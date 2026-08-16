@@ -12,13 +12,19 @@
      'pyod_portero' del navegador para volver al original. */
   const PORTERO_ORIGINAL = 'https://script.google.com/macros/s/AKfycbwlDDCWWzOWYZsUpBU9uqsQ7aenQ469PF6s6FkNlBFS1_cJSU5njG9oQmuyELy5zlqzFg/exec';
   const PORTERO_RESPALDO = 'https://script.google.com/macros/s/AKfycbyrhqMb70Qh8BljAOYnSYBZ8IXUuEclFWPg10NWIv3GJ-nAR597OTsGB4IL-xyUl7Ms/exec';
-  let ENDPOINT = (function(){ try { return localStorage.getItem('pyod_portero') || PORTERO_ORIGINAL; } catch(e){ return PORTERO_ORIGINAL; } })();
+  /* El ORIGINAL siempre va primero, en cada llamada. El respaldo entra solo si
+     el original falla en ese momento, y NUNCA queda guardado como destino: la
+     versión anterior lo pegaba en localStorage y, al reactivarse Google, el
+     navegador seguía hablándole al respaldo (que no sabe de Google ni conoce
+     los correos) — por eso "ya no entra" tras pagar. Limpiamos ese resto. */
+  try { localStorage.removeItem('pyod_portero'); } catch(e){}
+  let ENDPOINT = PORTERO_ORIGINAL;
   function pyodUsarRespaldo(){
     if (ENDPOINT === PORTERO_RESPALDO) return false;
     ENDPOINT = PORTERO_RESPALDO;
-    try { localStorage.setItem('pyod_portero', PORTERO_RESPALDO); } catch(e){}
     return true;
   }
+  function pyodVolverAlOriginal(){ ENDPOINT = PORTERO_ORIGINAL; }
   /* Manda al portero y, si el original falla, reintenta con el respaldo. */
   function pyodConLimite(p, ms){
     return Promise.race([p, new Promise((_,rj)=>setTimeout(()=>rj(new Error('timeout')), ms||12000))]);
@@ -36,6 +42,7 @@
       const t = await r.text();
       try { return JSON.parse(t); } catch(e){ return { ok:false, error:'servidor' }; }
     }
+    pyodVolverAlOriginal();
     let j;
     try { j = await intenta(ENDPOINT); } catch(e){ j = { ok:false, error:'servidor' }; }
     if (!pyodOk(j) && pyodUsarRespaldo()) {
@@ -51,6 +58,7 @@
       const t = await r.text();
       try { return JSON.parse(t); } catch(e){ return { ok:false, error:'servidor' }; }
     }
+    pyodVolverAlOriginal();
     let j;
     try { j = await intenta(ENDPOINT); } catch(e){ j = { ok:false, error:'servidor' }; }
     if (!(j && j.ok) && pyodUsarRespaldo()) {
