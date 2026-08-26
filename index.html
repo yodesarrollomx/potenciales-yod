@@ -111,6 +111,7 @@
     #listaTodos{max-height:38vh}
   }
 </style>
+<style>.leaflet-tile{filter:invert(1) hue-rotate(180deg) saturate(.55) brightness(.9) contrast(.9)}.leaflet-container{background:#17140F}</style>
 </head>
 <body>
 <header>
@@ -193,7 +194,7 @@
   function initMap(){
     if(map)return;
     map=L.map('map',{zoomControl:false,attributionControl:true,gestureHandling:true,gestureHandlingOptions:{duration:1200,text:{touch:'Usa dos dedos para mover el mapa',scroll:'Usa ctrl + scroll para hacer zoom',scrollMac:'Usa \u2318 + scroll para hacer zoom'}}}).setView([25.5,-104],5);window._zc=L.control.zoom({position:'bottomleft'}).addTo(map);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:19}).addTo(map); /* CARTO ahora exige API key: sus tiles salian tapizados de 'API KEY REQUIRED'. OSM + filtro CSS oscuro. */
     capa=L.layerGroup().addTo(map);
     window._pyodMap=map;
   }
