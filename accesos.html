@@ -7,7 +7,7 @@
 <title>Accesos · El Portero · YoDesarrollo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://alexpueblag.github.io/yod-portal/os/shell.css">
+<link rel="stylesheet" href="https://tableros.yodesarrollo.mx/yod-portal/os/shell.css">
 <style>
   :root{--bg:#f6f3ed;--card:#ffffff;--text:#231d14;--muted:#766f62;--suave:#8a8272;--linea:#e1dacb;--lineaf:#d8cfbb;--gold:#9a7b3f;--goldc:#b98b3c;--green:#39744b;--orange:#9a6a1e;--red:#a94438;--blue:#3e6484}
   *{box-sizing:border-box}
@@ -283,7 +283,7 @@
       });
       cont.querySelectorAll('[data-liga]').forEach(b=>b.onclick=async()=>{
         b.disabled=true;const t0=b.textContent;b.textContent='…';
-        try{const r2=await post({tipo:'sesion-crear',correo:b.dataset.liga,destino:'https://alexpueblag.github.io/potenciales-yod/'});
+        try{const r2=await post({tipo:'sesion-crear',correo:b.dataset.liga,destino:'https://tableros.yodesarrollo.mx/potenciales-yod/'});
           if(!r2.ok){toast('No se pudo crear la liga: '+(r2.error||''),'err');return}
           try{await navigator.clipboard.writeText(r2.liga)}catch(e){}
           toast('✓ Liga lista y copiada');
@@ -341,6 +341,6 @@
   </div>
 </div>
 <script src="portero.js?v=relevo5"></script>
-<script src="https://alexpueblag.github.io/yod-portal/os/shell.js"></script>
+<script src="https://tableros.yodesarrollo.mx/yod-portal/os/shell.js"></script>
 </body>
 </html>
