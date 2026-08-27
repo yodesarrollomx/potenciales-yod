@@ -26,7 +26,7 @@ BD: Google Sheet **"YOD - POTENCIALES"** · 1 hoja por tipo de desarrollo · **1
 
 ## URLs y datos
 
-- Sitio: https://alexpueblag.github.io/potenciales-yod/
+- Sitio: https://tableros.yodesarrollo.mx/potenciales-yod/
 - Apps Script (editor): https://script.google.com/d/115k1wTxnEdPaPyAVqDo9-N2mAhS5d50eoQT9W83nxrXe99EfPhwpC_dw/edit
 - `/exec`: `https://script.google.com/macros/s/AKfycbwlDDCWWzOWYZsUpBU9uqsQ7aenQ469PF6s6FkNlBFS1_cJSU5njG9oQmuyELy5zlqzFg/exec`
 - Sheet: lo crea `setup()` (el ID queda en Script Properties, llave `SHEET_ID`).
