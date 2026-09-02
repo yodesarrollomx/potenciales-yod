@@ -269,7 +269,7 @@
     b.id = 'engraneBtn'; b.type = 'button'; b.textContent = '⚙️';
     b.title = 'Accesos · quién entra a qué (solo tú lo ves)';
     b.style.cssText = 'position:fixed;right:14px;bottom:64px;z-index:1300;width:42px;height:42px;border-radius:50%;border:1px solid var(--lineaf,rgba(255,255,255,.16));background:var(--card,#131317);color:var(--text,#f4f1ea);font-size:17px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center';
-    b.onclick = () => { location.href = 'https://tableros.yodesarrollo.mx/potenciales-yod/accesos.html'; };
+    b.onclick = () => { location.href = 'https://yodesarrollomx.github.io/potenciales-yod/accesos.html'; };
     document.body.appendChild(b);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', engraneAdmin);
