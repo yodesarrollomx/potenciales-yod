@@ -9,7 +9,7 @@ Lee este archivo completo antes de tocar nada.
 Dos cosas en un mismo repo:
 
 1. **El board de Potenciales** — calculadora de potencial de desarrollos, sheet-driven. Cinco motores vivos: VERTICAL (`mixto.html`), MACROLOTES (`macrolotes.html`), UNIFAMILIAR (`unifamiliar.html`), RESIDENCIAL (`residencial.html`), PATRIMONIAL (`patrimonial.html`), más portal (`index.html`) y mapa (`mapa.html`). Lo usan Alejandro y el equipo YoDesarrollo.
-2. **EL PORTERO** (`portero.js`) — la cerradura compartida de **todos** los tableros YOD. No es un archivo de este board: otros repos lo cargan por URL absoluta (`yodesarrollo-board/index.html`, `obra-board/index.html`, los 5 HTML de `real-miramar-board/` traen `src="https://yodesarrollomx.github.io/potenciales-yod/portero.js"`). Trae además el tema claro/oscuro de todos los boards (`portero.js` 292-378).
+2. **EL PORTERO** (`portero.js`) — la cerradura compartida de **todos** los tableros YOD. No es un archivo de este board: otros repos lo cargan por URL absoluta (`yodesarrollo-board/index.html`, `obra-board/index.html`, los 5 HTML de `real-miramar-board/` traen `src="https://yodesarrollomx.github.io/potenciales-yod/portero.js"`). Trae además el tema claro/oscuro de todos los boards (bloque «TEMA CLARO / OSCURO» de `portero.js`, hasta el final del archivo).
 
 **Dirección en vivo (curl, 2026-09-04):** `https://yodesarrollomx.github.io/potenciales-yod/` → **200** (casa canónica) · `/portero.js` → **200** · `/accesos.html` → **200** · `https://alexpueblag.github.io/potenciales-yod/` → **200** (cascarón viejo, sigue respondiendo) · `https://tableros.yodesarrollo.mx/potenciales-yod/` → **000, no resuelve** (el DNS del dominio propio no existe todavía).
 
@@ -34,7 +34,7 @@ Dos cosas en un mismo repo:
   `patrimonial.html` — los motores. Todos cierran con `<script src="portero.js?v=relevo5">`.
 - `gas/Code.gs` — el backend. **NO está en el repo público** (`.gitignore` excluye `gas/`).
 - `gas/parches/2026-09-02-canje-cache.gs` — el parche de caché del canje, ya integrado en Code.gs.
-- `.claude/launch.json` — server local `potenciales`, puerto 8797.
+- `.claude/launch.json` — server local `potenciales`, puerto 8765.
 
 ## Arquitectura de datos
 
@@ -46,9 +46,11 @@ Google Sheet "YOD - POTENCIALES"  (el ID vive en Script Properties, llave SHEET_
         │
         ▼   Apps Script — UN SOLO /exec, scriptId 115k1wTxnEdPaPyAVqDo9-N2mAhS5d50eoQT9W83nxrXe99EfPhwpC_dw
    ORIGINAL:  https://script.google.com/macros/s/AKfycbwlDDCWWzOWYZsUpBU9uqsQ7aenQ469PF6s6FkNlBFS1_cJSU5njG9oQmuyELy5zlqzFg/exec
-              → 2026-09-04: {"ok":true,"pong":true,"schema":1}  (HTTP 200)
+              → 2026-09-04, con `?recurso=meta`: {"ok":true,"pong":true,"schema":1}  (HTTP 200)
+              (el /exec pelado contesta {"ok":false,"error":"clave"} — eso NO es que esté caído)
    RESPALDO:  https://script.google.com/macros/s/AKfycbyrhqMb70Qh8BljAOYnSYBZ8IXUuEclFWPg10NWIv3GJ-nAR597OTsGB4IL-xyUl7Ms/exec
-              → 2026-09-04: {"ok":true,"pong":true,"portero":"respaldo"}  (HTTP 200)
+              → 2026-09-04, con `?recurso=meta`: {"ok":true,"pong":true,"portero":"respaldo"}  (HTTP 200)
+              (el /exec pelado contesta {"ok":false,"error":"admin"})
         │
         ├─ GET  ?recurso=meta|canje|activar            (sin credencial)
         ├─ GET  ?recurso=lista|caso|flujo|mapa|track|catalogo|accesos-lista|cm   (exigen k)
@@ -68,7 +70,7 @@ Google Sheet "YOD - POTENCIALES"  (el ID vive en Script Properties, llave SHEET_
 
 ### Contrato del board (lo que ya decía este archivo, conservado)
 
-Upsert **por `caso_id`**, no por credenciales. La `palabra` es única entre casos vivos; repetirla → `palabra_ocupada`. Columnas leídas por encabezado y auto-sanadas: agregar columnas en el Sheet nunca rompe; las variables del motor son columnas `in*` editables directo en Sheets. Versiones del mismo caso (comparador, en los 5 boards): `doPost tipo=guardar` acepta `escenarios` (máx 8) → columna `escenarios_json`; las columnas `in*` guardan la versión ACTIVA. `request_id` da idempotencia de 6 h. El correo (MailApp) manda la palabra + `?open=CASO_ID`; ese enlace **nunca** devuelve la clave del board. Un tipo nuevo (p. ej. LOGISTICO) = hoja nueva + entrada en `CFG.HOJAS_TIPO` + motor en el front; la infraestructura se reutiliza tal cual. Respaldo semanal del Sheet a Drive "Potenciales Respaldos" (domingo 3 AM, conserva 8). Preview local: `.claude/launch.json` → server `potenciales`, puerto 8797; sin clave se entra con "Trabajar sin conexión" (no escribe a la nube).
+Upsert **por `caso_id`**, no por credenciales. La `palabra` es única entre casos vivos; repetirla → `palabra_ocupada`. Columnas leídas por encabezado y auto-sanadas: agregar columnas en el Sheet nunca rompe; las variables del motor son columnas `in*` editables directo en Sheets. Versiones del mismo caso (comparador, en los 5 boards): `doPost tipo=guardar` acepta `escenarios` (máx 8) → columna `escenarios_json`; las columnas `in*` guardan la versión ACTIVA. `request_id` da idempotencia de 6 h. El correo (MailApp) manda la palabra + `?open=CASO_ID`; ese enlace **nunca** devuelve la clave del board. Un tipo nuevo (p. ej. LOGISTICO) = hoja nueva + entrada en `CFG.HOJAS_TIPO` + motor en el front; la infraestructura se reutiliza tal cual. Respaldo semanal del Sheet a Drive "Potenciales Respaldos" (domingo 3 AM, conserva 8). Preview local: `.claude/launch.json` → server `potenciales`, puerto 8765; sin clave se entra con "Trabajar sin conexión" (no escribe a la nube).
 
 ### Contrato del canje (lo delicado)
 
