@@ -2,7 +2,7 @@
 
 Calculador de potencial de desarrollos, sheet-driven. Módulos vivos: VERTICAL (mixto.html),
 MACROLOTES (macrolotes.html) y UNIFAMILIAR (unifamiliar.html, motor del libro de Casa Alysa).
-Front: `index.html` único en GitHub Pages (`alexpueblag/potenciales-yod`).
+Front: `index.html` único en GitHub Pages (`yodesarrollomx/potenciales-yod`).
 Backend: Google Apps Script en `gas/` (NO se sube al repo público — está en `.gitignore`).
 BD: Google Sheet **"YOD - POTENCIALES"** · 1 hoja por tipo de desarrollo · **1 fila = 1 caso**.
 
