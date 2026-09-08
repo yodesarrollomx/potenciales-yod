@@ -205,7 +205,7 @@
 
   // Los 8 tableros de YOD OS (mismo orden que la barra lateral). Palomear
   // un tablero = esa persona puede verlo. '*' = ve todos.
-  const CODES=[['*','Todo'],['PT','Potenciales'],['CO','Codesarrollos'],['RM','Miramar'],['TA','Operación'],['FL','Flujo'],['IN','Interiores'],['IV','Inversion.'],['MK','Métricas'],['OB','Obra']];
+  const CODES=[['*','Todo'],['PT','Potenciales'],['CO','Codesarrollos'],['RM','Miramar'],['TA','Operación'],['FL','Flujo'],['IN','Interiores'],['IV','Inversion.'],['MK','Métricas'],['OB','Obra'],['MZ','La matriz'],['DP','Despacho']];
   function boardsDe(u){const b=String(u.boards||'*').trim();return b===''?'*':b}
   function tieneCode(b,c){if(b==='*')return true;return b.toUpperCase().split(/[,|; ]+/).indexOf(c)>-1}
   function renderMatriz(usuarios){
