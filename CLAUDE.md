@@ -68,6 +68,19 @@ Google Sheet "YOD - POTENCIALES"  (el ID vive en Script Properties, llave SHEET_
 > al editor **y** se actualiza la implementación existente. Antes de tocar el .gs, pide el Code.gs
 > vivo del editor ([[backend-vivo-no-es-el-repo]]).
 
+> **9-sep-2026 · lo que está vivo y lo que espera un clic.** La copia local
+> `gas/Code.gs` estaba **23 líneas atrás** del backend real: le faltaban los dos
+> arreglos del 4-sep (boards en blanco = sin acceso, y `AL/TM/TC` para que `TA`
+> dejara de nombrar dos cosas). Ya está sincronizada. Y hay una **versión 48
+> creada pero NO desplegada**: cambia el valor por omisión de `boards` en
+> `accesoAlta_` de `'*'` a vacío, porque dar de alta a alguien llenando solo
+> correo y nombre le entregaba los once tableros. Desplegarla exige una
+> identidad del dominio (la API rechaza cualquier cuenta gmail con *«Only users
+> in the same domain as the script owner may deploy this script»*): son cinco
+> clics en **Implementar → Administrar implementaciones → lápiz → Versión 48**,
+> sobre la implementación que termina en `…zlqzFg`. La URL no cambia. El detalle
+> completo, en `gas/DESPLIEGUE.md` (fuera del repo, junto al código).
+
 ### Contrato del board (lo que ya decía este archivo, conservado)
 
 Upsert **por `caso_id`**, no por credenciales. La `palabra` es única entre casos vivos; repetirla → `palabra_ocupada`. Columnas leídas por encabezado y auto-sanadas: agregar columnas en el Sheet nunca rompe; las variables del motor son columnas `in*` editables directo en Sheets. Versiones del mismo caso (comparador, en los 5 boards): `doPost tipo=guardar` acepta `escenarios` (máx 8) → columna `escenarios_json`; las columnas `in*` guardan la versión ACTIVA. `request_id` da idempotencia de 6 h. El correo (MailApp) manda la palabra + `?open=CASO_ID`; ese enlace **nunca** devuelve la clave del board. Un tipo nuevo (p. ej. LOGISTICO) = hoja nueva + entrada en `CFG.HOJAS_TIPO` + motor en el front; la infraestructura se reutiliza tal cual. Respaldo semanal del Sheet a Drive "Potenciales Respaldos" (domingo 3 AM, conserva 8). Preview local: `.claude/launch.json` → server `potenciales`, puerto 8765; sin clave se entra con "Trabajar sin conexión" (no escribe a la nube).
