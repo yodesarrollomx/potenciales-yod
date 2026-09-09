@@ -209,7 +209,10 @@
   // El número de la leyenda ("ve los N") se cuenta de este arreglo, no se
   // escribe a mano: la última vez que se hizo a mano se quedó en "8" con 11 códigos ya vivos.
   (function(){const t=$('totalTb');if(t)t.textContent=String(CODES.length-1)})();
-  function boardsDe(u){const b=String(u.boards||'*').trim();return b===''?'*':b}
+  /* 9-sep-2026: esta funcion tambien mentia. Una fila con boards en blanco se
+     pintaba como «Todo» palomeado, y al siguiente clic se le escribia '*' de
+     verdad. Desde el 4-sep, blanco = sin acceso: se pinta como lo que es. */
+  function boardsDe(u){return String(u.boards==null?'':u.boards).trim()}
   function tieneCode(b,c){if(b==='*')return true;return b.toUpperCase().split(/[,|; ]+/).indexOf(c)>-1}
   function renderMatriz(usuarios){
     const tb=$('matriz');

@@ -68,18 +68,16 @@ Google Sheet "YOD - POTENCIALES"  (el ID vive en Script Properties, llave SHEET_
 > al editor **y** se actualiza la implementación existente. Antes de tocar el .gs, pide el Code.gs
 > vivo del editor ([[backend-vivo-no-es-el-repo]]).
 
-> **9-sep-2026 · lo que está vivo y lo que espera un clic.** La copia local
-> `gas/Code.gs` estaba **23 líneas atrás** del backend real: le faltaban los dos
-> arreglos del 4-sep (boards en blanco = sin acceso, y `AL/TM/TC` para que `TA`
-> dejara de nombrar dos cosas). Ya está sincronizada. Y hay una **versión 48
-> creada pero NO desplegada**: cambia el valor por omisión de `boards` en
-> `accesoAlta_` de `'*'` a vacío, porque dar de alta a alguien llenando solo
-> correo y nombre le entregaba los once tableros. Desplegarla exige una
-> identidad del dominio (la API rechaza cualquier cuenta gmail con *«Only users
-> in the same domain as the script owner may deploy this script»*): son cinco
-> clics en **Implementar → Administrar implementaciones → lápiz → Versión 48**,
-> sobre la implementación que termina en `…zlqzFg`. La URL no cambia. El detalle
-> completo, en `gas/DESPLIEGUE.md` (fuera del repo, junto al código).
+> **9-sep-2026 · sincronizado y desplegado.** La copia local `gas/Code.gs` estaba
+> **23 líneas atrás** del backend real: le faltaban los dos arreglos del 4-sep
+> (boards en blanco = sin acceso, y `AL/TM/TC` para que `TA` dejara de nombrar
+> dos cosas). Ya está al día. Y se desplegaron dos versiones que cierran las dos
+> mitades del mismo agujero: la **48** deja de escribir `'*'` cuando un alta
+> viene sin boards, y la **49** deja de *reportar* `'*'` cuando la fila está en
+> blanco — esta última era la que mordía: la matriz pintaba «Todo» palomeado
+> para alguien sin ningún tablero y al siguiente clic se lo escribía de verdad.
+> **Vive la 49**, sobre la misma implementación `…zlqzFg` (la URL no cambió).
+> Verificado en vivo. El detalle y cómo revertir, en `gas/DESPLIEGUE.md`.
 
 ### Contrato del board (lo que ya decía este archivo, conservado)
 
