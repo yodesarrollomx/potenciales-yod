@@ -102,9 +102,9 @@
     <div class="fila-alta">
       <input id="aCorreo" type="email" placeholder="correo@…">
       <input id="aNombre" placeholder="Nombre">
-      <input id="aBoards" placeholder="boards: * o RM,TA,TM…" value="*">
+      <input id="aBoards" placeholder="boards: * o RM,TA,TM…">
       <select id="aRol" title="vista = solo lee · editor = puede editar los boards que tenga · admin = además administra accesos"><option value="vista">vista</option><option value="editor">editor</option><option value="admin">admin</option></select>
-      <button class="btn" id="aBtn"><span class="sp"></span><span id="aBtnT">Dar acceso</span></button>
+      <button class="btn" id="aBtn" disabled><span class="sp"></span><span id="aBtnT">Dar acceso</span></button>
     </div>
     <div class="msg" id="aMsg"></div>
   </section>
@@ -121,7 +121,7 @@
 
   <section class="card">
     <h2>🎛️ Quién ve qué tablero — palomea por persona</h2>
-    <p style="font-size:12px;color:var(--muted);margin:-2px 0 12px">Cada columna es un tablero de YOD OS. Palomea los que esa persona puede ver. <b>Todo</b> = ve los 8. Se guarda solo al palomear.</p>
+    <p style="font-size:12px;color:var(--muted);margin:-2px 0 12px">Cada columna es un tablero de YOD OS. Palomea los que esa persona puede ver. <b>Todo</b> = ve los <span id="totalTb">8</span>. Se guarda solo al palomear.</p>
     <div class="mwrap"><table class="matriz" id="matriz"><tbody><tr><td class="u">Cargando…</td></tr></tbody></table></div>
     <div class="msg" id="mMsg"></div>
   </section>
@@ -206,6 +206,9 @@
   // Los 8 tableros de YOD OS (mismo orden que la barra lateral). Palomear
   // un tablero = esa persona puede verlo. '*' = ve todos.
   const CODES=[['*','Todo'],['PT','Potenciales'],['CO','Codesarrollos'],['RM','Miramar'],['TA','Operación'],['FL','Flujo'],['IN','Interiores'],['IV','Inversion.'],['MK','Métricas'],['OB','Obra'],['MZ','La matriz'],['DP','Despacho']];
+  // El número de la leyenda ("ve los N") se cuenta de este arreglo, no se
+  // escribe a mano: la última vez que se hizo a mano se quedó en "8" con 11 códigos ya vivos.
+  (function(){const t=$('totalTb');if(t)t.textContent=String(CODES.length-1)})();
   function boardsDe(u){const b=String(u.boards||'*').trim();return b===''?'*':b}
   function tieneCode(b,c){if(b==='*')return true;return b.toUpperCase().split(/[,|; ]+/).indexOf(c)>-1}
   function renderMatriz(usuarios){
@@ -213,7 +216,7 @@
     tb.innerHTML='<thead><tr><th>Usuario</th>'+CODES.map(c=>'<th class="'+(c[0]==='*'?'todo':'')+'" title="'+esc(c[1])+'">'+esc(c[1])+'</th>').join('')+'</tr></thead><tbody>'+
       usuarios.map(u=>{
         const b=boardsDe(u),todo=b==='*',rev=u.estado!=='activo';
-        return '<tr class="'+(rev?'rev':'')+'" data-correo="'+esc(u.correo)+'" data-boards="'+esc(b)+'"><td class="u">'+esc(u.nombre||u.correo)+'<small>'+esc(u.correo)+(rev?' · revocado':'')+'</small></td>'+
+        return '<tr class="'+(rev?'rev':'')+'" data-correo="'+esc(u.correo)+'" data-nombre="'+esc(u.nombre||'')+'" data-rol="'+esc(u.rol||'vista')+'" data-boards="'+esc(b)+'"><td class="u">'+esc(u.nombre||u.correo)+'<small>'+esc(u.correo)+(rev?' · revocado':'')+'</small></td>'+
           CODES.map(c=>{const es=c[0]==='*'?todo:tieneCode(b,c[0]);
             return '<td class="'+(c[0]==='*'?'todo':'')+'"><input type="checkbox" data-code="'+c[0]+'" '+(es?'checked':'')+(rev||(todo&&c[0]!=='*')?' disabled':'')+'></td>'}).join('')+'</tr>'}).join('')+'</tbody>';
     tb.querySelectorAll('input[type=checkbox]').forEach(ch=>ch.onchange=async()=>{
@@ -233,7 +236,10 @@
       }
       ch.disabled=true;mMsg.className='msg';mMsg.textContent='Guardando '+correo+'…';
       try{
-        const r=await post({tipo:'acceso-alta',correo,boards});
+        // acceso-alta hace UPSERT de la fila completa: mandar solo 'boards'
+        // dejaba el rol y el nombre a lo que el backend adivinara (o borrara).
+        // Los 4 campos siempre van juntos y tomados de la fila en pantalla.
+        const r=await post({tipo:'acceso-alta',correo,nombre:tr.dataset.nombre,rol:tr.dataset.rol,boards});
         if(r.ok){mMsg.className='msg ok';mMsg.textContent='✓ '+correo+' → '+r.boards;toast('✓ Permisos guardados');cargar()}
         else{const det=r.error==='admin'?'necesitas sesión de administrador':(r.error||'error');mMsg.className='msg err';mMsg.textContent='No se pudo: '+det;toast('No se pudo: '+det,'err');ch.checked=was;ch.disabled=false}
       }catch(e){
@@ -265,7 +271,7 @@
             <span class="u-correo">${esc(u.correo)}</span>
             <span class="badge ${u.estado==='activo'?'activo':'revocado'}">${esc(u.estado)}</span>
             ${u.rol==='admin'?'<span class="badge admin">admin</span>':''}
-            <span class="u-acciones">${u.estado==='activo'?`<button class="btn mini" data-rol="${esc(u.correo)}" data-cur="${esc(u.rol||'vista')}" data-nom="${esc(u.nombre||'')}" data-boards="${esc(u.boards||'*')}">${u.rol==='admin'?'↓ Colaborador':'↑ Dirección'}</button><button class="btn mini" data-liga="${esc(u.correo)}">🔗 Liga directa</button><button class="btn rojo mini" data-rev="${esc(u.correo)}">Revocar</button>`:`<button class="btn mini" data-rea="${esc(u.correo)}" data-nom="${esc(u.nombre)}">Reactivar</button>`}</span>
+            <span class="u-acciones">${u.estado==='activo'?`<button class="btn mini" data-rol="${esc(u.correo)}" data-cur="${esc(u.rol||'vista')}" data-nom="${esc(u.nombre||'')}" data-boards="${esc(u.boards||'*')}">${u.rol==='admin'?'↓ Colaborador':'↑ Dirección'}</button><button class="btn mini" data-liga="${esc(u.correo)}">🔗 Liga directa</button><button class="btn rojo mini" data-rev="${esc(u.correo)}">Revocar</button>`:`<button class="btn mini" data-rea="${esc(u.correo)}" data-nom="${esc(u.nombre||'')}" data-rolrea="${esc(u.rol||'vista')}" data-boardsrea="${esc(u.boards||'*')}">Reactivar</button>`}</span>
           </div>
           <div class="u-meta">boards: ${esc(u.boards)} · sesiones vivas: ${u.sesiones_vivas} · visitas registradas: ${u.visitas_n}${u.ts_alta?' · alta: '+esc(String(u.ts_alta).slice(0,10)):''}</div>
           ${u.ultimas&&u.ultimas.length?`<div class="u-visitas">${u.ultimas.map(esc).join('\n')}</div>`:''}
@@ -295,22 +301,89 @@
         b.disabled=true;try{const r=await post({tipo:'acceso-revocar',correo:b.dataset.rev});if(r.ok){toast('Acceso revocado')}else{toast('No se pudo revocar: '+(r.error||''),'err')}cargar()}catch(e){b.disabled=false;toast('No se pudo revocar: '+e.message,'err')}
       });
       cont.querySelectorAll('[data-rea]').forEach(b=>b.onclick=async()=>{
-        b.disabled=true;try{const r=await post({tipo:'acceso-alta',correo:b.dataset.rea,nombre:b.dataset.nom});if(r.ok){toast('✓ Acceso reactivado')}else{toast('No se pudo reactivar: '+(r.error||''),'err')}cargar()}catch(e){b.disabled=false;toast('No se pudo reactivar: '+e.message,'err')}
+        b.disabled=true;
+        // Reactivar es un acceso-alta más: sin rol y boards, el backend los
+        // rellena con su default (rol vista, boards '*') y puede devolverle
+        // a esa persona acceso a TODO. Se recuperan del rol/boards que ya
+        // tenía (guardados en el botón desde la última lista cargada).
+        try{const r=await post({tipo:'acceso-alta',correo:b.dataset.rea,nombre:b.dataset.nom,rol:b.dataset.rolrea,boards:b.dataset.boardsrea});if(r.ok){toast('✓ Acceso reactivado')}else{toast('No se pudo reactivar: '+(r.error||''),'err')}cargar()}catch(e){b.disabled=false;toast('No se pudo reactivar: '+e.message,'err')}
       });
     }catch(e){cont.innerHTML='<p class="u-meta">No se pudo cargar la lista ('+esc(e.message||'sin conexión')+'). Recarga con Ctrl/⌘+Shift+R o vuelve a entrar con tu Google.</p>'}
   }
+  async function rolDeLaClave(kk){
+    /* El engrane de portero.js (rol admin → ⚙️) SE SALTA esta página a
+       propósito (portero.js: "if (!k || pagina === 'accesos') return"), así
+       que aquí no hay evento ni variable de la que colgarse. Repetimos su
+       mismo canje — GET, sin costo, cacheado 10 min en el backend — y su
+       misma caché de pestaña (sessionStorage.pyod_rol), en vez de adivinar
+       el rol o fiarnos de que el backend sea la única puerta. */
+    try{
+      const cache=JSON.parse(sessionStorage.getItem('pyod_rol')||'null');
+      if(cache&&cache.f===kk.slice(0,14))return cache.rol||'';
+    }catch(e){}
+    async function pide(){
+      const raw=await fetch(ENDPOINT+'?recurso=canje&t='+encodeURIComponent(kk)).then(x=>x.text()).catch(()=>'');
+      try{return JSON.parse(raw)}catch(_){return null}
+    }
+    let j=await pide();
+    if((!j||!j.ok)&&ENDPOINT===PORTERO_ORIGINAL){usarRespaldo();j=await pide();}
+    if(j&&j.ok){const rol=j.rol||'vista';try{sessionStorage.setItem('pyod_rol',JSON.stringify({f:kk.slice(0,14),rol}))}catch(e){}return rol}
+    return '';
+  }
+  async function esperarAdminYcargar(){
+    /* cargar() pide 'accesos-lista' — correos, roles, boards y bitácora de
+       TODOS — y antes se llamaba en la última línea del script, ANTES de
+       que portero.js (que carga después, en un <script> aparte) canjee
+       ?sesion=/?liga= y pueda mostrar su puerta. Esa carrera mandaba la
+       primera llamada con la credencial vacía y dependía solo de que el
+       backend la rechazara. Ahora se espera a que haya sesión y, además, a
+       que esa sesión sea admin, antes de pedir nada. */
+    const cont=$('lista');
+    let canjesFallidos=0;
+    for(let i=0;i<400;i++){ // ~60s de margen: cubre el canje de una liga que aún no ha entrado
+      const kk=k();
+      if(kk){
+        const rol=await rolDeLaClave(kk);
+        if(rol==='admin'){cargar();return}
+        if(rol){ // sesión válida pero no admin: no va a cambiar sola, no insistas
+          cont.innerHTML='<p class="u-meta">Necesitas sesión de administrador (o la clave maestra) para ver esto.</p>';
+          $('matriz').innerHTML='<tbody><tr><td class="u">Solo administrador.</td></tr></tbody>';
+          return;
+        }
+        /* Credencial presente pero el canje no la reconoció (token viejo, o el
+           backend todavía resolviendo el respaldo). Se reintenta MUY POCAS
+           veces y despacio: sin este freno, el ciclo de 150 ms mandaba
+           cuatrocientas peticiones de canje en un minuto. */
+        if(++canjesFallidos>=4){
+          cont.innerHTML='<p class="u-meta">Tu sesión no se pudo validar. Vuelve a entrar con tu Google o pide una liga nueva.</p>';
+          return;
+        }
+        await new Promise(r=>setTimeout(r,2500));
+        continue;
+      }
+      await new Promise(r=>setTimeout(r,150));
+    }
+    cont.innerHTML='<p class="u-meta">Inicia sesión para ver los accesos.</p>';
+  }
+  // El campo de boards ya no trae '*' de fábrica (antes regalaba TODOS los
+  // tableros a quien diera de alta llenando solo correo y nombre): el botón
+  // se habilita solo cuando hay al menos un tablero escrito.
+  function actualizarBotonAlta(){$('aBtn').disabled=!$('aBoards').value.trim()}
+  $('aBoards').addEventListener('input',actualizarBotonAlta);
+  actualizarBotonAlta();
   $('aBtn').onclick=async()=>{
-    const correo=$('aCorreo').value.trim(),nombre=$('aNombre').value.trim();
+    const correo=$('aCorreo').value.trim(),nombre=$('aNombre').value.trim(),boards=$('aBoards').value.trim();
     const msg=$('aMsg');
     if(!correo||correo.indexOf('@')<1){msg.className='msg err';msg.textContent='Correo inválido — escribe algo como nombre@correo.com';$('aCorreo').focus();return}
+    if(!boards){msg.className='msg err';msg.textContent='Elige al menos un tablero (o escribe * para dárselos todos)';$('aBoards').focus();return}
     setBusy($('aBtn'),true,'aBtnT','Guardando…','Dar acceso');
     msg.className='msg';msg.textContent='Guardando '+correo+'…';
     try{
-      const r=await post({tipo:'acceso-alta',correo,nombre,rol:$('aRol').value,boards:($('aBoards').value.trim()||'*')});
+      const r=await post({tipo:'acceso-alta',correo,nombre,rol:$('aRol').value,boards});
       if(r.ok){
         msg.className='msg ok';msg.textContent='✓ '+correo+' ya puede pedir su liga mágica en cualquier board';
         toast('✓ Acceso guardado');
-        $('aCorreo').value='';$('aNombre').value='';cargar();
+        $('aCorreo').value='';$('aNombre').value='';$('aBoards').value='';cargar();
       }else{
         const det=r.error==='admin'?'necesitas sesión de administrador (entra con tu Google o la clave maestra)':(r.error||'error desconocido');
         msg.className='msg err';msg.textContent='No se pudo guardar: '+det;
@@ -321,9 +394,10 @@
       toast('No se pudo guardar — reintenta','err');
     }finally{
       setBusy($('aBtn'),false,'aBtnT','Guardando…','Dar acceso');
+      actualizarBotonAlta();
     }
   };
-  cargar();
+  esperarAdminYcargar();
 })();
 </script>
 <div id="toast" role="status" aria-live="polite"></div>
