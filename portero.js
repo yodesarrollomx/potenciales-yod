@@ -255,7 +255,15 @@
       const cache = JSON.parse(sessionStorage.getItem('pyod_rol') || 'null');
       if (cache && cache.f === k.slice(0, 14)) rol = cache.rol;
       else {
-        const r = await pyodPide('?recurso=canje&t=' + encodeURIComponent(k));
+        let r = await pyodPide('?recurso=canje&t=' + encodeURIComponent(k));
+        /* El Portero a veces contesta «liga» a una sesion BUENA (parpadeo de
+           Apps Script, visto el 9 y el 14-sep). Antes eso borraba la sesion y
+           ponia el candado encima de una pagina que ya habia cargado con datos.
+           Se repregunta una vez antes de creerle. */
+        if (r && r.ok === false && r.error === 'liga') {
+          await new Promise(ok => setTimeout(ok, 1800));
+          r = await pyodPide('?recurso=canje&t=' + encodeURIComponent(k));
+        }
         if (r && r.ok) { rol = r.rol || 'vista'; sessionStorage.setItem('pyod_rol', JSON.stringify({ f: k.slice(0, 14), rol })); }
         else if (r && r.ok === false && r.error === 'liga') {
           localStorage.removeItem(LSC); sessionStorage.removeItem('pyod_rol');
