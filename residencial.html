@@ -1264,40 +1264,34 @@
     let dom=r.tiposViv[0];for(const t of r.tiposViv)if(t.mezclaPct>dom.mezclaPct)dom=t;
     const huella=dom.m2Constr/Math.max(1,dom.niveles);
     const frenteLote=r.p.m2Lote/fondoUtil;
-    // Regla de acomodo (confirmada): 1 m de margen lateral fijo por lado, sin importar el ancho del
-    // lote — antes era 10% del frente, que en lotes angostos daba márgenes irrisorios. Además,
-    // TODO lote (angosto o ancho) reserva un carril de cochera al frente para maniobrar un auto
-    // (6 m de ancho o el ancho útil si es menor, con ~5.5 m de fondo real, no los 2 m simbólicos
-    // de antes). La casa se construye detrás de esa cochera, usando el ancho útil completo — en
-    // lotes angostos la cochera ocupa todo ese ancho (mismo resultado visual que antes); en lotes
-    // anchos (>12 m de frente aprox.) sobra ancho útil a un lado de la cochera, y se ve como tal.
-    const margenLat=1,anchoUtil=Math.max(1,frenteLote-2*margenLat);
-    const cocheraAncho=Math.min(6,anchoUtil),cocheraFondo=5.5;
-    const frenteCasa=anchoUtil,fondoCasa=huella/frenteCasa;
-    const patio=Math.max(0,fondoUtil-cocheraFondo-fondoCasa);
+    // Regla de acomodo (confirmada, corregida): UN SOLO margen lateral de 1 m (no dos) — en un
+    // lote de 6 m de frente la casa queda con 5 m de frente. Y una restricción fija de 6 m de
+    // fondo desde la vialidad en TODO el ancho del predio (no un carril de cochera de ancho
+    // variable): esos primeros 6 m no se pueden ocupar con m² de construcción — da igual si ahí
+    // se estaciona el coche o no, es simplemente terreno sin COS/CUS disponible.
+    const margenLat=1,frenteCasa=Math.max(1,frenteLote-margenLat);
+    const restriccionFondo=6,fondoCasa=huella/frenteCasa;
+    const patio=Math.max(0,fondoUtil-restriccionFondo-fondoCasa);
     const W=300,H=380,mT=16;
     let pxPerM=(H-mT-40)/fondoUtil;if(frenteLote*pxPerM>140)pxPerM=140/frenteLote;
     const lotWpx=frenteLote*pxPerM,lotHpx=fondoUtil*pxPerM,x0=(W-lotWpx)/2,yTop=mT;
-    const margenPx=margenLat*pxPerM,xUtil=x0+margenPx,anchoUtilPx=anchoUtil*pxPerM;
-    const cocheraWpx=cocheraAncho*pxPerM,cocheraHpx=cocheraFondo*pxPerM;
-    const casaWpx=frenteCasa*pxPerM,casaHpx=fondoCasa*pxPerM;
-    const yBanqueta=yTop+lotHpx,yCochera=yBanqueta-cocheraHpx,yCasa=yCochera-casaHpx;
+    const margenPx=margenLat*pxPerM,xCasa0=x0+margenPx,casaWpx=frenteCasa*pxPerM;
+    const restriccionHpx=restriccionFondo*pxPerM,casaHpx=fondoCasa*pxPerM;
+    const yBanqueta=yTop+lotHpx,yRestriccion=yBanqueta-restriccionHpx,yCasa=yRestriccion-casaHpx;
     let s=`<rect x="${x0}" y="${yTop}" width="${lotWpx}" height="${lotHpx}" fill="none" stroke="#F1EDE3" stroke-width="1.3"/>`;
     s+=`<text x="${x0+lotWpx/2}" y="${yTop-5}" font-size="8.5" fill="#8A8272" text-anchor="middle">frente ${frenteLote.toFixed(1)} m</text>`;
-    // márgenes laterales de 1 m, marcados con línea punteada
-    s+=`<line x1="${xUtil}" y1="${yTop}" x2="${xUtil}" y2="${yBanqueta}" stroke="#8A8272" stroke-width=".6" stroke-dasharray="2 3"/>`;
-    s+=`<line x1="${xUtil+anchoUtilPx}" y1="${yTop}" x2="${xUtil+anchoUtilPx}" y2="${yBanqueta}" stroke="#8A8272" stroke-width=".6" stroke-dasharray="2 3"/>`;
-    s+=`<text x="${x0+2}" y="${yTop+10}" font-size="6.5" fill="#8A8272">1 m</text><text x="${x0+lotWpx-9}" y="${yTop+10}" font-size="6.5" fill="#8A8272">1 m</text>`;
+    // margen lateral de 1 m, un solo lado
+    s+=`<line x1="${xCasa0}" y1="${yTop}" x2="${xCasa0}" y2="${yBanqueta}" stroke="#8A8272" stroke-width=".6" stroke-dasharray="2 3"/>`;
+    s+=`<text x="${x0+2}" y="${yTop+10}" font-size="6.5" fill="#8A8272">1 m</text>`;
     s+=`<rect x="${x0}" y="${yBanqueta}" width="${lotWpx}" height="7" fill="#000" stroke="#8A8272" stroke-width=".7"/><text x="${x0+lotWpx/2}" y="${yBanqueta+18}" font-size="8" fill="#8A8272" text-anchor="middle">vialidad ${fmtN(anchoVialidad)} m</text>`;
-    s+=`<rect x="${xUtil}" y="${yCochera}" width="${cocheraWpx}" height="${cocheraHpx}" fill="#a9a4f51f" stroke="#a9a4f5" stroke-width=".8" stroke-dasharray="4 3"/>`;
-    if(cocheraHpx>16)s+=`<text x="${xUtil+cocheraWpx/2}" y="${yCochera+cocheraHpx/2+3}" font-size="7.5" font-weight="700" fill="#a9a4f5" text-anchor="middle">COCHERA</text>`;
-    if(anchoUtil>cocheraAncho+.3)s+=`<text x="${xUtil+cocheraWpx+4}" y="${yCochera+cocheraHpx/2+3}" font-size="7" fill="#8A8272">${(anchoUtil-cocheraAncho).toFixed(1)} m libres</text>`;
-    if(patio>0)s+=`<rect x="${xUtil}" y="${yTop}" width="${anchoUtilPx}" height="${yCasa-yTop}" fill="#8fbf8b1f" stroke="#8FBF8B" stroke-width=".7"/><text x="${xUtil+anchoUtilPx/2}" y="${yTop+(yCasa-yTop)/2-3}" font-size="8.5" font-weight="700" fill="#8FBF8B" text-anchor="middle">PATIO</text><text x="${xUtil+anchoUtilPx/2}" y="${yTop+(yCasa-yTop)/2+9}" font-size="7.5" fill="#8FBF8B" text-anchor="middle">${patio.toFixed(1)} m fondo</text>`;
-    s+=`<rect x="${xUtil}" y="${yCasa}" width="${casaWpx}" height="${casaHpx}" fill="#ff8aa1" opacity=".9" stroke="#ff8aa1" stroke-width="1"/>`;
-    s+=`<text x="${xUtil+casaWpx/2}" y="${yCasa+casaHpx/2-3}" font-size="9.5" font-weight="800" fill="#17140F" text-anchor="middle">${esc(dom.nombre)}</text>`;
-    s+=`<text x="${xUtil+casaWpx/2}" y="${yCasa+casaHpx/2+10}" font-size="8.5" fill="#17140F" text-anchor="middle">${fmtN(huella)} m² huella${dom.niveles>1?' · '+dom.niveles+' niveles':''}</text>`;
-    if(casaHpx>26)s+=`<text x="${xUtil+casaWpx/2}" y="${yCasa+casaHpx/2+22}" font-size="7.5" fill="#5c1f1a" text-anchor="middle">${frenteCasa.toFixed(1)} × ${fondoCasa.toFixed(1)} m</text>`;
-    s+=`<text x="4" y="${H-16}" font-size="7.5" fill="#8A8272">lote ${frenteLote.toFixed(1)}×${fondoUtil.toFixed(1)} m (${fmtN(r.p.m2Lote)} m²) · 1 m de margen por lado + cochera de ${cocheraAncho.toFixed(1)}×${cocheraFondo} m</text>`;
+    s+=`<rect x="${x0}" y="${yRestriccion}" width="${lotWpx}" height="${restriccionHpx}" fill="#a9a4f51f" stroke="#a9a4f5" stroke-width=".8" stroke-dasharray="4 3"/>`;
+    if(restriccionHpx>16)s+=`<text x="${x0+lotWpx/2}" y="${yRestriccion+restriccionHpx/2+3}" font-size="7.5" font-weight="700" fill="#a9a4f5" text-anchor="middle">RESTRICCIÓN ${restriccionFondo} m</text>`;
+    if(patio>0)s+=`<rect x="${xCasa0}" y="${yTop}" width="${casaWpx}" height="${yCasa-yTop}" fill="#8fbf8b1f" stroke="#8FBF8B" stroke-width=".7"/><text x="${xCasa0+casaWpx/2}" y="${yTop+(yCasa-yTop)/2-3}" font-size="8.5" font-weight="700" fill="#8FBF8B" text-anchor="middle">PATIO</text><text x="${xCasa0+casaWpx/2}" y="${yTop+(yCasa-yTop)/2+9}" font-size="7.5" fill="#8FBF8B" text-anchor="middle">${patio.toFixed(1)} m fondo</text>`;
+    s+=`<rect x="${xCasa0}" y="${yCasa}" width="${casaWpx}" height="${casaHpx}" fill="#ff8aa1" opacity=".9" stroke="#ff8aa1" stroke-width="1"/>`;
+    s+=`<text x="${xCasa0+casaWpx/2}" y="${yCasa+casaHpx/2-3}" font-size="9.5" font-weight="800" fill="#17140F" text-anchor="middle">${esc(dom.nombre)}</text>`;
+    s+=`<text x="${xCasa0+casaWpx/2}" y="${yCasa+casaHpx/2+10}" font-size="8.5" fill="#17140F" text-anchor="middle">${fmtN(huella)} m² huella${dom.niveles>1?' · '+dom.niveles+' niveles':''}</text>`;
+    if(casaHpx>26)s+=`<text x="${xCasa0+casaWpx/2}" y="${yCasa+casaHpx/2+22}" font-size="7.5" fill="#5c1f1a" text-anchor="middle">${frenteCasa.toFixed(1)} × ${fondoCasa.toFixed(1)} m</text>`;
+    s+=`<text x="4" y="${H-16}" font-size="7.5" fill="#8A8272">lote ${frenteLote.toFixed(1)}×${fondoUtil.toFixed(1)} m (${fmtN(r.p.m2Lote)} m²) · 1 m de margen (un lado) + restricción de ${restriccionFondo} m de fondo</text>`;
     s+=`<text x="4" y="${H-6}" font-size="7.5" fill="#8A8272">huella = m² de construcción ÷ niveles de "${esc(dom.nombre)}" (tipología con mayor mezcla)</text>`;
     el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Modelo de casa">${s}</svg>`;
   }
