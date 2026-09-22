@@ -439,6 +439,23 @@
         <div class="subheading">4. Demografía (para dimensionar)</div>
         <div class="input-group"><div class="input-header"><label>Habitantes por vivienda</label><div class="val-display" data-input="inHabPorViv">4.18</div></div><input type="range" id="inHabPorViv" min="1" max="6" step=".01" value="4.18" data-color="var(--green)" data-format="decimal"></div>
         <div class="micro-readout" id="readCapital">Calculando flujo…</div></div></article>
+
+    <article class="card wide" data-card="dVivienda"><div class="card-header"><div class="title-wrap"><div class="icon-box" style="background:#ff8aa11f;color:var(--pink)"><i class="ti ti-home"></i></div><div class="card-title">Vivienda (opcional)</div></div><div class="edit-pill">AJUSTAR</div></div>
+      <div class="kpi-grid" id="kpiVivienda"></div>
+      <div class="drawer" id="dVivienda">
+        <div class="partner-guide"><b>Por qué existe esta tarjeta:</b> en terrenos donde el lote pelón queda más caro que una casa INFONAVIT de la zona, vender casa+lote permite competir en vez de perder la venta. Apagado, el caso se comporta exactamente como "solo lotes" — nada de lo demás en el modelo cambia.</div>
+        <div class="input-group"><div class="input-header"><label>Desarrollar vivienda sobre los lotes</label><button type="button" class="small-btn secondary" id="btnVivToggle">No</button></div></div>
+        <div id="vivBody" style="display:none">
+          <div class="input-group"><div class="input-header"><label>% de lotes con vivienda construida</label><div class="val-display" data-input="inPctViv">0%</div></div><input type="range" id="inPctViv" min="0" max="100" step="5" value="0" data-color="var(--pink)" data-format="pct"></div>
+          <div class="subheading">Tipologías de vivienda</div>
+          <div id="vivTipologias"></div>
+          <button type="button" class="small-btn secondary" id="btnVivAddTipo"><i class="ti ti-plus"></i>Agregar tipología</button>
+          <div class="micro-readout" id="readVivMezcla"></div>
+          <div class="subheading">Referencia de mercado</div>
+          <div class="input-group"><div class="input-header"><label>Precio casa INFONAVIT equivalente en la zona</label><div class="val-display" data-input="inPrecioInfonavit">$0</div></div><input type="range" id="inPrecioInfonavit" min="0" max="3000000" step="5000" value="0" data-color="var(--blue)" data-format="money"></div>
+          <div class="micro-readout" id="readVivSemaforo"></div>
+        </div>
+      </div></article>
   </section>
 
   <details class="advanced-board" id="advBoard"><summary>Herramientas avanzadas · proforma, fórmulas, corrida y JSON</summary><div class="proforma-grid"><section class="proforma-card"><h3>Fuentes y usos</h3><table class="mini-table"><tbody id="sourcesUses"></tbody></table></section><section class="proforma-card"><h3>Semáforo del caso</h3><div id="covenantPanel">Calculando…</div></section></div><div class="two-advanced"><section><div class="subheading">Relaciones del modelo</div><div class="formula-list" id="formulaList"></div><div class="formula-detail" id="formulaDetail">Selecciona una relación para ver sus valores y los campos que la controlan.</div><div class="subheading">Verificación automática</div><div class="micro-readout" id="checks">Calculando verificaciones…</div></section><section><div class="subheading">Flujo mensual de caja</div><p class="note" id="flujoCaption" style="margin-top:-4px"></p><div class="flow-scroll"><table class="flow-table"><thead><tr><th>Mes</th><th>Cobros</th><th>Costos</th><th>Capital propio</th><th>Interés (PIK) + comisión</th><th>Deuda</th><th>Caja</th></tr></thead><tbody id="flowRows"></tbody></table></div></section></div><div class="subheading">Editor JSON del supuesto actual</div><textarea class="json-editor" id="jsonEditor" spellcheck="false"></textarea><div class="sheet-actions" style="justify-content:flex-start"><button class="small-btn secondary" id="refreshJson"><i class="ti ti-refresh"></i>Actualizar JSON</button><button class="small-btn" id="applyJson"><i class="ti ti-check"></i>Aplicar JSON</button><button class="small-btn secondary" id="exportJson"><i class="ti ti-download"></i>Descargar JSON</button></div><p class="note">Cada renglón de la hoja RESIDENCIAL del Sheet es un caso; la corrida completa vive en la hoja FLUJO.</p></details>
@@ -603,8 +620,35 @@
   window.addEventListener('scroll',hideMetricTip,{passive:true});
   function irr(flows){if(!flows.some(x=>x<0)||!flows.some(x=>x>0))return null;let lo=-.999,hi=4;const npv=r=>flows.reduce((s,x,i)=>s+x/Math.pow(1+r,i),0);while(npv(hi)>0&&hi<500)hi*=2;for(let i=0;i<100;i++){const mid=(lo+hi)/2;if(npv(mid)>0)lo=mid;else hi=mid}return Math.pow(1+(lo+hi)/2,12)-1}
 
+  /* ================== VIVIENDA (OPCIONAL) · estado por escenario ================== */
+  const tId=()=>'t'+Math.random().toString(36).slice(2,8);
+  function viviendaDefault(){return {activo:false,tipologias:[]}}
+  function viviendaClone(v){try{return JSON.parse(JSON.stringify(v||viviendaDefault()))}catch(e){return viviendaDefault()}}
+  function viviendaSanearTipo(t){t=t||{};return{
+    id:String(t.id||tId()),nombre:String(t.nombre||'Tipología').slice(0,40),
+    niveles:[1,2,3].includes(Number(t.niveles))?Number(t.niveles):1,
+    m2Constr:Number.isFinite(Number(t.m2Constr))?Math.max(0,Number(t.m2Constr)):0,
+    mezclaPct:Number.isFinite(Number(t.mezclaPct))?Math.max(0,Math.min(100,Number(t.mezclaPct))):0,
+    costoM2:Number.isFinite(Number(t.costoM2))?Math.max(0,Number(t.costoM2)):0,
+    precioModo:t.precioModo==='m2'?'m2':'total',
+    precioVal:Number.isFinite(Number(t.precioVal))?Math.max(0,Number(t.precioVal)):0,
+    mesesConstr:Number.isFinite(Number(t.mesesConstr))?Math.max(0,Number(t.mesesConstr)):0}}
+  function viviendaSanear(v){
+    if(!v||typeof v!=='object')return viviendaDefault();
+    const tips=Array.isArray(v.tipologias)?v.tipologias.slice(0,12).map(viviendaSanearTipo):[];
+    return {activo:!!v.activo,tipologias:tips}}
+  function normalizarMezcla(tipologias){
+    const tot=(tipologias||[]).reduce((s,t)=>s+(Number(t.mezclaPct)||0),0);
+    if(!tot)return [];
+    return tipologias.map(t=>Object.assign({},t,{mezclaPct:(Number(t.mezclaPct)||0)/tot*100}))}
+  function vivPresetInicial(){return [
+    {id:tId(),nombre:'Sencilla 1 nivel',niveles:1,m2Constr:55,mezclaPct:40,costoM2:6500,precioModo:'total',precioVal:850000,mesesConstr:4},
+    {id:tId(),nombre:'Dúplex 2 niveles',niveles:2,m2Constr:80,mezclaPct:40,costoM2:7200,precioModo:'total',precioVal:1050000,mesesConstr:5},
+    {id:tId(),nombre:'3 niveles tipo Bienestar',niveles:3,m2Constr:110,mezclaPct:20,costoM2:7800,precioModo:'total',precioVal:1350000,mesesConstr:7}
+  ]}
+
   /* ================== MOTOR LOTES RESIDENCIALES ================== */
-  function computar(vals){
+  function computar(vals,viv){
     const gv=id=>Number(vals[id])||0;
     const p={sup:Math.max(1,gv('inSuperficie')),frente:Math.max(1,gv('inFrente')),fondo:Math.max(1,gv('inFondo')),
       pctVial:gv('inPctVialidades')/100,pctVerdes:gv('inPctVerdes')/100,pctEquip:gv('inPctEquipamiento')/100,efSubdiv:gv('inEfSubdiv')/100,
@@ -614,52 +658,95 @@
       urbM2:gv('inUrbM2'),tramites:gv('inTramitesPct')/100,imprevistos:gv('inImprevistosPct')/100,blandos:gv('inBlandosPct')/100,
       valorTierraM2:gv('inValorTierraM2'),aporteTierra:gv('inAporteTierra')/100,pctDueno:gv('inPctDueno')/100,
       etapas:Math.max(1,Math.round(gv('inEtapas'))),mesesUrbEtapa:Math.max(1,Math.round(gv('inMesesUrbEtapa'))),inicioVentas:Math.max(1,Math.round(gv('inInicioVentas'))),absLotes:Math.max(.1,gv('inLotesMes')),
-      equity:gv('inEquity'),maxDeuda:gv('inMaxDeuda'),ltc:gv('inLTC')/100,pik:gv('inPIK')/100,feeDeuda:gv('inFeeDeuda')/100,tirTarget:gv('inTirObjetivo')/100,habViv:gv('inHabPorViv')};
+      equity:gv('inEquity'),maxDeuda:gv('inMaxDeuda'),ltc:gv('inLTC')/100,pik:gv('inPIK')/100,feeDeuda:gv('inFeeDeuda')/100,tirTarget:gv('inTirObjetivo')/100,habViv:gv('inHabPorViv'),
+      pctViv:gv('inPctViv')/100,precioInfonavit:gv('inPrecioInfonavit')};
     // 1) cuadro de áreas
     const sumaCes=p.pctVial+p.pctVerdes+p.pctEquip,vendibleBruto=p.sup*Math.max(0,1-sumaCes);
     const comercial=Math.min(p.comM2,vendibleBruto),casaClub=Math.min(p.ccM2,Math.max(0,vendibleBruto-comercial));
     const residBruto=Math.max(0,vendibleBruto-comercial-casaClub),lotesArea=residBruto*p.efSubdiv;
     const nLotes=Math.floor(lotesArea/p.m2Lote),m2Lotes=nLotes*p.m2Lote;
-    // 2) precios e ingresos
-    const nPrev=Math.round(nLotes*p.pctPrev),nFinal=nLotes-nPrev;
+    // 2) vivienda sobre lotes (opcional; todo el bloque queda en 0/neutro si el switch está apagado)
+    const vivActiva=!!(viv&&viv.activo&&p.pctViv>0&&(viv.tipologias||[]).length);
+    const tiposViv=vivActiva?normalizarMezcla(viv.tipologias):[];
+    const nLotesViv=vivActiva?Math.round(nLotes*p.pctViv):0;
+    const nLotesPel=nLotes-nLotesViv;
+    // reparte unidades entre tipologías (mezcla continua unidad por unidad); el residuo va a la de mayor mezcla
+    let unidadesViv=[];
+    if(vivActiva&&nLotesViv>0){
+      unidadesViv=tiposViv.map(t=>({t,u:Math.floor(nLotesViv*t.mezclaPct/100)}));
+      const asignado=unidadesViv.reduce((s,x)=>s+x.u,0),falta=nLotesViv-asignado;
+      if(falta>0&&unidadesViv.length){let iMax=0;for(let i=1;i<unidadesViv.length;i++)if(unidadesViv[i].t.mezclaPct>unidadesViv[iMax].t.mezclaPct)iMax=i;unidadesViv[iMax].u+=falta}
+    }
+    const precioUnidad=t=>t.precioModo==='m2'?t.precioVal*t.m2Constr:t.precioVal;
+    const ingViv=unidadesViv.reduce((s,x)=>s+x.u*precioUnidad(x.t),0);
+    const costoConstrViv=unidadesViv.reduce((s,x)=>s+x.u*x.t.m2Constr*x.t.costoM2,0);
+    const mesesConstrProm=nLotesViv>0?unidadesViv.reduce((s,x)=>s+x.u*x.t.mesesConstr,0)/nLotesViv:0;
+    const precioPromedioViv=nLotesViv>0?ingViv/nLotesViv:0;
+    const m2ConstrPromedioViv=nLotesViv>0?unidadesViv.reduce((s,x)=>s+x.u*x.t.m2Constr,0)/nLotesViv:0;
+    const costoUnidViv=nLotesViv>0?costoConstrViv/nLotesViv:0;
+    const semaforoViv=!vivActiva?null:(p.precioInfonavit>0?(precioPromedioViv<=p.precioInfonavit?'ok':'bad'):'na');
+    // 3) precios e ingresos de LOTES PELONES (idéntico al motor original: nLotesPel===nLotes cuando la vivienda está apagada)
+    const nPrev=Math.round(nLotesPel*p.pctPrev),nFinal=nLotesPel-nPrev;
     const precioPrev=p.m2Lote*p.prePreventa,precioFinal=p.m2Lote*p.preVenta;
     const ingLotesBase=nPrev*precioPrev+nFinal*precioFinal,ingCom=comercial*p.preCom;
     // financiamiento por lote: interés simple anual sobre saldo insoluto promedio
     const retLote=precio=>{const saldo=precio*(1-p.eng);return saldo*p.interes*(p.nMens+1)/24};
     const retFinPrev=retLote(precioPrev),retFinFinal=retLote(precioFinal);
-    const nFin=Math.round(nLotes*p.pctFin);
-    // retorno total ponderado por mezcla preventa/final entre los financiados
+    const nFin=Math.round(nLotesPel*p.pctFin);
+    // retorno total ponderado por mezcla preventa/final entre los financiados (solo lotes pelones)
     const retFinTotal=nFin*(p.pctPrev*retFinPrev+(1-p.pctPrev)*retFinFinal);
     const mensualidad=(precioFinal*(1-p.eng)+retFinFinal)/p.nMens;
-    const ingresos=ingLotesBase+ingCom+retFinTotal;
-    // 3) costos
+    // financiamiento de unidades con vivienda: mismo mecanismo (enganche + mensualidades) sobre el precio completo casa+lote
+    const retFinViv=retLote(precioPromedioViv),nFinViv=Math.round(nLotesViv*p.pctFin);
+    const retFinTotalViv=nFinViv*retFinViv;
+    const ingresos=ingLotesBase+ingViv+ingCom+retFinTotal+retFinTotalViv;
+    // 4) costos
     const urbanizacion=vendibleBruto*p.urbM2,blandosUrb=urbanizacion*(p.tramites+p.imprevistos);
     const blandosIng=ingresos*p.blandos,tierraPago=p.sup*p.valorTierraM2*(1-p.aporteTierra);
-    const costoProyecto=urbanizacion+blandosUrb+p.ccCosto+blandosIng+tierraPago;
+    const costoProyecto=urbanizacion+blandosUrb+p.ccCosto+blandosIng+tierraPago+costoConstrViv;
     const utilidadPre=ingresos-costoProyecto,margenPre=ingresos?utilidadPre/ingresos:0;
     // 4) calendario y flujo
     const mesesUrb=p.etapas*p.mesesUrbEtapa;
     const mesFinVentas=p.inicioVentas+(nLotes?nLotes/p.absLotes:0);
-    const colaCobranza=Math.ceil(mesFinVentas+p.nMens);
+    const colaCobranzaViv=vivActiva&&nLotesViv>0?Math.ceil(mesFinVentas+mesesConstrProm+p.nMens):0;
+    const colaCobranza=Math.ceil(Math.max(mesFinVentas+p.nMens,colaCobranzaViv));
     const mesesNecesarios=Math.ceil(Math.max(mesesUrb,colaCobranza,p.mesCom+p.mesesContado))+1,totalMonths=Math.min(240,Math.max(6,mesesNecesarios)),ventasTruncadas=mesesNecesarios>240;
     const rev=Array(totalMonths).fill(0),cost=Array(totalMonths).fill(0),cartera=Array(totalMonths).fill(0);
     cost[0]+=tierraPago;
     for(let e=0;e<p.etapas;e++){const ini=e*p.mesesUrbEtapa,gasto=(urbanizacion+blandosUrb+(e===0?p.ccCosto:0))/p.etapas;for(let m=0;m<p.mesesUrbEtapa;m++){const mm=ini+m;if(mm<totalMonths)cost[mm]+=gasto/p.mesesUrbEtapa}}
-    // ventas de lotes: preventa primero, luego precio final
-    let vendidos=0,carteraSaldo=0;const cobrosMens=Array(totalMonths).fill(0);
+    // ventas de lotes: preventa primero, luego precio final. Las unidades con vivienda se mezclan proporcionalmente
+    // (continua, unidad por unidad) con las pelonas conforme se venden, y su cobro se retrasa hasta que la casa está construida.
+    let vendidos=0,vendidosPel=0;const cobrosMens=Array(totalMonths).fill(0);
     for(let m=p.inicioVentas-1;m<totalMonths&&vendidos<nLotes;m++){
       const u=Math.min(p.absLotes,nLotes-vendidos);
-      const enPrev=Math.max(0,Math.min(u,nPrev-vendidos));// primeros nPrev a precio preventa
-      const precioU=(enPrev*precioPrev+(u-enPrev)*precioFinal)/u;
+      const uViv=vivActiva?Math.min(u,Math.round((vendidos+u)*p.pctViv)-Math.round(vendidos*p.pctViv)):0;
+      const uPel=u-uViv;
       vendidos+=u;
-      const uFin=u*p.pctFin,uCont=u-uFin;
-      // contado: enganche + saldo corto
-      rev[m]+=uCont*precioU*p.eng;
-      for(let k=1;k<=p.mesesContado;k++){const mm=Math.min(m+k,totalMonths-1);rev[mm]+=uCont*precioU*(1-p.eng)/p.mesesContado}
-      // financiado: enganche + mensualidades con interés
-      rev[m]+=uFin*precioU*p.eng;
-      const saldoU=precioU*(1-p.eng),retU=saldoU*p.interes*(p.nMens+1)/24,mensU=(saldoU+retU)/p.nMens;
-      for(let k=1;k<=p.nMens;k++){const mm=Math.min(m+k,totalMonths-1);cobrosMens[mm]+=uFin*mensU}
+      // --- lotes pelones (idéntico al motor original cuando no hay vivienda) ---
+      if(uPel>0){
+        const enPrev=Math.max(0,Math.min(uPel,nPrev-vendidosPel));// primeros nPrev a precio preventa
+        const precioU=(enPrev*precioPrev+(uPel-enPrev)*precioFinal)/uPel;
+        vendidosPel+=uPel;
+        const uFin=uPel*p.pctFin,uCont=uPel-uFin;
+        // contado: enganche + saldo corto
+        rev[m]+=uCont*precioU*p.eng;
+        for(let k=1;k<=p.mesesContado;k++){const mm=Math.min(m+k,totalMonths-1);rev[mm]+=uCont*precioU*(1-p.eng)/p.mesesContado}
+        // financiado: enganche + mensualidades con interés
+        rev[m]+=uFin*precioU*p.eng;
+        const saldoU=precioU*(1-p.eng),retU=saldoU*p.interes*(p.nMens+1)/24,mensU=(saldoU+retU)/p.nMens;
+        for(let k=1;k<=p.nMens;k++){const mm=Math.min(m+k,totalMonths-1);cobrosMens[mm]+=uFin*mensU}
+      }
+      // --- unidades con vivienda: mismo mecanismo de cobro, pero no antes de que la casa quede construida ---
+      if(uViv>0){
+        const retraso=Math.max(0,mesesUrb-(m+1))+mesesConstrProm,mEntrega=Math.min(m+Math.round(retraso),totalMonths-1);
+        cost[Math.min(m,totalMonths-1)]+=uViv*costoUnidViv;
+        const uFin=uViv*p.pctFin,uCont=uViv-uFin;
+        rev[mEntrega]+=uCont*precioPromedioViv*p.eng;
+        for(let k=1;k<=p.mesesContado;k++){const mm=Math.min(mEntrega+k,totalMonths-1);rev[mm]+=uCont*precioPromedioViv*(1-p.eng)/p.mesesContado}
+        rev[mEntrega]+=uFin*precioPromedioViv*p.eng;
+        const saldoUV=precioPromedioViv*(1-p.eng),retUV=saldoUV*p.interes*(p.nMens+1)/24,mensUV=(saldoUV+retUV)/p.nMens;
+        for(let k=1;k<=p.nMens;k++){const mm=Math.min(mEntrega+k,totalMonths-1);cobrosMens[mm]+=uFin*mensUV}
+      }
     }
     for(let m=0;m<totalMonths;m++)rev[m]+=cobrosMens[m];
     if(p.mesCom-1<totalMonths)rev[Math.min(p.mesCom-1,totalMonths-1)]+=ingCom;
@@ -699,11 +786,12 @@
       ingLotesBase,ingCom,retFinTotal,nFin,mensualidad,ingresos,urbanizacion,blandosUrb,blandosIng,tierraPago,ccCosto:p.ccCosto,costoProyecto,utilidadPre,margenPre,
       mesesUrb,totalMonths,flows,cartera,carteraPico,carteraPicoMes,colaCobranza:Math.min(colaCobranza,totalMonths),ventasTruncadas,
       debtCap,peak,peakMonth,fundingGap,interest,cashInterest,feeDebt,debt,cash,equityUsed,debtDraws,revTotal,costTotal,
-      utilidadFinal,margenFinal,duenoUtilidad,ownerTotal,devDist,devIrr,devMoic,valorTerrenoM2,habitantes,densidad,donacionPct,comercioPorHab,ingresoM2,costoM2Lote,spreadM2}}
+      utilidadFinal,margenFinal,duenoUtilidad,ownerTotal,devDist,devIrr,devMoic,valorTerrenoM2,habitantes,densidad,donacionPct,comercioPorHab,ingresoM2,costoM2Lote,spreadM2,
+      vivActiva,nLotesViv,nLotesPel,tiposViv,unidadesViv,ingViv,costoConstrViv,retFinTotalViv,mesesConstrProm,precioPromedioViv,m2ConstrPromedioViv,semaforoViv}}
 
   /* ================== RENDER ================== */
   function calculate(){
-    state=computar(inputValues());
+    state=computar(inputValues(),vivienda);
     escSyncActivo();
     render();renderEscenarios();renderComparador();guardarDraft();return state}
 
@@ -711,20 +799,21 @@
   // Hasta 8 versiones del mismo caso. La versión ★ (esBase) es la referencia del comparador.
   // Mismo patrón que Patrimonial/Unifamiliar; se guardan en la columna escenarios_json del Sheet.
   let escenarios=[],escActivo='';
+  let vivienda=viviendaDefault(); // config de vivienda del escenario ACTIVO (espejo de `vivienda` por versión, igual que los controles reflejan `inputs`)
   const MAX_ESC=8;
   const escId=()=>'e'+Math.random().toString(36).slice(2,8);
   function escGet(id){return escenarios.find(e=>e.id===id)}
   function escBaseObj(){return escenarios.find(e=>e.esBase)||escenarios[0]}
-  function escInicial(nombre){escenarios=[{id:escId(),nombre:nombre||'Base',esBase:true,inputs:inputValues()}];escActivo=escenarios[0].id}
-  function escSyncActivo(){const e=escGet(escActivo);if(e)e.inputs=inputValues()}
-  function escAplicar(e){Object.entries(e.inputs||{}).forEach(([k,v])=>setControl(k,v))}
+  function escInicial(nombre){vivienda=viviendaDefault();escenarios=[{id:escId(),nombre:nombre||'Base',esBase:true,inputs:inputValues(),vivienda:viviendaClone(vivienda)}];escActivo=escenarios[0].id}
+  function escSyncActivo(){const e=escGet(escActivo);if(e){e.inputs=inputValues();e.vivienda=viviendaClone(vivienda)}}
+  function escAplicar(e){Object.entries(e.inputs||{}).forEach(([k,v])=>setControl(k,v));vivienda=viviendaSanear(e.vivienda)}
   function escCambiar(id){if(id===escActivo)return;const e=escGet(id);if(!e)return;escSyncActivo();escActivo=id;escAplicar(e);calculate();toast('Versión activa: «'+e.nombre+'»',1800)}
   function escNueva(){
     if(escenarios.length>=MAX_ESC){toast('Máximo '+MAX_ESC+' versiones por caso');return}
     const sug=escenarios.length===1?'Escenario B':'Versión '+(escenarios.length+1);
     const nombre=prompt('Nombre de la nueva versión (copia de la activa):',sug);if(nombre===null)return;
     escSyncActivo();
-    const e={id:escId(),nombre:(nombre.trim()||sug).slice(0,40),esBase:false,inputs:inputValues()};
+    const e={id:escId(),nombre:(nombre.trim()||sug).slice(0,40),esBase:false,inputs:inputValues(),vivienda:viviendaClone(vivienda)};
     escenarios.push(e);escActivo=e.id;calculate();
     toast('Versión «'+e.nombre+'» creada: mueve solo los supuestos que cambian')}
   function escRenombrar(id){const e=escGet(id);if(!e)return;const nombre=prompt('Nuevo nombre de la versión:',e.nombre);if(nombre===null)return;e.nombre=(nombre.trim()||e.nombre).slice(0,40);calculate()}
@@ -737,15 +826,15 @@
     if(e.esBase)escenarios[0].esBase=true;
     if(escActivo===id){const b=escBaseObj();escActivo=b.id;escAplicar(b)}
     calculate()}
-  function escParaGuardar(){escSyncActivo();return escenarios.map(e=>({id:e.id,nombre:e.nombre,esBase:!!e.esBase,activo:e.id===escActivo,inputs:e.inputs}))}
+  function escParaGuardar(){escSyncActivo();return escenarios.map(e=>({id:e.id,nombre:e.nombre,esBase:!!e.esBase,activo:e.id===escActivo,inputs:e.inputs,vivienda:viviendaSanear(e.vivienda)}))}
   function escDesdeJson(raw){
     try{const arr=JSON.parse(raw||'null');
       if(!Array.isArray(arr)||!arr.length)return false;
       const limpio=arr.filter(e=>e&&typeof e==='object'&&e.inputs&&typeof e.inputs==='object')
-        .slice(0,MAX_ESC).map(e=>({id:String(e.id||escId()),nombre:String(e.nombre||'Versión').slice(0,40),esBase:!!e.esBase,activo:!!e.activo,inputs:e.inputs}));
+        .slice(0,MAX_ESC).map(e=>({id:String(e.id||escId()),nombre:String(e.nombre||'Versión').slice(0,40),esBase:!!e.esBase,activo:!!e.activo,inputs:e.inputs,vivienda:viviendaSanear(e.vivienda)}));
       if(!limpio.length)return false;
       if(!limpio.some(e=>e.esBase))limpio[0].esBase=true;
-      escenarios=limpio.map(e=>({id:e.id,nombre:e.nombre,esBase:e.esBase,inputs:e.inputs}));
+      escenarios=limpio.map(e=>({id:e.id,nombre:e.nombre,esBase:e.esBase,inputs:e.inputs,vivienda:e.vivienda}));
       const act=limpio.find(e=>e.activo)||limpio.find(e=>e.esBase)||limpio[0];
       escActivo=act.id;escAplicar(escGet(act.id));
       return true}catch(err){return false}}
@@ -776,7 +865,7 @@
     const secc=$('compSection');if(!secc)return;
     if(escenarios.length<2){secc.style.display='none';return}
     secc.style.display='';
-    const res=escenarios.map(e=>({e,r:e.id===escActivo&&state?state:computar(e.inputs)}));
+    const res=escenarios.map(e=>({e,r:e.id===escActivo&&state?state:computar(e.inputs,viviendaSanear(e.vivienda))}));
     const base=res.find(x=>x.e.esBase)||res[0];
     const otras=res.filter(x=>x!==base);
     $('compMarginal').innerHTML=otras.map(x=>{
@@ -852,7 +941,95 @@
     const filasF=[];r.flows.forEach((x,i)=>{if(i%12===0)filasF.push(`<tr class="year-row"><td colspan="7">AÑO ${Math.floor(i/12)+1}</td></tr>`);filasF.push(`<tr><td>${x.m}</td><td>${fmtM(x.rev)}</td><td>${fmtM(x.cost)}</td><td>${fmtM(x.equity)}</td><td>${fmtM(x.pik+x.fee)}</td><td>${fmtM(x.debt)}</td><td>${fmtM(x.caja)}</td></tr>`)});
     filasF.push(`<tr class="tot-row"><td>Σ</td><td>${fmtM(r.revTotal)}</td><td>${fmtM(r.costTotal)}</td><td>${fmtM(r.equityUsed)}</td><td>${fmtM(r.interest+r.feeDebt)}</td><td>${fmtM(r.debt)}</td><td>${fmtM(r.cash)}</td></tr>`);
     $('flowRows').innerHTML=filasF.join('');
-    renderProforma(r);dibujaPlan(r);dibujaCascada(r);dibujaCartera(r);renderFormulas();refreshJson();
+    renderProforma(r);dibujaPlan(r);dibujaCascada(r);dibujaCartera(r);renderFormulas();renderVivienda(r);refreshJson();
+  }
+  /* ================== VIVIENDA (OPCIONAL) · render ================== */
+  function vivMezclaResumen(r){
+    if(!r.tiposViv||!r.tiposViv.length)return '—';
+    return r.tiposViv.map(t=>Math.round(t.mezclaPct)+'% '+esc(t.nombre)).join(' · ')}
+  function renderVivienda(r){
+    const kpi=$('kpiVivienda');if(!kpi)return;
+    if(!r.vivActiva){
+      kpi.innerHTML='<div class="kpi-box full"><span class="kpi-lbl">Modalidad</span><span class="kpi-val">Solo lotes</span></div>';
+    }else{
+      kpi.innerHTML=`<div class="kpi-box"><span class="kpi-lbl">Modalidad</span><span class="kpi-val c-pink">Lotes + vivienda</span></div>
+        <div class="kpi-box"><span class="kpi-lbl">Mezcla de tipologías</span><span class="kpi-val" style="font-size:11px">${vivMezclaResumen(r)}</span></div>
+        <div class="kpi-box"><span class="kpi-lbl">m² construcción prom.</span><span class="kpi-val">${fmtN(r.m2ConstrPromedioViv)} m²</span></div>
+        <div class="kpi-box"><span class="kpi-lbl">Precio promedio/unidad</span><span class="kpi-val c-green">${fmtM(r.precioPromedioViv)}</span></div>`;
+    }
+    const btn=$('btnVivToggle'),body=$('vivBody');if(!btn||!body)return;
+    btn.textContent=vivienda.activo?'Sí':'No';
+    btn.className='small-btn'+(vivienda.activo?'':' secondary');
+    body.style.display=vivienda.activo?'':'none';
+    renderVivTipologias();
+    const sumaMezcla=(vivienda.tipologias||[]).reduce((s,t)=>s+(Number(t.mezclaPct)||0),0);
+    const rm=$('readVivMezcla');
+    if(rm){
+      if(!vivienda.tipologias.length)rm.innerHTML='Agrega al menos una tipología para activar la vivienda en el cálculo.';
+      else if(Math.abs(sumaMezcla-100)>0.5)rm.innerHTML=`<span class="status-warn">La mezcla suma ${sumaMezcla.toFixed(0)}% — debe sumar 100% (se normaliza internamente mientras tanto).</span>`;
+      else rm.innerHTML=`<span class="status-ok">La mezcla suma 100%.</span> ${r.vivActiva?fmtN(r.nLotesViv)+' de '+fmtN(r.nLotes)+' lotes llevan vivienda construida ('+fmtM(r.ingViv)+' de ingreso, '+fmtM(r.costoConstrViv)+' de costo de construcción).':''}`;
+    }
+    const rs=$('readVivSemaforo');
+    if(rs){
+      if(r.semaforoViv==='ok')rs.innerHTML=`<span class="status-ok">Compite con INFONAVIT:</span> precio promedio ${fmtM(r.precioPromedioViv)} vs ${fmtM(r.p.precioInfonavit)} de referencia (${r.p.precioInfonavit?pct((1-r.precioPromedioViv/r.p.precioInfonavit)*100,1)+' por debajo':''}).`;
+      else if(r.semaforoViv==='bad')rs.innerHTML=`<span class="status-bad">Arriba de INFONAVIT:</span> precio promedio ${fmtM(r.precioPromedioViv)} vs ${fmtM(r.p.precioInfonavit)} de referencia (${pct((r.precioPromedioViv/r.p.precioInfonavit-1)*100,1)} arriba) — revisar tipologías o costos.`;
+      else if(r.semaforoViv==='na')rs.innerHTML='Captura el precio INFONAVIT de referencia para comparar.';
+      else rs.innerHTML='Activa la vivienda para ver el semáforo contra INFONAVIT.';
+    }
+  }
+  function renderVivTipologias(){
+    const cont=$('vivTipologias');if(!cont)return;
+    cont.innerHTML=(vivienda.tipologias||[]).map(t=>`
+      <div class="input-group" data-tipo="${t.id}" style="border:1px solid var(--linea);border-radius:12px;padding:10px;margin-bottom:10px">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+          <input type="text" class="viv-nombre" value="${esc(t.nombre)}" placeholder="Nombre" style="flex:1;min-width:120px;background:rgba(35,29,20,.05);border:1px solid var(--lineaf);border-radius:8px;padding:7px 9px;color:var(--text);font:inherit;font-size:12px">
+          <select class="viv-niveles" style="background:rgba(35,29,20,.05);border:1px solid var(--lineaf);border-radius:8px;padding:7px;color:var(--text);font:inherit;font-size:12px">
+            <option value="1"${t.niveles===1?' selected':''}>1 nivel</option>
+            <option value="2"${t.niveles===2?' selected':''}>2 niveles</option>
+            <option value="3"${t.niveles===3?' selected':''}>3 niveles</option>
+          </select>
+          <button type="button" class="small-btn danger viv-del" title="Eliminar tipología"><i class="ti ti-trash"></i></button>
+        </div>
+        <div class="input-header"><label>% de mezcla dentro de lotes con vivienda</label><div class="val-display viv-mezcla-val">${Math.round(t.mezclaPct)}%</div></div>
+        <input type="range" class="viv-mezcla" min="0" max="100" step="1" value="${t.mezclaPct}" data-color="var(--pink)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+          <label style="font-size:10px;color:var(--muted);font-weight:700">m² de construcción<input type="number" class="viv-m2" value="${t.m2Constr}" min="0" style="display:block;width:100%;margin-top:3px;background:rgba(35,29,20,.05);border:1px solid var(--lineaf);border-radius:8px;padding:7px 9px;color:var(--text);font:inherit;font-size:12px"></label>
+          <label style="font-size:10px;color:var(--muted);font-weight:700">Meses de construcción<input type="number" class="viv-meses" value="${t.mesesConstr}" min="0" style="display:block;width:100%;margin-top:3px;background:rgba(35,29,20,.05);border:1px solid var(--lineaf);border-radius:8px;padding:7px 9px;color:var(--text);font:inherit;font-size:12px"></label>
+          <label style="font-size:10px;color:var(--muted);font-weight:700">Costo de construcción ($/m²)<input type="number" class="viv-costoM2" value="${t.costoM2}" min="0" style="display:block;width:100%;margin-top:3px;background:rgba(35,29,20,.05);border:1px solid var(--lineaf);border-radius:8px;padding:7px 9px;color:var(--text);font:inherit;font-size:12px"></label>
+          <label style="font-size:10px;color:var(--muted);font-weight:700">Precio de venta final casa+lote
+            <div style="display:flex;gap:5px;margin-top:3px">
+              <select class="viv-preciomodo" style="background:rgba(35,29,20,.05);border:1px solid var(--lineaf);border-radius:8px;padding:7px;color:var(--text);font:inherit;font-size:11px">
+                <option value="total"${t.precioModo==='total'?' selected':''}>$ total/unidad</option>
+                <option value="m2"${t.precioModo==='m2'?' selected':''}>$/m²</option>
+              </select>
+              <input type="number" class="viv-preciovalor" value="${t.precioVal}" min="0" style="flex:1;min-width:0;background:rgba(35,29,20,.05);border:1px solid var(--lineaf);border-radius:8px;padding:7px 9px;color:var(--text);font:inherit;font-size:12px">
+            </div>
+          </label>
+        </div>
+      </div>`).join('')||'<p class="note">Sin tipologías todavía. Agrega la primera.</p>';
+  }
+  function vivTipoDe(el){const row=el.closest('[data-tipo]');if(!row)return null;return (vivienda.tipologias||[]).find(t=>t.id===row.dataset.tipo)||null}
+  function installVivEvents(){
+    $('btnVivToggle').addEventListener('click',e=>{e.stopPropagation();vivienda.activo=!vivienda.activo;if(vivienda.activo&&!vivienda.tipologias.length)vivienda.tipologias=vivPresetInicial();calculate()});
+    $('btnVivAddTipo').addEventListener('click',e=>{e.stopPropagation();vivienda.tipologias.push(viviendaSanearTipo({nombre:'Nueva tipología',niveles:1,m2Constr:60,mezclaPct:0,costoM2:6500,precioModo:'total',precioVal:900000,mesesConstr:4}));calculate()});
+    const cont=$('vivTipologias');
+    cont.addEventListener('click',e=>{if(e.target.closest('.viv-del')){e.stopPropagation();const row=e.target.closest('[data-tipo]');if(row){vivienda.tipologias=vivienda.tipologias.filter(t=>t.id!==row.dataset.tipo);calculate()}}});
+    cont.addEventListener('input',e=>{
+      const t=vivTipoDe(e.target);if(!t)return;
+      if(e.target.classList.contains('viv-nombre'))t.nombre=e.target.value.slice(0,40);
+      else if(e.target.classList.contains('viv-mezcla')){t.mezclaPct=Math.max(0,Math.min(100,Number(e.target.value)||0));const disp=e.target.closest('[data-tipo]').querySelector('.viv-mezcla-val');if(disp)disp.textContent=Math.round(t.mezclaPct)+'%';}
+      else if(e.target.classList.contains('viv-m2'))t.m2Constr=Math.max(0,Number(e.target.value)||0);
+      else if(e.target.classList.contains('viv-meses'))t.mesesConstr=Math.max(0,Number(e.target.value)||0);
+      else if(e.target.classList.contains('viv-costoM2'))t.costoM2=Math.max(0,Number(e.target.value)||0);
+      else if(e.target.classList.contains('viv-preciovalor'))t.precioVal=Math.max(0,Number(e.target.value)||0);
+      else return;
+      calculate()});
+    cont.addEventListener('change',e=>{
+      const t=vivTipoDe(e.target);if(!t)return;
+      if(e.target.classList.contains('viv-niveles'))t.niveles=Number(e.target.value)||1;
+      else if(e.target.classList.contains('viv-preciomodo'))t.precioModo=e.target.value==='m2'?'m2':'total';
+      else return;
+      calculate()});
   }
   function renderProforma(r){
     const row=(l,v,k='')=>`<tr class="${k}"><td>${l}</td><td>${v}</td></tr>`,section=l=>`<tr class="section-row"><td colspan="2">${l}</td></tr>`;
@@ -955,9 +1132,10 @@
     superficie_ha:num(r.p.sup/10000,2),terreno_m2:num(r.p.sup),vendible_m2:num(r.vendibleBruto),unidades:r.nLotes,lotes_n:r.nLotes,m2_lote:num(r.p.m2Lote),precio_lote:num(r.precioFinal),
     mensualidad:num(r.mensualidad),cartera_pico:num(r.carteraPico),retorno_financiamiento:num(r.retFinTotal),cola_cobranza_mes:r.colaCobranza,
     urbanizacion_total:num(r.urbanizacion),utilidad_pre_fin:num(r.utilidadPre),valor_terreno_m2:num(r.valorTerrenoM2),habitantes_polo:r.habitantes,
-    ingreso_lotes:num(r.ingLotesBase),ingreso_comercial:num(r.ingCom),densidad_viv_ha:num(r.densidad,1),donacion_pct:num(r.donacionPct,1),comercio_m2_hab:r.comercioPorHab===null?'':num(r.comercioPorHab,2),retorno_pct:num(r.costoProyecto?r.utilidadFinal/r.costoProyecto*100:0,1)}}
-  function refreshJson(){if(!$('jsonEditor')||!state)return;$('jsonEditor').value=JSON.stringify({schema:'potenciales-yod/residencial/v1',caso:{caso_id:caso.caso_id,nombre_caso:caso.nombre_caso,palabra:caso.palabra},inputs:inputValues(),resumen:resumenActual()},null,2)}
-  function applyJson(){try{const data=JSON.parse($('jsonEditor').value);if(data.schema&&data.schema!=='potenciales-yod/residencial/v1')throw Error();const vals=data.inputs||data;let n=0;Object.entries(vals).forEach(([id,v])=>{if($(id)&&Number.isFinite(Number(v))){setControl(id,v);n++}});if(!n)throw Error();calculate();$('checks').innerHTML='<div class="status-ok">JSON aplicado: '+n+' variables.</div>'}catch{$('checks').innerHTML='<div class="status-bad">JSON inválido.</div>'}}
+    ingreso_lotes:num(r.ingLotesBase),ingreso_comercial:num(r.ingCom),densidad_viv_ha:num(r.densidad,1),donacion_pct:num(r.donacionPct,1),comercio_m2_hab:r.comercioPorHab===null?'':num(r.comercioPorHab,2),retorno_pct:num(r.costoProyecto?r.utilidadFinal/r.costoProyecto*100:0,1),
+    viv_activa:!!r.vivActiva,viv_unidades:r.nLotesViv||0,viv_ingreso:num(r.ingViv),viv_costo_construccion:num(r.costoConstrViv),viv_precio_promedio:num(r.precioPromedioViv)}}
+  function refreshJson(){if(!$('jsonEditor')||!state)return;$('jsonEditor').value=JSON.stringify({schema:'potenciales-yod/residencial/v1',caso:{caso_id:caso.caso_id,nombre_caso:caso.nombre_caso,palabra:caso.palabra},inputs:inputValues(),vivienda:viviendaSanear(vivienda),resumen:resumenActual()},null,2)}
+  function applyJson(){try{const data=JSON.parse($('jsonEditor').value);if(data.schema&&data.schema!=='potenciales-yod/residencial/v1')throw Error();const vals=data.inputs||data;let n=0;Object.entries(vals).forEach(([id,v])=>{if($(id)&&Number.isFinite(Number(v))){setControl(id,v);n++}});if(!n)throw Error();if(data.vivienda&&typeof data.vivienda==='object')vivienda=viviendaSanear(data.vivienda);calculate();$('checks').innerHTML='<div class="status-ok">JSON aplicado: '+n+' variables.</div>'}catch{$('checks').innerHTML='<div class="status-bad">JSON inválido.</div>'}}
   function exportJson(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([$('jsonEditor').value],{type:'application/json'}));a.download=(caso.palabra||'residencial')+'-'+Date.now()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
   /* ================== CAPA DE NUBE ================== */
   let toastTimer=null;
@@ -1063,7 +1241,7 @@
   function cerrarOverlays(){document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('on'))}
   /* ================== ARRANQUE ================== */
   document.querySelectorAll('.card[data-card]').forEach(c=>c.onclick=e=>{if(e.target.closest('.drawer'))return;toggleDrawer(c)});
-  controls.forEach(c=>{updateColor(c);c.addEventListener('input',calculate)});readPills();installFactorHelp();installMetricHelp();
+  controls.forEach(c=>{updateColor(c);c.addEventListener('input',calculate)});readPills();installFactorHelp();installMetricHelp();installVivEvents();
   $('btnGuardar').onclick=()=>{if(modoLocal){toast('Estás sin nube: entra con la clave para guardar');return}$('gNombre').value=caso.nombre_caso||'';$('gPalabra').value=caso.palabra||'';$('gCorreo').value=caso.correo||'';$('gNotas').value=caso.notas_caso||'';abrirOverlay('ovGuardar')};
   $('gGuardarSolo').onclick=()=>guardarCaso(false);$('gGuardarEnviar').onclick=()=>guardarCaso(true);$('gCancelar').onclick=cerrarOverlays;
   $('btnMisCasos').onclick=()=>{if(modoLocal){toast('Estás sin nube: entra con la clave');return}abrirOverlay('ovCasos');cargarLista()};
