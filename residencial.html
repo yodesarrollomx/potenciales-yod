@@ -1332,6 +1332,10 @@
     s+=`<text x="${xCasa0+casaWpx/2}" y="${yCasa+casaHpx/2-3}" font-size="9.5" font-weight="800" fill="#17140F" text-anchor="middle">${esc(dom.nombre)}</text>`;
     s+=`<text x="${xCasa0+casaWpx/2}" y="${yCasa+casaHpx/2+10}" font-size="8.5" fill="#17140F" text-anchor="middle">${fmtN(huellaReal)} m² huella${dom.niveles>1?' · '+dom.niveles+' niveles':''}</text>`;
     if(casaHpx>26)s+=`<text x="${xCasa0+casaWpx/2}" y="${yCasa+casaHpx/2+22}" font-size="7.5" fill="#5c1f1a" text-anchor="middle">${frenteCasa.toFixed(1)} × ${fondoCasa.toFixed(1)} m</text>`;
+    // Mismo pie de casa apilado: cada planta lleva la mitad de los m² de construcción (huella =
+    // m²Constr ÷ niveles ya reparte parejo) — se deja explícito para que no haya duda de que
+    // planta baja y planta alta comparten exactamente el mismo footprint en el plano.
+    if(dom.niveles>1&&casaHpx>40)s+=`<text x="${xCasa0+casaWpx/2}" y="${yCasa+casaHpx/2+34}" font-size="7" fill="#5c1f1a" text-anchor="middle">planta baja ${fmtN(huellaReal)} m² + planta alta ${fmtN(huellaReal)} m² (mismo pie) = ${fmtN(huellaReal*dom.niveles)} m² construidos</text>`;
     if(recortada)s+=`<text x="${xCasa0+casaWpx/2}" y="${yCasa-4}" font-size="7" font-weight="700" fill="#E0605A" text-anchor="middle">recortada — pedía ${fmtN(huella)} m²</text>`;
     s+=`<text x="4" y="${H-16}" font-size="7.5" fill="#8A8272">lote ${frenteLote.toFixed(1)}×${fondoUtil.toFixed(1)} m (${fmtN(r.p.m2Lote)} m²) · 1 m de margen (un lado, constante en la hilera) + restricción de ${restriccionFondo} m + patio mínimo ${patioMin} m</text>`;
     s+=recortada
