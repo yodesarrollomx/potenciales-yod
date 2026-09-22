@@ -259,9 +259,10 @@
   .suelo-chunk.ces{color:#c9c5ba}
   .suelo-chunk.libre{color:#8A8272;background:repeating-linear-gradient(45deg,#ffffff,#ffffff 5px,#26262c 5px,#26262c 10px)!important}
   .grafs{display:grid;gap:14px;margin-bottom:16px}
-  .graf-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;align-items:start}
-  .graf-row3 .viz-card{height:100%}
-  @media(max-width:860px){.graf-row3{grid-template-columns:1fr}}
+  .graf-row4{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  .graf-row4 .viz-card{height:100%}
+  @media(max-width:860px){.graf-row4{grid-template-columns:1fr}}
+  .viz-empty{font-size:11px;color:#b6b3aa;line-height:1.5;padding:14px 4px}
   /* ===== Versiones del caso + comparador (patrón del board Patrimonial) ===== */
   .esc-bar{display:flex;align-items:center;gap:10px;margin:-4px 0 12px;padding:9px 12px;background:var(--card);border:1px solid var(--linea);border-radius:14px;flex-wrap:wrap}
   .esc-lbl{font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
@@ -335,7 +336,7 @@
 <div class="sticky-header"><div class="header-inner">
   <div class="brandrow"><img src="img/yod-logo.png" alt="YoDesarrollo"><span class="kick">Potenciales · PPP Lotes Residenciales</span></div>
   <div class="suelo-bar" id="sueloBar" title="El suelo repartiéndose en vivo"></div>
-  <div class="urban-hud" style="margin:4px 0 5px;padding:6px 0"><div class="urban-item"><span>Lotes</span><b id="hudLotes" class="c-gold">0</b></div><div class="urban-item"><span>m²/lote</span><b id="hudM2Lote">0</b></div><div class="urban-item"><span>Densidad</span><b id="hudVendible" class="c-green">0</b></div><div class="urban-item"><span>Comercial</span><b id="hudCom" style="color:var(--teal)">0 m²</b></div><div class="urban-item"><span>Precio/lote</span><b id="hudPrecioLote" class="c-green">$0</b></div><div class="urban-item"><span>Mensualidad</span><b id="hudMensualidad" class="c-blue">$0</b></div><div class="urban-item"><span>Cartera pico</span><b id="hudCartera" class="c-purple">$0</b></div><div class="urban-item"><span>Retorno financiero</span><b id="hudRetFin" class="c-gold">$0</b></div><div class="urban-item"><span>Habitantes</span><b id="hudHab">—</b></div><div class="urban-item"><span>Cola de cobranza</span><b id="hudCola" class="c-orange">0 m</b></div></div>
+  <div class="urban-hud" style="margin:4px 0 5px;padding:6px 0"><div class="urban-item"><span>Lotes</span><b id="hudLotes" class="c-gold">0</b></div><div class="urban-item"><span>m²/lote</span><b id="hudM2Lote">0</b></div><div class="urban-item"><span>Densidad</span><b id="hudVendible" class="c-green">0</b></div><div class="urban-item"><span>Comercial</span><b id="hudCom" style="color:var(--teal)">0 m²</b></div><div class="urban-item"><span>Precio/lote</span><b id="hudPrecioLote" class="c-green">$0</b></div><div class="urban-item"><span>Mensualidad</span><b id="hudMensualidad" class="c-blue">$0</b></div><div class="urban-item"><span>Cartera pico</span><b id="hudCartera" class="c-purple">$0</b></div><div class="urban-item"><span>Dueño $/m²</span><b id="hudDuenoM2" class="c-blue">$0</b></div><div class="urban-item"><span>% con vivienda</span><b id="hudVivPct">—</b></div><div class="urban-item"><span>Cola de cobranza</span><b id="hudCola" class="c-orange">0 m</b></div></div>
   <div class="hud-row" style="margin-top:5px;border:0;font-size:10px;color:#8A8272"><div class="hud-item">Ventas <span id="hudIngresos" class="hud-val c-green">$0 M</span></div><div class="hud-item">Utilidad <span id="hudUtilidad" class="hud-val c-gold">$0 M</span> · <span id="hudMargen">0%</span></div><div class="hud-item">TIR <span id="hudTir" class="hud-val c-blue">—</span></div><div class="hud-item">Pico de deuda <span id="hudDeuda" class="hud-val c-purple">$0 M</span></div><div class="hud-item">Dueño <span id="hudDueno" class="hud-val c-blue">$0 M</span></div></div>
 </div></div>
 
@@ -380,10 +381,11 @@
   </section>
 
   <section class="grafs">
-    <div class="graf-row3">
+    <div class="graf-row4">
       <div class="viz-card"><span class="k">Plano proporcional · a escala real</span><div id="vizPlan" class="viz-svg"></div></div>
       <div class="viz-card"><span class="k">El río del dinero · a reparto</span><div id="vizCascada" class="viz-svg"></div></div>
       <div class="viz-card"><span class="k">La cartera · enganches y mensualidades</span><div id="vizCartera" class="viz-svg"></div></div>
+      <div class="viz-card"><span class="k">Modelo de casa · la tipología dominante, a escala del lote</span><div id="vizCasa" class="viz-svg"></div></div>
     </div>
   </section>
 
@@ -404,6 +406,8 @@
         <div class="input-group"><div class="input-header"><label>Superficie del terreno (m²)</label><div class="val-display" data-input="inSuperficie">17,928</div></div><input type="range" id="inSuperficie" min="500" max="500000" step="1" value="17928" data-color="var(--purple)"></div>
         <div class="input-group"><div class="input-header"><label>Frente (m) · para el plano</label><div class="val-display" data-input="inFrente">75</div></div><input type="range" id="inFrente" min="20" max="1000" step="5" value="75" data-color="var(--purple)"></div>
         <div class="input-group"><div class="input-header"><label>Fondo (m) · para el plano</label><div class="val-display" data-input="inFondo">239</div></div><input type="range" id="inFondo" min="20" max="1500" step="1" value="239" data-color="var(--purple)"></div>
+        <div class="input-group"><div class="input-header"><label>Ancho de vialidad interna (m) · para el modelo de casa</label><div class="val-display" data-input="inAnchoVialidadInterna">10</div></div><input type="range" id="inAnchoVialidadInterna" min="6" max="20" step="1" value="10" data-color="var(--purple)">
+          <div class="input-help">Sólo alimenta la gráfica "Modelo de casa" (asume una sola calle corriendo por todo el frente, una sola fila de lotes) — no toca ningún cálculo de ingresos, costos ni utilidad.</div></div>
         <div class="subheading">Cuadro de áreas · % del terreno que se cede</div>
         <div class="input-group"><div class="input-header"><label>Vialidades y banquetas (%)</label><div class="val-display" data-input="inPctVialidades">22%</div></div><input type="range" id="inPctVialidades" min="0" max="40" step="1" value="22" data-color="var(--orange)" data-format="pct"></div>
         <div class="input-group"><div class="input-header"><label>Áreas verdes y donación (%)</label><div class="val-display" data-input="inPctVerdes">10%</div></div><input type="range" id="inPctVerdes" min="0" max="25" step="1" value="10" data-color="var(--green)" data-format="pct"></div>
@@ -502,35 +506,6 @@
         </div>
       </div></article>
 
-    <article class="card wide" data-card="dEquilibrio"><div class="card-header"><div class="title-wrap"><div class="icon-box" style="background:#8fbf8b1f;color:var(--green)"><i class="ti ti-target-arrow"></i></div><div class="card-title">Punto de Equilibrio &amp; Producto Óptimo</div></div><div class="edit-pill">AJUSTAR</div></div>
-      <div class="kpi-grid tres">
-        <div class="kpi-box"><span class="kpi-lbl">Precio mínimo (equilibrio)</span><span class="kpi-val c-red" id="lblEqPrecio">—</span></div>
-        <div class="kpi-box"><span class="kpi-lbl">Colchón sobre el equilibrio</span><span class="kpi-val" id="lblEqColchon">—</span></div>
-        <div class="kpi-box"><span class="kpi-lbl">Mejor producto encontrado</span><span class="kpi-val c-green" id="lblEqOptimo">Sin buscar todavía</span></div>
-      </div>
-      <div class="drawer" id="dEquilibrio">
-        <div class="partner-guide"><b>Dos preguntas distintas:</b> el <b>equilibrio</b> es el precio mínimo para no perder, con todo lo demás igual que en el caso actual. El <b>óptimo</b> es otra cosa — prueba miles de combinaciones de tamaño de lote, precio y mezcla de vivienda para encontrar la que más le paga al dueño por su terreno, sin dejar de cumplir la TIR objetivo del desarrollador ni quedarse sin caja.</div>
-
-        <div class="subheading">1. Precio mínimo para no perder (equilibrio)</div>
-        <div class="micro-readout" id="readEquilibrio">Calculando…</div>
-        <button type="button" class="small-btn secondary" id="btnEqAplicar" style="margin-top:8px"><i class="ti ti-arrow-down"></i>Aplicar estos precios al caso</button>
-
-        <div class="subheading">2. Buscar el producto óptimo</div>
-        <div class="input-group"><div class="input-header"><label>m² por lote — rango de búsqueda</label><div class="val-display" id="eqM2Lbl">— a —</div></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <input type="number" class="viv-in" id="eqM2Min" min="50" step="5">
-            <input type="number" class="viv-in" id="eqM2Max" min="50" step="5">
-          </div></div>
-        <div class="input-group"><div class="input-header"><label>Cuánto pueden moverse los precios ($/m² de lote, tipologías)</label><div class="val-display" id="eqPctVal">±20%</div></div>
-          <input type="range" id="eqPrecioPct" min="5" max="60" step="5" value="20" data-color="var(--green)"></div>
-        <div class="input-group"><div class="input-header"><label>Incluir vivienda en la búsqueda (mezcla y % libres)</label>
-          <button type="button" class="small-btn secondary" id="btnEqViv">No</button></div>
-          <div class="input-help">Si la tarjeta Vivienda no tiene tipologías capturadas, esta opción no hace nada aunque esté en "Sí".</div></div>
-        <button type="button" class="small-btn" id="btnEqBuscar"><i class="ti ti-search"></i>Buscar producto óptimo</button>
-        <div class="micro-readout" id="readEqOptimo" style="margin-top:10px">Todavía no se ha buscado. Ajusta los rangos y presiona «Buscar».</div>
-        <div id="eqOptimoTabla"></div>
-        <button type="button" class="small-btn secondary" id="btnEqAplicarOptimo" style="display:none;margin-top:8px"><i class="ti ti-arrow-down"></i>Aplicar este producto al caso</button>
-      </div></article>
   </section>
 
   <details class="advanced-board" id="advBoard"><summary>Herramientas avanzadas · proforma, fórmulas, corrida y JSON</summary><div class="proforma-grid"><section class="proforma-card"><h3>Fuentes y usos</h3><table class="mini-table"><tbody id="sourcesUses"></tbody></table></section><section class="proforma-card"><h3>Semáforo del caso</h3><div id="covenantPanel">Calculando…</div></section></div><div class="two-advanced"><section><div class="subheading">Relaciones del modelo</div><div class="formula-list" id="formulaList"></div><div class="formula-detail" id="formulaDetail">Selecciona una relación para ver sus valores y los campos que la controlan.</div><div class="subheading">Verificación automática</div><div class="micro-readout" id="checks">Calculando verificaciones…</div></section><section><div class="subheading">Flujo mensual de caja</div><p class="note" id="flujoCaption" style="margin-top:-4px"></p><div class="flow-scroll"><table class="flow-table"><thead><tr><th>Mes</th><th>Cobros</th><th>Costos</th><th>Capital propio</th><th>Interés (PIK) + comisión</th><th>Deuda</th><th>Caja</th></tr></thead><tbody id="flowRows"></tbody></table></div></section></div><div class="subheading">Editor JSON del supuesto actual</div><textarea class="json-editor" id="jsonEditor" spellcheck="false"></textarea><div class="sheet-actions" style="justify-content:flex-start"><button class="small-btn secondary" id="refreshJson"><i class="ti ti-refresh"></i>Actualizar JSON</button><button class="small-btn" id="applyJson"><i class="ti ti-check"></i>Aplicar JSON</button><button class="small-btn secondary" id="exportJson"><i class="ti ti-download"></i>Descargar JSON</button></div><p class="note">Cada renglón de la hoja RESIDENCIAL del Sheet es un caso; la corrida completa vive en la hoja FLUJO.</p></details>
@@ -651,11 +626,12 @@
     absorcion:{t:'Absorción (lotes por mes)',k:'Calendario',q:'El ritmo real de venta de la plaza: cuántos lotes se colocan al mes.',r:'Define cuántos meses dura la venta y, con las mensualidades, la cola de cobranza y la cartera pico.'},
     meses:{t:'Meses totales de la corrida',k:'Calendario',q:'Lo que dura todo el caso: obra, ventas y cobranza completa.',r:'Casi siempre lo fija la cola de cobranza, no la obra: cobrar mensualidades tarda más que urbanizar.'},
     duenoM2:{t:'Dueño por m² vs mercado',k:'Reparto',q:'Lo que el dueño termina recibiendo por cada m² de su terreno, contra lo que le pagarían hoy vendiendo en bruto.',r:'El argumento del Plan de Potencial: cuántas veces multiplica el co-desarrollo al precio en bruto.'},
+    vivPct:{t:'% de lotes con vivienda construida',k:'Vivienda',q:'La parte del fraccionamiento que se vende casa+lote en vez de lote pelón, tal como está en la tarjeta Vivienda.',r:'Sube el ingreso por unidad y el costo de construcción; con el switch apagado siempre muestra "—".'},
     condPIK:{t:'Condición del crédito · interés capitalizado (PIK)',k:'Crédito',q:'La tasa anual del crédito puente que capitaliza interés (PIK: se suma al saldo en vez de pagarse cada mes), su pico y su límite.',r:'El interés capitalizado más comisiones se resta de la utilidad; el límite viene del tope absoluto y del crédito sobre costo (LTC).'},
     vizPlan:{t:'Plano proporcional · a escala real',k:'Gráfica',q:'El terreno dibujado a proporción: cómo se reparte el suelo entre lotes, calles, comercial, verdes y equipamiento.',r:'Es el cuadro de áreas hecho dibujo; cambia con el frente, el fondo y las cesiones.'},
     vizCascada:{t:'El río del dinero · a reparto',k:'Gráfica',q:'De dónde entra el dinero (lotes, comercial, financiamiento) y en qué se va (urbanización, blandos, tierra, interés) hasta llegar a la utilidad.',r:'La franja azul dentro de la utilidad es la parte del dueño; el interés capitalizado (PIK) es la última resta.'},
     vizCartera:{t:'La cartera · enganches y mensualidades',k:'Gráfica',q:'La línea azul es el saldo por cobrar (la cartera) mes a mes; las barras verdes son los cobros de cada mes.',r:'El punto marca la cartera pico; la línea punteada, la última mensualidad (la cola de cobranza).'}};
-  const metricHelp={hudLotes:'lotes',hudM2Lote:'m2Lote',hudVendible:'densidad',hudCom:'comercial',hudPrecioLote:'precioLote',hudMensualidad:'mensualidad',hudCartera:'carteraPico',hudRetFin:'retFin',hudHab:'habitantes',hudCola:'cola',
+  const metricHelp={hudLotes:'lotes',hudM2Lote:'m2Lote',hudVendible:'densidad',hudCom:'comercial',hudPrecioLote:'precioLote',hudMensualidad:'mensualidad',hudCartera:'carteraPico',hudDuenoM2:'duenoM2',hudVivPct:'vivPct',hudCola:'cola',
     hudIngresos:'ingresos',hudUtilidad:'utilidad',hudTir:'tir',hudDeuda:'picoDeuda',hudDueno:'dueno',
     heroUtil:'utilidad',heroFin:'retFin',heroTir:'tir',
     lblSup:'sup',lblCesiones:'cesiones',lblVendible:'vendible',lblResid:'resid',
@@ -986,8 +962,10 @@
     const sb=$('sueloBar');if(sb){const chunks=[['cesiones',r.sumaCes,'#3a3a40','ces'],['lotes',r.lotesArea/r.p.sup,'#B98B3C',''],['comercial',r.comercial/r.p.sup,'#7fd4e8',''],['casa club',r.casaClub/r.p.sup,'#a9a4f5',''],['merma traza',(r.residBruto-r.lotesArea)/r.p.sup,'#ffffff','libre']].filter(c=>c[1]>0.004);
       sb.innerHTML=chunks.map(c=>`<span class="suelo-chunk ${c[3]}" style="width:${c[1]*100}%;background:${c[2]}" title="${c[0]}: ${pct(c[1]*100,0)} · ${fmtN(r.p.sup*c[1])} m²">${c[1]>.09?c[0]+' '+pct(c[1]*100,0):''}</span>`).join('')}
     txt('hudLotes',fmtN(r.nLotes));txt('hudM2Lote',fmtN(r.p.m2Lote));const hd=$('hudVendible');if(hd){hd.textContent=r.densidad.toFixed(0)+' viv/ha';hd.style.color=r.densidad>=50?'var(--green)':r.densidad>=25?'var(--orange)':'var(--muted)'}txt('hudCom',fmtN(r.comercial)+' m²');
-    txt('hudPrecioLote',fmtM(r.precioFinal));txt('hudMensualidad',fmtMoney(r.mensualidad));txt('hudCartera',fmtM(r.carteraPico));txt('hudRetFin',fmtM(r.retFinTotal));
-    txt('hudHab',r.habitantes?fmtN(r.habitantes):'—');txt('hudCola',r.colaCobranza+' m');
+    txt('hudPrecioLote',fmtM(r.precioFinal));txt('hudMensualidad',fmtMoney(r.mensualidad));txt('hudCartera',fmtM(r.carteraPico));
+    const hdm=$('hudDuenoM2');if(hdm){hdm.textContent=fmtMoney(r.valorTerrenoM2);hdm.style.color=r.p.valorTierraM2&&r.valorTerrenoM2>=r.p.valorTierraM2?'var(--green)':'var(--blue)'}
+    txt('hudVivPct',r.vivActiva?pct(r.p.pctViv*100,0):'—');
+    txt('hudCola',r.colaCobranza+' m');
     txt('hudIngresos',fmtM(r.ingresos));txt('hudUtilidad',fmtM(r.utilidadFinal));txt('hudMargen',pct(r.margenFinal*100,1));txt('hudTir',r.devIrr===null?'—':pct(r.devIrr*100,1));txt('hudDeuda',fmtM(r.peak));txt('hudDueno',fmtM(r.ownerTotal));
     txt('heroUtil',fmtM(r.utilidadFinal));txt('heroUtilSub','margen '+pct(r.margenFinal*100,1)+' · antes de financiar '+fmtM(r.utilidadPre)+' ('+pct(r.margenPre*100,1)+')');
     txt('heroFin',fmtM(r.retFinTotal));txt('heroFinSub',fmtN(r.nFin)+' lotes financiados · mensualidad '+fmtMoney(r.mensualidad)+' · cartera pico '+fmtM(r.carteraPico));
@@ -1028,7 +1006,7 @@
     const filasF=[];r.flows.forEach((x,i)=>{if(i%12===0)filasF.push(`<tr class="year-row"><td colspan="7">AÑO ${Math.floor(i/12)+1}</td></tr>`);filasF.push(`<tr><td>${x.m}</td><td>${fmtM(x.rev)}</td><td>${fmtM(x.cost)}</td><td>${fmtM(x.equity)}</td><td>${fmtM(x.pik+x.fee)}</td><td>${fmtM(x.debt)}</td><td>${fmtM(x.caja)}</td></tr>`)});
     filasF.push(`<tr class="tot-row"><td>Σ</td><td>${fmtM(r.revTotal)}</td><td>${fmtM(r.costTotal)}</td><td>${fmtM(r.equityUsed)}</td><td>${fmtM(r.interest+r.feeDebt)}</td><td>${fmtM(r.debt)}</td><td>${fmtM(r.cash)}</td></tr>`);
     $('flowRows').innerHTML=filasF.join('');
-    renderProforma(r);dibujaPlan(r);dibujaCascada(r);dibujaCartera(r);renderFormulas();renderVivienda(r);renderEquilibrio();refreshJson();
+    renderProforma(r);dibujaPlan(r);dibujaCascada(r);dibujaCartera(r);dibujaModeloCasa(r);renderFormulas();renderVivienda(r);refreshJson();
   }
   /* ================== TRATAMIENTO DEL TERRENO · cascada de pago ================== */
   function renderWaterfallTierra(r){
@@ -1185,149 +1163,6 @@
       calculate()});
   }
 
-  /* ================== PUNTO DE EQUILIBRIO & PRODUCTO ÓPTIMO ================== */
-  // El motor (computar) ya es una función pura de (vals, viv) → resultado, ~0.3 ms por corrida.
-  // Ambas herramientas de esta tarjeta sólo lo llaman muchas veces con supuestos distintos — nunca
-  // tocan el caso activo hasta que el usuario aprieta "Aplicar".
-  let eqViv=false; // incluir vivienda en la búsqueda del óptimo (checkbox propio, no confundir con vivienda.activo del caso)
-
-  function eqRand(a,b){return a+Math.random()*(b-a)}
-
-  // 1) EQUILIBRIO: precio mínimo (escalando $/m² de lote, comercial y precio de tipologías por el
-  // mismo factor k) para que utilidadFinal llegue a 0, con todo lo demás igual al caso actual.
-  // utilidadFinal(k) es creciente en k (subir precio nunca baja la utilidad), así que basta bisección.
-  function equilibrioPrecio(){
-    const base=inputValues();
-    const vivBase=vivienda.activo&&vivienda.tipologias.length?vivienda:null;
-    const conK=k=>{
-      const v={...base,inPrecioM2Preventa:base.inPrecioM2Preventa*k,inPrecioM2Venta:base.inPrecioM2Venta*k,inPrecioM2Comercial:base.inPrecioM2Comercial*k};
-      const viv=vivBase?{activo:true,tipologias:vivBase.tipologias.map(t=>({...t,precioVal:t.precioVal*k}))}:null;
-      return computar(v,viv);
-    };
-    let hi=1,tries=0;
-    while(conK(hi).utilidadFinal<0&&tries<25){hi*=1.4;tries++}
-    if(conK(hi).utilidadFinal<0)return{imposible:true};
-    if(conK(0.02).utilidadFinal>=0)return{k:0.02,r:conK(0.02),actual:conK(1)};
-    let lo=0.02;
-    for(let i=0;i<45;i++){const mid=(lo+hi)/2;if(conK(mid).utilidadFinal<0)lo=mid;else hi=mid}
-    return{k:hi,r:conK(hi),actual:conK(1)};
-  }
-
-  function renderEquilibrio(){
-    const eq=equilibrioPrecio();
-    const el=$('readEquilibrio'),lbl=$('lblEqPrecio'),col=$('lblEqColchon');
-    if(eq.imposible){
-      if(lbl){lbl.textContent='no alcanza';lbl.className='kpi-val status-bad'}
-      if(col)col.textContent='—';
-      if(el)el.innerHTML='<span class="status-bad">Ni multiplicando los precios ×10 se alcanza a cubrir costos y financiamiento.</span> El problema no es el precio — revisa costos de urbanización, absorción o apalancamiento antes de tocar precios.';
-      $('btnEqAplicar').disabled=true;
-      return;
-    }
-    $('btnEqAplicar').disabled=false;
-    const base=inputValues();
-    const precioMinLote=base.inPrecioM2Venta*eq.k;
-    if(lbl){lbl.textContent=fmtMoney(precioMinLote)+'/m²';lbl.className='kpi-val c-red'}
-    const colchonPct=(base.inPrecioM2Venta/precioMinLote-1)*100;
-    if(col){col.textContent=pct(colchonPct,0);col.className='kpi-val '+(colchonPct>=15?'status-ok':colchonPct>=0?'status-warn':'status-bad')}
-    if(el){
-      if(eq.k>=0.999&&eq.k<=1.001){
-        el.innerHTML='El caso actual YA está en el punto de equilibrio (utilidad ≈ $0). Cualquier baja de precio lo manda a pérdida.';
-      }else if(eq.k<1){
-        el.innerHTML=`El caso actual rinde con sobra: podrías bajar los precios hasta <b>${pct((1-eq.k)*100,0)}</b> (preventa a ${fmtMoney(base.inPrecioM2Preventa*eq.k)}/m², final a ${fmtMoney(precioMinLote)}/m²) y la utilidad seguiría en $0 o más. El colchón de hoy sobre ese mínimo es <b class="status-ok">${pct(colchonPct,0)}</b>.`;
-      }else{
-        el.innerHTML=`Con todo lo demás igual (costos, calendario, financiamiento, mezcla), el precio final mínimo para no perder es <b>${fmtMoney(precioMinLote)}/m²</b> (hoy: ${fmtMoney(base.inPrecioM2Venta)}/m²) — preventa mínima ${fmtMoney(base.inPrecioM2Preventa*eq.k)}/m². El colchón actual sobre ese mínimo es <b class="${colchonPct>=15?'status-ok':colchonPct>=0?'status-warn':'status-bad'}">${pct(colchonPct,0)}</b>.`;
-      }
-    }
-  }
-
-  // 2) ÓPTIMO: búsqueda aleatoria sobre tamaño de lote, precios (lote + tipologías) y mezcla de
-  // vivienda, maximizando lo que se lleva el dueño por m² de terreno — sujeto a utilidad positiva,
-  // TIR del desarrollador ≥ su meta, fondeo completo (sin faltante) y el repago de tierra cumplido.
-  // No es una tarjeta más: es la que responde "cuál es el producto perfecto para este terreno".
-  function eqRangoDefault(){
-    const base=inputValues();
-    if(!$('eqM2Min').value){$('eqM2Min').value=Math.round(base.inM2Lote*0.7);$('eqM2Max').value=Math.round(base.inM2Lote*1.4)}
-  }
-
-  function buscarOptimo(){
-    const base=inputValues();
-    const tirObjetivo=base.inTirObjetivo/100;
-    const m2Min=Math.max(50,Number($('eqM2Min').value)||base.inM2Lote*0.7);
-    const m2Max=Math.max(m2Min+1,Number($('eqM2Max').value)||base.inM2Lote*1.4);
-    const precioPct=Number($('eqPrecioPct').value)/100;
-    const incluirViv=eqViv&&vivienda.activo&&vivienda.tipologias.length;
-    const tiposBase=incluirViv?vivienda.tipologias:[];
-    const N=incluirViv?6000:3000;
-    let mejor=null,evaluados=0,factibles=0;
-    for(let i=0;i<N;i++){
-      const v={...base};
-      v.inM2Lote=eqRand(m2Min,m2Max);
-      v.inPrecioM2Preventa=base.inPrecioM2Preventa*eqRand(1-precioPct,1+precioPct);
-      v.inPrecioM2Venta=base.inPrecioM2Venta*eqRand(1-precioPct,1+precioPct);
-      let viv=null;
-      if(incluirViv){
-        const pctViv=eqRand(0,100);
-        v.inPctViv=pctViv;
-        viv={activo:pctViv>0,tipologias:tiposBase.map(t=>({...t,precioVal:t.precioVal*eqRand(1-precioPct,1+precioPct),mezclaPct:eqRand(1,100)}))};
-      }else{v.inPctViv=0}
-      const r=computar(v,viv);
-      evaluados++;
-      const factible=r.utilidadFinal>0&&r.fundingGap<1&&r.repagoFaltante<1&&r.devIrr!==null&&r.devIrr>=tirObjetivo&&r.nLotes>0;
-      if(factible){
-        factibles++;
-        if(!mejor||r.valorTerrenoM2>mejor.r.valorTerrenoM2)mejor={vals:v,viv,r};
-      }
-    }
-    return{mejor,evaluados,factibles};
-  }
-
-  function renderResultadoOptimo(res){
-    const el=$('readEqOptimo'),tabla=$('eqOptimoTabla'),btn=$('btnEqAplicarOptimo'),lblKpi=$('lblEqOptimo');
-    if(!res.mejor){
-      el.innerHTML=`<span class="status-bad">De ${fmtN(res.evaluados)} combinaciones probadas, ninguna cumplió utilidad positiva + TIR objetivo + fondeo completo a la vez.</span> Amplía los rangos de precio, o revisa si la TIR objetivo (tarjeta Capital) es realista para este terreno.`;
-      tabla.innerHTML='';btn.style.display='none';
-      lblKpi.textContent='sin resultado factible';lblKpi.className='kpi-val status-bad';
-      return;
-    }
-    const{vals:v,viv,r}=res.mejor,base=inputValues();
-    lblKpi.textContent=fmtMoney(r.valorTerrenoM2)+'/m² para el dueño';lblKpi.className='kpi-val c-green';
-    el.innerHTML=`De ${fmtN(res.evaluados)} combinaciones, <b>${fmtN(res.factibles)}</b> cumplieron utilidad positiva, TIR ≥ meta y fondeo completo. La mejor le deja al dueño <b>${fmtMoney(r.valorTerrenoM2)}/m²</b> (hoy: ${fmtMoney(state.valorTerrenoM2)}/m²) — TIR del desarrollador ${pct(r.devIrr*100,1)}, utilidad ${fmtM(r.utilidadFinal)}.`;
-    const filas=[['m² por lote',fmtN(base.inM2Lote),fmtN(v.inM2Lote)],
-      ['Precio preventa',fmtMoney(base.inPrecioM2Preventa)+'/m²',fmtMoney(v.inPrecioM2Preventa)+'/m²'],
-      ['Precio final',fmtMoney(base.inPrecioM2Venta)+'/m²',fmtMoney(v.inPrecioM2Venta)+'/m²']];
-    if(viv){
-      filas.push(['% lotes con vivienda',pct(vivienda.activo?Number($('inPctViv').value):0,0),pct(v.inPctViv,0)]);
-      viv.tipologias.forEach((t,i)=>filas.push(['Precio · '+esc(tiposBaseNombre(i)),fmtMoney((vivienda.tipologias[i]||{}).precioVal||0),fmtMoney(t.precioVal)]));
-    }
-    tabla.innerHTML='<table class="mini-table" style="margin-top:6px">'+filas.map(f=>`<tr><td>${f[0]}</td><td>${f[1]} → <b>${f[2]}</b></td></tr>`).join('')+'</table>';
-    btn.style.display='';
-    btn.onclick=()=>{
-      setControl('inM2Lote',v.inM2Lote);setControl('inPrecioM2Preventa',v.inPrecioM2Preventa);setControl('inPrecioM2Venta',v.inPrecioM2Venta);
-      if(viv){setControl('inPctViv',v.inPctViv);vivienda.activo=viv.activo;vivienda.tipologias=viv.tipologias.map(viviendaSanearTipo);vivResetFirma()}
-      calculate();
-    };
-  }
-  function tiposBaseNombre(i){return (vivienda.tipologias[i]||{}).nombre||('Tipología '+(i+1))}
-
-  function installEquilibrioEvents(){
-    eqRangoDefault();
-    $('eqPrecioPct').addEventListener('input',e=>{$('eqPctVal').textContent='±'+e.target.value+'%'});
-    $('eqM2Min').addEventListener('change',()=>{$('eqM2Lbl').textContent=$('eqM2Min').value+' a '+$('eqM2Max').value+' m²'});
-    $('eqM2Max').addEventListener('change',()=>{$('eqM2Lbl').textContent=$('eqM2Min').value+' a '+$('eqM2Max').value+' m²'});
-    $('eqM2Lbl').textContent=$('eqM2Min').value+' a '+$('eqM2Max').value+' m²';
-    $('btnEqViv').addEventListener('click',e=>{e.stopPropagation();eqViv=!eqViv;const b=e.currentTarget;b.textContent=eqViv?'Sí':'No';b.className='small-btn'+(eqViv?'':' secondary')});
-    $('btnEqAplicar').addEventListener('click',e=>{
-      e.stopPropagation();const eq=equilibrioPrecio();if(eq.imposible)return;
-      const base=inputValues();
-      setControl('inPrecioM2Preventa',base.inPrecioM2Preventa*eq.k);setControl('inPrecioM2Venta',base.inPrecioM2Venta*eq.k);setControl('inPrecioM2Comercial',base.inPrecioM2Comercial*eq.k);
-      if(vivienda.activo&&vivienda.tipologias.length){vivienda.tipologias=vivienda.tipologias.map(t=>viviendaSanearTipo({...t,precioVal:t.precioVal*eq.k}));vivResetFirma()}
-      calculate();
-    });
-    $('btnEqBuscar').addEventListener('click',e=>{
-      e.stopPropagation();const btn=e.currentTarget;btn.disabled=true;btn.textContent='Buscando…';
-      setTimeout(()=>{try{renderResultadoOptimo(buscarOptimo())}finally{btn.disabled=false;btn.innerHTML='<i class="ti ti-search"></i>Buscar producto óptimo'}},30);
-    });
-  }
   function renderProforma(r){
     const row=(l,v,k='')=>`<tr class="${k}"><td>${l}</td><td>${v}</td></tr>`,section=l=>`<tr class="section-row"><td colspan="2">${l}</td></tr>`;
     $('sourcesUses').innerHTML=[section('USOS'),row('Tierra pagada al cierre',fmtM(r.tierraPago)),row('Urbanización',fmtM(r.urbanizacion)),row('Trámites + imprevistos',fmtM(r.blandosUrb)),row('Casa club',fmtM(r.ccCosto)),row('Blandos s/ingresos',fmtM(r.blandosIng)),row('Costo del proyecto',fmtM(r.costoProyecto),'total-row'),row('Interés capitalizado (PIK) + comisiones',fmtM(r.interest+r.feeDebt)),section('FUENTES'),row('Enganches y contado',fmtM(r.revTotal-r.retFinTotal>0?r.ingLotesBase+r.ingCom:0)),row('Retorno por financiamiento',fmtM(r.retFinTotal)),row('Capital propio usado',fmtM(r.equityUsed)),row('Disposiciones de deuda',fmtM(r.debtDraws)),section('RESULTADO'),row('Utilidad neta',fmtM(r.utilidadFinal),'total-row'),row('Repago de tierra aportada (dueño, antes de utilidad)',fmtM(r.repagoTierra)),row('Utilidad repartible tras el repago',fmtM(r.utilidadRepartible)),row('Dueño / Desarrollador',fmtM(r.ownerTotal)+' / '+fmtM(r.devDist),'total-row')].join('');
@@ -1337,9 +1172,9 @@
   /* ================== INFOGRAFÍA ================== */
   function dibujaPlan(r){
     const el=$('vizPlan');if(!el)return;const p=r.p;
-    const W=340,H=330,mT=14,mB=36;
+    const W=420,H=380,mT=14,mB=36;
     const aspect=p.fondo/Math.max(1,p.frente);
-    let lotH=H-mT-mB,lotW=lotH/aspect;const maxW=190;
+    let lotH=H-mT-mB,lotW=lotH/aspect;const maxW=250;
     if(lotW>maxW){lotW=maxW;lotH=lotW*aspect;if(lotH>H-mT-mB){lotH=H-mT-mB;lotW=lotH/aspect}}
     const x0=16,yG=mT+lotH;let s='';
     const hOf=f=>f*lotH;let y=yG;
@@ -1362,6 +1197,7 @@
     s+=`<text x="${lx}" y="${ly}" font-size="8" font-weight="800" fill="#8A8272" letter-spacing="1.5">EL REPARTO</text>`;ly+=15;
     const fila=(c,n,d)=>{s+=`<rect x="${lx}" y="${ly-6.5}" width="8" height="8" rx="2" fill="${c}"/><text x="${lx+13}" y="${ly+1}" font-size="8.5" fill="#b6b3aa">${n}</text><text x="${lx+13}" y="${ly+11}" font-size="7.5" fill="#8A8272">${d}</text>`;ly+=24};
     fila('#B98B3C','Lotes',fmtN(r.nLotes)+' × '+fmtN(p.m2Lote)+' m² → '+fmtM(r.ingLotesBase));
+    if(r.vivActiva)fila('#ff8aa1','Vivienda',fmtN(r.nLotesViv)+' con casa · huella '+fmtN(r.m2ConstrPromedioViv)+' m² prom.');
     if(r.comercial>0)fila('#7fd4e8','Comercial',fmtN(r.comercial)+' m² → '+fmtM(r.ingCom));
     if(r.casaClub>0)fila('#a9a4f5','Casa club',fmtN(r.casaClub)+' m²');
     fila('#8ab8ff','Financiamiento',fmtM(r.retFinTotal)+' de retorno');
@@ -1371,7 +1207,7 @@
     el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Plano proporcional">${s}</svg>`;
   }
   function dibujaCascada(r){
-    const el=$('vizCascada');if(!el)return;const W=340,H=330,mB=36,mT=18;
+    const el=$('vizCascada');if(!el)return;const W=420,H=380,mB=36,mT=18;
     const pasos=[['Lotes',r.ingLotesBase,'#B98B3C'],['Comercial',r.ingCom,'#7fd4e8'],['Financ.+',r.retFinTotal,'#8ab8ff'],['Urbaniz.',-(r.urbanizacion+r.blandosUrb+r.ccCosto),'#E0605A'],['Blandos',-r.blandosIng,'#cf7a74']];
     if(r.tierraPago>0)pasos.push(['Tierra',-r.tierraPago,'#E0605A']);
     pasos.push(['PIK',-(r.interest+r.feeDebt),'#cf7a74']);
@@ -1390,11 +1226,11 @@
         s+=`<text x="${xx+(xw-8)/2}" y="${yy-4}" font-size="7" font-weight="700" fill="${pa[2]}" text-anchor="middle">${v<0?'−':''}${fmtM(Math.abs(v))}</text>`}
       s+=`<text x="${xx+(xw-8)/2}" y="${H-mB+11}" font-size="6.8" fill="#8A8272" text-anchor="middle">${pa[0]}</text>`;xx+=xw});
     s+=`<line x1="6" y1="${y00}" x2="${W-6}" y2="${y00}" stroke="#ffffff26" stroke-width="1"/>`;
-    s+=`<text x="8" y="${H-8}" font-size="8" fill="#8A8272">azul en la utilidad = la parte del dueño (${pct(r.p.pctDueno*100,0)})</text>`;
+    s+=`<text x="8" y="${H-8}" font-size="8" fill="#8A8272">azul en la utilidad = la parte del dueño (${pct(r.p.pctDueno*100,0)}) → ${fmtMoney(r.valorTerrenoM2)}/m² de terreno</text>`;
     el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Río del dinero">${s}</svg>`;
   }
   function dibujaCartera(r){
-    const el=$('vizCartera');if(!el)return;const W=340,H=330,mL=12,mR=12,mT=20,mB=38,n=r.flows.length;
+    const el=$('vizCartera');if(!el)return;const W=420,H=380,mL=12,mR=12,mT=20,mB=38,n=r.flows.length;
     const X=i=>mL+(W-mL-mR)*(n>1?i/(n-1):0);
     const maxC=Math.max(r.carteraPico,1),Y=v=>mT+(H-mT-mB)*(1-v/maxC);
     const maxRev=Math.max(...r.flows.map(f=>f.rev),1);let s='';
@@ -1406,8 +1242,46 @@
     s+=`<line x1="${mL}" y1="${H-mB}" x2="${W-mR}" y2="${H-mB}" stroke="#ffffff22"/>`;
     for(let m=12;m<=n;m+=12)s+=`<text x="${X(m-1)}" y="${H-mB+11}" font-size="7" fill="#8A8272" text-anchor="middle">${m}</text>`;
     s+=`<text x="${mL}" y="${H-16}" font-size="8" fill="#8A8272">línea azul = saldo por cobrar (cartera) · barras verdes = cobros del mes</text>`;
-    s+=`<text x="${mL}" y="${H-6}" font-size="8" fill="#8A8272">la cartera es el activo del negocio: crece al vender, se drena al cobrar</text>`;
+    s+=`<text x="${mL}" y="${H-6}" font-size="8" fill="#8A8272">${r.vivActiva?'la cola incluye la construcción de vivienda: no se cobra antes de terminar la casa':'la cartera es el activo del negocio: crece al vender, se drena al cobrar'}</text>`;
     el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Curva de cartera">${s}</svg>`;
+  }
+  // Modelo de casa: dibuja la tipología dominante DENTRO del lote a escala real, asumiendo una sola
+  // calle corriendo por todo el frente del terreno (una sola fila de lotes) — el supuesto que
+  // corresponde a un terreno de un solo predio/una sola calle, no a un fraccionamiento con muchas
+  // calles internas (ahí el fondo útil da un número absurdo y se avisa en vez de dibujarlo).
+  function dibujaModeloCasa(r){
+    const el=$('vizCasa');if(!el)return;
+    if(!r.vivActiva||!r.tiposViv||!r.tiposViv.length){
+      el.innerHTML='<div class="viz-empty">Activa la tarjeta Vivienda y agrega al menos una tipología para ver el modelo de casa dentro del lote.</div>';
+      return;
+    }
+    const anchoVialidad=Number($('inAnchoVialidadInterna')?.value)||10;
+    const fondoUtil=r.p.fondo-anchoVialidad;
+    if(fondoUtil<=4||fondoUtil>60){
+      el.innerHTML=`<div class="viz-empty"><span class="status-warn">Con una sola calle de ${fmtN(anchoVialidad)} m, el fondo útil da ${fondoUtil.toFixed(1)} m — no es razonable a esta escala (terreno con varias calles internas, tipo fraccionamiento grande). Este esquema sólo sirve para un predio de una sola calle; ajusta Frente/Fondo o el ancho de vialidad interna en la tarjeta Terreno.</span></div>`;
+      return;
+    }
+    let dom=r.tiposViv[0];for(const t of r.tiposViv)if(t.mezclaPct>dom.mezclaPct)dom=t;
+    const huella=dom.m2Constr/Math.max(1,dom.niveles);
+    const frenteLote=r.p.m2Lote/fondoUtil,frenteCasa=frenteLote*.8,fondoCasa=huella/frenteCasa;
+    const restriccion=2,patio=Math.max(0,fondoUtil-restriccion-fondoCasa);
+    const W=300,H=380,mT=16;
+    let pxPerM=(H-mT-40)/fondoUtil;if(frenteLote*pxPerM>140)pxPerM=140/frenteLote;
+    const lotWpx=frenteLote*pxPerM,lotHpx=fondoUtil*pxPerM,x0=(W-lotWpx)/2,yTop=mT;
+    const casaHpx=fondoCasa*pxPerM,casaWpx=frenteCasa*pxPerM,restriccionHpx=restriccion*pxPerM;
+    const yBanqueta=yTop+lotHpx,yCasa=yBanqueta-restriccionHpx-casaHpx,xCasa=x0+(lotWpx-casaWpx)/2;
+    let s=`<rect x="${x0}" y="${yTop}" width="${lotWpx}" height="${lotHpx}" fill="none" stroke="#F1EDE3" stroke-width="1.3"/>`;
+    s+=`<text x="${x0+lotWpx/2}" y="${yTop-5}" font-size="8.5" fill="#8A8272" text-anchor="middle">frente ${frenteLote.toFixed(1)} m</text>`;
+    s+=`<rect x="${x0}" y="${yBanqueta}" width="${lotWpx}" height="7" fill="#000" stroke="#8A8272" stroke-width=".7"/><text x="${x0+lotWpx/2}" y="${yBanqueta+18}" font-size="8" fill="#8A8272" text-anchor="middle">vialidad ${fmtN(anchoVialidad)} m</text>`;
+    s+=`<rect x="${x0}" y="${yBanqueta-restriccionHpx}" width="${lotWpx}" height="${restriccionHpx}" fill="#a9a4f512" stroke="#a9a4f5" stroke-width=".7" stroke-dasharray="4 3"/>`;
+    if(patio>0)s+=`<rect x="${x0}" y="${yTop}" width="${lotWpx}" height="${yCasa-yTop}" fill="#8fbf8b1f" stroke="#8FBF8B" stroke-width=".7"/><text x="${x0+lotWpx/2}" y="${yTop+(yCasa-yTop)/2-3}" font-size="8.5" font-weight="700" fill="#8FBF8B" text-anchor="middle">PATIO</text><text x="${x0+lotWpx/2}" y="${yTop+(yCasa-yTop)/2+9}" font-size="7.5" fill="#8FBF8B" text-anchor="middle">${patio.toFixed(1)} m fondo</text>`;
+    s+=`<rect x="${xCasa}" y="${yCasa}" width="${casaWpx}" height="${casaHpx}" fill="#ff8aa1" opacity=".9" stroke="#ff8aa1" stroke-width="1"/>`;
+    s+=`<text x="${x0+lotWpx/2}" y="${yCasa+casaHpx/2-3}" font-size="9.5" font-weight="800" fill="#17140F" text-anchor="middle">${esc(dom.nombre)}</text>`;
+    s+=`<text x="${x0+lotWpx/2}" y="${yCasa+casaHpx/2+10}" font-size="8.5" fill="#17140F" text-anchor="middle">${fmtN(huella)} m² huella${dom.niveles>1?' · '+dom.niveles+' niveles':''}</text>`;
+    if(casaHpx>26)s+=`<text x="${x0+lotWpx/2}" y="${yCasa+casaHpx/2+22}" font-size="7.5" fill="#5c1f1a" text-anchor="middle">${frenteCasa.toFixed(1)} × ${fondoCasa.toFixed(1)} m</text>`;
+    s+=`<text x="4" y="${H-16}" font-size="7.5" fill="#8A8272">lote ${frenteLote.toFixed(1)}×${fondoUtil.toFixed(1)} m (${fmtN(r.p.m2Lote)} m²) · supone 1 calle a todo el frente, 1 fila de lotes</text>`;
+    s+=`<text x="4" y="${H-6}" font-size="7.5" fill="#8A8272">huella = m² de construcción ÷ niveles de "${esc(dom.nombre)}" (tipología con mayor mezcla)</text>`;
+    el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Modelo de casa">${s}</svg>`;
   }
   const formulaDefs=[
     ['Vendible','Superficie × (1 − cesiones)',['inPctVialidades','inPctVerdes','inPctEquipamiento'],r=>`${fmtN(r.p.sup)} × (1 − ${pct(r.sumaCes*100,0)}) = ${fmtN(r.vendibleBruto)} m²`],
@@ -1539,7 +1413,7 @@
   function cerrarOverlays(){document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('on'))}
   /* ================== ARRANQUE ================== */
   document.querySelectorAll('.card[data-card]').forEach(c=>c.onclick=e=>{if(e.target.closest('.drawer'))return;toggleDrawer(c)});
-  controls.forEach(c=>{updateColor(c);c.addEventListener('input',calculate)});readPills();installFactorHelp();installMetricHelp();installVivEvents();installEquilibrioEvents();
+  controls.forEach(c=>{updateColor(c);c.addEventListener('input',calculate)});readPills();installFactorHelp();installMetricHelp();installVivEvents();
   $('btnGuardar').onclick=()=>{if(modoLocal){toast('Estás sin nube: entra con la clave para guardar');return}$('gNombre').value=caso.nombre_caso||'';$('gPalabra').value=caso.palabra||'';$('gCorreo').value=caso.correo||'';$('gNotas').value=caso.notas_caso||'';abrirOverlay('ovGuardar')};
   $('gGuardarSolo').onclick=()=>guardarCaso(false);$('gGuardarEnviar').onclick=()=>guardarCaso(true);$('gCancelar').onclick=cerrarOverlays;
   $('btnMisCasos').onclick=()=>{if(modoLocal){toast('Estás sin nube: entra con la clave');return}abrirOverlay('ovCasos');cargarLista()};
