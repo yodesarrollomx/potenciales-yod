@@ -1172,11 +1172,42 @@
   /* ================== INFOGRAFÍA ================== */
   function dibujaPlan(r){
     const el=$('vizPlan');if(!el)return;const p=r.p;
-    const W=420,H=380,mT=14,mB=36;
+    const W=420,H=380,mT=14,mB=36;const maxW=250;
+    const x0=16;let s='',lotW,lotH;
+    // Modo simple: un predio con UNA sola calle a lo largo del frente y UNA sola fila de lotes
+    // reales (mismo supuesto que "Modelo de casa") — dibuja la geometría literal en vez de las
+    // bandas abstractas de % de área, que están pensadas para fraccionamientos grandes con
+    // muchas calles internas y aquí giraban/duplicaban la vialidad sin sentido.
+    // El lado más largo del predio es el que da a la calle (una vialidad no corre por el lado
+    // corto) — no importa cuál de los dos campos (Frente/Fondo) trae el número mayor, porque ese
+    // dato histórico se llenaba sólo para la proporción del plano viejo, no como "cuál da a la
+    // calle". Detectarlo así evita lotes absurdos (angostos y profundísimos) cuando el campo
+    // Frente quedó con el número menor.
+    const largo=Math.max(p.frente,p.fondo),corto=Math.min(p.frente,p.fondo);
+    const anchoVialidad=Number($('inAnchoVialidadInterna')?.value)||10;
+    const fondoUtilSimple=corto-anchoVialidad;
+    const modoSimple=fondoUtilSimple>4&&fondoUtilSimple<=60&&largo>0&&largo<=200;
+    if(modoSimple){
+      const frenteLoteInd=Math.max(.5,p.m2Lote/fondoUtilSimple);
+      const nFila=Math.max(1,Math.floor(largo/frenteLoteInd));
+      const anchoUsado=nFila*frenteLoteInd,remanente=Math.max(0,largo-anchoUsado);
+      let pxPerM=Math.min((W-32)/largo,(H-mT-mB-24)/corto,maxW/largo);
+      lotW=largo*pxPerM;lotH=corto*pxPerM;
+      const yTop=mT,viaHpx=anchoVialidad*pxPerM,loteHpx=fondoUtilSimple*pxPerM,yLotes=yTop+viaHpx;
+      s+=`<rect x="${x0}" y="${yTop}" width="${lotW}" height="${viaHpx}" fill="#000" stroke="#8A8272" stroke-width="1"/>`;
+      if(viaHpx>10)s+=`<text x="${x0+lotW/2}" y="${yTop+viaHpx/2+3}" font-size="7.5" font-weight="800" fill="#8A8272" text-anchor="middle">vialidad ${fmtN(anchoVialidad)} m</text>`;
+      const anchoLotePx=frenteLoteInd*pxPerM,filaWpx=anchoUsado*pxPerM;
+      for(let i=0;i<nFila;i++)s+=`<rect x="${x0+i*anchoLotePx}" y="${yLotes}" width="${anchoLotePx}" height="${loteHpx}" fill="#B98B3C14" stroke="#B98B3C" stroke-width="1"/>`;
+      if(nFila>0&&loteHpx>11)s+=`<text x="${x0+filaWpx/2}" y="${yLotes+loteHpx/2+3}" font-size="8" font-weight="800" fill="#B98B3C" text-anchor="middle">${nFila} de ${frenteLoteInd.toFixed(1)}×${fondoUtilSimple.toFixed(1)} m</text>`;
+      if(remanente>.3){s+=`<rect x="${x0+filaWpx}" y="${yLotes}" width="${lotW-filaWpx}" height="${loteHpx}" fill="#8fbf8b1f" stroke="#8FBF8B" stroke-width="1" stroke-dasharray="4 3"/>`;
+        if(lotW-filaWpx>8)s+=`<text x="${x0+filaWpx+(lotW-filaWpx)/2}" y="${yLotes+loteHpx/2+3}" font-size="7" fill="#8FBF8B" text-anchor="middle">${remanente.toFixed(1)} m</text>`;}
+      s+=`<rect x="${x0}" y="${yTop}" width="${lotW}" height="${lotH}" fill="none" stroke="#F1EDE3" stroke-width="1.5"/>`;
+      s+=`<text x="${x0}" y="${yTop-4}" font-size="7.5" fill="#8A8272">frente ${fmtN(largo)} m · 1 calle, 1 fila de lotes${remanente>.3?' · '+remanente.toFixed(1)+' m sobrante → donación':''}</text>`;
+    }else{
     const aspect=p.fondo/Math.max(1,p.frente);
-    let lotH=H-mT-mB,lotW=lotH/aspect;const maxW=250;
+    lotH=H-mT-mB;lotW=lotH/aspect;
     if(lotW>maxW){lotW=maxW;lotH=lotW*aspect;if(lotH>H-mT-mB){lotH=H-mT-mB;lotW=lotH/aspect}}
-    const x0=16,yG=mT+lotH;let s='';
+    const yG=mT+lotH;
     const hOf=f=>f*lotH;let y=yG;
     const segs=[];
     if(r.comercial>0)segs.push({h:hOf(r.comercial/p.sup),c:'#7fd4e8',f:'#7fd4e814',lbl:'comercial '+fmtN(r.comercial)+' m²'});
@@ -1193,6 +1224,7 @@
       if(seg.lbl&&h>=11)s+=`<text x="${x0+lotW/2}" y="${y+h/2+3}" font-size="8" font-weight="800" fill="${seg.c}" text-anchor="middle">${seg.lbl}</text>`});
     s+=`<rect x="${x0}" y="${mT}" width="${lotW}" height="${lotH}" fill="none" stroke="#F1EDE3" stroke-width="1.5"/>`;
     s+=`<line x1="${x0-8}" y1="${yG+8}" x2="${x0+lotW+8}" y2="${yG+8}" stroke="#F1EDE3" stroke-width="2"/><text x="${x0+lotW/2}" y="${yG+20}" font-size="8" fill="#8A8272" text-anchor="middle">vialidad principal · frente ${fmtN(p.frente)} m</text>`;
+    }
     const lx=x0+lotW+14;let ly=mT+8;
     s+=`<text x="${lx}" y="${ly}" font-size="8" font-weight="800" fill="#8A8272" letter-spacing="1.5">EL REPARTO</text>`;ly+=15;
     const fila=(c,n,d)=>{s+=`<rect x="${lx}" y="${ly-6.5}" width="8" height="8" rx="2" fill="${c}"/><text x="${lx+13}" y="${ly+1}" font-size="8.5" fill="#b6b3aa">${n}</text><text x="${lx+13}" y="${ly+11}" font-size="7.5" fill="#8A8272">${d}</text>`;ly+=24};
@@ -1255,8 +1287,11 @@
       el.innerHTML='<div class="viz-empty">Activa la tarjeta Vivienda y agrega al menos una tipología para ver el modelo de casa dentro del lote.</div>';
       return;
     }
+    // El lado más largo del predio es el que da a la calle (ver dibujaPlan) — no importa cuál de
+    // los dos campos, Frente o Fondo, trae el número mayor.
+    const largo=Math.max(r.p.frente,r.p.fondo),corto=Math.min(r.p.frente,r.p.fondo);
     const anchoVialidad=Number($('inAnchoVialidadInterna')?.value)||10;
-    const fondoUtil=r.p.fondo-anchoVialidad;
+    const fondoUtil=corto-anchoVialidad;
     if(fondoUtil<=4||fondoUtil>60){
       el.innerHTML=`<div class="viz-empty"><span class="status-warn">Con una sola calle de ${fmtN(anchoVialidad)} m, el fondo útil da ${fondoUtil.toFixed(1)} m — no es razonable a esta escala (terreno con varias calles internas, tipo fraccionamiento grande). Este esquema sólo sirve para un predio de una sola calle; ajusta Frente/Fondo o el ancho de vialidad interna en la tarjeta Terreno.</span></div>`;
       return;
