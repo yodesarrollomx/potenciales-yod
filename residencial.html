@@ -54,7 +54,7 @@
   .hero h1{font-size:clamp(26px,5vw,38px);margin:6px 0 2px;line-height:1.05}
   .hero .hsub{color:var(--muted);font-size:12px;margin:0 0 14px}
   .hero .hsub b{color:var(--suave)}
-  .estado-pill{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--gold);color:var(--goldc);border-radius:12px;padding:4px 10px;margin-left:8px;vertical-align:middle}
+  .estado-pill{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--gold);color:var(--goldc);border-radius:12px;padding:4px 10px;margin-left:0;vertical-align:middle}
   .hero-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
   .hcard{background:var(--surface);border:1px solid var(--linea);border-radius:16px;padding:12px 14px;min-width:0}
   .hcard .k{font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
@@ -370,7 +370,7 @@
 
   <section class="hero">
     <span class="kick">¿Qué da este terreno en lotes?</span>
-    <h1 class="serif" id="heroNombre">Caso nuevo<span class="estado-pill" id="heroEstado">EXPLORACIÓN</span></h1>
+    <h1 class="serif" id="heroNombre">Caso nuevo <span class="estado-pill" id="heroEstado">EXPLORACIÓN</span></h1>
     <p class="hsub" id="heroSub">Mueve los supuestos y guarda el caso con una palabra para volver.</p>
     <div class="hero-grid">
       <div class="hcard"><span class="k">Utilidad antes de reparto</span><div class="big serif" id="heroUtil">$0 M</div><div class="sub2" id="heroUtilSub">margen —</div></div>
@@ -1415,7 +1415,7 @@
   function fechaCorta(ts){const d=new Date(ts);return isNaN(d)?'':d.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'})}
   function pintaCaso(){
     const nombre=caso.nombre_caso||'Caso nuevo';
-    const h=$('heroNombre');h.innerHTML='';h.append(document.createTextNode(nombre));
+    const h=$('heroNombre');h.innerHTML='';h.append(document.createTextNode(nombre+' '));
     const pill=document.createElement('span');pill.className='estado-pill';pill.id='heroEstado';pill.textContent=caso.estado||'EXPLORACIÓN';h.append(pill);
     txt('heroSub',caso.caso_id?`palabra: ${caso.palabra} · v${caso.version||1}${caso.siguiente_paso?' · siguiente: '+caso.siguiente_paso:''}`:'Mueve los supuestos y guarda el caso con una palabra para volver.');
     txt('casoNombreBar',caso.caso_id?`${nombre} · ${caso.palabra}`:'Caso nuevo (sin guardar)');
