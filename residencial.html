@@ -699,6 +699,9 @@
   ]}
 
   /* ================== MOTOR LOTES RESIDENCIALES ================== */
+  // Normativa aplicable (Hermosillo, Sonora): donación = 10% del área lotificable vendible (LOTDU Sonora art. 74);
+  // sección mínima de calle local en fraccionamientos = 12 m (lineamientos IMPLAN Hermosillo).
+  const NORMA={donacionVendible:.10,vialLocalMin:12};
   function geometriaSimple(frente,fondo,anchoVial,m2Lote){
     const largo=Math.max(frente,fondo),corto=Math.min(frente,fondo),fondoUtil=corto-anchoVial;
     if(!(fondoUtil>4&&fondoUtil<=60&&largo<=200))return null;
@@ -717,15 +720,25 @@
       pctViv:gv('inPctViv')/100,precioInfonavit:gv('inPrecioInfonavit')};
     // 1) cuadro de áreas
     // Predio de una sola calle (una fila de lotes a lo largo del lado largo): los lotes salen de la geometría real
-    // — vialidad en metros × largo, donación = % verdes+equipamiento — y no del % de vialidades abstracto.
+    // (vialidad en metros × largo, lote frente×fondo) y la donación sigue la ley de Sonora: 10% del área
+    // lotificable vendible (LOTDU Sonora, art. 74). En este modo los sliders de % vialidades/verdes/equipamiento
+    // no aplican: se sustituyen por lo que realmente ocupa cada cosa en el plano.
     const geo=Math.abs(p.frente*p.fondo-p.sup)<=p.sup*.05?geometriaSimple(p.frente,p.fondo,gv('inAnchoVialidadInterna')||10,p.m2Lote):null;
-    if(geo){geo.vialM2=geo.anchoVial*geo.largo;p.pctVial=Math.min(1,geo.vialM2/p.sup)}
+    let nLotesGeo=0;
+    if(geo){
+      geo.vialM2=geo.anchoVial*geo.largo;const util=geo.largo*geo.fondoUtil;
+      const com0=Math.min(p.comM2,util),cc0=Math.min(p.ccM2,Math.max(0,util-com0));
+      geo.caben=Math.floor(geo.largo/geo.frenteLote+1e-9);
+      nLotesGeo=Math.max(0,Math.min(geo.caben,Math.floor((util-com0-cc0)/(p.m2Lote*(1+NORMA.donacionVendible))+1e-9)));
+      geo.donacionReqM2=NORMA.donacionVendible*nLotesGeo*p.m2Lote;
+      geo.donacionM2=Math.max(0,util-com0-cc0-nLotesGeo*p.m2Lote);
+      geo.vialBajoNorma=geo.anchoVial<NORMA.vialLocalMin;
+      p.pctVial=Math.min(1,geo.vialM2/p.sup);p.pctVerdes=Math.min(1-p.pctVial,geo.donacionM2/p.sup);p.pctEquip=0}
     const sumaCes=p.pctVial+p.pctVerdes+p.pctEquip,vendibleBruto=p.sup*Math.max(0,1-sumaCes);
     const comercial=Math.min(p.comM2,vendibleBruto),casaClub=Math.min(p.ccM2,Math.max(0,vendibleBruto-comercial));
-    const residBruto=Math.max(0,vendibleBruto-comercial-casaClub),lotesArea=geo?residBruto:residBruto*p.efSubdiv;
-    let nLotes=Math.floor(lotesArea/p.m2Lote);
-    if(geo){geo.caben=Math.floor(geo.largo/geo.frenteLote+1e-9);geo.sinDonacion=Math.max(0,Math.floor((geo.largo*geo.fondoUtil-comercial-casaClub)/p.m2Lote+1e-9));
-      nLotes=Math.min(nLotes,geo.caben);geo.nLotes=nLotes;geo.donacionM2=p.sup-geo.vialM2-nLotes*p.m2Lote-comercial-casaClub}
+    const residBruto=Math.max(0,vendibleBruto-comercial-casaClub),lotesArea=geo?nLotesGeo*p.m2Lote:residBruto*p.efSubdiv;
+    const nLotes=geo?nLotesGeo:Math.floor(lotesArea/p.m2Lote);
+    if(geo)geo.nLotes=nLotes;
     const m2Lotes=nLotes*p.m2Lote;
     // 2) vivienda sobre lotes (opcional; todo el bloque queda en 0/neutro si el switch está apagado)
     const vivActiva=!!(viv&&viv.activo&&p.pctViv>0&&(viv.tipologias||[]).length);
@@ -987,7 +1000,7 @@
     txt('heroTirSub','cola de cobranza hasta el mes '+r.colaCobranza+' · '+r.totalMonths+' meses de corrida');
     const lect=$('heroLectura');if(lect)lect.innerHTML=`Las ${fmtHa(r.p.sup)} ceden ${pct(r.sumaCes*100,0)} y dejan <b>${fmtN(r.nLotes)} lotes de ${fmtN(r.p.m2Lote)} m²</b>${r.comercial?' + '+fmtN(r.comercial)+' m² comerciales':''} por <b>${fmtM(r.ingresos)}</b> (incluye <b>${fmtM(r.retFinTodo)}</b> de retorno por financiar). Utilidad <b>${fmtM(r.utilidadFinal)}</b>; el dueño se lleva <b>${fmtM(r.ownerTotal)}</b> (${fmtMoney(r.valorTerrenoM2)}/m² vs ${fmtMoney(r.p.valorTierraM2)} en bruto). La cartera pica en <b>${fmtM(r.carteraPico)}</b> y se cobra hasta el mes ${r.colaCobranza}.`;
     txt('lblSup',fmtN(r.p.sup)+' m² · '+fmtHa(r.p.sup));txt('lblCesiones',pct(r.sumaCes*100,0));txt('lblVendible',fmtN(r.vendibleBruto)+' m²');txt('lblResid',fmtN(r.lotesArea)+' m²');
-    $('readAreas').innerHTML=`<b>Cuadro:</b> ${fmtN(r.p.sup)} m² − vialidades ${pct(r.p.pctVial*100,0)} − verdes ${pct(r.p.pctVerdes*100,0)} − equipamiento ${pct(r.p.pctEquip*100,0)} = <b>${fmtN(r.vendibleBruto)} m² vendibles</b>. De ahí: comercial ${fmtN(r.comercial)} + casa club ${fmtN(r.casaClub)} → para lotes ${r.geo?fmtN(r.residBruto)+' m² (la eficiencia no aplica: el lote sale del plano)':fmtN(r.residBruto)+' × eficiencia '+pct(r.p.efSubdiv*100,0)+' = <b>'+fmtN(r.lotesArea)+' m²</b>'}. El cuadro SIEMPRE cierra (la lección de Brunnen).${r.geo?`<br><b>Predio de una calle:</b> vialidad ${fmtN(r.geo.anchoVial)} m × ${fmtN(r.geo.largo)} m = ${fmtN(r.geo.vialM2)} m² (${pct(r.p.pctVial*100,0)}, sustituye al slider de vialidades). Lote de ${r.geo.frenteLote.toFixed(1)}×${r.geo.fondoUtil.toFixed(1)} m: caben <b>${fmtN(r.geo.caben)}</b> a lo largo${r.nLotes<r.geo.caben?`, se venden <b>${fmtN(r.nLotes)}</b> para respetar la donación de ${pct((r.p.pctVerdes+r.p.pctEquip)*100,0)} (${fmtN(r.p.sup*(r.p.pctVerdes+r.p.pctEquip))} m²)`:''}. Donación real resultante: <b>${fmtN(r.geo.donacionM2)} m²</b> (${pct(r.geo.donacionM2/r.p.sup*100,1)}).${r.nLotes<r.geo.caben?` Para ganar un lote: baja el % de verdes/equipamiento a ${pct(Math.max(0,r.geo.donacionM2-r.p.m2Lote)/r.p.sup*100,1)} o angosta la vialidad.`:''}`:''}`;
+    $('readAreas').innerHTML=`<b>Cuadro:</b> ${fmtN(r.p.sup)} m² − vialidades ${pct(r.p.pctVial*100,0)} ${r.geo?'− donación '+pct(r.p.pctVerdes*100,0):'− verdes '+pct(r.p.pctVerdes*100,0)+' − equipamiento '+pct(r.p.pctEquip*100,0)} = <b>${fmtN(r.vendibleBruto)} m² vendibles</b>. De ahí: comercial ${fmtN(r.comercial)} + casa club ${fmtN(r.casaClub)} → para lotes ${r.geo?fmtN(r.residBruto)+' m² (la eficiencia no aplica: el lote sale del plano)':fmtN(r.residBruto)+' × eficiencia '+pct(r.p.efSubdiv*100,0)+' = <b>'+fmtN(r.lotesArea)+' m²</b>'}. El cuadro SIEMPRE cierra (la lección de Brunnen).${r.geo?`<br><b>Predio de una calle</b> (los % de vialidades, verdes y equipamiento no aplican aquí; se miden en el plano): vialidad ${fmtN(r.geo.anchoVial)} m × ${fmtN(r.geo.largo)} m = ${fmtN(r.geo.vialM2)} m². Lote de ${r.geo.frenteLote.toFixed(1)}×${r.geo.fondoUtil.toFixed(1)} m: caben <b>${fmtN(r.geo.caben)}</b> a lo largo; se venden <b>${fmtN(r.nLotes)}</b> dejando la donación de ley: <b>10% del área vendible</b> = ${fmtN(r.geo.donacionReqM2)} m² (LOTDU Sonora, art. 74). Donación que queda en el plano: <b>${fmtN(r.geo.donacionM2)} m²</b>.${r.geo.vialBajoNorma?` <span class="status-bad">⚠ La vialidad de ${fmtN(r.geo.anchoVial)} m está por debajo de la sección mínima de calle local de ${NORMA.vialLocalMin} m (IMPLAN Hermosillo): súbela a ${NORMA.vialLocalMin} m o consigue la excepción por escrito antes de presentar el proyecto.</span>`:''}`:''}`;
     txt('lblLotes',fmtN(r.nLotes)+' de '+fmtN(r.p.m2Lote)+' m²');txt('lblPrecioLote',fmtM(r.precioFinal)+' · prev '+fmtM(r.precioPrev));txt('lblComercial',fmtN(r.comercial)+' m² → '+fmtM(r.ingCom));txt('lblIngresos',fmtM(r.ingresos));
     $('readProducto').innerHTML=`<b>Producto:</b> ${fmtN(r.nPrev)} lotes en preventa a ${fmtMoney(r.p.prePreventa)}/m² (${fmtM(r.precioPrev)}) + ${fmtN(r.nFinal)} a precio final ${fmtMoney(r.p.preVenta)}/m² (${fmtM(r.precioFinal)}) = ${fmtM(r.ingLotesBase)}${r.vivActiva?' · '+fmtN(r.nLotesViv)+' casas+lote '+fmtM(r.ingViv):''} · comercial ${fmtM(r.ingCom)} · retorno financiero ${fmtM(r.retFinTodo)} → <b>ingresos ${fmtM(r.ingresos)}</b>.`;
     txt('lblMensualidad',fmtMoney(r.mensualidad));txt('lblRetFin',fmtM(r.retFinTodo));txt('lblCartera',fmtM(r.carteraPico)+' (mes '+r.carteraPicoMes+')');txt('lblColaCobranza','hasta el mes '+r.colaCobranza);
@@ -1011,6 +1024,7 @@
     if(r.debt>1)warnings.push('La deuda no se repaga al cierre');
     if(r.devIrr!==null&&r.devIrr<r.p.tirTarget)warnings.push('TIR debajo de la meta: '+pct(r.devIrr*100,1)+' vs '+pct(r.p.tirTarget*100,1));
     if(r.carteraPico>r.ingresos*.5)warnings.push('La cartera pico ('+fmtM(r.carteraPico)+') es más de la mitad del ingreso: mucho capital dormido en mensualidades');
+    if(r.geo&&r.geo.vialBajoNorma)warnings.push('Vialidad de '+fmtN(r.geo.anchoVial)+' m, debajo de la sección mínima de calle local ('+NORMA.vialLocalMin+' m, IMPLAN Hermosillo)');
     if(Math.abs(r.revTotal-r.ingresos)>Math.max(2,r.ingresos*.001))warnings.push('Cobros no concilian con ingresos (dif '+fmtM(r.revTotal-r.ingresos)+')');
     if(r.densidad<50&&r.p.m2Lote<1000)warnings.push('Densidad '+r.densidad.toFixed(0)+' viv/ha — los DUIS pedían ≥50 (y proponían ~67) para que el suelo y la infraestructura rindan');
     if(r.nLotes>=5&&r.donacionPct<15)warnings.push('Donación '+r.donacionPct.toFixed(0)+'% — la norma DUIS/Art.73 pide ≥15% (10% verdes + 5% equipamiento)');
@@ -1182,7 +1196,7 @@
     const row=(l,v,k='')=>`<tr class="${k}"><td>${l}</td><td>${v}</td></tr>`,section=l=>`<tr class="section-row"><td colspan="2">${l}</td></tr>`;
     $('sourcesUses').innerHTML=[section('USOS'),row('Tierra pagada al cierre',fmtM(r.tierraPago)),row('Urbanización',fmtM(r.urbanizacion)),row('Trámites + imprevistos',fmtM(r.blandosUrb)),row('Casa club',fmtM(r.ccCosto)),...(r.costoConstrViv?[row('Obra de vivienda',fmtM(r.costoConstrViv))]:[]),row('Blandos s/ingresos',fmtM(r.blandosIng)),row('Costo del proyecto',fmtM(r.costoProyecto),'total-row'),row('Interés capitalizado (PIK) + comisiones',fmtM(r.interest+r.feeDebt)),section('FUENTES'),row('Ventas cobradas (sin intereses)',fmtM(r.ingLotesBase+r.ingViv+r.ingCom)),row('Retorno por financiamiento',fmtM(r.retFinTodo)),row('Total fuentes = costo + utilidad antes de financiar',fmtM(r.ingresos),'total-row'),section('CÓMO SE FONDEA EL HUECO DE CAJA (se devuelve)'),row('Capital propio usado',fmtM(r.equityUsed)),row('Disposiciones de deuda',fmtM(r.debtDraws)),section('RESULTADO'),row('Utilidad neta',fmtM(r.utilidadFinal),'total-row'),row('Repago de tierra aportada (dueño, antes de utilidad)',fmtM(r.repagoTierra)),row('Utilidad repartible tras el repago',fmtM(r.utilidadRepartible)),row('Dueño / Desarrollador (incluye su capital de vuelta)',fmtM(r.ownerTotal)+' / '+fmtM(r.devDist),'total-row')].join('');
     const line=(l,v,k)=>`<div class="covenant-line"><span>${l}</span><b class="${k}">${v}</b></div>`;
-    $('covenantPanel').innerHTML=[line('Utilidad neta',fmtM(r.utilidadFinal),r.utilidadFinal>0?'covenant-ok':'covenant-bad'),line('TIR vs meta',`${r.devIrr===null?'—':pct(r.devIrr*100,1)} / ${pct(r.p.tirTarget*100,1)}`,r.devIrr!==null&&r.devIrr>=r.p.tirTarget?'covenant-ok':'covenant-bad'),line('Pico de deuda',`${fmtM(r.peak)} / ${fmtM(r.debtCap)}`,r.fundingGap<1?'covenant-ok':'covenant-bad'),line('Cartera pico',fmtM(r.carteraPico),r.carteraPico<=r.ingresos*.5?'covenant-ok':'covenant-warn'),line('Cola de cobranza','mes '+r.colaCobranza,'covenant-warn'),line('Densidad vs DUIS ≥50 viv/ha',r.densidad.toFixed(0)+' viv/ha',r.densidad>=50?'covenant-ok':r.p.m2Lote>=1000?'covenant-warn':'covenant-bad'),line('Donación vs 15% (10 verde + 5 equip.)',r.donacionPct.toFixed(0)+'%',r.donacionPct>=15?'covenant-ok':'covenant-bad'),line('Comercio básico vs 0.13 m²/hab',r.comercioPorHab===null?'—':r.comercioPorHab.toFixed(2)+' m²/hab',r.comercioPorHab===null||r.comercioPorHab>=0.13?'covenant-ok':'covenant-warn'),line('Cuadro de áreas','cierra al 100%','covenant-ok')].join('')+'<p class="note">Presupuesto de urbanización, comparables de lote y norma de donación de la plaza pendientes de validar por caso.</p>';
+    $('covenantPanel').innerHTML=[line('Utilidad neta',fmtM(r.utilidadFinal),r.utilidadFinal>0?'covenant-ok':'covenant-bad'),line('TIR vs meta',`${r.devIrr===null?'—':pct(r.devIrr*100,1)} / ${pct(r.p.tirTarget*100,1)}`,r.devIrr!==null&&r.devIrr>=r.p.tirTarget?'covenant-ok':'covenant-bad'),line('Pico de deuda',`${fmtM(r.peak)} / ${fmtM(r.debtCap)}`,r.fundingGap<1?'covenant-ok':'covenant-bad'),line('Cartera pico',fmtM(r.carteraPico),r.carteraPico<=r.ingresos*.5?'covenant-ok':'covenant-warn'),line('Cola de cobranza','mes '+r.colaCobranza,'covenant-warn'),line('Densidad vs DUIS ≥50 viv/ha',r.densidad.toFixed(0)+' viv/ha',r.densidad>=50?'covenant-ok':r.p.m2Lote>=1000?'covenant-warn':'covenant-bad'),line('Donación vs 15% (10 verde + 5 equip.)',r.donacionPct.toFixed(0)+'%',r.donacionPct>=15?'covenant-ok':'covenant-bad'),line('Comercio básico vs 0.13 m²/hab',r.comercioPorHab===null?'—':r.comercioPorHab.toFixed(2)+' m²/hab',r.comercioPorHab===null||r.comercioPorHab>=0.13?'covenant-ok':'covenant-warn'),line('Cuadro de áreas','cierra al 100%','covenant-ok'),...(r.geo?[line('Calle local ≥ '+NORMA.vialLocalMin+' m (IMPLAN Hermosillo)',fmtN(r.geo.anchoVial)+' m',r.geo.vialBajoNorma?'covenant-bad':'covenant-ok'),line('Donación ≥ 10% del vendible (LOTDU Son. art. 74)',fmtN(r.geo.donacionM2)+' / '+fmtN(r.geo.donacionReqM2)+' m²',r.geo.donacionM2>=r.geo.donacionReqM2-.5?'covenant-ok':'covenant-bad')]:[])].join('')+'<p class="note">Presupuesto de urbanización, comparables de lote y norma de donación de la plaza pendientes de validar por caso.</p>';
   }
   /* ================== INFOGRAFÍA ================== */
   function dibujaPlan(r){
