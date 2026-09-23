@@ -295,6 +295,8 @@
   .comp-lectura{font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:14px;line-height:1.55;color:var(--text);margin:12px 2px 2px;max-width:70ch}
   .comp-lectura b{color:var(--goldc);font-style:normal}
   /* ===== Tarjeta Vivienda (opcional) · mismo lenguaje que .land-mode del tratamiento del terreno ===== */
+  .sw-group{margin:4px 0 14px}.sw-lbl{font-size:10.5px;font-weight:700;color:var(--muted);margin-bottom:6px}
+  .otro-row{display:grid;grid-template-columns:1fr 110px 58px 30px;gap:6px;margin-bottom:6px}
   .viv-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:2px 0 16px}
   .viv-opt{border:1px solid var(--lineaf);border-radius:12px;background:rgba(255,255,255,.03);text-align:left;padding:11px 13px;cursor:pointer;font-family:inherit;transition:border-color .15s,background .15s,box-shadow .15s}
   .viv-opt b{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);font-weight:700}
@@ -411,6 +413,12 @@
         <div class="input-group"><div class="input-header"><label>Largo de la calle (m) · 0 = hasta el fondo</label><div class="val-display" data-input="inLargoCalle">0</div></div><input type="range" id="inLargoCalle" min="0" max="1500" step="1" value="0" data-color="var(--purple)"><div class="input-help">Si la calle no llega al fondo, lo que sobra al final se vuelve lote(s) de fondo que dan al retorno. Ej.: predio de 50 m con calle de 40 m → 10 m de fondo para lotes.</div></div>
         <div class="input-group"><div class="input-header"><label>Retorno al final de la calle (m²)</label><div class="val-display" data-input="inRetornoM2">0</div></div><input type="range" id="inRetornoM2" min="0" max="600" step="5" value="0" data-color="var(--purple)"><div class="input-help">El área de vuelta cuando la calle no llega al fondo (sólo cuenta si el largo de la calle es menor que el predio). Su forma y medida las valida IMPLAN.</div></div>
         <div class="input-group"><div class="input-header"><label>Donación de ley (% de la superficie vendible)</label><div class="val-display" data-input="inDonacionPct">12%</div></div><input type="range" id="inDonacionPct" min="0" max="20" step="1" value="12" data-color="var(--green)" data-format="pct"><div class="input-help"><b>12%</b> = 9% equipamiento + 3% áreas verdes (Ley de Ordenamiento Territorial y Desarrollo Urbano de Sonora, <b>art. 80</b>, texto vigente 15-jun-2021). Aplica a todo «desarrollo inmobiliario» —abierto o en condominio (art. 94)—, y abrir una calle pública nueva lo convierte en desarrollo inmobiliario (art. 2-XIII). Sólo la <b>subdivisión</b> con lotes al frente de una calle YA existente no dona (arts. 90-93). La cesión puede permutarse o pagarse (art. 79-I).</div></div>
+        <div class="sw-group"><div class="sw-lbl">Donación: física / pagada en efectivo (art. 79-I Ley OTDU Sonora)</div>
+          <input type="range" id="inDonacionPagada" min="0" max="1" step="1" value="0" hidden>
+          <div class="viv-switch" data-sw="inDonacionPagada">
+            <button type="button" class="viv-opt" data-val="0"><b><i class="ti ti-trees"></i>Física</b><span>Se deja en el plano el mínimo exacto (% × vendible); lo que sobra se reparte entre los lotes.</span></button>
+            <button type="button" class="viv-opt" data-val="1"><b><i class="ti ti-cash"></i>Pagada en efectivo</b><span>No resta área ni lotes. Cuesta m² de donación × valor de mercado del terreno en bruto, al arranque (con la licencia).</span></button>
+          </div></div>
         <div class="subheading">Cuadro de áreas · % del terreno que se cede</div>
         <div class="input-group"><div class="input-header"><label>Vialidades y banquetas (%)</label><div class="val-display" data-input="inPctVialidades">22%</div></div><input type="range" id="inPctVialidades" min="0" max="40" step="1" value="22" data-color="var(--orange)" data-format="pct"></div>
         <div class="input-group"><div class="input-header"><label>Áreas verdes y donación (%)</label><div class="val-display" data-input="inPctVerdes">10%</div></div><input type="range" id="inPctVerdes" min="0" max="25" step="1" value="10" data-color="var(--green)" data-format="pct"></div>
@@ -424,19 +432,21 @@
         <div class="input-group"><div class="input-header"><label>m² por lote</label><div class="val-display" data-input="inM2Lote">206</div></div><input type="range" id="inM2Lote" min="90" max="10000" step="1" value="206" data-color="var(--gold)"></div>
         <div class="input-group"><div class="input-header"><label>Precio en preventa ($/m² de lote)</label><div class="val-display" data-input="inPrecioM2Preventa">$3,800</div></div><input type="range" id="inPrecioM2Preventa" min="300" max="9000" step="10" value="3800" data-color="var(--green)" data-format="money"></div>
         <div class="input-group"><div class="input-header"><label>Precio en venta final ($/m² de lote)</label><div class="val-display" data-input="inPrecioM2Venta">$4,700</div></div><input type="range" id="inPrecioM2Venta" min="300" max="12000" step="10" value="4700" data-color="var(--green)" data-format="money"></div>
-        <div class="input-group"><div class="input-header"><label>Lotes vendidos en preventa (%)</label><div class="val-display" data-input="inPctLotesPreventa">40%</div></div><input type="range" id="inPctLotesPreventa" min="0" max="100" step="5" value="40" data-color="var(--gold)" data-format="pct"></div>
+        <div class="input-group"><div class="input-header"><label>Lotes vendidos en preventa (%)</label><div class="val-display" data-input="inPctLotesPreventa">40%</div></div><input type="range" id="inPctLotesPreventa" min="0" max="100" step="5" value="40" data-color="var(--gold)" data-format="pct"><div class="input-help" id="notaPreventa"></div></div>
         <div class="subheading">Comercial y amenidad (bloques en m²)</div>
         <div class="input-group"><div class="input-header"><label>m² comerciales (frente a vialidad principal)</label><div class="val-display" data-input="inComercialM2">2,166</div></div><input type="range" id="inComercialM2" min="0" max="30000" step="1" value="2166" data-color="var(--teal)"></div>
         <div class="input-group"><div class="input-header"><label>Precio comercial ($/m²)</label><div class="val-display" data-input="inPrecioM2Comercial">$5,800</div></div><input type="range" id="inPrecioM2Comercial" min="500" max="15000" step="50" value="5800" data-color="var(--teal)" data-format="money"></div>
         <div class="input-group"><div class="input-header"><label>Mes de venta del comercial</label><div class="val-display" data-input="inMesComercial">14</div></div><input type="range" id="inMesComercial" min="1" max="60" step="1" value="14" data-color="var(--teal)"></div>
         <div class="input-group"><div class="input-header"><label>m² de casa club / amenidad (no venden)</label><div class="val-display" data-input="inCasaClubM2">0</div></div><input type="range" id="inCasaClubM2" min="0" max="20000" step="50" value="0" data-color="var(--purple)"></div>
-        <div class="input-group"><div class="input-header"><label>Costo de la casa club ($)</label><div class="val-display" data-input="inCostoCasaClub">$0</div></div><input type="range" id="inCostoCasaClub" min="0" max="30000000" step="250000" value="0" data-color="var(--purple)" data-format="money"></div>
+        <div class="input-group"><div class="input-header"><label>Costo de la casa club ($)</label><div class="val-display" data-input="inCostoCasaClub">$0</div></div><input type="range" id="inCostoCasaClub" min="0" max="30000000" step="10000" value="0" data-color="var(--purple)" data-format="money"></div>
         <div class="micro-readout" id="readProducto">Calculando producto…</div></div></article>
 
     <article class="card" data-card="dFin"><div class="card-header"><div class="title-wrap"><div class="icon-box" style="background:#8ab8ff1f;color:var(--blue)"><i class="ti ti-credit-card"></i></div><div class="card-title">Lotes Financiados (el motor)</div></div><div class="edit-pill">AJUSTAR</div></div>
       <div class="kpi-grid"><div class="kpi-box"><span class="kpi-lbl">Mensualidad por lote</span><span class="kpi-val c-blue" id="lblMensualidad">$0</span></div><div class="kpi-box"><span class="kpi-lbl">Retorno por financiamiento</span><span class="kpi-val c-gold" id="lblRetFin">$0</span></div><div class="kpi-box"><span class="kpi-lbl">Cartera pico (saldo por cobrar)</span><span class="kpi-val c-purple" id="lblCartera">$0</span></div><div class="kpi-box"><span class="kpi-lbl">Cola de cobranza</span><span class="kpi-val c-orange" id="lblColaCobranza">0 meses</span></div></div>
       <div class="drawer" id="dFin"><div class="partner-guide"><b>Tu esquema real:</b> el comprador da un <b>enganche</b> y el saldo se cobra en <b>mensualidades con interés</b> — el financiamiento es un ingreso más del proyecto (no un descuento). La cartera es el activo: crece con cada venta y se drena con cada cobro.</div>
-        <div class="input-group"><div class="input-header"><label>Lotes financiados (% del total)</label><div class="val-display" data-input="inPctFinanciados">70%</div></div><input type="range" id="inPctFinanciados" min="0" max="100" step="5" value="70" data-color="var(--blue)" data-format="pct"></div>
+        <div class="input-group"><div class="input-header"><label>Financiamiento directo (% de las ventas)</label><div class="val-display" data-input="inPctFinanciados">70%</div></div><input type="range" id="inPctFinanciados" min="0" max="100" step="5" value="70" data-color="var(--blue)" data-format="pct"></div>
+        <div class="input-group"><div class="input-header"><label>Crédito INFONAVIT / bancario (% de las ventas)</label><div class="val-display" data-input="inPctCredito">0%</div></div><input type="range" id="inPctCredito" min="0" max="100" step="5" value="0" data-color="var(--teal)" data-format="pct">
+          <div class="input-help">Enganche al firmar y el saldo al escriturar (cuando termina la casa, o el lote ya urbanizado). No hay cartera ni cola. Lo que no es directo ni crédito es <b>contado</b>: <b id="lblMezclaPago">—</b>.</div></div>
         <div class="input-group"><div class="input-header"><label>Enganche (%)</label><div class="val-display" data-input="inEngancheLote">20%</div></div><input type="range" id="inEngancheLote" min="5" max="60" step="5" value="20" data-color="var(--blue)" data-format="pct"></div>
         <div class="input-group"><div class="input-header"><label>Mensualidades (meses)</label><div class="val-display" data-input="inMensualidades">36</div></div><input type="range" id="inMensualidades" min="6" max="120" step="6" value="36" data-color="var(--blue)"></div>
         <div class="input-group"><div class="input-header"><label>Interés anual del financiamiento (%)</label><div class="val-display" data-input="inInteresAnualFin">12.0%</div></div><input type="range" id="inInteresAnualFin" min="0" max="30" step=".5" value="12" data-color="var(--gold)" data-format="pct1"></div>
@@ -447,14 +457,18 @@
       <div class="kpi-grid"><div class="kpi-box"><span class="kpi-lbl">Urbanización</span><span class="kpi-val c-red" id="lblUrb">$0 M</span></div><div class="kpi-box"><span class="kpi-lbl">Costos blandos + trámites</span><span class="kpi-val" id="lblBlandos">$0 M</span></div><div class="kpi-box"><span class="kpi-lbl">Costo total</span><span class="kpi-val c-red" id="lblCostoTotal">$0 M</span></div><div class="kpi-box"><span class="kpi-lbl">Diferencial del m² de lote</span><span class="kpi-val c-gold" id="lblSpread">$0 /m²</span></div></div>
       <div class="drawer" id="dCostos">
         <div class="input-group"><div class="input-header"><label>Urbanización ($/m² VENDIBLE bruto)</label><div class="val-display" data-input="inUrbM2">$1,800</div></div><input type="range" id="inUrbM2" min="300" max="4000" step="10" value="1800" data-color="var(--red)" data-format="money"></div>
-        <div class="input-group"><div class="input-header"><label>Proyectos y trámites (% s/urbanización)</label><div class="val-display" data-input="inTramitesPct">4.0%</div></div><input type="range" id="inTramitesPct" min="0" max="12" step=".5" value="4" data-color="var(--gold)" data-format="pct1"></div>
+        <div class="input-group"><div class="input-header"><label>Proyectos y trámites (% s/urbanización)</label><div class="val-display" data-input="inTramitesPct">4.0%</div></div><input type="range" id="inTramitesPct" min="0" max="25" step=".5" value="4" data-color="var(--gold)" data-format="pct1"></div>
         <div class="input-group"><div class="input-header"><label>Imprevistos (% s/urbanización)</label><div class="val-display" data-input="inImprevistosPct">8.0%</div></div><input type="range" id="inImprevistosPct" min="0" max="25" step=".5" value="8" data-color="var(--red)" data-format="pct1"></div>
         <div class="input-group"><div class="input-header"><label>Costos blandos s/ingresos (%) · admón. + comisiones + marketing</label><div class="val-display" data-input="inBlandosPct">8.0%</div></div><input type="range" id="inBlandosPct" min="0" max="20" step=".5" value="8" data-color="var(--gold)" data-format="pct1"></div>
+        <div class="subheading">Otros costos · lista libre</div>
+        <div class="input-help" style="margin-top:-4px">Estudios, factibilidades de CFE y Agua de Hermosillo, escrituración, donación pagada (si no usas el switch)… Cada renglón entra al costo del proyecto en su mes (mes 0 = al arranque).</div>
+        <div id="otrosCostos"></div>
+        <button type="button" class="small-btn secondary" id="btnOtroCosto"><i class="ti ti-plus"></i>Agregar costo</button>
         <div class="micro-readout" id="readCostos">Calculando costos…</div></div></article>
 
     <article class="card" data-card="dCapital"><div class="card-header"><div class="title-wrap"><div class="icon-box" style="background:#d9a45b1f;color:var(--orange)"><i class="ti ti-world"></i></div><div class="card-title">Tierra, Calendario &amp; Capital</div></div><div class="edit-pill">AJUSTAR</div></div>
       <div class="kpi-grid"><div class="kpi-box"><span class="kpi-lbl">Tratamiento del terreno</span><span class="kpi-val" id="lblTierraModo">—</span></div><div class="kpi-box"><span class="kpi-lbl">Etapas</span><span class="kpi-val c-orange" id="lblEtapas">—</span></div><div class="kpi-box"><span class="kpi-lbl">Absorción</span><span class="kpi-val c-green" id="lblAbsorcion">—</span></div><div class="kpi-box"><span class="kpi-lbl">Meses totales</span><span class="kpi-val" id="lblMeses">0</span></div><div class="kpi-box"><span class="kpi-lbl">Dueño por m² vs mercado</span><span class="kpi-val c-blue" id="lblDuenoM2">$0</span></div><div class="kpi-box full"><span class="kpi-lbl">Condición de crédito</span><span class="kpi-val" id="lblCondPIK">—</span></div></div>
-      <div class="drawer" id="dCapital"><div class="partner-guide"><b>Reparto fiel al PPP:</b> la tierra que el dueño <b>aporta</b> es capital suyo, así que primero se le <b>repaga su valor</b> y sólo lo que sobra se reparte como utilidad — su % corre <b>antes de costos financieros</b>; el crédito puente corre por cuenta del desarrollador.</div>
+      <div class="drawer" id="dCapital"><div class="partner-guide"><b>Reparto fiel al PPP:</b> la tierra que el dueño <b>aporta</b> es capital suyo, así que primero se le <b>repaga su valor</b> y sólo lo que sobra se reparte como utilidad — los intereses y comisiones del crédito puente van <b>a cargo del proyecto (ambos)</b>, antes del reparto: ingresos − costos − intereses − repago de la tierra − honorario de desarrollo = utilidad repartible.</div>
         <div class="subheading">1. Tratamiento del terreno</div>
         <div class="input-group"><div class="input-header"><label>Valor de mercado del terreno ($/m² en bruto)</label><div class="val-display" data-input="inValorTierraM2">$450</div></div><input type="range" id="inValorTierraM2" min="0" max="4000" step="10" value="450" data-color="var(--orange)" data-format="money"></div>
         <div class="input-group"><div class="input-header"><label>Porción aportada por el dueño (%)</label><div class="val-display" data-input="inAporteTierra">100%</div></div><input type="range" id="inAporteTierra" min="0" max="100" step="5" value="100" data-color="var(--orange)" data-format="pct">
@@ -462,6 +476,14 @@
         <div class="input-group"><div class="input-header"><label>Repago del terreno aportado, antes de utilidad (%)</label><div class="val-display" data-input="inRepagoTierra">100%</div></div><input type="range" id="inRepagoTierra" min="0" max="100" step="5" value="100" data-color="var(--blue)" data-format="pct">
           <div class="input-help">Al 100%, el dueño recupera íntegro el valor de mercado de la tierra que aportó <b>antes</b> de que nadie toque utilidad; el reparto de abajo se aplica sólo al remanente. En 0% se comporta como antes de este cambio: la tierra aportada no se repaga y el dueño sólo vive de su % de utilidad.</div></div>
         <div class="input-group"><div class="input-header"><label>% de utilidad para el dueño (sobre el remanente)</label><div class="val-display" data-input="inPctDueno">30%</div></div><input type="range" id="inPctDueno" min="0" max="60" step="1" value="30" data-color="var(--blue)" data-format="pct"></div>
+        <div class="input-group"><div class="input-header"><label>Honorario de desarrollo (% sobre ventas)</label><div class="val-display" data-input="inHonorarioPct">0.0%</div></div><input type="range" id="inHonorarioPct" min="0" max="15" step=".5" value="0" data-color="var(--orange)" data-format="pct1">
+          <div class="input-help">Para el desarrollador, antes del reparto (típico 5-8%). En 0% no existe.</div></div>
+        <div class="sw-group"><div class="sw-lbl">Intereses y comisiones del crédito puente</div>
+          <input type="range" id="inInteresesDev" min="0" max="1" step="1" value="0" hidden>
+          <div class="viv-switch" data-sw="inInteresesDev">
+            <button type="button" class="viv-opt" data-val="0"><b><i class="ti ti-users"></i>A cargo del proyecto (ambos)</b><span>Se restan antes del reparto: los pagan dueño y desarrollador en su proporción.</span></button>
+            <button type="button" class="viv-opt" data-val="1"><b><i class="ti ti-history"></i>Sólo el desarrollador (histórico)</b><span>El % del dueño corre antes de costos financieros. Sólo para reproducir casos viejos.</span></button>
+          </div></div>
         <div class="waterfall-steps" id="waterfallTierra"></div>
         <div class="land-deal-summary" id="landDeal">Calculando el trato del terreno…</div>
         <div class="subheading">2. Calendario y absorción</div>
@@ -501,6 +523,8 @@
           <div class="subheading">Tipologías de vivienda</div>
           <div id="vivTipologias"></div>
           <button type="button" class="small-btn secondary" id="btnVivAddTipo"><i class="ti ti-plus"></i>Agregar tipología</button>
+          <div class="viv-field" id="vivFondoWrap" style="margin-top:12px"><span>Tipología del lote de fondo</span><select class="viv-in" id="vivTipoFondo"></select>
+            <div class="input-help" id="vivFondoNota"></div></div>
           <div class="micro-readout" id="readVivMezcla"></div>
           <div class="subheading">Referencia de mercado</div>
           <div class="input-group"><div class="input-header"><label>Precio casa INFONAVIT equivalente en la zona</label><div class="val-display" data-input="inPrecioInfonavit">$0</div></div><input type="range" id="inPrecioInfonavit" min="0" max="3000000" step="5000" value="0" data-color="var(--blue)" data-format="money">
@@ -566,7 +590,7 @@
     inPctVialidades:{t:'Vialidades',k:'Diseño / norma',q:'% del terreno en calles y banquetas.',m:'Resta vendible; manda sobre urbanización.',d:'Traza y norma municipal.'},
     inLargoCalle:{t:'Largo de la calle',k:'Plano',q:'Metros de calle; 0 = hasta el fondo.',m:'Lo que sobra al final se vuelve lote(s) de fondo.',d:'Diseño del plano.'},
     inRetornoM2:{t:'Retorno',k:'Plano',q:'Área de vuelta al final de la calle.',m:'Resta área de lotes; la valida IMPLAN.',d:'Diseño del plano.'},
-    inDonacionPct:{t:'Donación de ley',k:'Ley OTDU Sonora art. 80',q:'% del área vendible que se dona.',m:'Resta lotes.',d:'Ley de Sonora / municipio.'},
+    inDonacionPct:{t:'Donación de ley',k:'Ley OTDU Sonora art. 80',q:'% del área vendible que se dona (mínimo exacto, sin redondear a lote).',m:'Física: resta área que se reparte entre lotes. Pagada: costo = m² × valor del terreno.',d:'Ley de Sonora / municipio.'},
     inPctVerdes:{t:'Verdes y donación',k:'Norma por validar',q:'% en áreas verdes + donación.',m:'Resta vendible.',d:'Ley de fraccionamientos de la plaza.'},
     inPctEquipamiento:{t:'Equipamiento',k:'Norma por validar',q:'% para equipamiento (los CODI asumían "se paga 7%, no se dona" — validar por municipio).',m:'Resta vendible.',d:'Norma de cada plaza.'},
     inEfSubdiv:{t:'Eficiencia de subdivisión',k:'Anteproyecto',q:'% del área de lotes que queda vendible tras la traza fina.',m:'Corrige la sobreestimación de lotes.',d:'Anteproyecto de lotificación.'},
@@ -585,6 +609,8 @@
     inInteresAnualFin:{t:'Interés del financiamiento',k:'Política',q:'Interés anual simple sobre saldo.',m:'El RETORNO POR FINANCIAMIENTO — ingreso extra que tus CODI ya cobraban.',d:'Mercado: 10-16% en financiamiento directo.'},
     inMesesSaldoContado:{t:'Saldo de contado',k:'Política',q:'Meses en que el comprador de contado liquida.',m:'Caja temprana.',d:'Escrituración.'},
     inUrbM2:{t:'Urbanización',k:'Precio unitario por cotizar',q:'$/m² de área VENDIBLE bruta (calles, redes, alumbrado prorrateados).',m:'El costo más grande.',d:'Guaymas $1,800 · Hipódromo $1,500 · Tuxtla $1,150 — pedir presupuesto local.'},
+    inPctCredito:{t:'Crédito INFONAVIT / bancario',k:'Mercado',q:'% de compradores que pagan con crédito hipotecario.',m:'Enganche al firmar y saldo al escriturar: sin cartera ni cola.',d:'Perfil del comprador de la plaza.'},
+    inHonorarioPct:{t:'Honorario de desarrollo',k:'Acuerdo',q:'% sobre ventas para el desarrollador, antes del reparto.',m:'Sale de la utilidad antes del % dueño/desarrollador.',d:'Negociación (5-8% típico).'},
     inTramitesPct:{t:'Proyectos y trámites',k:'Costo blando',q:'% sobre urbanización.',m:'Suma al costo.',d:'Lotificación, permisos, DRO (Director Responsable de Obra).'},
     inImprevistosPct:{t:'Imprevistos',k:'Riesgo',q:'Colchón sobre urbanización.',m:'Protege el margen.',d:'Sin presupuesto firmado usa 8-12%.'},
     inBlandosPct:{t:'Costos blandos s/ingresos',k:'Costo blando',q:'Administración + comisiones + marketing.',m:'Sale con cada cobro.',d:'Estructura comercial.'},
@@ -618,9 +644,9 @@
     carteraPico:{t:'Cartera pico (saldo por cobrar)',k:'Cartera',q:'El punto máximo de las mensualidades que te deben: capital de trabajo metido en financiar compradores.',r:'Crece con cada venta (absorción y % financiados) y se drena con cada mensualidad cobrada; es la línea azul de la gráfica «La cartera».'},
     cola:{t:'Cola de cobranza',k:'Cartera',q:'El mes en que se cobra la última mensualidad del último lote vendido.',r:'Último lote vendido + meses de financiamiento; manda sobre el plazo total de la corrida, más que la obra.'},
     utilidad:{t:'Utilidad final',k:'Dinero',q:'Lo que queda de las ventas después de todos los costos y del interés del crédito, con su margen sobre ventas.',r:'De aquí sale el reparto con el dueño; la TIR mide qué tan rápido la genera el capital invertido.'},
-    tir:{t:'Tasa Interna de Retorno (TIR)',k:'Dinero',q:'El rendimiento anual del dinero que puso el desarrollador, tomando en cuenta cuándo entra y cuándo sale cada peso.',r:'Se compara contra la TIR objetivo; mejora cobrando antes (absorción, enganches) y bajando el pico de deuda.'},
+    tir:{t:'Tasa Interna de Retorno (TIR)',k:'Dinero',q:'El rendimiento anual tomando en cuenta cuándo entra y sale cada peso. Siempre se muestra la del proyecto (flujo sin deuda, tierra a valor de mercado en el mes 0) y la del dueño; la del desarrollador sólo si pone capital propio.',r:'Se compara contra la TIR objetivo; mejora cobrando antes (absorción, enganches) y bajando el pico de deuda.'},
     picoDeuda:{t:'Pico de deuda',k:'Crédito',q:'El punto máximo del crédito puente dispuesto durante la corrida.',r:'Lo bajan las etapas y las ventas tempranas; genera interés capitalizado (PIK) y se compara contra el límite de deuda.'},
-    dueno:{t:'Resultado del dueño del terreno',k:'Reparto',q:'Lo que recibe quien aporta la tierra: su % de la utilidad (antes de costos financieros) más lo que se le paga por la porción vendida.',r:'Dividido entre los m² del terreno da el «Dueño por m²», que se compara contra vender en bruto hoy.'},
+    dueno:{t:'Resultado del dueño del terreno',k:'Reparto',q:'Lo que recibe quien aporta la tierra: el repago de su tierra, su % de la utilidad (ya descontados intereses y comisiones del crédito, que son del proyecto) y lo que se le paga por la porción vendida.',r:'Dividido entre los m² del terreno da el «Dueño por m²», que se compara contra vender en bruto hoy.'},
     habitantes:{t:'Habitantes estimados',k:'Norma DUIS',q:'Lotes × habitantes por vivienda (factor CONAVI 4.18): la gente que vivirá en el fraccionamiento.',r:'Dimensiona el comercio básico (0.13 m²/hab) y el equipamiento que pide la norma.'},
     densidad:{t:'Densidad (viviendas por hectárea)',k:'Norma DUIS',q:'Lotes entre las hectáreas del terreno. Semáforo: verde ≥50 viv/ha (óptimo del Desarrollo Urbano Integral Sustentable, DUIS), naranja ≥25.',r:'La mueven el tamaño de lote y las cesiones; lo campestre (lotes de 1,000+ m²) queda fuera de este criterio.'},
     urb:{t:'Urbanización',k:'Costos',q:'El costo de calles, redes y alumbrado: el $/m² por cada m² vendible bruto.',r:'Es el costo más grande del proyecto; trámites e imprevistos se calculan como % de este número.'},
@@ -679,7 +705,7 @@
 
   /* ================== VIVIENDA (OPCIONAL) · estado por escenario ================== */
   const tId=()=>'t'+Math.random().toString(36).slice(2,8);
-  function viviendaDefault(){return {activo:false,tipologias:[]}}
+  function viviendaDefault(){return {activo:false,tipologias:[],tipoFondo:'',otros:[]}}
   function viviendaClone(v){try{return JSON.parse(JSON.stringify(v||viviendaDefault()))}catch(e){return viviendaDefault()}}
   function viviendaSanearTipo(t){t=t||{};return{
     id:String(t.id||tId()),nombre:String(t.nombre||'Tipología').slice(0,40),
@@ -693,7 +719,13 @@
   function viviendaSanear(v){
     if(!v||typeof v!=='object')return viviendaDefault();
     const tips=Array.isArray(v.tipologias)?v.tipologias.slice(0,12).map(viviendaSanearTipo):[];
-    return {activo:!!v.activo,tipologias:tips}}
+    // viajan con la versión (igual que las tipologías) aunque no sean de vivienda: son lo que no cabe en un slider
+    //  · tipoFondo: id de la tipología que lleva el lote de fondo ('' = sigue la mezcla)
+    //  · otros: lista libre de "Otros costos" {concepto, monto, mes}
+    const otros=Array.isArray(v.otros)?v.otros.slice(0,30).map(o=>({id:String((o&&o.id)||tId()),concepto:String((o&&o.concepto)||'').slice(0,60),
+      monto:Number.isFinite(Number(o&&o.monto))?Math.max(0,Number(o.monto)):0,mes:Number.isFinite(Number(o&&o.mes))?Math.max(0,Math.round(Number(o.mes))):0})):[];
+    const tipoFondo=tips.some(t=>t.id===v.tipoFondo)?String(v.tipoFondo):'';
+    return {activo:!!v.activo,tipologias:tips,tipoFondo,otros}}
   function normalizarMezcla(tipologias){
     const tot=(tipologias||[]).reduce((s,t)=>s+(Number(t.mezclaPct)||0),0);
     if(!tot)return [];
@@ -725,7 +757,12 @@
       valorTierraM2:gv('inValorTierraM2'),aporteTierra:gv('inAporteTierra')/100,repagoPct:gv('inRepagoTierra')/100,pctDueno:gv('inPctDueno')/100,
       etapas:Math.max(1,Math.round(gv('inEtapas'))),mesesUrbEtapa:Math.max(1,Math.round(gv('inMesesUrbEtapa'))),inicioVentas:Math.max(1,Math.round(gv('inInicioVentas'))),absLotes:Math.max(.1,gv('inLotesMes')),
       equity:gv('inEquity'),maxDeuda:gv('inMaxDeuda'),ltc:gv('inLTC')/100,pik:gv('inPIK')/100,feeDeuda:gv('inFeeDeuda')/100,tirTarget:gv('inTirObjetivo')/100,habViv:gv('inHabPorViv'),
-      pctViv:gv('inPctViv')/100,precioInfonavit:gv('inPrecioInfonavit')};
+      pctViv:gv('inPctViv')/100,precioInfonavit:gv('inPrecioInfonavit'),
+      donPct:Math.max(0,Math.min(.5,gv('inDonacionPct')/100)),donPagada:gv('inDonacionPagada')>=.5,
+      honorario:gv('inHonorarioPct')/100,interesesSoloDev:gv('inInteresesDev')>=.5};
+    // forma de pago del comprador: directo (mensualidades) + crédito INFONAVIT/banco + contado = 100%
+    p.pctCred=Math.max(0,Math.min(1-p.pctFin,gv('inPctCredito')/100));p.pctCont=Math.max(0,1-p.pctFin-p.pctCred);
+    const otrosCostos=((viv&&viv.otros)||[]).map(o=>({concepto:o.concepto,monto:Math.max(0,Number(o.monto)||0),mes:Math.max(0,Math.round(Number(o.mes)||0))}));
     // 1) cuadro de áreas
     // Predio de una sola calle (una fila de lotes a lo largo del lado largo): los lotes salen de la geometría real
     // (vialidad en metros × largo, lote frente×fondo) y la donación sigue la ley de Sonora: 10% del área
@@ -735,41 +772,67 @@
     let nLotesGeo=0;
     if(geo){
       // 23-sep (chinche de Alejandro): la calle ya no tiene que llegar al fondo. Con calle de L < largo, el
-      // tramo final (largo−L)×corto se vuelve lote(s) de fondo que dan al retorno, y el retorno (m²) come
-      // área de la fila lateral. Donación: % del vendible configurable (inDonacionPct, antes fijo 10%).
+      // tramo final (largo−L)×corto se vuelve UN solo lote de fondo con su tamaño real (no se parte en lotes
+      // tipo), y el retorno (m²) come área de la fila lateral.
+      // Donación (Ley OTDU Sonora art. 80): el MÍNIMO EXACTO, m² = % × área vendible. Nunca se redondea a un
+      // lote entero: lo que sobra se reparte entre los lotes de la fila. Si se paga en efectivo (art. 79-I)
+      // no resta área ni lotes; entra como costo = m² de donación × valor de mercado del terreno en bruto.
       const lc=gv('inLargoCalle');geo.largoCalle=lc>0?Math.min(geo.largo,lc):geo.largo;
       geo.retorno=geo.largoCalle<geo.largo-1e-9?Math.max(0,gv('inRetornoM2')):0;
-      geo.donPct=Math.max(0,Math.min(.5,gv('inDonacionPct')/100));
+      geo.donPct=p.donPct;geo.donPagada=p.donPagada;
       geo.vialM2=geo.anchoVial*geo.largoCalle+geo.retorno;
       const fondoM2=(geo.largo-geo.largoCalle)*geo.corto,ladoM2=Math.max(0,geo.largoCalle*geo.fondoUtil-geo.retorno);
       const util=ladoM2+fondoM2;
+      // comercial y amenidad salen de la fila lateral (el lote de fondo se respeta completo)
       const com0=Math.min(p.comM2,util),cc0=Math.min(p.ccM2,Math.max(0,util-com0));
+      const ladoDisp=Math.max(0,ladoM2-com0-cc0),fondoDisp=Math.max(0,fondoM2-Math.max(0,com0+cc0-ladoM2));
+      const vendLotes=p.donPagada?ladoDisp+fondoDisp:(ladoDisp+fondoDisp)/(1+geo.donPct);
+      geo.fondoLoteM2=Math.min(fondoDisp,vendLotes);
+      const ladoVend=Math.max(0,vendLotes-geo.fondoLoteM2);
       geo.cabenLado=Math.floor(Math.max(0,geo.largoCalle-geo.retorno/geo.fondoUtil)/geo.frenteLote+1e-9);
-      geo.cabenFondo=Math.floor(fondoM2/p.m2Lote+1e-9);
-      geo.caben=geo.cabenLado+geo.cabenFondo;
-      nLotesGeo=Math.max(0,Math.min(geo.caben,Math.floor((util-com0-cc0)/(p.m2Lote*(1+geo.donPct))+1e-9)));
-      geo.nFondo=Math.min(geo.cabenFondo,nLotesGeo);geo.nLado=nLotesGeo-geo.nFondo;
-      geo.donacionReqM2=geo.donPct*nLotesGeo*p.m2Lote;
-      geo.donacionM2=Math.max(0,util-com0-cc0-nLotesGeo*p.m2Lote);
+      geo.nFondo=geo.fondoLoteM2>=1?1:0;
+      geo.nLado=Math.max(0,Math.min(geo.cabenLado,Math.floor(ladoVend/p.m2Lote+1e-9)));
+      geo.m2LadoLote=geo.nLado?ladoVend/geo.nLado:p.m2Lote;
+      geo.frenteLoteReal=geo.m2LadoLote/geo.fondoUtil;
+      geo.cabenFondo=geo.nFondo;geo.caben=geo.cabenLado+geo.nFondo;
+      nLotesGeo=geo.nLado+geo.nFondo;
+      geo.m2LotesReal=geo.nLado*geo.m2LadoLote+(geo.nFondo?geo.fondoLoteM2:0);
+      geo.donacionReqM2=geo.donPct*geo.m2LotesReal;
+      geo.donacionPagadaM2=p.donPagada?geo.donacionReqM2:0;
+      geo.donacionM2=Math.max(0,util-com0-cc0-geo.m2LotesReal); // lo que queda físicamente en el plano
       geo.vialBajoNorma=geo.anchoVial<NORMA.vialLocalMin;
       p.pctVial=Math.min(1,geo.vialM2/p.sup);p.pctVerdes=Math.min(1-p.pctVial,geo.donacionM2/p.sup);p.pctEquip=0}
+    else if(p.donPagada){p.pctVerdes=0;p.pctEquip=0} // donación pagada: el cuadro no cede verdes ni equipamiento
     const sumaCes=p.pctVial+p.pctVerdes+p.pctEquip,vendibleBruto=p.sup*Math.max(0,1-sumaCes);
     const comercial=Math.min(p.comM2,vendibleBruto),casaClub=Math.min(p.ccM2,Math.max(0,vendibleBruto-comercial));
-    const residBruto=Math.max(0,vendibleBruto-comercial-casaClub),lotesArea=geo?nLotesGeo*p.m2Lote:residBruto*p.efSubdiv;
+    const residBruto=Math.max(0,vendibleBruto-comercial-casaClub),lotesArea=geo?geo.m2LotesReal:residBruto*p.efSubdiv;
     const nLotes=geo?nLotesGeo:Math.floor(lotesArea/p.m2Lote);
     if(geo)geo.nLotes=nLotes;
-    const m2Lotes=nLotes*p.m2Lote;
+    const m2Lotes=geo?geo.m2LotesReal:nLotes*p.m2Lote;
+    const m2LoteTipo=geo&&geo.nLado?geo.m2LadoLote:p.m2Lote; // lote tipo (fila); el de fondo va aparte
+    const fondoM2Lote=geo&&geo.nFondo?geo.fondoLoteM2:0;
+    // donación pagada en efectivo (art. 79-I): % × área vendible × valor de mercado del terreno EN BRUTO
+    const donacionPagadaM2=p.donPagada?(geo?geo.donacionPagadaM2:p.donPct*vendibleBruto):0;
+    const costoDonacion=donacionPagadaM2*p.valorTierraM2;
+    const costoOtros=otrosCostos.reduce((s,o)=>s+o.monto,0);
     // 2) vivienda sobre lotes (opcional; todo el bloque queda en 0/neutro si el switch está apagado)
     const vivActiva=!!(viv&&viv.activo&&p.pctViv>0&&(viv.tipologias||[]).length);
     const tiposViv=vivActiva?normalizarMezcla(viv.tipologias):[];
     const nLotesViv=vivActiva?Math.round(nLotes*p.pctViv):0;
     const nLotesPel=nLotes-nLotesViv;
     // reparte unidades entre tipologías (mezcla continua unidad por unidad); el residuo va a la de mayor mezcla
+    // reparte unidades entre tipologías (mezcla continua unidad por unidad); el residuo va a la de mayor mezcla.
+    // 23-sep: el lote de fondo (predio de una calle que no llega al fondo) puede llevar su PROPIA tipología
+    // (viv.tipoFondo): esa unidad se aparta primero, con el m² real del lote de fondo, y el resto sigue la mezcla.
     let unidadesViv=[];
+    const fondoTipo=vivActiva&&fondoM2Lote>0&&nLotesViv>0?tiposViv.find(t=>t.id===viv.tipoFondo)||null:null;
     if(vivActiva&&nLotesViv>0){
-      unidadesViv=tiposViv.map(t=>({t,u:Math.floor(nLotesViv*t.mezclaPct/100)}));
-      const asignado=unidadesViv.reduce((s,x)=>s+x.u,0),falta=nLotesViv-asignado;
+      const nMezcla=nLotesViv-(fondoTipo?1:0);
+      unidadesViv=tiposViv.map(t=>({t,u:Math.floor(nMezcla*t.mezclaPct/100),m2Lote:m2LoteTipo}));
+      const asignado=unidadesViv.reduce((s,x)=>s+x.u,0),falta=nMezcla-asignado;
       if(falta>0&&unidadesViv.length){let iMax=0;for(let i=1;i<unidadesViv.length;i++)if(unidadesViv[i].t.mezclaPct>unidadesViv[iMax].t.mezclaPct)iMax=i;unidadesViv[iMax].u+=falta}
+      unidadesViv=unidadesViv.filter(x=>x.u>0);
+      if(fondoTipo)unidadesViv.push({t:fondoTipo,u:1,m2Lote:fondoM2Lote,fondo:true});
     }
     const precioUnidad=t=>t.precioModo==='m2'?t.precioVal*t.m2Constr:t.precioVal;
     const ingViv=unidadesViv.reduce((s,x)=>s+x.u*precioUnidad(x.t),0);
@@ -778,10 +841,14 @@
     const precioPromedioViv=nLotesViv>0?ingViv/nLotesViv:0;
     const m2ConstrPromedioViv=nLotesViv>0?unidadesViv.reduce((s,x)=>s+x.u*x.t.m2Constr,0)/nLotesViv:0;
     const costoUnidViv=nLotesViv>0?costoConstrViv/nLotesViv:0;
+    const precioMaxViv=unidadesViv.reduce((m,x)=>Math.max(m,precioUnidad(x.t)),0);
     const semaforoViv=!vivActiva?null:(p.precioInfonavit>0?(precioPromedioViv<=p.precioInfonavit?'ok':'bad'):'na');
-    // 3) precios e ingresos de LOTES PELONES (idéntico al motor original: nLotesPel===nLotes cuando la vivienda está apagada)
+    // 3) precios e ingresos de LOTES PELONES (idéntico al motor original: nLotesPel===nLotes cuando la vivienda está apagada).
+    // Con lotes de distinto tamaño (fila + fondo) el precio del lote pelón sale de su m² promedio real.
+    const m2Pel=nLotesPel<=0?0:(fondoM2Lote>0&&!fondoTipo&&nLotesViv<nLotes?fondoM2Lote+(nLotesPel-1)*m2LoteTipo:nLotesPel*m2LoteTipo);
+    const m2PelProm=nLotesPel>0?m2Pel/nLotesPel:m2LoteTipo;
     const nPrev=Math.round(nLotesPel*p.pctPrev),nFinal=nLotesPel-nPrev;
-    const precioPrev=p.m2Lote*p.prePreventa,precioFinal=p.m2Lote*p.preVenta;
+    const precioPrev=m2PelProm*p.prePreventa,precioFinal=m2PelProm*p.preVenta;
     const ingLotesBase=nPrev*precioPrev+nFinal*precioFinal,ingCom=comercial*p.preCom;
     // financiamiento por lote: interés simple anual sobre saldo insoluto promedio
     const retLote=precio=>{const saldo=precio*(1-p.eng);return saldo*p.interes*(p.nMens+1)/24};
@@ -800,25 +867,27 @@
     // 4) costos
     const urbanizacion=vendibleBruto*p.urbM2,blandosUrb=urbanizacion*(p.tramites+p.imprevistos);
     const blandosIng=ingresos*p.blandos,tierraPago=p.sup*p.valorTierraM2*(1-p.aporteTierra);
-    const costoProyecto=urbanizacion+blandosUrb+p.ccCosto+blandosIng+tierraPago+costoConstrViv;
+    const costoProyecto=urbanizacion+blandosUrb+p.ccCosto+blandosIng+tierraPago+costoConstrViv+costoDonacion+costoOtros;
     const utilidadPre=ingresos-costoProyecto,margenPre=ingresos?utilidadPre/ingresos:0;
-    // 3.5) el terreno APORTADO es capital del dueño: se le repaga su valor de mercado ANTES de repartir
-    // utilidad (return of capital senior al profit split). No es un costo del proyecto — no consume deuda ni
-    // capital del desarrollador — sino una preferencia sobre la utilidad, así que sale de `utilidadPre`.
-    // Con repagoPct=0 el motor se comporta igual que antes de existir este bloque.
+    // el terreno APORTADO es capital del dueño: se le repaga su valor de mercado ANTES de repartir utilidad
+    // (return of capital senior al profit split). No es costo del proyecto (no consume deuda ni capital); el
+    // repago y el reparto se calculan abajo, ya con los intereses del crédito conocidos.
     const tierraAportada=p.sup*p.valorTierraM2*p.aporteTierra;
     const repagoObjetivo=tierraAportada*p.repagoPct;
-    const repagoTierra=Math.min(repagoObjetivo,Math.max(0,utilidadPre));
-    const repagoFaltante=Math.max(0,repagoObjetivo-repagoTierra);
-    const utilidadRepartible=Math.max(0,utilidadPre-repagoTierra);
     // 4) calendario y flujo
     const mesesUrb=p.etapas*p.mesesUrbEtapa;
     const mesFinVentas=p.inicioVentas+(nLotes?nLotes/p.absLotes:0);
-    const colaCobranzaViv=vivActiva&&nLotesViv>0?Math.ceil(Math.max(mesFinVentas,mesesUrb)+mesesConstrProm+p.nMens):0;
-    const colaCobranza=Math.ceil(Math.max(mesFinVentas+p.nMens,colaCobranzaViv));
-    const mesesNecesarios=Math.ceil(Math.max(mesesUrb,colaCobranza,p.mesCom+p.mesesContado))+1,totalMonths=Math.min(240,Math.max(6,mesesNecesarios)),ventasTruncadas=mesesNecesarios>240;
+    // cola de cobranza según la forma de pago: sólo el financiamiento directo deja mensualidades por cobrar.
+    // (bug 23-sep: con 0% financiado la cola seguía sumando las mensualidades y el crédito puente seguía corriendo)
+    const colaPago=p.pctFin>0?p.nMens:p.pctCont>0?p.mesesContado:0;
+    const colaCobranzaPel=nLotesPel>0?Math.max(mesFinVentas+Math.max(1,colaPago),p.pctCred>0?mesesUrb:0):0;
+    const colaCobranzaViv=vivActiva&&nLotesViv>0?Math.ceil(Math.max(mesFinVentas,mesesUrb)+mesesConstrProm+colaPago):0;
+    const colaCobranza=Math.ceil(Math.max(colaCobranzaPel,colaCobranzaViv));
+    const mesUltOtro=otrosCostos.reduce((m,o)=>o.monto>0?Math.max(m,o.mes):m,0);
+    const mesesNecesarios=Math.ceil(Math.max(mesesUrb,colaCobranza,ingCom>0?p.mesCom+p.mesesContado:0,mesUltOtro))+1,totalMonths=Math.min(240,Math.max(6,mesesNecesarios)),ventasTruncadas=mesesNecesarios>240;
     const rev=Array(totalMonths).fill(0),cost=Array(totalMonths).fill(0),cartera=Array(totalMonths).fill(0);
-    cost[0]+=tierraPago;
+    cost[0]+=tierraPago+costoDonacion; // la donación pagada se liquida con la licencia, al arranque
+    otrosCostos.forEach(o=>{cost[Math.min(totalMonths-1,Math.max(0,o.mes-1))]+=o.monto});
     for(let e=0;e<p.etapas;e++){const ini=e*p.mesesUrbEtapa,gasto=(urbanizacion+blandosUrb)/p.etapas+(e===0?p.ccCosto:0);for(let m=0;m<p.mesesUrbEtapa;m++){const mm=ini+m;if(mm<totalMonths)cost[mm]+=gasto/p.mesesUrbEtapa}}
     // ventas de lotes: preventa primero, luego precio final. Las unidades con vivienda se mezclan proporcionalmente
     // (continua, unidad por unidad) con las pelonas conforme se venden, y su cobro se retrasa hasta que la casa está construida.
@@ -833,7 +902,9 @@
         const enPrev=Math.max(0,Math.min(uPel,nPrev-vendidosPel));// primeros nPrev a precio preventa
         const precioU=(enPrev*precioPrev+(uPel-enPrev)*precioFinal)/uPel;
         vendidosPel+=uPel;
-        const uFin=uPel*p.pctFin,uCont=uPel-uFin;
+        const uFin=uPel*p.pctFin,uCred=uPel*p.pctCred,uCont=Math.max(0,uPel-uFin-uCred);
+        // crédito INFONAVIT/banco: enganche al firmar, el saldo al escriturar (lote ya urbanizado); sin cartera ni cola
+        rev[m]+=uCred*precioU*p.eng;rev[Math.min(Math.max(m+1,mesesUrb-1),totalMonths-1)]+=uCred*precioU*(1-p.eng);
         // contado: enganche + saldo corto
         rev[m]+=uCont*precioU*p.eng;
         for(let k=1;k<=p.mesesContado;k++){const mm=Math.min(m+k,totalMonths-1);rev[mm]+=uCont*precioU*(1-p.eng)/p.mesesContado}
@@ -846,7 +917,9 @@
       if(uViv>0){
         const retraso=Math.max(0,mesesUrb-(m+1))+mesesConstrProm,mEntrega=Math.min(m+Math.round(retraso),totalMonths-1);
         {const mc=Math.max(1,Math.round(mesesConstrProm)),ini=Math.max(m,mEntrega-mc),nm=Math.max(1,mEntrega-ini);for(let k=0;k<nm;k++)cost[Math.min(ini+k,totalMonths-1)]+=uViv*costoUnidViv/nm}
-        const uFin=uViv*p.pctFin,uCont=uViv-uFin;
+        const uFin=uViv*p.pctFin,uCred=uViv*p.pctCred,uCont=Math.max(0,uViv-uFin-uCred);
+        // crédito INFONAVIT/banco: enganche al firmar y el saldo al escriturar, cuando termina la casa
+        rev[m]+=uCred*precioPromedioViv*p.eng;rev[mEntrega]+=uCred*precioPromedioViv*(1-p.eng);
         rev[mEntrega]+=uCont*precioPromedioViv*p.eng;
         for(let k=1;k<=p.mesesContado;k++){const mm=Math.min(mEntrega+k,totalMonths-1);rev[mm]+=uCont*precioPromedioViv*(1-p.eng)/p.mesesContado}
         rev[mEntrega]+=uFin*precioPromedioViv*p.eng;
@@ -875,19 +948,36 @@
     }
     const revTotal=rev.reduce((a,b)=>a+b,0),costTotal=cost.reduce((a,b)=>a+b,0);
     const utilidadFinal=utilidadPre-interest-feeDebt,margenFinal=ingresos?utilidadFinal/ingresos:0;
+    // REPARTO (23-sep): el crédito puente financia el proyecto de LOS DOS, así que intereses (PIK) y comisiones
+    // son costo del proyecto y salen ANTES del reparto:
+    //   ingresos − costos − intereses − comisiones − repago de la tierra aportada − honorario de desarrollo
+    //   = utilidad repartible → % dueño / % desarrollador.
+    // Modo histórico (inInteresesDev=1): el % del dueño corre antes de costos financieros y el crédito lo
+    // absorbe sólo el desarrollador (así calculaban los casos viejos).
+    const baseReparto=p.interesesSoloDev?utilidadPre:utilidadFinal;
+    const repagoTierra=Math.min(repagoObjetivo,Math.max(0,baseReparto));
+    const repagoFaltante=Math.max(0,repagoObjetivo-repagoTierra);
+    const honorarioObj=ingresos*p.honorario,honorarioDev=Math.min(honorarioObj,Math.max(0,baseReparto-repagoTierra));
+    const utilidadRepartible=Math.max(0,baseReparto-repagoTierra-honorarioDev);
     const duenoUtilidad=utilidadRepartible*p.pctDueno,ownerTotal=tierraPago+repagoTierra+duenoUtilidad;
     const distribuible=debt<1&&fundingGap<1?cash:0,devDist=Math.max(0,distribuible-duenoUtilidad-repagoTierra);
-    devFlows[devFlows.length-1]+=devDist;const devIrr=irr(devFlows),devMoic=equityUsed?devDist/equityUsed:null;
+    const devUtilidad=devDist-equityUsed,devPctUtil=utilidadFinal>0?devUtilidad/utilidadFinal:null;
+    devFlows[devFlows.length-1]+=devDist;const devIrr=equityUsed>1?irr(devFlows):null,devMoic=equityUsed?devDist/equityUsed:null;
+    // TIR siempre calculadas: proyecto sin deuda (la tierra entra a valor de mercado en el mes 0) y dueño
+    // (invierte el valor de mercado de lo que aporta en el mes 0; recibe repago + su utilidad al cierre).
+    const projFlows=rev.map((x,i)=>x-cost[i]);projFlows.unshift(-tierraAportada);const projIrr=irr(projFlows);
+    const ownerFlows=Array(totalMonths+1).fill(0);ownerFlows[0]=-tierraAportada;ownerFlows[totalMonths]+=repagoTierra+duenoUtilidad;const ownerIrr=tierraAportada>0?irr(ownerFlows):null;
     const valorTerrenoM2=p.sup?ownerTotal/p.sup:0;
     const habitantes=Math.round(nLotes*p.habViv);
     // medidores DUIS (Art.73 LV / CONAVI): densidad, donación 10+5, comercio básico 0.13 m²/hab
     const densidad=p.sup>0?nLotes/(p.sup/10000):0;
-    const donacionPct=(p.pctVerdes+p.pctEquip)*100;
+    const donacionPct=(p.pctVerdes+p.pctEquip)*100,donacionCumple=p.donPagada||(geo?geo.donacionM2>=geo.donacionReqM2-.5:donacionPct>=15);
     const comercioPorHab=habitantes>0?comercial/habitantes:null;
     const ingresoM2=m2Lotes?ingresos/m2Lotes:0,costoM2Lote=m2Lotes?costoProyecto/m2Lotes:0,spreadM2=ingresoM2-costoM2Lote;
     return {p,sumaCes,vendibleBruto,comercial,casaClub,residBruto,lotesArea,nLotes,m2Lotes,nPrev,nFinal,precioPrev,precioFinal,
       ingLotesBase,ingCom,retFinTotal,nFin,mensualidad,mensualidadLote,mensualidadViv,retFinTodo,nFinTodo,geo,ingresos,urbanizacion,blandosUrb,blandosIng,tierraPago,ccCosto:p.ccCosto,costoProyecto,utilidadPre,margenPre,
-      tierraAportada,repagoObjetivo,repagoTierra,repagoFaltante,utilidadRepartible,
+      tierraAportada,repagoObjetivo,repagoTierra,repagoFaltante,utilidadRepartible,honorarioDev,devUtilidad,devPctUtil,projIrr,ownerIrr,
+      donacionPagadaM2,costoDonacion,costoOtros,otrosCostos,donacionCumple,m2LoteTipo,fondoM2Lote,fondoTipo,precioMaxViv,
       mesesUrb,totalMonths,flows,cartera,carteraPico,carteraPicoMes,colaCobranza:Math.min(colaCobranza,totalMonths),ventasTruncadas,
       debtCap,peak,peakMonth,fundingGap,interest,cashInterest,feeDebt,debt,cash,equityUsed,debtDraws,revTotal,costTotal,
       utilidadFinal,margenFinal,duenoUtilidad,ownerTotal,devDist,devIrr,devMoic,valorTerrenoM2,habitantes,densidad,donacionPct,comercioPorHab,ingresoM2,costoM2Lote,spreadM2,
@@ -910,7 +1000,10 @@
   function escBaseObj(){return escenarios.find(e=>e.esBase)||escenarios[0]}
   function escInicial(nombre){vivienda=viviendaDefault();escenarios=[{id:escId(),nombre:nombre||'Base',esBase:true,inputs:inputValues(),vivienda:viviendaClone(vivienda)}];escActivo=escenarios[0].id}
   function escSyncActivo(){const e=escGet(escActivo);if(e){e.inputs=inputValues();e.vivienda=viviendaClone(vivienda)}}
-  function escAplicar(e){Object.entries(e.inputs||{}).forEach(([k,v])=>setControl(k,v));vivienda=viviendaSanear(e.vivienda);vivResetFirma()}
+  // campos nacidos el 23-sep: si la versión no los trae, van a su default (no heredan los de la versión anterior)
+  const NUEVOS_23SEP=['inDonacionPagada','inPctCredito','inHonorarioPct','inInteresesDev'];
+  function resetNuevos(){NUEVOS_23SEP.forEach(id=>setControl(id,DEFAULTS[id]))}
+  function escAplicar(e){resetNuevos();Object.entries(e.inputs||{}).forEach(([k,v])=>setControl(k,v));vivienda=viviendaSanear(e.vivienda);vivResetFirma()}
   function escCambiar(id){if(id===escActivo)return;const e=escGet(id);if(!e)return;escSyncActivo();escActivo=id;escAplicar(e);calculate();toast('Versión activa: «'+e.nombre+'»',1800)}
   function escNueva(){
     if(escenarios.length>=MAX_ESC){toast('Máximo '+MAX_ESC+' versiones por caso');return}
@@ -987,7 +1080,10 @@
       ['Costo del proyecto',x=>fmtM(x.r.costoProyecto),null],
       ['Utilidad final',x=>fmtM(x.r.utilidadFinal),x=>x.r.utilidadFinal],
       ['Margen',x=>pct(x.r.margenFinal*100,1),x=>x.r.margenFinal],
-      ['TIR desarrollador',x=>x.r.devIrr===null?'—':pct(x.r.devIrr*100,1),x=>x.r.devIrr],
+      ['TIR proyecto (sin deuda)',x=>pctTir(x.r.projIrr),x=>x.r.projIrr],
+      ['TIR dueño',x=>x.r.tierraAportada>0?pctTir(x.r.ownerIrr):'no aporta',x=>x.r.ownerIrr],
+      ['TIR desarrollador',x=>x.r.devIrr===null?'sin capital':pct(x.r.devIrr*100,1),x=>x.r.devIrr],
+      ['Utilidad desarrollador',x=>fmtM(x.r.devUtilidad),x=>x.r.devUtilidad],
       ['Cartera pico (mes)',x=>fmtM(x.r.carteraPico)+' (m'+x.r.carteraPicoMes+')',x=>-x.r.carteraPico],
       ['Pico de deuda',x=>fmtM(x.r.peak),x=>-x.r.peak],
       ['Faltante de capital',x=>fmtM(x.r.fundingGap),x=>-x.r.fundingGap],
@@ -1000,6 +1096,8 @@
     $('compLectura').innerHTML=`«<b>${esc(foco.e.nombre)}</b>» vs «${esc(base.e.nombre)}»: ingresos ${sM(dI)} y utilidad final <b>${sM(dU)}</b> (margen ${pct(foco.r.margenFinal*100,1)} vs ${pct(base.r.margenFinal*100,1)})${foco.r.devIrr!==null&&base.r.devIrr!==null?' · TIR '+pct(foco.r.devIrr*100,1)+' vs '+pct(base.r.devIrr*100,1):''}. La cartera pico cambia ${sM(foco.r.carteraPico-base.r.carteraPico)} y el dueño recibe ${sM(foco.r.ownerTotal-base.r.ownerTotal)}.`}
 
   /* ================== RENDER ================== */
+  const pctTir=v=>v===null||!isFinite(v)?'—':pct(v*100,1);
+  function tirLinea(r){return 'TIR proyecto '+pctTir(r.projIrr)+' · dueño '+(r.tierraAportada>0?pctTir(r.ownerIrr):'no aporta')+' · desarrollador '+(r.devIrr!==null?pctTir(r.devIrr):'sin capital propio')}
   function render(){
     const r=state;syncPills();
     const sb=$('sueloBar');if(sb){const chunks=[['cesiones',r.sumaCes,'#3a3a40','ces'],['lotes',r.lotesArea/r.p.sup,'#B98B3C',''],['comercial',r.comercial/r.p.sup,'#7fd4e8',''],['casa club',r.casaClub/r.p.sup,'#a9a4f5',''],['merma traza',(r.residBruto-r.lotesArea)/r.p.sup,'#ffffff','libre']].filter(c=>c[1]>0.004);
@@ -1009,27 +1107,30 @@
     const hdm=$('hudDuenoM2');if(hdm){hdm.textContent=fmtMoney(r.valorTerrenoM2);hdm.style.color=r.p.valorTierraM2&&r.valorTerrenoM2>=r.p.valorTierraM2?'var(--green)':'var(--blue)'}
     txt('hudVivPct',r.vivActiva?pct(r.p.pctViv*100,0):'—');
     txt('hudCola',r.colaCobranza+' m');
-    txt('hudIngresos',fmtM(r.ingresos));txt('hudUtilidad',fmtM(r.utilidadFinal));txt('hudMargen',pct(r.margenFinal*100,1));txt('hudTir',r.devIrr===null?'—':pct(r.devIrr*100,1));txt('hudDeuda',fmtM(r.peak));txt('hudDueno',fmtM(r.ownerTotal));
+    txt('hudIngresos',fmtM(r.ingresos));txt('hudUtilidad',fmtM(r.utilidadFinal));txt('hudMargen',pct(r.margenFinal*100,1));txt('hudTir',r.devIrr!==null?pct(r.devIrr*100,1):r.projIrr!==null?pct(r.projIrr*100,1)+' proy.':'—');txt('hudDeuda',fmtM(r.peak));txt('hudDueno',fmtM(r.ownerTotal));
     txt('heroUtil',fmtM(r.utilidadFinal));txt('heroUtilSub','margen '+pct(r.margenFinal*100,1)+' · antes de financiar '+fmtM(r.utilidadPre)+' ('+pct(r.margenPre*100,1)+')');
     txt('heroFin',fmtM(r.retFinTodo));txt('heroFinSub',fmtN(r.nFinTodo)+(r.vivActiva?' unidades financiadas':' lotes financiados')+' · mensualidad '+fmtMoney(r.mensualidad)+' · cartera pico '+fmtM(r.carteraPico));
-    const tirEl=$('heroTir');tirEl.textContent=(r.devIrr===null?'—':pct(r.devIrr*100,1))+' · '+fmtM(r.peak);tirEl.className='big serif '+(r.devIrr===null?'':r.devIrr>=r.p.tirTarget?'status-ok':'status-bad');
-    txt('heroTirSub','cola de cobranza hasta el mes '+r.colaCobranza+' · '+r.totalMonths+' meses de corrida');
+    const tirRef=r.devIrr!==null?r.devIrr:r.projIrr;
+    const tirEl=$('heroTir');tirEl.textContent=(tirRef===null?'—':pct(tirRef*100,1))+' · '+fmtM(r.peak);tirEl.className='big serif '+(tirRef===null?'':tirRef>=r.p.tirTarget?'status-ok':'status-bad');
+    txt('heroTirSub',tirLinea(r)+' · cola hasta el mes '+r.colaCobranza+' · '+r.totalMonths+' meses');
     const lect=$('heroLectura');if(lect)lect.innerHTML=`Las ${fmtHa(r.p.sup)} ceden ${pct(r.sumaCes*100,0)} y dejan <b>${fmtN(r.nLotes)} lotes de ${fmtN(r.p.m2Lote)} m²</b>${r.comercial?' + '+fmtN(r.comercial)+' m² comerciales':''} por <b>${fmtM(r.ingresos)}</b> (incluye <b>${fmtM(r.retFinTodo)}</b> de retorno por financiar). Utilidad <b>${fmtM(r.utilidadFinal)}</b>; el dueño se lleva <b>${fmtM(r.ownerTotal)}</b> (${fmtMoney(r.valorTerrenoM2)}/m² vs ${fmtMoney(r.p.valorTierraM2)} en bruto). La cartera pica en <b>${fmtM(r.carteraPico)}</b> y se cobra hasta el mes ${r.colaCobranza}.`;
     txt('lblSup',fmtN(r.p.sup)+' m² · '+fmtHa(r.p.sup));txt('lblCesiones',pct(r.sumaCes*100,0));txt('lblVendible',fmtN(r.vendibleBruto)+' m²');txt('lblResid',fmtN(r.lotesArea)+' m²');
-    $('readAreas').innerHTML=`<b>Cuadro:</b> ${fmtN(r.p.sup)} m² − vialidades ${pct(r.p.pctVial*100,0)} ${r.geo?'− donación '+pct(r.p.pctVerdes*100,0):'− verdes '+pct(r.p.pctVerdes*100,0)+' − equipamiento '+pct(r.p.pctEquip*100,0)} = <b>${fmtN(r.vendibleBruto)} m² vendibles</b>. De ahí: comercial ${fmtN(r.comercial)} + casa club ${fmtN(r.casaClub)} → para lotes ${r.geo?fmtN(r.residBruto)+' m² (la eficiencia no aplica: el lote sale del plano)':fmtN(r.residBruto)+' × eficiencia '+pct(r.p.efSubdiv*100,0)+' = <b>'+fmtN(r.lotesArea)+' m²</b>'}. El cuadro SIEMPRE cierra (la lección de Brunnen).${r.geo?`<br><b>Predio de una calle</b> (los % de vialidades, verdes y equipamiento no aplican aquí; se miden en el plano): vialidad ${fmtN(r.geo.anchoVial)} m × ${fmtN(r.geo.largoCalle)} m${r.geo.retorno?' + retorno '+fmtN(r.geo.retorno)+' m²':''} = ${fmtN(r.geo.vialM2)} m²${r.geo.largoCalle<r.geo.largo?' (la calle no llega al fondo: quedan '+fmtN(r.geo.largo-r.geo.largoCalle)+' m × '+fmtN(r.geo.corto)+' m para lotes de fondo)':''}. Lote de ${r.geo.frenteLote.toFixed(1)}×${r.geo.fondoUtil.toFixed(1)} m: caben <b>${fmtN(r.geo.cabenLado)}</b> a lo largo de la calle${r.geo.cabenFondo?' y <b>'+fmtN(r.geo.cabenFondo)+'</b> al fondo':''}; se venden <b>${fmtN(r.nLotes)}</b>${r.geo.donPct>0?` dejando donación de <b>${pct(r.geo.donPct*100,0)} del área vendible</b> = ${fmtN(r.geo.donacionReqM2)} m² (ley de Sonora art. 80: aplica también a calle abierta, arts. 2-XIII y 94)`:' <b>sin donación</b> (sólo vale para subdivisión sobre calle existente, art. 90, o si el municipio acepta permuta o pago, art. 79-I)'}. ${r.geo.donPct>0?'Donación que queda en el plano':'Sobrante sin lotificar'}: <b>${fmtN(r.geo.donacionM2)} m²</b>${r.geo.nFondo?' · los lotes de fondo dan al retorno; su forma exacta se ajusta en el plano':''}.${r.geo.vialBajoNorma?` <span class="status-bad">⚠ La vialidad de ${fmtN(r.geo.anchoVial)} m está por debajo de la sección mínima de calle local de ${NORMA.vialLocalMin} m (IMPLAN Hermosillo): súbela a ${NORMA.vialLocalMin} m o consigue la excepción por escrito antes de presentar el proyecto.</span>`:''}`:''}`;
+    $('readAreas').innerHTML=`<b>Cuadro:</b> ${fmtN(r.p.sup)} m² − vialidades ${pct(r.p.pctVial*100,0)} ${r.geo?'− donación '+pct(r.p.pctVerdes*100,0):'− verdes '+pct(r.p.pctVerdes*100,0)+' − equipamiento '+pct(r.p.pctEquip*100,0)} = <b>${fmtN(r.vendibleBruto)} m² vendibles</b>. De ahí: comercial ${fmtN(r.comercial)} + casa club ${fmtN(r.casaClub)} → para lotes ${r.geo?fmtN(r.residBruto)+' m² (la eficiencia no aplica: el lote sale del plano)':fmtN(r.residBruto)+' × eficiencia '+pct(r.p.efSubdiv*100,0)+' = <b>'+fmtN(r.lotesArea)+' m²</b>'}. El cuadro SIEMPRE cierra (la lección de Brunnen).${r.geo?`<br><b>Predio de una calle</b> (los % de vialidades, verdes y equipamiento no aplican aquí; se miden en el plano): vialidad ${fmtN(r.geo.anchoVial)} m × ${fmtN(r.geo.largoCalle)} m${r.geo.retorno?' + retorno '+fmtN(r.geo.retorno)+' m²':''} = ${fmtN(r.geo.vialM2)} m²${r.geo.largoCalle<r.geo.largo?' (la calle no llega al fondo: quedan '+fmtN(r.geo.largo-r.geo.largoCalle)+' m × '+fmtN(r.geo.corto)+' m para lotes de fondo)':''}. Lotes <b>${fmtN(r.geo.nLado)} de ${r.geo.frenteLoteReal.toFixed(2)}×${r.geo.fondoUtil.toFixed(1)} m (${fmtN(r.geo.m2LadoLote)} m²)</b> a lo largo de la calle${r.geo.nFondo?' + <b>1 lote de fondo de '+fmtN(r.geo.fondoLoteM2)+' m²</b> ('+fmtN(r.geo.corto)+' × '+fmtN(r.geo.largo-r.geo.largoCalle)+' m'+(r.geo.retorno?', da al retorno':'')+')':''} = <b>${fmtN(r.nLotes)} lotes, ${fmtN(r.m2Lotes)} m² vendibles</b>. ${r.geo.donPct<=0?'<b>Sin donación</b> (sólo vale para subdivisión sobre calle existente, art. 90).':r.geo.donPagada?`Donación <b>pagada en efectivo</b> (art. 79-I): ${pct(r.geo.donPct*100,0)} × ${fmtN(r.m2Lotes)} m² = <b>${fmtN(r.donacionPagadaM2)} m² × ${fmtMoney(r.p.valorTierraM2)} = ${fmtMoney(r.costoDonacion)}</b>; no resta área ni lotes.`:`Donación física: el mínimo exacto, ${pct(r.geo.donPct*100,0)} del área vendible = <b>${fmtN(r.geo.donacionReqM2)} m²</b> (art. 80; aplica también a calle abierta, arts. 2-XIII y 94); en el plano quedan <b>${fmtN(r.geo.donacionM2)} m²</b> y lo que sobra se reparte entre los lotes.`}${r.geo.vialBajoNorma?` <span class="status-bad">⚠ La vialidad de ${fmtN(r.geo.anchoVial)} m está por debajo de la sección mínima de calle local de ${NORMA.vialLocalMin} m (IMPLAN Hermosillo): súbela a ${NORMA.vialLocalMin} m o consigue la excepción por escrito antes de presentar el proyecto.</span>`:''}`:''}`;
     txt('lblLotes',fmtN(r.nLotes)+' de '+fmtN(r.p.m2Lote)+' m²');txt('lblPrecioLote',r.vivActiva&&!r.nLotesPel?'casa+lote '+fmtM(r.precioPromedioViv)+' prom.':fmtM(r.precioFinal)+' · prev '+fmtM(r.precioPrev));txt('lblComercial',fmtN(r.comercial)+' m² → '+fmtM(r.ingCom));txt('lblIngresos',fmtM(r.ingresos));
-    $('readProducto').innerHTML=`<b>Producto:</b> ${fmtN(r.nPrev)} lotes en preventa a ${fmtMoney(r.p.prePreventa)}/m² (${fmtM(r.precioPrev)}) + ${fmtN(r.nFinal)} a precio final ${fmtMoney(r.p.preVenta)}/m² (${fmtM(r.precioFinal)}) = ${fmtM(r.ingLotesBase)}${r.vivActiva?' · '+fmtN(r.nLotesViv)+' casas+lote '+fmtM(r.ingViv):''} · comercial ${fmtM(r.ingCom)} · retorno financiero ${fmtM(r.retFinTodo)} → <b>ingresos ${fmtM(r.ingresos)}</b>.`;
+    {const np=$('notaPreventa');if(np)np.innerHTML=r.vivActiva&&!r.nLotesPel?'<span class="status-warn">No aplica: todos los lotes llevan casa y el lote se vende dentro del precio casa+lote.</span> La preventa y su precio sólo mueven los lotes pelones.':r.vivActiva?`Aplica sólo a los ${fmtN(r.nLotesPel)} lotes pelones; las ${fmtN(r.nLotesViv)} casas+lote van a su precio de tipología.`:''}
+    txt('lblMezclaPago',pct(r.p.pctFin*100,0)+' directo · '+pct(r.p.pctCred*100,0)+' crédito · '+pct(r.p.pctCont*100,0)+' contado');
+    $('readProducto').innerHTML=r.vivActiva&&!r.nLotesPel?`<b>Producto:</b> ${fmtN(r.nLotesViv)} casas+lote por ${fmtM(r.ingViv)} (la preventa de lote no aplica: el lote va dentro de casa+lote) · comercial ${fmtM(r.ingCom)} · retorno financiero ${fmtM(r.retFinTodo)} → <b>ingresos ${fmtM(r.ingresos)}</b>.`:`<b>Producto:</b> ${fmtN(r.nPrev)} lotes en preventa a ${fmtMoney(r.p.prePreventa)}/m² (${fmtM(r.precioPrev)}) + ${fmtN(r.nFinal)} a precio final ${fmtMoney(r.p.preVenta)}/m² (${fmtM(r.precioFinal)}) = ${fmtM(r.ingLotesBase)}${r.vivActiva?' · '+fmtN(r.nLotesViv)+' casas+lote '+fmtM(r.ingViv):''} · comercial ${fmtM(r.ingCom)} · retorno financiero ${fmtM(r.retFinTodo)} → <b>ingresos ${fmtM(r.ingresos)}</b>.`;
     txt('lblMensualidad',fmtMoney(r.mensualidad));{const e=$('lblMensualidad');if(e&&e.previousElementSibling)e.previousElementSibling.textContent=r.vivActiva&&!r.nLotesPel?'Mensualidad por casa+lote':'Mensualidad por lote'}txt('lblRetFin',fmtM(r.retFinTodo));txt('lblCartera',fmtM(r.carteraPico)+' (mes '+r.carteraPicoMes+')');txt('lblColaCobranza','hasta el mes '+r.colaCobranza);
     {const soloViv=r.vivActiva&&r.nLotesPel===0,precioTipo=soloViv?r.precioPromedioViv:r.precioFinal;
-    $('readFin').innerHTML=`<b>${soloViv?'Casa+lote financiada tipo (precio promedio)':'Lote financiado tipo (precio final)'}:</b> ${fmtM(precioTipo)} → enganche ${pct(r.p.eng*100,0)} (${fmtM(precioTipo*r.p.eng)}) + ${r.p.nMens} mensualidades de <b>${fmtMoney(r.mensualidad)}</b> (incluyen ${pct(r.p.interes*100,1)} anual s/saldo). ${fmtN(r.nFinTodo)} financiados y ${fmtN(r.nLotes-r.nFinTodo)} de contado${r.vivActiva&&!soloViv?' (lote solo: mensualidad '+fmtMoney(r.mensualidadLote)+' · casa+lote: '+fmtMoney(r.mensualidadViv)+')':''}. El financiamiento agrega <b>${fmtM(r.retFinTodo)}</b> de ingreso.`}
+    $('readFin').innerHTML=`<b>${soloViv?'Casa+lote financiada tipo (precio promedio)':'Lote financiado tipo (precio final)'}:</b> ${fmtM(precioTipo)} → enganche ${pct(r.p.eng*100,0)} (${fmtM(precioTipo*r.p.eng)}) + ${r.p.nMens} mensualidades de <b>${fmtMoney(r.mensualidad)}</b> (incluyen ${pct(r.p.interes*100,1)} anual s/saldo). ${fmtN(r.nFinTodo)} con financiamiento directo, ${fmtN(r.nLotes*r.p.pctCred)} con crédito INFONAVIT/banco (enganche al firmar, saldo al escriturar) y ${fmtN(r.nLotes*r.p.pctCont)} de contado${r.vivActiva&&!soloViv?' (lote solo: mensualidad '+fmtMoney(r.mensualidadLote)+' · casa+lote: '+fmtMoney(r.mensualidadViv)+')':''}. El financiamiento agrega <b>${fmtM(r.retFinTodo)}</b> de ingreso.`}
     txt('lblUrb',fmtM(r.urbanizacion)+' · '+fmtMoney(r.p.urbM2)+'/m²');txt('lblBlandos',fmtM(r.blandosUrb+r.blandosIng));txt('lblCostoTotal',fmtM(r.costoProyecto));
     const sEl=$('lblSpread');if(sEl){sEl.textContent=fmtMoney(r.spreadM2)+' /m²';sEl.className='kpi-val '+(r.ingresoM2&&r.spreadM2/r.ingresoM2>=.3?'c-gold':r.spreadM2>0?'status-warn':'status-bad')}
-    $('readCostos').innerHTML=`<b>Costos ${fmtM(r.costoProyecto)}:</b> urbanización ${fmtM(r.urbanizacion)} (${fmtMoney(r.p.urbM2)} × ${fmtN(r.vendibleBruto)} m² vendibles) + trámites/imprevistos ${fmtM(r.blandosUrb)}${r.ccCosto?' + casa club '+fmtM(r.ccCosto):''} + blandos s/ingresos ${fmtM(r.blandosIng)}${r.costoConstrViv?' + obra de vivienda '+fmtM(r.costoConstrViv):''}${r.tierraPago>0?' + tierra '+fmtM(r.tierraPago):''}. Por m² de lote: cuesta ${fmtMoney(r.costoM2Lote)} y entra ${fmtMoney(r.ingresoM2)}.`;
+    $('readCostos').innerHTML=`<b>Costos ${fmtM(r.costoProyecto)}:</b> urbanización ${fmtM(r.urbanizacion)} (${fmtMoney(r.p.urbM2)} × ${fmtN(r.vendibleBruto)} m² vendibles) + trámites/imprevistos ${fmtM(r.blandosUrb)}${r.ccCosto?' + casa club '+fmtM(r.ccCosto):''} + blandos s/ingresos ${fmtM(r.blandosIng)}${r.costoConstrViv?' + obra de vivienda '+fmtM(r.costoConstrViv):''}${r.tierraPago>0?' + tierra '+fmtM(r.tierraPago):''}${r.costoDonacion>0?' + donación pagada '+fmtM(r.costoDonacion):''}${r.costoOtros>0?' + otros costos '+fmtM(r.costoOtros):''}. Por m² de lote: cuesta ${fmtMoney(r.costoM2Lote)} y entra ${fmtMoney(r.ingresoM2)}.`;
     const modoT=r.p.aporteTierra>=.999?'Aporta':r.p.aporteTierra<=.001?'Vende':'Mixto';txt('lblTierraModo',modoT+(r.repagoObjetivo>0?' · repago '+pct(r.p.repagoPct*100,0):'')+' · '+pct(r.p.pctDueno*100,0)+' utilidad');txt('lblEtapas',r.p.etapas+' × '+r.p.mesesUrbEtapa+' m');txt('lblAbsorcion',r.p.absLotes+' lotes/mes');txt('lblMeses',r.totalMonths+' m');
     renderWaterfallTierra(r);
     txt('lblDuenoM2',fmtMoney(r.valorTerrenoM2)+' vs '+fmtMoney(r.p.valorTierraM2)+' ('+(r.p.valorTierraM2?(r.valorTerrenoM2/r.p.valorTierraM2).toFixed(2):'—')+'×)');
     txt('lblCondPIK',pct(r.p.pik*100,1)+' anual · '+(r.peak>1?'pico '+fmtM(r.peak)+' mes '+r.peakMonth:'sin deuda dispuesta')+' · límite '+fmtM(r.debtCap)+(r.fundingGap>1?' · FALTAN '+fmtM(r.fundingGap):''));
-    $('readCapital').innerHTML=`<b>Flujo:</b> ${r.totalMonths} meses · obra ${r.p.etapas}×${r.p.mesesUrbEtapa} · ventas desde el mes ${r.p.inicioVentas} a ${r.p.absLotes}/mes · pico de deuda ${fmtM(r.peak)} · intereses + comisiones ${fmtM(r.interest+r.feeDebt)} · ${r.fundingGap>1?'<b class="status-bad">faltan '+fmtM(r.fundingGap)+'</b>':'fondeo completo'}.<br><b>Reparto:</b> dueño ${fmtM(r.duenoUtilidad)} de utilidad${r.repagoTierra>0?' + '+fmtM(r.repagoTierra)+' de repago de su tierra':''}${r.tierraPago>0?' + '+fmtM(r.tierraPago)+' de compra de tierra':''} = <b>${fmtM(r.ownerTotal)}</b> · desarrollador ${fmtM(r.devDist)} · TIR ${r.devIrr===null?'—':pct(r.devIrr*100,1)} vs ${pct(r.p.tirTarget*100,1)}.`;
+    $('readCapital').innerHTML=`<b>Flujo:</b> ${r.totalMonths} meses · obra ${r.p.etapas}×${r.p.mesesUrbEtapa} · ventas desde el mes ${r.p.inicioVentas} a ${r.p.absLotes}/mes · pico de deuda ${fmtM(r.peak)} · intereses + comisiones ${fmtM(r.interest+r.feeDebt)} · ${r.fundingGap>1?'<b class="status-bad">faltan '+fmtM(r.fundingGap)+'</b>':'fondeo completo'}.<br><b>Reparto</b> (intereses ${r.p.interesesSoloDev?'sólo del desarrollador · modo histórico':'a cargo del proyecto, antes del reparto'}${r.honorarioDev>0?' · honorario de desarrollo '+fmtM(r.honorarioDev):''}): dueño ${fmtM(r.duenoUtilidad)} de utilidad${r.repagoTierra>0?' + '+fmtM(r.repagoTierra)+' de repago de su tierra':''}${r.tierraPago>0?' + '+fmtM(r.tierraPago)+' de compra de tierra':''} = <b>${fmtM(r.ownerTotal)}</b> · desarrollador ${fmtM(r.devDist)} (utilidad ${fmtM(r.devUtilidad)}${r.devPctUtil!==null?' = '+pct(r.devPctUtil*100,0)+' de la utilidad':''}).<br><b>${tirLinea(r)}</b> · meta ${pct(r.p.tirTarget*100,1)}.`;
     // semáforo
     const warnings=[];
     if(r.ventasTruncadas)warnings.push('La absorción no alcanza a vender/cobrar todo en 240 meses: sube lotes/mes o baja mensualidades');
@@ -1038,20 +1139,24 @@
     if(r.fundingGap>1)warnings.push('Faltan '+fmtM(r.fundingGap)+' de capital');
     if(r.repagoFaltante>1)warnings.push('El proyecto no alcanza a repagarle al dueño su tierra aportada: faltan '+fmtM(r.repagoFaltante)+' de los '+fmtM(r.repagoObjetivo)+' comprometidos, y no queda utilidad que repartir');
     if(r.debt>1)warnings.push('La deuda no se repaga al cierre');
+    if(r.utilidadFinal>0&&r.devUtilidad<=1)warnings.push('ALERTA: el desarrollador no recibe utilidad ('+fmtM(r.devUtilidad)+')');
+    else if(r.devPctUtil!==null&&r.devPctUtil<.15)warnings.push('ALERTA: el desarrollador recibe sólo '+pct(r.devPctUtil*100,0)+' de la utilidad total (mínimo 15%)');
+    if(r.vivActiva&&r.p.precioInfonavit>0&&r.precioMaxViv>r.p.precioInfonavit)warnings.push('Casa+lote de hasta '+fmtM(r.precioMaxViv)+' arriba del techo del comprador ('+fmtM(r.p.precioInfonavit)+' INFONAVIT)');
+    if(r.debtCap>0&&r.peak>r.debtCap*.9&&r.fundingGap<1)warnings.push('El pico de deuda ('+fmtM(r.peak)+') pasa del 90% del límite ('+fmtM(r.debtCap)+')');
     if(r.devIrr!==null&&r.devIrr<r.p.tirTarget)warnings.push('TIR debajo de la meta: '+pct(r.devIrr*100,1)+' vs '+pct(r.p.tirTarget*100,1));
     if(r.carteraPico>r.ingresos*.5)warnings.push('La cartera pico ('+fmtM(r.carteraPico)+') es más de la mitad del ingreso: mucho capital dormido en mensualidades');
     if(r.geo&&r.geo.vialBajoNorma)warnings.push('Vialidad de '+fmtN(r.geo.anchoVial)+' m, debajo de la sección mínima de calle local ('+NORMA.vialLocalMin+' m, IMPLAN Hermosillo)');
     if(Math.abs(r.revTotal-r.ingresos)>Math.max(2,r.ingresos*.001))warnings.push('Cobros no concilian con ingresos (dif '+fmtM(r.revTotal-r.ingresos)+')');
     if(!r.geo&&r.densidad<50&&r.p.m2Lote<1000)warnings.push('Densidad '+r.densidad.toFixed(0)+' viv/ha — los DUIS pedían ≥50 (y proponían ~67) para que el suelo y la infraestructura rindan');
-    if(!r.geo&&r.nLotes>=5&&r.donacionPct<15)warnings.push('Donación '+r.donacionPct.toFixed(0)+'% — la norma DUIS/Art.73 pide ≥15% (10% verdes + 5% equipamiento)');
+    if(!r.geo&&!r.p.donPagada&&r.nLotes>=5&&r.donacionPct<15)warnings.push('Donación '+r.donacionPct.toFixed(0)+'% — la norma DUIS/Art.73 pide ≥15% (10% verdes + 5% equipamiento)');
     if(r.nLotes>=5&&r.comercioPorHab!==null&&r.habitantes>=250&&r.comercioPorHab<0.13)warnings.push('Comercio básico '+r.comercioPorHab.toFixed(2)+' m²/hab — el mínimo normativo es 0.13 m²/hab a ≤300 m de la vivienda');
     if(!warnings.length)warnings.push('Cuadro, cobranza, deuda, retorno y medidores DUIS pasan con los supuestos capturados.');
-    $('checks').innerHTML=warnings.map(w=>`<div class="${w.includes('pasan')?'status-ok':w.includes('PÉRDIDA')?'status-bad':'status-warn'}">${w}</div>`).join('');
+    $('checks').innerHTML=warnings.map(w=>`<div class="${w.includes('pasan')?'status-ok':w.includes('PÉRDIDA')||w.includes('ALERTA')?'status-bad':'status-warn'}">${w}</div>`).join('');
     const fc=$('flujoCaption');if(fc)fc.textContent=`Corrida completa: ${r.totalMonths} meses · la cola de mensualidades llega al mes ${r.colaCobranza}`;
     const filasF=[];r.flows.forEach((x,i)=>{if(i%12===0)filasF.push(`<tr class="year-row"><td colspan="7">AÑO ${Math.floor(i/12)+1}</td></tr>`);filasF.push(`<tr><td>${x.m}</td><td>${fmtM(x.rev)}</td><td>${fmtM(x.cost)}</td><td>${fmtM(x.equity)}</td><td>${fmtM(x.pik+x.fee)}</td><td>${fmtM(x.debt)}</td><td>${fmtM(x.caja)}</td></tr>`)});
     filasF.push(`<tr class="tot-row"><td>Σ</td><td>${fmtM(r.revTotal)}</td><td>${fmtM(r.costTotal)}</td><td>${fmtM(r.equityUsed)}</td><td>${fmtM(r.interest+r.feeDebt)}</td><td>${fmtM(r.debt)}</td><td>${fmtM(r.cash)}</td></tr>`);
     $('flowRows').innerHTML=filasF.join('');
-    renderProforma(r);dibujaPlan(r);dibujaCascada(r);dibujaCartera(r);dibujaModeloCasa(r);renderFormulas();renderVivienda(r);refreshJson();
+    renderProforma(r);dibujaPlan(r);dibujaCascada(r);dibujaCartera(r);dibujaModeloCasa(r);renderFormulas();renderVivienda(r);renderSwitches();renderOtros(r);refreshJson();
   }
   /* ================== TRATAMIENTO DEL TERRENO · cascada de pago ================== */
   function renderWaterfallTierra(r){
@@ -1059,9 +1164,10 @@
     if(el){
       const pasos=[
         ['1 · Costos del proyecto',fmtM(r.costoProyecto),'urbanización, blandos'+(r.costoConstrViv>0?', obra de vivienda':'')+(r.tierraPago>0?' y la tierra comprada':'')],
-        ['2 · Deuda + PIK',fmtM(r.interest+r.feeDebt),'por cuenta del desarrollador'],
+        ['2 · Deuda + PIK',fmtM(r.interest+r.feeDebt),r.p.interesesSoloDev?'sólo del desarrollador (modo histórico)':'a cargo del proyecto (ambos)'],
         ['3 · Repago tierra aportada',fmtM(r.repagoTierra),r.repagoObjetivo<=0?'sin repago configurado':r.repagoFaltante>1?'faltan '+fmtM(r.repagoFaltante)+': el proyecto no da':'íntegro al dueño, antes de utilidad'],
-        ['4 · Utilidad repartida',fmtM(r.utilidadRepartible),pct(r.p.pctDueno*100,0)+' dueño · '+pct((1-r.p.pctDueno)*100,0)+' desarrollador']
+        ...(r.honorarioDev>0?[['4 · Honorario de desarrollo',fmtM(r.honorarioDev),pct(r.p.honorario*100,1)+' s/ventas, al desarrollador']]:[]),
+        [(r.honorarioDev>0?'5':'4')+' · Utilidad repartida',fmtM(r.utilidadRepartible),pct(r.p.pctDueno*100,0)+' dueño · '+pct((1-r.p.pctDueno)*100,0)+' desarrollador']
       ];
       el.innerHTML=pasos.map(x=>`<div class="waterfall-step"><b>${x[0]}</b>${x[1]}<br>${x[2]}</div>`).join('');
     }
@@ -1103,7 +1209,7 @@
     document.querySelectorAll('#vivSwitch .viv-opt').forEach(b=>b.classList.toggle('active',(b.dataset.viv==='1')===!!vivienda.activo));
     const body=$('vivBody');if(!body)return;
     body.style.display=vivienda.activo?'':'none';
-    renderVivTipologias(r);
+    renderVivTipologias(r);renderVivFondo(r);
     const sumaMezcla=(vivienda.tipologias||[]).reduce((s,t)=>s+(Number(t.mezclaPct)||0),0);
     const rm=$('readVivMezcla');
     if(rm){
@@ -1123,11 +1229,11 @@
   // escenario). Antes se reconstruía dentro de cada calculate() — o sea, en cada tecla y en cada pixel
   // de arrastre — y eso tiraba el cursor del campo que estabas escribiendo y cortaba el drag del slider.
   let vivFirma=null;
-  function vivResetFirma(){vivFirma=null}
+  function vivResetFirma(){vivFirma=null;otrosFirma=null}
   function renderVivTipologias(r){
     const cont=$('vivTipologias');if(!cont)return;
     const lista=vivienda.tipologias||[],firma=lista.map(t=>t.id).join('|');
-    const unidades={};if(r&&r.unidadesViv)r.unidadesViv.forEach(x=>{unidades[x.t.id]=x.u});
+    const unidades={};if(r&&r.unidadesViv)r.unidadesViv.forEach(x=>{unidades[x.t.id]=(unidades[x.t.id]||0)+x.u});
     if(firma!==vivFirma){
       vivFirma=firma;
       cont.innerHTML=lista.map(t=>`
@@ -1172,10 +1278,19 @@
         const precioU=t.precioModo==='m2'?t.precioVal*t.m2Constr:t.precioVal,costoU=t.m2Constr*t.costoM2;
         const margen=precioU-costoU;
         const cab=`precio ${fmtMoney(precioU)} − obra ${fmtMoney(costoU)} = <b class="${margen>0?'status-ok':'status-bad'}">${fmtMoney(margen)}</b> por unidad sobre el lote`;
-        res.innerHTML=(r&&r.vivActiva)?`<b>${fmtN(unidades[t.id]||0)} unidad(es)</b> · ${cab} · ingreso ${fmtM((unidades[t.id]||0)*precioU)}`:cab+'.';
+        const esFondo=r&&r.geo&&r.fondoM2Lote>0&&vivienda.tipoFondo===t.id;
+        const pi=r?preciosImplicitos(t,r,esFondo?r.fondoM2Lote:r.m2LoteTipo):null;
+        const imp=pi?`<br><span style="color:var(--muted)">${esFondo?'lote de fondo':'lote tipo'} ${fmtN(pi.m2Lote)} m² · <b>${fmtMoney(pi.construido)}</b>/m² construido · <b class="${pi.sinLote>0?'':'status-bad'}">${fmtMoney(pi.sinLote)}</b>/m² construido sin lote (lote a ${fmtMoney(r.p.preVenta)}/m²) · <b>${fmtMoney(pi.deLote)}</b>/m² de lote</span>`:'';
+        res.innerHTML=((r&&r.vivActiva)?`<b>${fmtN(unidades[t.id]||0)} unidad(es)</b> · ${cab} · ingreso ${fmtM((unidades[t.id]||0)*precioU)}`:cab+'.')+imp;
       }
     });
   }
+  function renderVivFondo(r){
+    const wrap=$('vivFondoWrap'),sel=$('vivTipoFondo');if(!wrap||!sel)return;
+    const hay=!!(r&&r.geo&&r.fondoM2Lote>0);wrap.style.display=hay?'':'none';if(!hay)return;
+    const opts=`<option value="">Sigue la mezcla (o lote pelón)</option>`+(vivienda.tipologias||[]).map(t=>`<option value="${t.id}"${vivienda.tipoFondo===t.id?' selected':''}>${esc(t.nombre)}</option>`).join('');
+    if(document.activeElement!==sel&&sel.innerHTML!==opts)sel.innerHTML=opts;
+    $('vivFondoNota').innerHTML=`El lote de fondo mide <b>${fmtN(r.fondoM2Lote)} m²</b>${r.fondoTipo?` y lleva «${esc(r.fondoTipo.nombre)}» (${fmtMoney(r.fondoTipo.precioModo==='m2'?r.fondoTipo.precioVal*r.fondoTipo.m2Constr:r.fondoTipo.precioVal)}); los otros ${fmtN(r.nLotesViv-1)} siguen la mezcla`:': elige su tipología para darle su propia casa y precio'}.`}
   function vivTipoDe(el){const row=el.closest('[data-tipo]');if(!row)return null;return (vivienda.tipologias||[]).find(t=>t.id===row.dataset.tipo)||null}
   function installVivEvents(){
     $('vivSwitch').addEventListener('click',e=>{
@@ -1208,11 +1323,40 @@
       calculate()});
   }
 
+  /* ===== switches (sobre un range oculto, para que viajen como columna in* del Sheet) y otros costos ===== */
+  function renderSwitches(){document.querySelectorAll('[data-sw]').forEach(w=>{const v=String(Math.round(Number($(w.dataset.sw)?.value)||0));w.querySelectorAll('.viv-opt').forEach(b=>b.classList.toggle('active',b.dataset.val===v))})}
+  let otrosFirma=null;
+  function renderOtros(r){
+    const cont=$('otrosCostos');if(!cont)return;
+    const lista=vivienda.otros||(vivienda.otros=[]),firma=lista.map(o=>o.id).join('|');
+    if(firma!==otrosFirma){otrosFirma=firma;
+      cont.innerHTML=lista.length?`<div class="otro-row" style="font-size:9.5px;color:var(--muted)"><span>Concepto</span><span>Monto ($)</span><span>Mes</span><span></span></div>`+lista.map(o=>`<div class="otro-row" data-otro="${o.id}">
+        <input type="text" class="viv-in otro-concepto" value="${esc(o.concepto)}" placeholder="p. ej. Factibilidad CFE">
+        <input type="number" class="viv-in otro-monto" value="${o.monto}" min="0" step="1000">
+        <input type="number" class="viv-in otro-mes" value="${o.mes}" min="0" step="1">
+        <button type="button" class="small-btn danger otro-del" title="Quitar"><i class="ti ti-trash"></i></button></div>`).join(''):'<p class="note">Sin otros costos.</p>'}
+    const tot=(r&&r.costoOtros)||0;cont.dataset.total=tot}
+  function installExtras(){
+    document.querySelectorAll('[data-sw]').forEach(w=>w.addEventListener('click',e=>{const b=e.target.closest('.viv-opt');if(!b)return;e.stopPropagation();setControl(w.dataset.sw,Number(b.dataset.val));calculate()}));
+    $('btnOtroCosto').addEventListener('click',e=>{e.stopPropagation();(vivienda.otros=vivienda.otros||[]).push({id:tId(),concepto:'',monto:0,mes:1});calculate()});
+    const cont=$('otrosCostos'),otroDe=el=>{const row=el.closest('[data-otro]');return row?(vivienda.otros||[]).find(o=>o.id===row.dataset.otro):null};
+    cont.addEventListener('click',e=>{if(e.target.closest('.otro-del')){e.stopPropagation();const row=e.target.closest('[data-otro]');vivienda.otros=(vivienda.otros||[]).filter(o=>o.id!==row.dataset.otro);calculate()}});
+    cont.addEventListener('input',e=>{const o=otroDe(e.target);if(!o)return;
+      if(e.target.classList.contains('otro-concepto'))o.concepto=e.target.value.slice(0,60);
+      else if(e.target.classList.contains('otro-monto'))o.monto=Math.max(0,Number(e.target.value)||0);
+      else if(e.target.classList.contains('otro-mes'))o.mes=Math.max(0,Math.round(Number(e.target.value)||0));
+      calculate()});
+    $('vivTipoFondo').addEventListener('change',e=>{vivienda.tipoFondo=e.target.value;calculate()});
+  }
+  // precio implícito por m² de cada tipología (para comparar contra comparables)
+  function preciosImplicitos(t,r,m2Lote){const precio=t.precioModo==='m2'?t.precioVal*t.m2Constr:t.precioVal,lote=m2Lote*r.p.preVenta;
+    return {construido:t.m2Constr?precio/t.m2Constr:0,sinLote:t.m2Constr?(precio-lote)/t.m2Constr:0,deLote:m2Lote?precio/m2Lote:0,m2Lote}}
+
   function renderProforma(r){
     const row=(l,v,k='')=>`<tr class="${k}"><td>${l}</td><td>${v}</td></tr>`,section=l=>`<tr class="section-row"><td colspan="2">${l}</td></tr>`;
-    $('sourcesUses').innerHTML=[section('USOS'),row('Tierra pagada al cierre',fmtM(r.tierraPago)),row('Urbanización',fmtM(r.urbanizacion)),row('Trámites + imprevistos',fmtM(r.blandosUrb)),row('Casa club',fmtM(r.ccCosto)),...(r.costoConstrViv?[row('Obra de vivienda',fmtM(r.costoConstrViv))]:[]),row('Blandos s/ingresos',fmtM(r.blandosIng)),row('Costo del proyecto',fmtM(r.costoProyecto),'total-row'),row('Interés capitalizado (PIK) + comisiones',fmtM(r.interest+r.feeDebt)),section('FUENTES'),row('Ventas cobradas (sin intereses)',fmtM(r.ingLotesBase+r.ingViv+r.ingCom)),row('Retorno por financiamiento',fmtM(r.retFinTodo)),row('Total fuentes = costo + utilidad antes de financiar',fmtM(r.ingresos),'total-row'),section('CÓMO SE FONDEA EL HUECO DE CAJA (se devuelve)'),row('Capital propio usado',fmtM(r.equityUsed)),row('Disposiciones de deuda',fmtM(r.debtDraws)),section('RESULTADO'),row('Utilidad neta',fmtM(r.utilidadFinal),'total-row'),row('Repago de tierra aportada (dueño, antes de utilidad)',fmtM(r.repagoTierra)),row('Utilidad repartible tras el repago',fmtM(r.utilidadRepartible)),row('Dueño / Desarrollador (incluye su capital de vuelta)',fmtM(r.ownerTotal)+' / '+fmtM(r.devDist),'total-row')].join('');
+    $('sourcesUses').innerHTML=[section('USOS'),row('Tierra pagada al cierre',fmtM(r.tierraPago)),row('Urbanización',fmtM(r.urbanizacion)),row('Trámites + imprevistos',fmtM(r.blandosUrb)),row('Casa club',fmtM(r.ccCosto)),...(r.costoConstrViv?[row('Obra de vivienda',fmtM(r.costoConstrViv))]:[]),row('Blandos s/ingresos',fmtM(r.blandosIng)),...(r.costoDonacion?[row('Donación pagada (art. 79-I)',fmtM(r.costoDonacion))]:[]),...(r.costoOtros?[row('Otros costos',fmtM(r.costoOtros))]:[]),row('Costo del proyecto',fmtM(r.costoProyecto),'total-row'),row('Interés capitalizado (PIK) + comisiones',fmtM(r.interest+r.feeDebt)),section('FUENTES'),row('Ventas cobradas (sin intereses)',fmtM(r.ingLotesBase+r.ingViv+r.ingCom)),row('Retorno por financiamiento',fmtM(r.retFinTodo)),row('Total fuentes = costo + utilidad antes de financiar',fmtM(r.ingresos),'total-row'),section('CÓMO SE FONDEA EL HUECO DE CAJA (se devuelve)'),row('Capital propio usado',fmtM(r.equityUsed)),row('Disposiciones de deuda',fmtM(r.debtDraws)),section('RESULTADO'),row('Utilidad neta',fmtM(r.utilidadFinal),'total-row'),row('Repago de tierra aportada (dueño, antes de utilidad)',fmtM(r.repagoTierra)),...(r.honorarioDev?[row('Honorario de desarrollo (desarrollador, antes del reparto)',fmtM(r.honorarioDev))]:[]),row('Utilidad repartible tras el repago',fmtM(r.utilidadRepartible)),row('Dueño / Desarrollador (incluye su capital de vuelta)',fmtM(r.ownerTotal)+' / '+fmtM(r.devDist),'total-row')].join('');
     const line=(l,v,k)=>`<div class="covenant-line"><span>${l}</span><b class="${k}">${v}</b></div>`;
-    $('covenantPanel').innerHTML=[line('Utilidad neta',fmtM(r.utilidadFinal),r.utilidadFinal>0?'covenant-ok':'covenant-bad'),line('TIR vs meta',`${r.devIrr===null?'—':pct(r.devIrr*100,1)} / ${pct(r.p.tirTarget*100,1)}`,r.devIrr!==null&&r.devIrr>=r.p.tirTarget?'covenant-ok':'covenant-bad'),line('Pico de deuda',`${fmtM(r.peak)} / ${fmtM(r.debtCap)}`,r.fundingGap<1?'covenant-ok':'covenant-bad'),line('Cartera pico',fmtM(r.carteraPico),r.carteraPico<=r.ingresos*.5?'covenant-ok':'covenant-warn'),line('Cola de cobranza','mes '+r.colaCobranza,'covenant-warn'),line('Densidad vs DUIS ≥50 viv/ha'+(r.geo?' (solo si buscas DUIS)':''),r.densidad.toFixed(0)+' viv/ha',r.densidad>=50?'covenant-ok':r.geo||r.p.m2Lote>=1000?'covenant-warn':'covenant-bad'),line('Donación vs 15% DUIS (10 verde + 5 equip.)'+(r.geo?' (solo si buscas DUIS)':''),r.donacionPct.toFixed(0)+'%',r.donacionPct>=15?'covenant-ok':r.geo?'covenant-warn':'covenant-bad'),line('Comercio básico vs 0.13 m²/hab',r.comercioPorHab===null?'—':r.comercioPorHab.toFixed(2)+' m²/hab',r.comercioPorHab===null||r.comercioPorHab>=0.13?'covenant-ok':'covenant-warn'),line('Cuadro de áreas','cierra al 100%','covenant-ok'),...(r.geo?[line('Calle local ≥ '+NORMA.vialLocalMin+' m (IMPLAN Hermosillo)',fmtN(r.geo.anchoVial)+' m',r.geo.vialBajoNorma?'covenant-bad':'covenant-ok'),line('Donación ≥ '+pct(r.geo.donPct*100,0)+' del vendible (Ley OTDU Son. art. 80)',fmtN(r.geo.donacionM2)+' / '+fmtN(r.geo.donacionReqM2)+' m²',r.geo.donacionM2>=r.geo.donacionReqM2-.5?'covenant-ok':'covenant-bad')]:[])].join('')+'<p class="note">Presupuesto de urbanización, comparables de lote y norma de donación de la plaza pendientes de validar por caso.</p>';
+    $('covenantPanel').innerHTML=[line('Utilidad neta',fmtM(r.utilidadFinal),r.utilidadFinal>0?'covenant-ok':'covenant-bad'),line('Utilidad del desarrollador > 0 y ≥ 15% del total',fmtM(r.devUtilidad)+(r.devPctUtil!==null?' · '+pct(r.devPctUtil*100,0):''),r.devUtilidad>1&&(r.devPctUtil===null||r.devPctUtil>=.15)?'covenant-ok':'covenant-bad'),line(r.devIrr!==null?'TIR desarrollador vs meta':'TIR proyecto vs meta',`${pctTir(r.devIrr!==null?r.devIrr:r.projIrr)} / ${pct(r.p.tirTarget*100,1)}`,(r.devIrr!==null?r.devIrr:r.projIrr)!==null&&(r.devIrr!==null?r.devIrr:r.projIrr)>=r.p.tirTarget?'covenant-ok':'covenant-bad'),line('TIR del dueño (tierra a valor de mercado)',r.tierraAportada>0?pctTir(r.ownerIrr):'no aporta',r.ownerIrr===null||r.ownerIrr>0?'covenant-ok':'covenant-bad'),line('Pico de deuda vs límite',`${fmtM(r.peak)} / ${fmtM(r.debtCap)}`,r.fundingGap>=1?'covenant-bad':r.debtCap>0&&r.peak>r.debtCap*.9?'covenant-warn':'covenant-ok'),...(r.vivActiva?[line('Precio casa+lote vs techo del comprador',r.p.precioInfonavit>0?fmtM(r.precioMaxViv)+' / '+fmtM(r.p.precioInfonavit):'sin techo capturado',r.p.precioInfonavit<=0?'covenant-warn':r.precioMaxViv<=r.p.precioInfonavit?'covenant-ok':'covenant-bad')]:[]),line('Cartera pico',fmtM(r.carteraPico),r.carteraPico<=r.ingresos*.5?'covenant-ok':'covenant-warn'),line('Cola de cobranza','mes '+r.colaCobranza,'covenant-warn'),line('Densidad vs DUIS ≥50 viv/ha'+(r.geo?' (solo si buscas DUIS)':''),r.densidad.toFixed(0)+' viv/ha',r.densidad>=50?'covenant-ok':r.geo||r.p.m2Lote>=1000?'covenant-warn':'covenant-bad'),line('Donación vs 15% DUIS (10 verde + 5 equip.)'+(r.geo?' (solo si buscas DUIS)':''),r.p.donPagada?'pagada':r.donacionPct.toFixed(0)+'%',r.p.donPagada||r.donacionPct>=15?'covenant-ok':r.geo?'covenant-warn':'covenant-bad'),line('Comercio básico vs 0.13 m²/hab',r.comercioPorHab===null?'—':r.comercioPorHab.toFixed(2)+' m²/hab',r.comercioPorHab===null||r.comercioPorHab>=0.13?'covenant-ok':'covenant-warn'),line('Cuadro de áreas','cierra al 100%','covenant-ok'),...(r.geo?[line('Calle local ≥ '+NORMA.vialLocalMin+' m (IMPLAN Hermosillo)',fmtN(r.geo.anchoVial)+' m',r.geo.vialBajoNorma?'covenant-bad':'covenant-ok'),line('Donación ≥ '+pct(r.geo.donPct*100,0)+' del vendible (Ley OTDU Son. art. 80)',r.p.donPagada?'pagada · '+fmtN(r.donacionPagadaM2)+' m² = '+fmtM(r.costoDonacion):fmtN(r.geo.donacionM2)+' / '+fmtN(r.geo.donacionReqM2)+' m²',r.donacionCumple?'covenant-ok':'covenant-bad')]:[])].join('')+'<p class="note">Presupuesto de urbanización, comparables de lote y norma de donación de la plaza pendientes de validar por caso.</p>';
   }
   /* ================== INFOGRAFÍA ================== */
   function dibujaPlan(r){
@@ -1232,7 +1376,7 @@
     const modoSimple=!!r.geo;
     if(modoSimple){
       const anchoVialidad=r.geo.anchoVial,fondoUtilSimple=r.geo.fondoUtil;
-      const frenteLoteInd=r.geo.frenteLote;
+      const frenteLoteInd=r.geo.frenteLoteReal;
       const g0=r.geo,nFila=g0.nLado,nFondo=g0.nFondo;
       let pxPerM=Math.min((W-32)/largo,(H-mT-mB-24)/corto,maxW/largo);
       lotW=largo*pxPerM;lotH=corto*pxPerM;
@@ -1246,22 +1390,22 @@
         if(rw>14)s+=`<text x="${x0+calleWpx-rw/2}" y="${yLotes+loteHpx/2+3}" font-size="7" fill="#8A8272" text-anchor="middle">retorno</text>`;}
       const anchoLotePx=frenteLoteInd*pxPerM,filaWpx=anchoUsado*pxPerM;
       for(let i=0;i<nFila;i++)s+=`<rect x="${x0+i*anchoLotePx}" y="${yLotes}" width="${anchoLotePx}" height="${loteHpx}" fill="#B98B3C14" stroke="#B98B3C" stroke-width="1"/>`;
-      if(nFila>0&&loteHpx>11)s+=`<text x="${x0+filaWpx/2}" y="${yLotes+loteHpx/2+3}" font-size="8" font-weight="800" fill="#B98B3C" text-anchor="middle">${nFila} de ${frenteLoteInd.toFixed(1)}×${fondoUtilSimple.toFixed(1)} m</text>`;
+      if(nFila>0&&loteHpx>11)s+=`<text x="${x0+filaWpx/2}" y="${yLotes+loteHpx/2+3}" font-size="8" font-weight="800" fill="#B98B3C" text-anchor="middle">${nFila} de ${frenteLoteInd.toFixed(2)}×${fondoUtilSimple.toFixed(1)} m</text>`;
       if(remanente>.3){s+=`<rect x="${x0+filaWpx}" y="${yLotes}" width="${remanente*pxPerM}" height="${loteHpx}" fill="#8fbf8b1f" stroke="#8FBF8B" stroke-width="1" stroke-dasharray="4 3"/>`;}
       // lotes de fondo: la franja donde ya no llega la calle, repartida a lo ancho del predio
       if(g0.largoCalle<largo){const fx=x0+calleWpx,fw=lotW-calleWpx,fh=nFondo>0?lotH/nFondo:lotH;
         if(nFondo>0)for(let i=0;i<nFondo;i++)s+=`<rect x="${fx}" y="${yTop+i*fh}" width="${fw}" height="${fh}" fill="#B98B3C14" stroke="#B98B3C" stroke-width="1"/>`;
         else s+=`<rect x="${fx}" y="${yTop}" width="${fw}" height="${lotH}" fill="#8fbf8b1f" stroke="#8FBF8B" stroke-width="1" stroke-dasharray="4 3"/>`;
-        if(fw>16)s+=`<text x="${fx+fw/2}" y="${yTop+lotH/2+3}" font-size="7.5" font-weight="800" fill="#B98B3C" text-anchor="middle">${nFondo?nFondo+' al fondo':'fondo'}</text>`;}
+        if(fw>16)s+=`<text x="${fx+fw/2}" y="${yTop+lotH/2+3}" font-size="7.5" font-weight="800" fill="#B98B3C" text-anchor="middle">${nFondo?'1 de fondo · '+fmtN(g0.fondoLoteM2)+' m²':'fondo'}</text>`;}
       s+=`<rect x="${x0}" y="${yTop}" width="${lotW}" height="${lotH}" fill="none" stroke="#F1EDE3" stroke-width="1.5"/>`;
-      s+=`<text x="${x0}" y="${yTop-4}" font-size="7.5" fill="#8A8272">frente ${fmtN(largo)} m · 1 calle de ${fmtN(g0.largoCalle)} m, ${fmtN(r.nLotes)} lotes${g0.donacionM2>.5?' · donación '+fmtN(g0.donacionM2)+' m²':''}</text>`;
+      s+=`<text x="${x0}" y="${yTop-4}" font-size="7.5" fill="#8A8272">frente ${fmtN(largo)} m · 1 calle de ${fmtN(g0.largoCalle)} m, ${fmtN(r.nLotes)} lotes${g0.donacionM2>.5?' · donación '+fmtN(g0.donacionM2)+' m²':g0.donPagada&&g0.donPct>0?' · donación pagada':''}</text>`;
       {const g=r.geo,ok=(c,t,d)=>`<text x="${x0}" y="${yb}" font-size="8.5" fill="${c?'#8FBF8B':'#E0605A'}" font-weight="800">${c?'✓':'✗'}</text><text x="${x0+12}" y="${yb}" font-size="8.5" fill="#F1EDE3">${t}</text><text x="${x0+12}" y="${yb+10}" font-size="7.5" fill="#8A8272">${d}</text>`;
         let yb=yTop+lotH+30;const esc10=10*pxPerM;
         s+=`<line x1="${x0}" y1="${yTop+lotH+12}" x2="${x0+esc10}" y2="${yTop+lotH+12}" stroke="#F1EDE3" stroke-width="1.5"/><text x="${x0+esc10+5}" y="${yTop+lotH+15}" font-size="7" fill="#8A8272">10 m</text>`;
         s+=`<text x="${x0}" y="${yb}" font-size="8" font-weight="800" fill="#8A8272" letter-spacing="1.5">CUMPLIMIENTO</text>`;yb+=16;
         s+=ok(!g.vialBajoNorma,`Calle local de ${fmtN(g.anchoVial)} m`,`mínimo ${NORMA.vialLocalMin} m · programa municipal (la ley la delega, art. 72)`);yb+=26;
-        s+=ok(g.donacionM2>=g.donacionReqM2-.5,`Donación ${fmtN(g.donacionM2)} m²`,(g.donPct>0?`pide ${fmtN(g.donacionReqM2)} m² = ${pct(g.donPct*100,0)} del vendible · Ley OTDU Sonora art. 80`:'donación en 0% · sólo subdivisión sobre calle existente (art. 90)'));yb+=26;
-        s+=ok(true,`${fmtN(r.nLotes)} lotes de ${g.frenteLote.toFixed(1)} × ${g.fondoUtil.toFixed(1)} m`,g.caben>r.nLotes?`caben ${fmtN(g.caben)} (${fmtN(g.cabenLado)} a lo largo${g.cabenFondo?' + '+fmtN(g.cabenFondo)+' al fondo':''}); ${fmtN(g.caben-r.nLotes)} se queda${g.caben-r.nLotes>1?'n':''} como donación`:'todos los que caben a lo largo');}
+        s+=ok(r.donacionCumple,g.donPagada?`Donación pagada ${fmtN(r.donacionPagadaM2)} m²`:`Donación ${fmtN(g.donacionM2)} m²`,(g.donPct<=0?'donación en 0% · sólo subdivisión sobre calle existente (art. 90)':g.donPagada?`${pct(g.donPct*100,0)} del vendible × ${fmtMoney(r.p.valorTierraM2)}/m² = ${fmtMoney(r.costoDonacion)} · art. 79-I`:`pide ${fmtN(g.donacionReqM2)} m² = ${pct(g.donPct*100,0)} del vendible · Ley OTDU Sonora art. 80`));yb+=26;
+        s+=ok(true,`${fmtN(g.nLado)} lotes de ${g.frenteLoteReal.toFixed(2)} × ${g.fondoUtil.toFixed(1)} m${g.nFondo?' + 1 de fondo':''}`,`${fmtN(r.m2Lotes)} m² vendibles${g.nFondo?' · fondo de '+fmtN(g.fondoLoteM2)+' m²':''}`);}
     }else{
     const aspect=p.fondo/Math.max(1,p.frente);
     lotH=H-mT-mB;lotW=lotH/aspect;
@@ -1425,7 +1569,9 @@
     mensualidad:num(r.mensualidad),cartera_pico:num(r.carteraPico),retorno_financiamiento:num(r.retFinTodo),cola_cobranza_mes:r.colaCobranza,
     urbanizacion_total:num(r.urbanizacion),utilidad_pre_fin:num(r.utilidadPre),valor_terreno_m2:num(r.valorTerrenoM2),habitantes_polo:r.habitantes,
     ingreso_lotes:num(r.ingLotesBase),ingreso_comercial:num(r.ingCom),densidad_viv_ha:num(r.densidad,1),donacion_pct:num(r.donacionPct,1),comercio_m2_hab:r.comercioPorHab===null?'':num(r.comercioPorHab,2),retorno_pct:num(r.costoProyecto?r.utilidadFinal/r.costoProyecto*100:0,1),
-    viv_activa:!!r.vivActiva,viv_unidades:r.nLotesViv||0,viv_ingreso:num(r.ingViv),viv_costo_construccion:num(r.costoConstrViv),viv_precio_promedio:num(r.precioPromedioViv)}}
+    viv_activa:!!r.vivActiva,viv_unidades:r.nLotesViv||0,viv_ingreso:num(r.ingViv),viv_costo_construccion:num(r.costoConstrViv),viv_precio_promedio:num(r.precioPromedioViv),
+    tir_proyecto_pct:r.projIrr===null?'':num(r.projIrr*100,2),tir_dueno_pct:r.ownerIrr===null?'':num(r.ownerIrr*100,2),utilidad_dev:num(r.devUtilidad),
+    donacion_pagada:!!r.p.donPagada,costo_donacion:num(r.costoDonacion),otros_costos:num(r.costoOtros),honorario_dev:num(r.honorarioDev)}}
   function refreshJson(){if(!$('jsonEditor')||!state)return;$('jsonEditor').value=JSON.stringify({schema:'potenciales-yod/residencial/v1',caso:{caso_id:caso.caso_id,nombre_caso:caso.nombre_caso,palabra:caso.palabra},inputs:inputValues(),vivienda:viviendaSanear(vivienda),resumen:resumenActual()},null,2)}
   function applyJson(){try{const data=JSON.parse($('jsonEditor').value);if(data.schema&&data.schema!=='potenciales-yod/residencial/v1')throw Error();const vals=data.inputs||data;let n=0;Object.entries(vals).forEach(([id,v])=>{if($(id)&&Number.isFinite(Number(v))){setControl(id,v);n++}});if(!n)throw Error();if(data.vivienda&&typeof data.vivienda==='object'){vivienda=viviendaSanear(data.vivienda);vivResetFirma()}calculate();$('checks').innerHTML='<div class="status-ok">JSON aplicado: '+n+' variables.</div>'}catch{$('checks').innerHTML='<div class="status-bad">JSON inválido.</div>'}}
   function exportJson(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([$('jsonEditor').value],{type:'application/json'}));a.download=(caso.palabra||'residencial')+'-'+Date.now()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
@@ -1453,6 +1599,7 @@
     $('segLog').textContent=caso.notas_seguimiento||'Sin notas todavía.'+(caso.caso_id?'':' Guarda el caso primero.');
   }
   function aplicarCasoRemoto(obj){
+    resetNuevos();
     Object.keys(obj).forEach(kk=>{if(/^in[A-Z]/.test(kk)&&obj[kk]!==''&&isFinite(Number(obj[kk])))setControl(kk,Number(obj[kk]))});
     caso={caso_id:obj.caso_id||'',palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
     if(!escDesdeJson(obj.escenarios_json))escInicial('Base');
@@ -1467,6 +1614,11 @@
     if(!palabra){toast('Elige una palabra para volver a tu caso');return}
     if(enviarCorreo&&!correo){toast('Pon un correo para enviarte la palabra');return}
     const btns=[$('gGuardarSolo'),$('gGuardarEnviar')];btns.forEach(b=>b.disabled=true);
+    // 23-sep: un caso NUEVO (sin caso_id) nunca hereda versiones de otro caso: la versión activa pasa a ser
+    // la Base y las demás (que venían del borrador de otro caso) no se guardan con él.
+    const esNuevo=!caso.caso_id;
+    if(esNuevo&&escenarios.length>1){escSyncActivo();const act=escGet(escActivo);escenarios=[Object.assign(act,{esBase:true})];escActivo=act.id;calculate();toast('Caso nuevo: la versión activa queda como Base de este caso')}
+    else if(esNuevo&&escenarios.length===1)escenarios[0].esBase=true;
     const rSt=state||calculate();
     const payload={tipo:'guardar',caso_id:caso.caso_id,palabra,correo,nombre_caso:nombre,notas_caso:notas,estado:caso.estado,inputs:inputValues(),resumen:resumenActual(),escenarios:escParaGuardar(),flujo:rSt.flows.map(f=>[f.m,Math.round(f.rev),Math.round(f.cost),Math.round(f.equity),Math.round(f.pik+f.fee),Math.round(f.debt),Math.round(f.caja)]),sendEmail:!!enviarCorreo,request_id:nuevoRequestId(),website:$('gWeb').value};
     try{
@@ -1533,7 +1685,7 @@
   function cerrarOverlays(){document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('on'))}
   /* ================== ARRANQUE ================== */
   document.querySelectorAll('.card[data-card]').forEach(c=>c.onclick=e=>{if(e.target.closest('.drawer'))return;toggleDrawer(c)});
-  controls.forEach(c=>{updateColor(c);c.addEventListener('input',calculate)});readPills();installFactorHelp();installMetricHelp();installVivEvents();
+  controls.forEach(c=>{updateColor(c);c.addEventListener('input',calculate)});readPills();installFactorHelp();installMetricHelp();installVivEvents();installExtras();
   $('btnGuardar').onclick=()=>{if(modoLocal){toast('Estás sin nube: entra con la clave para guardar');return}$('gNombre').value=caso.nombre_caso||'';$('gPalabra').value=caso.palabra||'';$('gCorreo').value=caso.correo||'';$('gNotas').value=caso.notas_caso||'';abrirOverlay('ovGuardar')};
   $('gGuardarSolo').onclick=()=>guardarCaso(false);$('gGuardarEnviar').onclick=()=>guardarCaso(true);$('gCancelar').onclick=cerrarOverlays;
   $('btnMisCasos').onclick=()=>{if(modoLocal){toast('Estás sin nube: entra con la clave');return}abrirOverlay('ovCasos');cargarLista()};
