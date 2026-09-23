@@ -19,7 +19,13 @@
      los correos) — por eso "ya no entra" tras pagar. Limpiamos ese resto. */
   try { localStorage.removeItem('pyod_portero'); } catch(e){}
   let ENDPOINT = PORTERO_ORIGINAL;
+  /* 23-sep: el respaldo contesta 404 «Page Not Found» (esa implementación ya no existe en
+     Google, medido por el vigía de yod-portal). Saltar a él convertía cada tardanza del original
+     en «No se pudo con Google: servidor». Mientras no haya un respaldo vivo, el segundo intento
+     vuelve a ser el ORIGINAL. Para reactivarlo: RESPALDO_VIVO = true con una URL que conteste. */
+  const RESPALDO_VIVO = false;
   function pyodUsarRespaldo(){
+    if (!RESPALDO_VIVO) return true;               // reintento contra el original
     if (ENDPOINT === PORTERO_RESPALDO) return false;
     ENDPOINT = PORTERO_RESPALDO;
     return true;
@@ -38,14 +44,16 @@
   async function pyodManda(cuerpo){
     async function intenta(base){
       const r = await pyodConLimite(fetch(base, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        credentials:'omit', body: JSON.stringify(cuerpo) }));
+        credentials:'omit', body: JSON.stringify(cuerpo) }), 30000);
       const t = await r.text();
       try { return JSON.parse(t); } catch(e){ return { ok:false, error:'servidor' }; }
     }
     pyodVolverAlOriginal();
     let j;
     try { j = await intenta(ENDPOINT); } catch(e){ j = { ok:false, error:'servidor' }; }
-    if (!pyodOk(j) && pyodUsarRespaldo()) {
+    const fallaDeRed = !j || j.error === 'servidor';
+    if (!pyodOk(j) && (RESPALDO_VIVO || fallaDeRed) && pyodUsarRespaldo()) {
+      if (!RESPALDO_VIVO) await new Promise(ok => setTimeout(ok, 1500));
       try { j = await intenta(ENDPOINT); } catch(e){ j = { ok:false, error:'servidor' }; }
     }
     return j;
@@ -54,14 +62,15 @@
   /* Pide a un portero y, si el original falla, reintenta con el respaldo. */
   async function pyodPide(qs){
     async function intenta(base){
-      const r = await pyodConLimite(fetch(base + qs, { credentials: 'omit' }));
+      const r = await pyodConLimite(fetch(base + qs, { credentials: 'omit' }), 25000);
       const t = await r.text();
       try { return JSON.parse(t); } catch(e){ return { ok:false, error:'servidor' }; }
     }
     pyodVolverAlOriginal();
     let j;
     try { j = await intenta(ENDPOINT); } catch(e){ j = { ok:false, error:'servidor' }; }
-    if (!(j && j.ok) && pyodUsarRespaldo()) {
+    if (!(j && j.ok) && (RESPALDO_VIVO || !j || j.error === 'servidor') && pyodUsarRespaldo()) {
+      if (!RESPALDO_VIVO) await new Promise(ok => setTimeout(ok, 1500));
       try { j = await intenta(ENDPOINT); } catch(e){ j = { ok:false, error:'servidor' }; }
     }
     return j;
@@ -208,12 +217,12 @@
       const arma = () => {
         try {
           google.accounts.id.initialize({ client_id: GCID, callback: async resp => {
-            $('pgMsg').textContent = 'Verificando con Google…';
+            $('pgMsg').textContent = 'Verificando con Google… (puede tardar hasta 30 s)';
             try {
               const r = await pyodManda({ tipo: 'acceso-google', credential: resp.credential, request_id: (crypto.randomUUID?.() || Date.now() + '') });
               if (r.ok && r.autorizado && r.token) { localStorage.setItem(LSC, r.token); sessionStorage.removeItem('pyod_rol'); $('pgMsg').textContent = '✓ Dentro — cargando…'; location.reload(); }
               else if (r.ok && !r.autorizado) { $('pgMsg').textContent = 'Tu cuenta de Google aún no tiene acceso — pídelo por WhatsApp:'; const ws = $('pgWs'); ws.style.display = 'block'; ws.onclick = () => window.open('https://wa.me/' + (r.whatsapp || '525518331100') + '?text=' + encodeURIComponent('Hola Alejandro, solicito acceso a los boards YOD (' + pagina + ').'), '_blank'); }
-              else $('pgMsg').textContent = 'No se pudo con Google: ' + (r.error || 'reintenta');
+              else $('pgMsg').textContent = r.error === 'servidor' ? 'El servidor de acceso no contestó a tiempo — vuelve a tocar «Continuar con Google»' : 'No se pudo con Google: ' + (r.error || 'reintenta');
             } catch (e) { $('pgMsg').textContent = 'Sin conexión — reintenta'; }
           } });
           google.accounts.id.renderButton(document.getElementById('pgGoogle'), { theme: 'outline', size: 'large', text: 'continue_with', locale: 'es', width: 280 });
