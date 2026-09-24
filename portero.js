@@ -226,6 +226,8 @@
       else { const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; sc.onload = arma; document.head.appendChild(sc); }
     }
   }
+  // Los candados propios de cada tablero (tablero, obra, tracks) abren este mismo gate de Google
+  window.YODPortero = { entrar: overlayCorreo };
   function engancharGates() {
     // modo suave (boards con gate propio): nunca tapar; solo ofrecer la liga dentro de su gate
     if (MODO_SUAVE) { const iv = setInterval(() => { const g = document.getElementById('gate') || document.getElementById('mapGate'); if (g && g.offsetParent !== null) { const caja = g.querySelector('.gate-box, .mg-box') || g.firstElementChild; if (caja && !caja.querySelector('.pg-alt2')) { const b = document.createElement('button'); b.className = 'pg-alt2'; b.textContent = '○ Entrar con Google'; b.style.cssText = 'display:block;margin:12px auto 0;font-size:11px;color:#c9a96e;background:none;border:0;text-decoration:underline;cursor:pointer;font-family:inherit'; b.onclick = () => overlayCorreo(); caja.appendChild(b); } } }, 1200); setTimeout(() => clearInterval(iv), 20000); return; }
