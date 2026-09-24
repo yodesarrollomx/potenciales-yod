@@ -1,6 +1,6 @@
 /* PORTERO YOD · capa compartida de accesos y bitácora
  * - Captura ?sesion=TOKEN de la liga mágica y lo guarda como credencial (viaja como k).
- * - Si no hay credencial, superpone un gate por CORREO (liga mágica) con botón de WhatsApp.
+ * - Si no hay credencial, superpone un gate con Google (One Tap automático); el enlace por correo queda como plan B.
  * - Bitácora codificada por visita: ● entrada · ◉ abrió caso · ✎ guardó · ⚑ estado
  *   · ☎ WhatsApp · ⤓ export · (Nm ×E) minutos y eventos al cerrar.
  */
@@ -135,7 +135,7 @@
   setInterval(() => { if (buf.length) flush(false); }, 45000);
   addEventListener('pagehide', () => flush(true));
 
-  /* 3) gate por correo (liga mágica) */
+  /* 3) gate: Google (One Tap automático) · enlace por correo solo como plan B */
   function overlayCorreo() {
     if (document.getElementById('porteroGate')) return;
     // Sistema de diseño YOD OS: asegurar fuentes Instrument (se ignora si el board ya las tiene)
@@ -170,25 +170,31 @@
     </style>
     <div class="pg-box">
       <div class="pg-eyebrow">Sistema interno · YOD OS</div>
-      <h2>Acceso a los boards</h2>
-      <p>Escribe tu correo: si tienes acceso te mando una <b>liga mágica</b> (sin contraseñas) que te abre todo por 90 días.</p>
-      <input type="email" id="pgCorreo" placeholder="tucorreo@…" autocomplete="email">
-      <button class="pg-btn" id="pgEnviar">Enviarme la liga</button>
-      <button class="pg-btn ws" id="pgWs">Pedir acceso por WhatsApp</button>
+      <h2>Entra con Google</h2>
+      <p>Usa tu cuenta de Google del equipo. Una vez dentro, <b>te quedas conectado</b> en este dispositivo; la próxima vez entra solo.</p>
       <div id="pgGoogle"></div>
+      <button class="pg-btn ws" id="pgWs">Pedir acceso por WhatsApp</button>
       <div class="pg-msg" id="pgMsg"></div>
       <div class="pg-sep"></div>
-      <button class="pg-alt" id="pgClave">Tengo una clave del equipo</button>
+      <button class="pg-alt" id="pgPlanB">¿Google no responde? Recibir un enlace en mi correo</button>
+      <div id="pgCorreoBox" style="display:none;margin-top:10px">
+        <input type="email" id="pgCorreo" placeholder="tucorreo@…" autocomplete="email">
+        <button class="pg-btn" id="pgEnviar">Enviarme el enlace</button>
+      </div>
     </div>`;
     document.body.appendChild(dv);
     const $ = id => document.getElementById(id);
+    /* Plan B, escondido: el Portero de respaldo no conoce Google. Si Google
+       falla, el enlace por correo evita quedarse afuera. La clave de equipo
+       ya no se ofrece. */
+    $('pgPlanB').onclick = () => { $('pgCorreoBox').style.display = 'block'; $('pgPlanB').style.display = 'none'; $('pgCorreo').focus(); };
     $('pgEnviar').onclick = async () => {
       const correo = $('pgCorreo').value.trim();
       if (!correo || correo.indexOf('@') < 1) { $('pgMsg').textContent = 'Escribe un correo válido'; return; }
       $('pgEnviar').disabled = true; $('pgMsg').textContent = 'Verificando…';
       try {
         const r = await pyodManda({ tipo: 'acceso-solicitar', correo, destino: location.href.split('#')[0], request_id: (crypto.randomUUID?.() || Date.now() + '') });
-        if (r.ok && r.autorizado) { $('pgMsg').textContent = '📬 Liga enviada: revisa tu correo y ábrela en este dispositivo.'; }
+        if (r.ok && r.autorizado) { $('pgMsg').textContent = '📬 Enlace enviado: ábrelo en este dispositivo.'; }
         else if (r.ok && !r.autorizado) {
           $('pgMsg').textContent = 'Ese correo aún no tiene acceso — pídelo por WhatsApp:';
           const ws = $('pgWs'); ws.style.display = 'block';
@@ -198,25 +204,11 @@
       $('pgEnviar').disabled = false;
     };
     $('pgCorreo').addEventListener('keydown', e => { if (e.key === 'Enter') $('pgEnviar').click(); });
-    $('pgClave').onclick = () => {
-      // si el board tiene su propio gate de clave, solo descubrirlo; si no (portal/tracks), pedirla aquí
-      const propio = document.getElementById('gate') || document.getElementById('mapGate');
-      if (propio) { dv.remove(); return; }
-      const inp = $('pgCorreo'); inp.type = 'password'; inp.placeholder = 'clave del equipo'; inp.value = ''; inp.focus();
-      $('pgEnviar').textContent = 'Entrar';
-      $('pgMsg').textContent = '';
-      const parr = dv.querySelector('.pg-box p'); if (parr) parr.textContent = 'Escribe la clave del equipo para entrar en este dispositivo.';
-      const gbtn = document.getElementById('pgGoogle'); if (gbtn) gbtn.style.display = 'none';
-      $('pgEnviar').onclick = () => {
-        const v = inp.value.trim(); if (!v) { $('pgMsg').textContent = 'Escribe la clave'; return; }
-        localStorage.setItem(LSC, v); sessionStorage.removeItem('pyod_rol'); location.reload();
-      };
-    };
     // botón "Continuar con Google" (GSI · id_token — sin redirect_uri, sin ciclo de transform)
     if (GCID && GCID !== 'PENDIENTE') {
       const arma = () => {
         try {
-          google.accounts.id.initialize({ client_id: GCID, callback: async resp => {
+          google.accounts.id.initialize({ client_id: GCID, auto_select: true, use_fedcm_for_prompt: true, cancel_on_tap_outside: false, itp_support: true, callback: async resp => {
             $('pgMsg').textContent = 'Verificando con Google… (puede tardar hasta 30 s)';
             try {
               const r = await pyodManda({ tipo: 'acceso-google', credential: resp.credential, request_id: (crypto.randomUUID?.() || Date.now() + '') });
@@ -226,6 +218,8 @@
             } catch (e) { $('pgMsg').textContent = 'Sin conexión — reintenta'; }
           } });
           google.accounts.id.renderButton(document.getElementById('pgGoogle'), { theme: 'outline', size: 'large', text: 'continue_with', locale: 'es', width: 280 });
+          // One Tap: si ya diste permiso antes, Google te mete solo, sin clic
+          google.accounts.id.prompt();
         } catch (e) {}
       };
       if (window.google && google.accounts) arma();
@@ -234,7 +228,7 @@
   }
   function engancharGates() {
     // modo suave (boards con gate propio): nunca tapar; solo ofrecer la liga dentro de su gate
-    if (MODO_SUAVE) { const iv = setInterval(() => { const g = document.getElementById('gate') || document.getElementById('mapGate'); if (g && g.offsetParent !== null) { const caja = g.querySelector('.gate-box, .mg-box') || g.firstElementChild; if (caja && !caja.querySelector('.pg-alt2')) { const b = document.createElement('button'); b.className = 'pg-alt2'; b.textContent = '○ Entrar con mi correo (liga mágica)'; b.style.cssText = 'display:block;margin:12px auto 0;font-size:11px;color:#c9a96e;background:none;border:0;text-decoration:underline;cursor:pointer;font-family:inherit'; b.onclick = () => overlayCorreo(); caja.appendChild(b); } } }, 1200); setTimeout(() => clearInterval(iv), 20000); return; }
+    if (MODO_SUAVE) { const iv = setInterval(() => { const g = document.getElementById('gate') || document.getElementById('mapGate'); if (g && g.offsetParent !== null) { const caja = g.querySelector('.gate-box, .mg-box') || g.firstElementChild; if (caja && !caja.querySelector('.pg-alt2')) { const b = document.createElement('button'); b.className = 'pg-alt2'; b.textContent = '○ Entrar con Google'; b.style.cssText = 'display:block;margin:12px auto 0;font-size:11px;color:#c9a96e;background:none;border:0;text-decoration:underline;cursor:pointer;font-family:inherit'; b.onclick = () => overlayCorreo(); caja.appendChild(b); } } }, 1200); setTimeout(() => clearInterval(iv), 20000); return; }
     // sin credencial → gate de correo encima de todo
     if (!localStorage.getItem(LSC)) { if (!SIN_GATE) overlayCorreo(); return; }
     // con credencial pero si el gate del board reaparece (clave vieja), ofrecer la liga
@@ -244,7 +238,7 @@
         const caja = g.querySelector('.gate-box, .mg-box');
         if (caja && !caja.querySelector('.pg-alt2')) {
           const b = document.createElement('button');
-          b.className = 'pg-alt2'; b.textContent = '○ Entrar con mi correo (liga mágica)';
+          b.className = 'pg-alt2'; b.textContent = '○ Entrar con Google';
           b.style.cssText = 'margin-top:12px;font-size:11px;color:#e0c590;background:none;border:0;text-decoration:underline;cursor:pointer;font-family:inherit';
           b.onclick = () => overlayCorreo();
           caja.appendChild(b);
@@ -273,9 +267,15 @@
           await new Promise(ok => setTimeout(ok, 1800));
           r = await pyodPide('?recurso=canje&t=' + encodeURIComponent(k));
         }
-        if (r && r.ok) { rol = r.rol || 'vista'; sessionStorage.setItem('pyod_rol', JSON.stringify({ f: k.slice(0, 14), rol })); }
+        if (r && r.ok) { try { localStorage.removeItem('yod_canje_fail'); } catch (e) {} rol = r.rol || 'vista'; sessionStorage.setItem('pyod_rol', JSON.stringify({ f: k.slice(0, 14), rol })); }
         else if (r && r.ok === false && r.error === 'liga') {
-          localStorage.removeItem(LSC); sessionStorage.removeItem('pyod_rol');
+          /* Misma regla que la cabina (yod-portal/os/app.js): la credencial es de
+             TODO el OS, así que un tablero solo la suelta tras 3 rechazos seguidos,
+             contados en la misma llave. Un parpadeo del Apps Script ya no te saca. */
+          let n = 0;
+          try { n = (parseInt(localStorage.getItem('yod_canje_fail') || '0', 10) || 0) + 1; localStorage.setItem('yod_canje_fail', String(n)); } catch (e) {}
+          if (n < 3) return;
+          localStorage.removeItem(LSC); localStorage.removeItem('yod_canje_fail'); sessionStorage.removeItem('pyod_rol');
           if (!SIN_GATE && !MODO_SUAVE) overlayCorreo();
           return;
         }
