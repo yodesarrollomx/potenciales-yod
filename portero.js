@@ -10,15 +10,20 @@
      falla — no contesta, contesta HTML de login, o su OAuth de Google truena —
      se usa el respaldo automáticamente. Al reactivar el dominio, basta borrar
      'pyod_portero' del navegador para volver al original. */
-  const PORTERO_ORIGINAL = 'https://script.google.com/macros/s/AKfycbwlDDCWWzOWYZsUpBU9uqsQ7aenQ469PF6s6FkNlBFS1_cJSU5njG9oQmuyELy5zlqzFg/exec';
-  const PORTERO_RESPALDO = 'https://script.google.com/macros/s/AKfycbyrhqMb70Qh8BljAOYnSYBZ8IXUuEclFWPg10NWIv3GJ-nAR597OTsGB4IL-xyUl7Ms/exec';
+  /* 25-sep-2026: la dirección vive SOLO en yod-portal/os/yod-acceso.js. Si la página
+     no la cargó en su <head>, se pide aquí; todo lo que habla con el Portero la espera. */
+  const ACCESO = 'https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=1';
+  const ACCESO_LISTO = window.YOD_PORTERO ? Promise.resolve() : new Promise(ok => {
+    const sc = document.createElement('script'); sc.src = ACCESO; sc.onload = sc.onerror = () => ok(); document.head.appendChild(sc);
+  });
+  const P_ = () => window.YOD_PORTERO || {};
   /* El ORIGINAL siempre va primero, en cada llamada. El respaldo entra solo si
      el original falla en ese momento, y NUNCA queda guardado como destino: la
      versión anterior lo pegaba en localStorage y, al reactivarse Google, el
      navegador seguía hablándole al respaldo (que no sabe de Google ni conoce
      los correos) — por eso "ya no entra" tras pagar. Limpiamos ese resto. */
   try { localStorage.removeItem('pyod_portero'); } catch(e){}
-  let ENDPOINT = PORTERO_ORIGINAL;
+  let ENDPOINT = '';
   /* 23-sep: el respaldo contesta 404 «Page Not Found» (esa implementación ya no existe en
      Google, medido por el vigía de yod-portal). Saltar a él convertía cada tardanza del original
      en «No se pudo con Google: servidor». Mientras no haya un respaldo vivo, el segundo intento
@@ -26,11 +31,11 @@
   const RESPALDO_VIVO = false;
   function pyodUsarRespaldo(){
     if (!RESPALDO_VIVO) return true;               // reintento contra el original
-    if (ENDPOINT === PORTERO_RESPALDO) return false;
-    ENDPOINT = PORTERO_RESPALDO;
+    if (ENDPOINT === P_().respaldo) return false;
+    ENDPOINT = P_().respaldo;
     return true;
   }
-  function pyodVolverAlOriginal(){ ENDPOINT = PORTERO_ORIGINAL; }
+  function pyodVolverAlOriginal(){ ENDPOINT = P_().original; }
   /* Manda al portero y, si el original falla, reintenta con el respaldo. */
   function pyodConLimite(p, ms){
     return Promise.race([p, new Promise((_,rj)=>setTimeout(()=>rj(new Error('timeout')), ms||12000))]);
@@ -48,6 +53,7 @@
       const t = await r.text();
       try { return JSON.parse(t); } catch(e){ return { ok:false, error:'servidor' }; }
     }
+    await ACCESO_LISTO;
     pyodVolverAlOriginal();
     let j;
     try { j = await intenta(ENDPOINT); } catch(e){ j = { ok:false, error:'servidor' }; }
@@ -66,6 +72,7 @@
       const t = await r.text();
       try { return JSON.parse(t); } catch(e){ return { ok:false, error:'servidor' }; }
     }
+    await ACCESO_LISTO;
     pyodVolverAlOriginal();
     let j;
     try { j = await intenta(ENDPOINT); } catch(e){ j = { ok:false, error:'servidor' }; }
@@ -128,6 +135,7 @@
     if (fin) { txt += ' (' + Math.max(1, Math.round((Date.now() - t0) / 6e4)) + 'm ×' + nEv + ')'; cerrado = true; }
     const body = JSON.stringify({ k, tipo: 'bitacora', eventos: txt, nueva, request_id: (crypto.randomUUID?.() || Date.now() + '' + Math.random()) });
     nueva = 0;
+    if (!ENDPOINT) ENDPOINT = P_().original; if (!ENDPOINT) return;
     if (fin && navigator.sendBeacon) navigator.sendBeacon(ENDPOINT, new Blob([body], { type: 'text/plain;charset=utf-8' }));
     else fetch(ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body, credentials: 'omit' }).catch(() => {});
   }

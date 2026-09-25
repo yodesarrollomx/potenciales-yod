@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
+<meta charset="UTF-8">
+<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=1"></script><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
 <title>Planificador de Potencial Inmobiliario · YoDesarrollo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -183,7 +184,7 @@
 <script src="https://unpkg.com/leaflet-gesture-handling@1.2.2/dist/leaflet-gesture-handling.min.js"></script>
 <script>
 (()=>{
-  const ENDPOINT='https://script.google.com/macros/s/AKfycbwlDDCWWzOWYZsUpBU9uqsQ7aenQ469PF6s6FkNlBFS1_cJSU5njG9oQmuyELy5zlqzFg/exec';
+  const ENDPOINT=window.YOD_PORTERO.original;   // única copia: yod-portal/os/yod-acceso.js
   const LSK='pyod_clave_v1';
   const $=id=>document.getElementById(id);
   const TIPOS={macrolotes:{n:'Macro Lotes',e:'🏭',ic:'ti-building-factory',hex:'#B98B3C'},vertical:{n:'Mixto / Depas',e:'🏢',ic:'ti-building-skyscraper',hex:'#8ab8ff'},unifamiliar:{n:'Unifamiliar',e:'🏡',ic:'ti-home',hex:'#8FBF8B'},residencial:{n:'Lotes Residenciales',e:'🏘️',ic:'ti-map-2',hex:'#7fd4e8'},patrimonial:{n:'Patrimonial / Rentas',e:'💼',ic:'ti-briefcase',hex:'#a9a4f5'}};
@@ -252,7 +253,7 @@
   if(clave){cargar(clave).then(()=>{$('mapGate').classList.add('off');ajusta()}).catch(e=>{if(e==='clave'){localStorage.removeItem(LSK);$('mgErr').textContent='La clave cambió'}})}
 })();
 </script>
-<script src="portero.js?v=relevo8"></script>
+<script src="portero.js?v=relevo9"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js"></script>
 </body>
 </html>

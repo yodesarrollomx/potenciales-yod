@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
 <title>Mapa de PPPs · Potenciales · YoDesarrollo</title>
@@ -92,7 +93,7 @@
 <script src="https://unpkg.com/leaflet-gesture-handling@1.2.2/dist/leaflet-gesture-handling.min.js"></script>
 <script>
 (()=>{
-  const ENDPOINT='https://script.google.com/macros/s/AKfycbwlDDCWWzOWYZsUpBU9uqsQ7aenQ469PF6s6FkNlBFS1_cJSU5njG9oQmuyELy5zlqzFg/exec';
+  const ENDPOINT=window.YOD_PORTERO.original;   // única copia: yod-portal/os/yod-acceso.js
   const LSK='pyod_clave_v1';
   const $=id=>document.getElementById(id);
   const TIPOS={macrolotes:{n:'Macro Lotes',e:'🏭',c:'var(--c-macrolotes)',hex:'#B98B3C'},vertical:{n:'Mixto / Depas',e:'🏢',c:'var(--c-vertical)',hex:'#8ab8ff'},unifamiliar:{n:'Unifamiliar',e:'🏡',c:'var(--c-unifamiliar)',hex:'#8FBF8B'},residencial:{n:'Lotes Residenciales',e:'🏘️',c:'var(--c-residencial)',hex:'#7fd4e8'},patrimonial:{n:'Patrimonial / Rentas',e:'💼',c:'var(--c-patrimonial)',hex:'#a9a4f5'}};
@@ -146,7 +147,7 @@
   if(clave){cargar(clave).then(()=>{$('gate').classList.add('off');ajusta()}).catch(e=>{if(e==='clave'){localStorage.removeItem(LSK);$('gateErr').textContent='La clave cambió'}else $('gateErr').textContent='Sin conexión con el Sheet'})}
 })();
 </script>
-<script src="portero.js?v=relevo8"></script>
+<script src="portero.js?v=relevo9"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js"></script>
 </body>
 </html>

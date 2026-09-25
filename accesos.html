@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
 <title>Accesos · El Portero · YoDesarrollo</title>
@@ -152,8 +153,8 @@
      suspendido; si no contesta o rechaza la clave, se usa el respaldo (cuenta
      personal) sin que nadie tenga que hacer nada. Al reactivar el dominio, el
      original retoma solo. */
-  const PORTERO_ORIGINAL='https://script.google.com/macros/s/AKfycbwlDDCWWzOWYZsUpBU9uqsQ7aenQ469PF6s6FkNlBFS1_cJSU5njG9oQmuyELy5zlqzFg/exec';
-  const PORTERO_RESPALDO='https://script.google.com/macros/s/AKfycbyrhqMb70Qh8BljAOYnSYBZ8IXUuEclFWPg10NWIv3GJ-nAR597OTsGB4IL-xyUl7Ms/exec';
+  const PORTERO_ORIGINAL=window.YOD_PORTERO.original;   // única copia: yod-portal/os/yod-acceso.js
+  const PORTERO_RESPALDO=window.YOD_PORTERO.respaldo;
   const LSP='pyod_portero_activo';
   let ENDPOINT = localStorage.getItem(LSP) || PORTERO_ORIGINAL;
   function usarRespaldo(){ ENDPOINT = PORTERO_RESPALDO; try{localStorage.setItem(LSP, PORTERO_RESPALDO);}catch(e){}
@@ -417,7 +418,7 @@
     </div>
   </div>
 </div>
-<script src="portero.js?v=relevo8"></script>
+<script src="portero.js?v=relevo9"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js"></script>
 </body>
 </html>
