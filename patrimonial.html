@@ -474,7 +474,7 @@
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
-  const NUBE={ENDPOINT:window.YOD_PORTERO.original,TIPO:'patrimonial',SITE:'https://yodesarrollomx.github.io/potenciales-yod/',PAGE:'patrimonial.html'};
+  const NUBE={ENDPOINT:(window.YOD_PORTERO||{}).original,TIPO:'patrimonial',SITE:'https://yodesarrollomx.github.io/potenciales-yod/',PAGE:'patrimonial.html'};
   const cloudOn=/^https:\/\//.test(NUBE.ENDPOINT);
   const LS={clave:'pyod_clave_v1',draft:'pyodp_draft_v1',cola:'pyodp_postq_v1'};
   const ESTADOS=['EXPLORACIÓN','ANÁLISIS','PROPUESTA','NEGOCIACIÓN','CERRADO','DESCARTADO'];

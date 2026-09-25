@@ -153,8 +153,8 @@
      suspendido; si no contesta o rechaza la clave, se usa el respaldo (cuenta
      personal) sin que nadie tenga que hacer nada. Al reactivar el dominio, el
      original retoma solo. */
-  const PORTERO_ORIGINAL=window.YOD_PORTERO.original;   // única copia: yod-portal/os/yod-acceso.js
-  const PORTERO_RESPALDO=window.YOD_PORTERO.respaldo;
+  const PORTERO_ORIGINAL=(window.YOD_PORTERO||{}).original;   // única copia: yod-portal/os/yod-acceso.js
+  const PORTERO_RESPALDO=(window.YOD_PORTERO||{}).respaldo;
   const LSP='pyod_portero_activo';
   let ENDPOINT = localStorage.getItem(LSP) || PORTERO_ORIGINAL;
   function usarRespaldo(){ ENDPOINT = PORTERO_RESPALDO; try{localStorage.setItem(LSP, PORTERO_RESPALDO);}catch(e){}

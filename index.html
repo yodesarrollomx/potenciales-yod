@@ -184,7 +184,7 @@
 <script src="https://unpkg.com/leaflet-gesture-handling@1.2.2/dist/leaflet-gesture-handling.min.js"></script>
 <script>
 (()=>{
-  const ENDPOINT=window.YOD_PORTERO.original;   // única copia: yod-portal/os/yod-acceso.js
+  const ENDPOINT=(window.YOD_PORTERO||{}).original;   // única copia: yod-portal/os/yod-acceso.js
   const LSK='pyod_clave_v1';
   const $=id=>document.getElementById(id);
   const TIPOS={macrolotes:{n:'Macro Lotes',e:'🏭',ic:'ti-building-factory',hex:'#B98B3C'},vertical:{n:'Mixto / Depas',e:'🏢',ic:'ti-building-skyscraper',hex:'#8ab8ff'},unifamiliar:{n:'Unifamiliar',e:'🏡',ic:'ti-home',hex:'#8FBF8B'},residencial:{n:'Lotes Residenciales',e:'🏘️',ic:'ti-map-2',hex:'#7fd4e8'},patrimonial:{n:'Patrimonial / Rentas',e:'💼',ic:'ti-briefcase',hex:'#a9a4f5'}};
