@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script src="https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=1"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/access-policy.js?v=0.1.2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
 <title>Accesos · El Portero · YoDesarrollo</title>
@@ -104,6 +105,7 @@
       <input id="aCorreo" type="email" placeholder="correo@…">
       <input id="aNombre" placeholder="Nombre">
       <input id="aBoards" placeholder="boards: * o RM,TA,TM…">
+      <small id="aVera" style="flex-basis:100%;color:var(--gold)"></small>
       <select id="aRol" title="vista = solo lee · editor = puede editar los boards que tenga · admin = además administra accesos"><option value="vista">vista</option><option value="editor">editor</option><option value="admin">admin</option></select>
       <button class="btn" id="aBtn" disabled><span class="sp"></span><span id="aBtnT">Dar acceso</span></button>
     </div>
@@ -215,12 +217,23 @@
      verdad. Desde el 4-sep, blanco = sin acceso: se pinta como lo que es. */
   function boardsDe(u){return String(u.boards==null?'':u.boards).trim()}
   function tieneCode(b,c){if(b==='*')return true;return b.toUpperCase().split(/[,|; ]+/).indexOf(c)>-1}
+  /* AC-5 (26-sep): «al marcar un código se ve qué verá esta persona». Misma regla que YOD OS
+     (os/access-policy.js · canOpen), así lo que dice aquí es lo que el menú le va a mostrar. */
+  const TABLEROS=[['SYS-DESPACHO','Despacho'],['SYS-POTENCIALES','PPP'],['SYS-TRACK','Codesarrollos'],['SYS-MIRAMAR','Miramar'],
+    ['SYS-TAREAS','MOAC'],['SYS-FLUJO','Flujo'],['SYS-INTERIORES','Interiores'],['SYS-INVERSION','Codesarrolladores'],
+    ['SYS-MARKETING','Embudo'],['SYS-OBRA','Obra'],['SYS-CONTROL','Control Maestro']];
+  function vera(boards,rol){const P=window.YodAccessPolicy;if(!P)return '';
+    const l=TABLEROS.filter(t=>P.canOpen(boards,t[0],rol)).map(t=>t[1]);
+    return l.length?l.join(' · '):'nada (sin tableros)';}
+  (function(){const pv=()=>{const b=document.getElementById('aBoards'),r=document.getElementById('aRol'),o=document.getElementById('aVera');
+      if(b&&o) o.textContent=b.value.trim()?'Esta persona verá: '+vera(b.value,r?r.value:'vista'):'';};
+    document.addEventListener('input',e=>{if(e.target&&(e.target.id==='aBoards'))pv()});document.addEventListener('change',e=>{if(e.target&&e.target.id==='aRol')pv()});})();
   function renderMatriz(usuarios){
     const tb=$('matriz');
     tb.innerHTML='<thead><tr><th>Usuario</th>'+CODES.map(c=>'<th class="'+(c[0]==='*'?'todo':'')+'" title="'+esc(c[1])+'">'+esc(c[1])+'</th>').join('')+'</tr></thead><tbody>'+
       usuarios.map(u=>{
         const b=boardsDe(u),todo=b==='*',rev=u.estado!=='activo';
-        return '<tr class="'+(rev?'rev':'')+'" data-correo="'+esc(u.correo)+'" data-nombre="'+esc(u.nombre||'')+'" data-rol="'+esc(u.rol||'vista')+'" data-boards="'+esc(b)+'"><td class="u">'+esc(u.nombre||u.correo)+'<small>'+esc(u.correo)+(rev?' · revocado':'')+'</small></td>'+
+        return '<tr class="'+(rev?'rev':'')+'" data-correo="'+esc(u.correo)+'" data-nombre="'+esc(u.nombre||'')+'" data-rol="'+esc(u.rol||'vista')+'" data-boards="'+esc(b)+'"><td class="u">'+esc(u.nombre||u.correo)+'<small>'+esc(u.correo)+(rev?' · revocado':'')+'</small>'+(rev?'':'<small class="vera" style="color:var(--gold)">verá: '+esc(vera(b,u.rol))+'</small>')+'</td>'+
           CODES.map(c=>{const es=c[0]==='*'?todo:tieneCode(b,c[0]);
             return '<td class="'+(c[0]==='*'?'todo':'')+'"><input type="checkbox" data-code="'+c[0]+'" '+(es?'checked':'')+(rev||(todo&&c[0]!=='*')?' disabled':'')+'></td>'}).join('')+'</tr>'}).join('')+'</tbody>';
     tb.querySelectorAll('input[type=checkbox]').forEach(ch=>ch.onchange=async()=>{
