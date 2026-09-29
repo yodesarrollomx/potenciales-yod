@@ -399,15 +399,19 @@
 
   <section class="grid-2">
     <article class="card" data-card="dRenta"><div class="card-header"><div class="title-wrap"><div class="icon-box" style="background:#8fbf8b1f;color:var(--green)"><i class="ti ti-key"></i></div><div class="card-title">Unidades &amp; Renta</div></div><div class="edit-pill">AJUSTAR</div></div>
-      <div class="kpi-grid"><div class="kpi-box"><span class="kpi-lbl">Unidades</span><span class="kpi-val c-gold" id="lblUnidades">0</span></div><div class="kpi-box"><span class="kpi-lbl">Renta bruta mensual</span><span class="kpi-val c-green" id="lblRentaMes">$0</span></div><div class="kpi-box"><span class="kpi-lbl">Renta efectiva anual</span><span class="kpi-val" id="lblRentaAnual">$0</span></div><div class="kpi-box"><span class="kpi-lbl">Renta por m² rentable</span><span class="kpi-val c-blue" id="lblRentaM2">$0</span></div></div>
+      <div class="kpi-grid"><div class="kpi-box"><span class="kpi-lbl">Unidades</span><span class="kpi-val c-gold" id="lblUnidades">0</span></div><div class="kpi-box"><span class="kpi-lbl">Renta bruta mensual</span><span class="kpi-val c-green" id="lblRentaMes">$0</span></div><div class="kpi-box"><span class="kpi-lbl">Renta efectiva anual</span><span class="kpi-val" id="lblRentaAnual">$0</span></div><div class="kpi-box"><span class="kpi-lbl">Renta por m² rentable</span><span class="kpi-val c-blue" id="lblRentaM2">$0</span></div><div class="kpi-box"><span class="kpi-lbl">Tamaño promedio por puerta</span><span class="kpi-val c-gold" id="lblM2Prom">—</span></div></div>
       <div class="drawer" id="dRenta">
         <div class="input-group"><div class="input-header"><label>Unidades / puertas en renta</label><div class="val-display" data-input="inUnidades">16</div></div><input type="range" id="inUnidades" min="1" max="60" step="1" value="16" data-color="var(--gold)"></div>
         <div class="input-group"><div class="input-header"><label>Renta por unidad ($/mes)</label><div class="val-display" data-input="inRentaUnidadMes">$17,625</div></div><input type="range" id="inRentaUnidadMes" min="2000" max="60000" step="1" value="17625" data-color="var(--green)" data-format="money"></div>
+        <div class="input-group"><div class="input-header"><label>Terreno (m²) · 0 = capturo los m² a mano</label><div class="val-display" data-input="inTerrenoM2">0</div></div><input type="range" id="inTerrenoM2" min="0" max="20000" step="1" value="0" data-color="var(--gold)"></div>
+        <div class="input-group"><div class="input-header"><label>CUS propuesto · m² construidos máx = terreno × CUS</label><div class="val-display" data-input="inCus">0.0</div></div><input type="range" id="inCus" min="0" max="12" step=".1" value="0" data-color="var(--gold)" data-format="decimal"></div>
+        <div class="input-group"><div class="input-header"><label>Pasillos y comunes (% de lo construido)</label><div class="val-display" data-input="inPasillosPct">0%</div></div><input type="range" id="inPasillosPct" min="0" max="45" step=".5" value="0" data-color="var(--orange)" data-format="pct1"></div>
+        <div class="micro-readout" id="readCus" style="display:none"></div>
         <div class="input-group"><div class="input-header"><label>m² construidos</label><div class="val-display" data-input="inM2Construccion">1,950</div></div><input type="range" id="inM2Construccion" min="80" max="8000" step="1" value="1950" data-color="var(--gold)"></div>
         <div class="input-group"><div class="input-header"><label>m² rentables</label><div class="val-display" data-input="inM2Rentable">1,444</div></div><input type="range" id="inM2Rentable" min="50" max="8000" step="1" value="1444" data-color="var(--green)"></div>
         <div class="prof-toggle"><label><input type="checkbox" id="profOn">Profundizar · depa por depa (m², renta, planta y pasillos)</label></div>
         <div class="prof-panel" id="profPanel" style="display:none">
-          <table class="prof-table"><thead><tr><th>Depa</th><th>Planta</th><th>m²</th><th>Renta/mes</th></tr></thead><tbody id="profRows"></tbody></table>
+          <table class="prof-table"><thead><tr><th>#</th><th>Tipo</th><th>Planta</th><th>m²</th><th>Renta/mes</th></tr></thead><tbody id="profRows"></tbody></table>
           <div class="input-group" style="margin-top:10px"><div class="input-header"><label>Pasillos y comunes (m²) · no rentables</label><div class="val-display" data-input="inPasillosM2">0</div></div><input type="range" id="inPasillosM2" min="0" max="600" step="1" value="0" data-color="var(--orange)"></div>
           <div class="micro-readout" id="profResumen">Suma de depas…</div>
         </div>
@@ -496,6 +500,9 @@
     inRentaUnidadMes:{t:'Renta por unidad',k:'Comparable por validar',q:'$/mes por puerta. Con Profundizar se deriva solo (promedio de la tabla).',m:'Todo el ingreso.',d:'Comparables de la zona (Anara $6k 2022 · RdA $17.6k 2026).'},
     inM2Construccion:{t:'m² construidos',k:'Proyecto',q:'Total construido. Con Profundizar = depas + pasillos.',m:'Referencia de costo/m².',d:'Proyecto arquitectónico.'},
     inM2Rentable:{t:'m² rentables',k:'Proyecto',q:'m² que generan renta. Con Profundizar = suma de la tabla de depas.',m:'Renta por m² (eficiencia).',d:'RdA: 1,444 de 1,950 (74%).'},
+    inTerrenoM2:{t:'Terreno',k:'Proyecto',q:'m² del terreno. Con terreno y CUS, el CUS manda: construidos = terreno × CUS.',m:'Fija el máximo construible y de ahí los m² rentables.',d:'Escritura / levantamiento. En 0 capturas los m² a mano.'},
+    inCus:{t:'CUS propuesto',k:'Norma',q:'Coeficiente de Utilización del Suelo que estamos proponiendo: veces el terreno que se puede construir.',m:'m² construidos máximos = terreno × CUS.',d:'Programa de desarrollo urbano / la propuesta del caso.'},
+    inPasillosPct:{t:'Pasillos y comunes (%)',k:'Proyecto',q:'Parte de lo construido que no se renta: pasillos, escaleras, cubos.',m:'m² rentables = construidos × (1 − %). Rentables ÷ puertas = tamaño promedio.',d:'Suele ir de 15% a 25% en vivienda vertical.'},
     inPasillosM2:{t:'Pasillos y comunes',k:'Proyecto',q:'m² construidos que NO se rentan: pasillos, escaleras, azotea común.',m:'Suben los m² construidos (costo) sin subir la renta.',d:'Plano; en la plantilla es "área común".'},
     inVacanciaPct:{t:'Vacancia',k:'Riesgo',q:'% del año sin inquilino.',m:'Reduce la renta efectiva.',d:'Rotación real del producto (5-7% plantilla).'},
     inOpexPct:{t:'Operación (OpEx)',k:'Operación',q:'% de la renta en operar: admón, mantenimiento, predial.',m:'Reduce el flujo neto (NOI).',d:'Plantilla: 11-15%.'},
@@ -610,8 +617,20 @@
     return {p,rentaMes,rentaBrutaAnual,vacMonto,rentaEfectiva,opexMonto,seguroMonto,noi,rentaM2,
       yieldOnCost,valorCap,valorCreado,recupAnios,montoCredito,equity,mensCredito,servicioAnual,flujoConCredito,coc,dscr,
       rows,patrim0,aniosRetener,anioCorte,patrimH:last.patrim,valorH:last.valor,acumH:last.acum,roiPat}}
+  // Chinche 28-sep (PPP patrimonial): el CUS manda. Con terreno y CUS capturados,
+  // construidos = terreno × CUS; rentables = construidos × (1 − % pasillos); promedio = rentables ÷ puertas.
+  // Sin terreno (0) todo sigue como antes: m² a mano. Con «Profundizar» manda la tabla de depas.
+  function cusDerivar(){
+    const e=escGet(escActivo),prof=!!(e&&e.prof);
+    const t=get('inTerrenoM2'),cus=get('inCus'),pas=get('inPasillosPct')/100,on=t>0&&cus>0&&!prof;
+    ['inM2Construccion','inM2Rentable'].forEach(id=>{const c=$(id);if(!c||prof)return;c.disabled=on;const g=c.closest('.input-group');if(g)g.classList.toggle('derived',on)});
+    const rd=$('readCus');
+    if(!on){if(rd)rd.style.display='none';return}
+    const cons=t*cus,rent=cons*(1-pas),n=Math.max(1,Math.round(get('inUnidades')));
+    setControl('inM2Construccion',Math.round(cons));setControl('inM2Rentable',Math.round(rent));
+    if(rd){rd.style.display='';rd.innerHTML=`<b>El CUS manda:</b> ${fmtN(t)} m² × CUS ${cus.toFixed(1)} = <b>${fmtN(Math.round(cons))} m² construidos</b> − pasillos ${pct(pas*100,1)} = <b>${fmtN(Math.round(rent))} m² rentables</b> ÷ ${n} puertas = <b>${fmtN(Math.round(rent/n))} m² promedio</b>.`}}
   function calculate(){
-    profDerivar();
+    profDerivar();cusDerivar();
     state=computar(inputValues(),escGet(escActivo));
     escSyncActivo();
     render();renderEscenarios();renderComparador();guardarDraft();return state}
@@ -627,7 +646,7 @@
     let rerender=false;
     if(e.depas.length!==n){
       const molde=e.depas[e.depas.length-1]||{m2:Math.max(8,Math.round(get('inM2Rentable')/n)),nivel:'PB',renta:get('inRentaUnidadMes')};
-      while(e.depas.length<n)e.depas.push({m2:molde.m2,nivel:molde.nivel,renta:molde.renta});
+      while(e.depas.length<n)e.depas.push({m2:molde.m2,nivel:molde.nivel,renta:molde.renta,tipo:molde.tipo||'Depa'});
       e.depas.length=n;rerender=true}
     // Depas guardados antes de la renta-por-depa heredan la renta del slider.
     e.depas.forEach(d=>{if(!isFinite(Number(d.renta))||Number(d.renta)<=0){d.renta=get('inRentaUnidadMes');rerender=true}});
@@ -638,6 +657,8 @@
     setControl('inM2Construccion',suma+get('inPasillosM2'));
     setControl('inRentaUnidadMes',Math.round(sumaRenta/n));
     const porNivel=NIVELES.map(nv=>{const ds=e.depas.filter(d=>d.nivel===nv);return ds.length?`${nv}: ${ds.length} · ${fmtN(ds.reduce((s,d)=>s+(Number(d.m2)||0),0))} m² · ${fmtMoney(ds.reduce((s,d)=>s+(Number(d.renta)||0),0))}/mes`:null}).filter(Boolean);
+    const porTipo=['Depa','Local'].map(tp=>{const ds=e.depas.filter(d=>(d.tipo||'Depa')===tp);if(!ds.length)return null;const m=ds.reduce((s,d)=>s+(Number(d.m2)||0),0),r=ds.reduce((s,d)=>s+(Number(d.renta)||0),0);return `${tp==='Depa'?'Departamentos':'Locales'}: ${ds.length} · promedio ${fmtN(Math.round(m/ds.length))} m² · ${fmtMoney(m?r/m:0)}/m²`}).filter(Boolean);
+    porNivel.unshift(...porTipo);
     const res=$('profResumen');if(res)res.innerHTML=`Rentable = suma de depas: <b>${fmtN(suma)} m²</b> · construido = depas + pasillos: <b>${fmtN(suma+get('inPasillosM2'))} m²</b> · renta total: <b>${fmtMoney(sumaRenta)}/mes</b>${porNivel.length?'<br>'+porNivel.join(' &nbsp;·&nbsp; '):''}`}
   function renderProf(){
     const e=escGet(escActivo),on=!!(e&&e.prof);
@@ -647,9 +668,10 @@
     if(!on)return;
     if(!Array.isArray(e.depas))e.depas=[];
     const tb=$('profRows');if(!tb)return;
-    tb.innerHTML=e.depas.map((d,i)=>`<tr><td>${i+1}</td><td><select data-prof-nivel="${i}">${NIVELES.map(nv=>`<option${d.nivel===nv?' selected':''}>${nv}</option>`).join('')}</select></td><td><input type="number" min="5" max="999" step="1" value="${Number(d.m2)||0}" data-prof-m2="${i}"></td><td><input type="number" min="0" max="200000" step="100" value="${Number(d.renta)||0}" data-prof-renta="${i}"></td></tr>`).join('');
+    tb.innerHTML=e.depas.map((d,i)=>`<tr><td>${i+1}</td><td><select data-prof-tipo="${i}">${['Depa','Local'].map(tp=>`<option${(d.tipo||'Depa')===tp?' selected':''}>${tp}</option>`).join('')}</select></td><td><select data-prof-nivel="${i}">${NIVELES.map(nv=>`<option${d.nivel===nv?' selected':''}>${nv}</option>`).join('')}</select></td><td><input type="number" min="5" max="999" step="1" value="${Number(d.m2)||0}" data-prof-m2="${i}"></td><td><input type="number" min="0" max="200000" step="100" value="${Number(d.renta)||0}" data-prof-renta="${i}"></td></tr>`).join('');
     tb.querySelectorAll('[data-prof-m2]').forEach(inp=>inp.addEventListener('input',()=>{const v=Number(inp.value);if(isFinite(v)&&v>0){e.depas[+inp.dataset.profM2].m2=v;calculate()}}));
     tb.querySelectorAll('[data-prof-renta]').forEach(inp=>inp.addEventListener('input',()=>{const v=Number(inp.value);if(isFinite(v)&&v>=0){e.depas[+inp.dataset.profRenta].renta=v;calculate()}}));
+    tb.querySelectorAll('[data-prof-tipo]').forEach(sel=>sel.addEventListener('change',()=>{e.depas[+sel.dataset.profTipo].tipo=sel.value;calculate()}));
     tb.querySelectorAll('[data-prof-nivel]').forEach(sel=>sel.addEventListener('change',()=>{e.depas[+sel.dataset.profNivel].nivel=sel.value;calculate()}))}
 
   /* ================== VERSIONES DEL CASO (comparador) ================== */
@@ -662,7 +684,7 @@
   function escBaseObj(){return escenarios.find(e=>e.esBase)||escenarios[0]}
   function escInicial(nombre){escenarios=[{id:escId(),nombre:nombre||'Base',esBase:true,inputs:inputValues()}];escActivo=escenarios[0].id;renderProf()}
   function escSyncActivo(){const e=escGet(escActivo);if(e)e.inputs=inputValues()}
-  function escAplicar(e){Object.entries(e.inputs||{}).forEach(([k,v])=>setControl(k,v));renderProf()}
+  function escAplicar(e){Object.entries(Object.assign({inTerrenoM2:0,inCus:0,inPasillosPct:0},e.inputs||{})).forEach(([k,v])=>setControl(k,v));renderProf()}
   function escCambiar(id){if(id===escActivo)return;const e=escGet(id);if(!e)return;escSyncActivo();escActivo=id;escAplicar(e);calculate();toast('Versión activa: «'+e.nombre+'»',1800)}
   function escNueva(){
     if(escenarios.length>=MAX_ESC){toast('Máximo '+MAX_ESC+' versiones por caso');return}
@@ -690,7 +712,7 @@
       if(!Array.isArray(arr)||!arr.length)return false;
       const limpio=arr.filter(e=>e&&typeof e==='object'&&e.inputs&&typeof e.inputs==='object')
         .slice(0,MAX_ESC).map(e=>({id:String(e.id||escId()),nombre:String(e.nombre||'Versión').slice(0,40),esBase:!!e.esBase,activo:!!e.activo,inputs:e.inputs,
-          prof:!!e.prof,depas:Array.isArray(e.depas)?e.depas.filter(d=>d&&isFinite(Number(d.m2))).map(d=>({m2:Number(d.m2),nivel:NIVELES.includes(d.nivel)?d.nivel:'PB',renta:isFinite(Number(d.renta))?Number(d.renta):undefined})):undefined}));
+          prof:!!e.prof,depas:Array.isArray(e.depas)?e.depas.filter(d=>d&&isFinite(Number(d.m2))).map(d=>({m2:Number(d.m2),nivel:NIVELES.includes(d.nivel)?d.nivel:'PB',renta:isFinite(Number(d.renta))?Number(d.renta):undefined,tipo:d.tipo==='Local'?'Local':'Depa'})):undefined}));
       if(!limpio.length)return false;
       if(!limpio.some(e=>e.esBase))limpio[0].esBase=true;
       escenarios=limpio.map(e=>({id:e.id,nombre:e.nombre,esBase:e.esBase,inputs:e.inputs,prof:e.prof,depas:e.depas}));
@@ -831,7 +853,7 @@
     txt('heroOptimo',r.aniosRetener>=r.p.horizonte?'retener '+r.p.horizonte+'+ años':r.aniosRetener===0?'vender ya':'retener ~'+r.aniosRetener+' años');
     txt('heroOptimoSub',r.anioCorte===null?'el patrimonio crece más que tu '+pct(r.p.tasaAlt*100,0)+' todo el horizonte':'en el año '+r.anioCorte+' cae debajo de tu '+pct(r.p.tasaAlt*100,0));
     const lect=$('heroLectura');if(lect)lect.innerHTML=`${r.p.unidades} unidades rentan <b>${fmtMoney(r.rentaMes)}/mes</b>; tras vacancia y operación queda un flujo neto (NOI) de <b>${fmtM(r.noi)}/año</b> — ${pct(r.yieldOnCost*100,1)} sobre los ${fmtM(r.p.inversion)} invertidos. A cap de mercado ${pct(r.p.capMercado*100,1)} el activo vale <b>${fmtM(r.valorCap)}</b>${r.valorCreado>0?' (creaste <b>'+fmtM(r.valorCreado)+'</b> sin vender)':''}. ${r.montoCredito>0?'Con crédito, el retorno de tu bolsa (Cash-on-Cash) es <b>'+pct((r.coc||0)*100,1)+'</b> y la cobertura de la deuda (DSCR) '+(r.dscr||0).toFixed(2)+'.':'Caso de contado puro (sube el crédito para ver el apalancado).'} Punto dulce: <b>${r.aniosRetener>=r.p.horizonte?'retener todo el horizonte':r.aniosRetener===0?'vender ya':'~'+r.aniosRetener+' años'}</b>.`;
-    txt('lblUnidades',r.p.unidades+' · '+fmtN(r.p.m2Rent)+' m² rentables');txt('lblRentaMes',fmtMoney(r.rentaMes));txt('lblRentaAnual',fmtM(r.rentaEfectiva));txt('lblRentaM2',fmtMoney(r.rentaM2)+'/m²');
+    txt('lblUnidades',r.p.unidades+' · '+fmtN(r.p.m2Rent)+' m² rentables');txt('lblRentaMes',fmtMoney(r.rentaMes));txt('lblRentaAnual',fmtM(r.rentaEfectiva));txt('lblRentaM2',fmtMoney(r.rentaM2)+'/m²');txt('lblM2Prom',fmtN(Math.round(r.p.m2Rent/r.p.unidades))+' m²');
     $('readRenta').innerHTML=`<b>Renta:</b> ${r.p.unidades} × ${fmtMoney(r.p.rentaU)} = ${fmtMoney(r.rentaMes)}/mes (${fmtMoney(r.rentaM2)}/m² rentable). Anual bruta ${fmtM(r.rentaBrutaAnual)} − vacancia ${pct(r.p.vac*100,1)} (${fmtM(r.vacMonto)}) − OpEx ${pct(r.p.opex*100,1)} (${fmtM(r.opexMonto)}) − seguro ${fmtM(r.seguroMonto)} = <b>flujo neto (NOI) ${fmtM(r.noi)}</b>.`;
     txt('lblInversion',fmtM(r.p.inversion)+(r.p.terrenoAportado?' · terreno aportado':''));txt('lblYield',pct(r.yieldOnCost*100,2));txt('lblValorCap',fmtM(r.valorCap));
     const vc=$('lblValorCreado');if(vc){vc.textContent=fmtM(r.valorCreado);vc.className='kpi-val '+(r.valorCreado>0?'c-green':'status-bad')}
