@@ -415,16 +415,26 @@
           <div class="input-group" style="margin-top:10px"><div class="input-header"><label>Pasillos y comunes (m²) · no rentables</label><div class="val-display" data-input="inPasillosM2">0</div></div><input type="range" id="inPasillosM2" min="0" max="600" step="1" value="0" data-color="var(--orange)"></div>
           <div class="micro-readout" id="profResumen">Suma de depas…</div>
         </div>
+        <div class="input-group"><div class="input-header"><label>Vacancia y OpEx se descuentan sobre: 1 = renta bruta (como el Excel) · 0 = sobre renta ya sin vacancia</label><div class="val-display" data-input="inOpexBase">0</div></div><input type="range" id="inOpexBase" min="0" max="1" step="1" value="0" data-color="var(--orange)"></div>
         <div class="input-group"><div class="input-header"><label>Vacancia (%)</label><div class="val-display" data-input="inVacanciaPct">5%</div></div><input type="range" id="inVacanciaPct" min="0" max="25" step=".5" value="5" data-color="var(--orange)" data-format="pct1"></div>
         <div class="input-group"><div class="input-header"><label>Operación OpEx (% de renta) · admón + mant + predial</label><div class="val-display" data-input="inOpexPct">13%</div></div><input type="range" id="inOpexPct" min="0" max="35" step=".5" value="13" data-color="var(--orange)" data-format="pct1"></div>
         <div class="input-group"><div class="input-header"><label>Seguro (% del valor al año)</label><div class="val-display" data-input="inSeguroPct">0.5%</div></div><input type="range" id="inSeguroPct" min="0" max="2" step=".05" value=".5" data-color="var(--orange)" data-format="pct1"></div>
         <div class="micro-readout" id="readRenta">Calculando renta…</div></div></article>
 
     <article class="card" data-card="dInv"><div class="card-header"><div class="title-wrap"><div class="icon-box" style="background:#e0605a1f;color:var(--red)"><i class="ti ti-hammer"></i></div><div class="card-title">Inversión &amp; Valor</div></div><div class="edit-pill">AJUSTAR</div></div>
-      <div class="kpi-grid"><div class="kpi-box"><span class="kpi-lbl">Inversión total</span><span class="kpi-val c-red" id="lblInversion">$0</span></div><div class="kpi-box"><span class="kpi-lbl">Rendimiento sobre costo (NOI ÷ inversión)</span><span class="kpi-val c-purple" id="lblYield">—</span></div><div class="kpi-box"><span class="kpi-lbl">Valor de mercado (NOI ÷ cap)</span><span class="kpi-val c-gold" id="lblValorCap">$0</span></div><div class="kpi-box"><span class="kpi-lbl">Valor creado (desarrollo)</span><span class="kpi-val c-green" id="lblValorCreado">$0</span></div></div>
+      <div class="kpi-grid"><div class="kpi-box"><span class="kpi-lbl">Inversión total</span><span class="kpi-val c-red" id="lblInversion">$0</span></div><div class="kpi-box"><span class="kpi-lbl">Retorno bruto (renta anual ÷ inversión)</span><span class="kpi-val c-green" id="lblBruto">—</span></div><div class="kpi-box"><span class="kpi-lbl">Cap rate implícito (NOI ÷ valor)</span><span class="kpi-val c-gold" id="lblCapImp">—</span></div><div class="kpi-box"><span class="kpi-lbl">Rendimiento sobre costo (NOI ÷ inversión)</span><span class="kpi-val c-purple" id="lblYield">—</span></div><div class="kpi-box"><span class="kpi-lbl">Valor de mercado (NOI ÷ cap)</span><span class="kpi-val c-gold" id="lblValorCap">$0</span></div><div class="kpi-box"><span class="kpi-lbl">Valor creado (desarrollo)</span><span class="kpi-val c-green" id="lblValorCreado">$0</span></div></div>
       <div class="drawer" id="dInv"><div class="partner-guide"><b>La jugada patrimonial YOD:</b> construir renta a costo de desarrollador. Si tu flujo neto (NOI) te cuesta 9-10% de rendimiento sobre costo y el mercado valúa a cap 7-8%, el valor creado es la diferencia — sin vender un solo m².</div>
+        <div class="subheading">Costo de desarrollo · como en el Excel del caso (0 en obra rentable = capturas la inversión a mano)</div>
+        <div class="input-group"><div class="input-header"><label>Obra rentable ($/m², sin IVA)</label><div class="val-display" data-input="inCostoRentM2">0</div></div><input type="range" id="inCostoRentM2" min="0" max="40000" step="50" value="0" data-color="var(--red)" data-format="money"></div>
+        <div class="input-group"><div class="input-header"><label>Obra no rentable · pasillos, estacionamiento, comunes ($/m²)</label><div class="val-display" data-input="inCostoNoRentM2">0</div></div><input type="range" id="inCostoNoRentM2" min="0" max="30000" step="50" value="0" data-color="var(--red)" data-format="money"></div>
+        <div class="input-group"><div class="input-header"><label>Proyecto ejecutivo ($/m² construido)</label><div class="val-display" data-input="inProyectoM2">0</div></div><input type="range" id="inProyectoM2" min="0" max="3000" step="1" value="0" data-color="var(--red)" data-format="money"></div>
+        <div class="input-group"><div class="input-header"><label>Permisos y tramitología ($/m² construido)</label><div class="val-display" data-input="inPermisosM2">0</div></div><input type="range" id="inPermisosM2" min="0" max="3000" step="1" value="0" data-color="var(--red)" data-format="money"></div>
+        <div class="input-group"><div class="input-header"><label>Costo del terreno ($) · no se suma si es aportado</label><div class="val-display" data-input="inTerrenoCosto">0</div></div><input type="range" id="inTerrenoCosto" min="0" max="100000000" step="1000" value="0" data-color="var(--red)" data-format="money"></div>
+        <div class="input-group"><div class="input-header"><label>Costos legales ($)</label><div class="val-display" data-input="inLegales">0</div></div><input type="range" id="inLegales" min="0" max="10000000" step="1000" value="0" data-color="var(--red)" data-format="money"></div>
+        <div class="micro-readout" id="readCosto" style="display:none"></div>
+        <div class="input-group"><div class="input-header"><label>Valor de venta por m² rentable en la zona ($) · 0 = valuar por cap rate</label><div class="val-display" data-input="inValorM2Zona">0</div></div><input type="range" id="inValorM2Zona" min="0" max="80000" step="100" value="0" data-color="var(--gold)" data-format="money"></div>
         <div class="input-group"><div class="input-header"><label>Inversión total ($) · terreno + obra + todo</label><div class="val-display" data-input="inInversionTotal">$29,760,000</div></div><input type="range" id="inInversionTotal" min="500000" max="150000000" step="10000" value="29760000" data-color="var(--red)" data-format="money"></div>
-        <div class="input-group"><div class="input-header"><label>¿Terreno aportado? (1 = sí, ya dentro de la inversión)</label><div class="val-display" data-input="inTerrenoAportado">1</div></div><input type="range" id="inTerrenoAportado" min="0" max="1" step="1" value="1" data-color="var(--orange)"></div>
+        <div class="input-group"><div class="input-header"><label>¿Terreno aportado? (1 = sí: lo pone el dueño y no se suma a la inversión)</label><div class="val-display" data-input="inTerrenoAportado">1</div></div><input type="range" id="inTerrenoAportado" min="0" max="1" step="1" value="1" data-color="var(--orange)"></div>
         <div class="input-group"><div class="input-header"><label>Cap rate de mercado (%) · para valuar el activo</label><div class="val-display" data-input="inCapRateMercado">8.0%</div></div><input type="range" id="inCapRateMercado" min="5" max="14" step=".25" value="8" data-color="var(--gold)" data-format="pct1"></div>
         <div class="input-group"><div class="input-header"><label>Plusvalía anual (%)</label><div class="val-display" data-input="inPlusvaliaPct">7.0%</div></div><input type="range" id="inPlusvaliaPct" min="0" max="15" step=".25" value="7" data-color="var(--green)" data-format="pct1"></div>
         <div class="micro-readout" id="readInv">Calculando inversión…</div></div></article>
@@ -505,8 +515,10 @@
   const $=id=>document.getElementById(id); const controls=[...document.querySelectorAll('input[type=range]')]; let state=null;
   const fmtN=n=>Math.round(n||0).toLocaleString('en-US'); const fmtM=n=>Math.abs(n||0)>=1e6?'$'+((n||0)/1e6).toFixed(2)+' M':'$'+Math.round(n||0).toLocaleString('en-US'); const fmtMoney=n=>'$'+Math.round(n||0).toLocaleString('en-US'); const pct=(n,d=1)=>Number(n||0).toFixed(d)+'%'; const sM=n=>(n<0?'−':'+')+fmtM(Math.abs(n||0));
   // Prellenado: Real del Arco 16 deptos (el patrimonial maduro, jun-2026)
-  const PRELLENADO={inUnidades:16,inRentaUnidadMes:17625,inM2Construccion:1950,inM2Rentable:1444,inVacanciaPct:5,inOpexPct:13,inSeguroPct:.5,
-    inInversionTotal:29760000,inTerrenoAportado:1,inCapRateMercado:8,inPlusvaliaPct:7,
+  // Real del Arco tal cual su Excel (Drive: «Yod - Departamentos - Real del Arco - PPP Patrimonial», jun-2026).
+  const PRELLENADO={inUnidades:16,inRentaUnidadMes:17625,inM2Construccion:1950,inM2Rentable:1444,inVacanciaPct:5,inOpexPct:11,inSeguroPct:0,inOpexBase:1,
+    inCostoRentM2:16200,inCostoNoRentM2:9200,inProyectoM2:383,inPermisosM2:350,inTerrenoCosto:6112535,inLegales:285000,inValorM2Zona:25000,
+    inInversionTotal:29760000,inTerrenoAportado:1,inCapRateMercado:8,inPlusvaliaPct:6,
     inCreditoPct:0,inTasaCredito:12.5,inPlazoCredito:15,inHorizonte:10,inTasaAlternativa:10};
   const DEFAULTS=Object.assign(Object.fromEntries(controls.map(c=>[c.id,Number(c.value)])),PRELLENADO);
   Object.entries(DEFAULTS).forEach(([id,v])=>{const c=$(id);if(c)c.value=v});
@@ -519,6 +531,14 @@
     inTerrenoM2:{t:'Terreno',k:'Proyecto',q:'m² del terreno. Con terreno y CUS, el CUS manda: construidos = terreno × CUS.',m:'Fija el máximo construible y de ahí los m² rentables.',d:'Escritura / levantamiento. En 0 capturas los m² a mano.'},
     inCus:{t:'CUS propuesto',k:'Norma',q:'Coeficiente de Utilización del Suelo que estamos proponiendo: veces el terreno que se puede construir.',m:'m² construidos máximos = terreno × CUS.',d:'Programa de desarrollo urbano / la propuesta del caso.'},
     inPasillosPct:{t:'Pasillos y comunes (%)',k:'Proyecto',q:'Parte de lo construido que no se renta: pasillos, escaleras, cubos.',m:'m² rentables = construidos × (1 − %). Rentables ÷ puertas = tamaño promedio.',d:'Suele ir de 15% a 25% en vivienda vertical.'},
+    inCostoRentM2:{t:'Obra rentable $/m²',k:'Costo',q:'Costo directo sin IVA de los m² que se rentan.',m:'× m² rentables → obra rentable.',d:'Excel RdA: $16,200.'},
+    inCostoNoRentM2:{t:'Obra no rentable $/m²',k:'Costo',q:'Pasillos, estacionamiento, escaleras y áreas sociales.',m:'× (construidos − rentables).',d:'Excel RdA: $9,200.'},
+    inProyectoM2:{t:'Proyecto ejecutivo',k:'Costo',q:'Honorarios de proyecto por m² construido.',m:'× m² construidos.',d:'Excel RdA: $383.'},
+    inPermisosM2:{t:'Permisos y tramitología',k:'Costo',q:'Licencias y trámites por m² construido.',m:'× m² construidos.',d:'Excel RdA: $350.'},
+    inTerrenoCosto:{t:'Costo del terreno',k:'Costo',q:'Precio del terreno con escrituración.',m:'Se suma a la inversión solo si NO es aportado.',d:'Excel RdA: $6,112,535 (aportado).'},
+    inLegales:{t:'Costos legales',k:'Costo',q:'Notaría, régimen en condominio, contratos.',m:'Se suma a la inversión.',d:'Excel RdA: $285,000.'},
+    inValorM2Zona:{t:'Valor por m² rentable en la zona',k:'Mercado',q:'Precio de venta de un m² de departamento terminado en la zona.',m:'Valor del edificio = m² rentables × este valor (manda sobre el cap rate).',d:'Excel RdA: $25,000 → $36.1 M.'},
+    inOpexBase:{t:'Base de vacancia y OpEx',k:'Método',q:'1 = se descuentan sobre la renta bruta, como el Excel del caso; 0 = OpEx sobre la renta ya sin vacancia.',m:'Cambia el NOI.',d:'Excel RdA: bruta × (1 − 5% − 11%).'},
     inPasillosM2:{t:'Pasillos y comunes',k:'Proyecto',q:'m² construidos que NO se rentan: pasillos, escaleras, azotea común.',m:'Suben los m² construidos (costo) sin subir la renta.',d:'Plano; en la plantilla es "área común".'},
     inVacanciaPct:{t:'Vacancia',k:'Riesgo',q:'% del año sin inquilino.',m:'Reduce la renta efectiva.',d:'Rotación real del producto (5-7% plantilla).'},
     inOpexPct:{t:'Operación (OpEx)',k:'Operación',q:'% de la renta en operar: admón, mantenimiento, predial.',m:'Reduce el flujo neto (NOI).',d:'Plantilla: 11-15%.'},
@@ -603,14 +623,18 @@
       vac:gv('inVacanciaPct')/100,opex:gv('inOpexPct')/100,seguro:gv('inSeguroPct')/100,
       inversion:Math.max(1,gv('inInversionTotal')),terrenoAportado:Math.round(gv('inTerrenoAportado')),capMercado:Math.max(.01,gv('inCapRateMercado')/100),plus:gv('inPlusvaliaPct')/100,
       credito:gv('inCreditoPct')/100,tasa:gv('inTasaCredito')/100,plazo:Math.max(1,Math.round(gv('inPlazoCredito'))),
-      horizonte:Math.max(1,Math.round(gv('inHorizonte'))),tasaAlt:gv('inTasaAlternativa')/100};
+      horizonte:Math.max(1,Math.round(gv('inHorizonte'))),tasaAlt:gv('inTasaAlternativa')/100,
+      opexBruta:Math.round(gv('inOpexBase'))===1,valorM2:gv('inValorM2Zona')};
     // 1) renta → NOI (depas sin renta capturada caen a la renta por unidad de esa versión)
     const rentaMes=(esc&&esc.prof&&Array.isArray(esc.depas)&&esc.depas.length?esc.depas.reduce((s,d)=>{const rd=Number(d.renta);return s+(isFinite(rd)&&rd>0?rd:p.rentaU)},0):p.unidades*p.rentaU),rentaBrutaAnual=rentaMes*12,vacMonto=rentaBrutaAnual*p.vac,rentaEfectiva=rentaBrutaAnual-vacMonto;
-    const opexMonto=rentaEfectiva*p.opex,seguroMonto=p.inversion*p.seguro;
+    // Los Excel de YOD (Real del Arco) descuentan vacancia y OpEx sobre la renta BRUTA: NOI = bruta × (1 − vac − OpEx).
+    const opexMonto=(p.opexBruta?rentaBrutaAnual:rentaEfectiva)*p.opex,seguroMonto=p.inversion*p.seguro;
     const noi=rentaEfectiva-opexMonto-seguroMonto;
     const rentaM2=p.m2Rent?rentaMes/p.m2Rent:0;
     // 2) valor
-    const yieldOnCost=noi/p.inversion,valorCap=noi/p.capMercado,valorCreado=valorCap-p.inversion;
+    // Valor: si hay valor de venta por m² rentable en la zona, manda (Excel: m² rentables × $/m²); si no, NOI ÷ cap.
+    const porM2=p.valorM2>0,yieldOnCost=noi/p.inversion,valorCap=porM2?p.m2Rent*p.valorM2:noi/p.capMercado,valorCreado=valorCap-p.inversion;
+    const capImplicito=valorCap>0?noi/valorCap:null,retornoBruto=rentaBrutaAnual/p.inversion,recupBruta=rentaBrutaAnual>0?p.inversion/rentaBrutaAnual:null;
     const recupAnios=noi>0?p.inversion/noi:null;
     // 3) crédito
     const montoCredito=p.inversion*p.credito,equity=p.inversion-montoCredito;
@@ -630,7 +654,7 @@
     const aniosRetener=anioCorte===null?p.horizonte:anioCorte-1;
     const last=rows[rows.length-1]||{valor:valorCap,acum:0,patrim:patrim0,saldo:0};
     const roiPat=p.inversion?(last.patrim-patrim0)/p.inversion:0;
-    return {p,rentaMes,rentaBrutaAnual,vacMonto,rentaEfectiva,opexMonto,seguroMonto,noi,rentaM2,
+    return {p,porM2,capImplicito,retornoBruto,recupBruta,rentaMes,rentaBrutaAnual,vacMonto,rentaEfectiva,opexMonto,seguroMonto,noi,rentaM2,
       yieldOnCost,valorCap,valorCreado,recupAnios,montoCredito,equity,mensCredito,servicioAnual,flujoConCredito,coc,dscr,
       rows,patrim0,aniosRetener,anioCorte,patrimH:last.patrim,valorH:last.valor,acumH:last.acum,roiPat}}
   // Chinche 28-sep (PPP patrimonial): el CUS manda. Con terreno y CUS capturados,
@@ -667,8 +691,18 @@
     if(tab)tab.innerHTML=`<thead><tr><th>Supuesto</th><th>$/m²</th><th>Renta por depa</th><th>Renta/mes</th><th>NOI/año</th><th>Rendimiento</th><th>Valor por depa</th></tr></thead><tbody>${sup.map(s=>`<tr><td>${s.n}</td><td>${fmtMoney(st.m2*(1+s.f))}</td><td>${fmtMoney(s.rU)}</td><td>${fmtMoney(s.x.rentaMes)}</td><td>${fmtM(s.x.noi)}</td><td>${pct(s.x.yieldOnCost*100,1)}</td><td>${fmtM(s.x.valorCap/s.x.p.unidades)}</td></tr>`).join('')}<tr style="font-weight:700"><td>Tu proyecto hoy</td><td>${fmtMoney(mio)}</td><td>${fmtMoney(r.p.rentaU)}</td><td>${fmtMoney(r.rentaMes)}</td><td>${fmtM(r.noi)}</td><td>${pct(r.yieldOnCost*100,1)}</td><td>${fmtM(r.valorCap/r.p.unidades)}</td></tr></tbody>`;
     const loc=mkStats(mkLista(),'Local');
     if(lec)lec.innerHTML=`${st.n} comparable${st.n>1?'s':''}: el mercado renta a <b>${fmtMoney(st.m2)}/m²</b>, un depa promedio de <b>${fmtN(Math.round(st.tam))} m²</b> en <b>${fmtMoney(st.renta)}/mes</b>. Tu depa promedio mide <b>${fmtN(Math.round(prom))} m²</b> (${st.tam?((prom/st.tam-1)*100>=0?'+':'')+((prom/st.tam-1)*100).toFixed(0)+'% vs mercado':''}) y lo rentas a <b>${fmtMoney(mio)}/m²</b>: ${Math.abs(dif)<=10?'en línea con la zona':dif>0?'<b>por encima</b> del mercado — revisa que se sostenga':'<b>por debajo</b> — hay margen para subir'}.${loc?` Locales: ${fmtMoney(loc.m2)}/m² (${loc.n}).`:''}`}
+  // Excel del caso (Real del Arco · hoja Inversión): obra rentable × m² rentables + obra no rentable × (construidos − rentables)
+  // + (proyecto + permisos) × construidos + legales + terreno (si no es aportado).
+  function costoDerivar(){
+    const cr=get('inCostoRentM2'),on=cr>0,c=$('inInversionTotal'),g=c&&c.closest('.input-group'),rd=$('readCosto');
+    if(c)c.disabled=on;if(g)g.classList.toggle('derived',on);
+    if(!on){if(rd)rd.style.display='none';return}
+    const mr=get('inM2Rentable'),mc=get('inM2Construccion'),mn=Math.max(0,mc-mr),apo=Math.round(get('inTerrenoAportado'))===1;
+    const obraR=cr*mr,obraN=get('inCostoNoRentM2')*mn,proy=get('inProyectoM2')*mc,perm=get('inPermisosM2')*mc,leg=get('inLegales'),ter=apo?0:get('inTerrenoCosto');
+    const tot=obraR+obraN+proy+perm+leg+ter;setControl('inInversionTotal',Math.round(tot));
+    if(rd){rd.style.display='';rd.innerHTML=`<b>Inversión armada:</b> obra rentable ${fmtN(mr)} m² × ${fmtMoney(cr)} = ${fmtM(obraR)} · no rentable ${fmtN(mn)} m² × ${fmtMoney(get('inCostoNoRentM2'))} = ${fmtM(obraN)} · proyecto ${fmtM(proy)} · permisos ${fmtM(perm)} · legales ${fmtM(leg)} · terreno ${apo?'aportado (no se suma)':fmtM(ter)} = <b>${fmtM(tot)}</b>.`}}
   function calculate(){
-    profDerivar();cusDerivar();
+    profDerivar();cusDerivar();costoDerivar();
     state=computar(inputValues(),escGet(escActivo));
     escSyncActivo();
     render();renderEscenarios();renderComparador();guardarDraft();return state}
@@ -722,7 +756,7 @@
   function escBaseObj(){return escenarios.find(e=>e.esBase)||escenarios[0]}
   function escInicial(nombre){escenarios=[{id:escId(),nombre:nombre||'Base',esBase:true,inputs:inputValues()}];escActivo=escenarios[0].id;renderProf()}
   function escSyncActivo(){const e=escGet(escActivo);if(e)e.inputs=inputValues()}
-  function escAplicar(e){setTimeout(renderMercadoFilas,0);Object.entries(Object.assign({inTerrenoM2:0,inCus:0,inPasillosPct:0},e.inputs||{})).forEach(([k,v])=>setControl(k,v));renderProf()}
+  function escAplicar(e){setTimeout(renderMercadoFilas,0);Object.entries(Object.assign({inTerrenoM2:0,inCus:0,inPasillosPct:0,inCostoRentM2:0,inCostoNoRentM2:0,inProyectoM2:0,inPermisosM2:0,inTerrenoCosto:0,inLegales:0,inValorM2Zona:0,inOpexBase:0},e.inputs||{})).forEach(([k,v])=>setControl(k,v));renderProf()}
   function escCambiar(id){if(id===escActivo)return;const e=escGet(id);if(!e)return;escSyncActivo();escActivo=id;escAplicar(e);calculate();toast('Versión activa: «'+e.nombre+'»',1800)}
   function escNueva(){
     if(escenarios.length>=MAX_ESC){toast('Máximo '+MAX_ESC+' versiones por caso');return}
@@ -889,7 +923,7 @@
     txt('hudYield',pct(r.yieldOnCost*100,1));txt('hudValor',fmtM(r.valorCap));txt('hudCoc',r.coc===null?'—':pct(r.coc*100,1));txt('hudDscr',r.dscr===null?'—':r.dscr.toFixed(2));
     txt('hudRecup',r.recupAnios===null?'—':r.recupAnios.toFixed(1)+' años');txt('hudOptimo',r.aniosRetener>=r.p.horizonte?r.p.horizonte+'+ años':r.aniosRetener+' años');
     txt('heroNoi',fmtM(r.noi)+'/año');txt('heroNoiSub','rendimiento s/costo '+pct(r.yieldOnCost*100,2)+' · recuperación '+(r.recupAnios===null?'—':r.recupAnios.toFixed(1)+' años'));
-    txt('heroValor',fmtM(r.valorCreado));txt('heroValorSub','activo vale '+fmtM(r.valorCap)+' a cap '+pct(r.p.capMercado*100,1)+' vs '+fmtM(r.p.inversion)+' invertidos');
+    txt('heroValor',fmtM(r.valorCreado));txt('heroValorSub','activo vale '+fmtM(r.valorCap)+(r.porM2?' a '+fmtMoney(r.p.valorM2)+'/m² rentable (cap implícito '+pct((r.capImplicito||0)*100,1)+')':' a cap '+pct(r.p.capMercado*100,1))+' vs '+fmtM(r.p.inversion)+' invertidos');
     txt('heroOptimo',r.aniosRetener>=r.p.horizonte?'retener '+r.p.horizonte+'+ años':r.aniosRetener===0?'vender ya':'retener ~'+r.aniosRetener+' años');
     txt('heroOptimoSub',r.anioCorte===null?'el patrimonio crece más que tu '+pct(r.p.tasaAlt*100,0)+' todo el horizonte':'en el año '+r.anioCorte+' cae debajo de tu '+pct(r.p.tasaAlt*100,0));
     const lect=$('heroLectura');if(lect)lect.innerHTML=`${r.p.unidades} unidades rentan <b>${fmtMoney(r.rentaMes)}/mes</b>; tras vacancia y operación queda un flujo neto (NOI) de <b>${fmtM(r.noi)}/año</b> — ${pct(r.yieldOnCost*100,1)} sobre los ${fmtM(r.p.inversion)} invertidos. A cap de mercado ${pct(r.p.capMercado*100,1)} el activo vale <b>${fmtM(r.valorCap)}</b>${r.valorCreado>0?' (creaste <b>'+fmtM(r.valorCreado)+'</b> sin vender)':''}. ${r.montoCredito>0?'Con crédito, el retorno de tu bolsa (Cash-on-Cash) es <b>'+pct((r.coc||0)*100,1)+'</b> y la cobertura de la deuda (DSCR) '+(r.dscr||0).toFixed(2)+'.':'Caso de contado puro (sube el crédito para ver el apalancado).'} Punto dulce: <b>${r.aniosRetener>=r.p.horizonte?'retener todo el horizonte':r.aniosRetener===0?'vender ya':'~'+r.aniosRetener+' años'}</b>.`;
@@ -897,7 +931,7 @@
     txt('hudM2Prom',fmtN(Math.round(r.p.m2Rent/r.p.unidades))+' m²');txt('hudRentaDepa',fmtMoney(r.rentaMes/r.p.unidades));txt('hudValorDepa',fmtM(r.valorCap/r.p.unidades));
     try{renderMercado(r)}catch(err){console.warn('mercado',err)}
     $('readRenta').innerHTML=`<b>Renta:</b> ${r.p.unidades} × ${fmtMoney(r.p.rentaU)} = ${fmtMoney(r.rentaMes)}/mes (${fmtMoney(r.rentaM2)}/m² rentable). Anual bruta ${fmtM(r.rentaBrutaAnual)} − vacancia ${pct(r.p.vac*100,1)} (${fmtM(r.vacMonto)}) − OpEx ${pct(r.p.opex*100,1)} (${fmtM(r.opexMonto)}) − seguro ${fmtM(r.seguroMonto)} = <b>flujo neto (NOI) ${fmtM(r.noi)}</b>.`;
-    txt('lblInversion',fmtM(r.p.inversion)+(r.p.terrenoAportado?' · terreno aportado':''));txt('lblYield',pct(r.yieldOnCost*100,2));txt('lblValorCap',fmtM(r.valorCap));
+    txt('lblInversion',fmtM(r.p.inversion)+(r.p.terrenoAportado?' · terreno aportado':''));txt('lblYield',pct(r.yieldOnCost*100,2));txt('lblValorCap',fmtM(r.valorCap));txt('lblBruto',pct(r.retornoBruto*100,1)+(r.recupBruta?' · '+r.recupBruta.toFixed(1)+' años':''));txt('lblCapImp',r.capImplicito===null?'—':pct(r.capImplicito*100,1));
     const vc=$('lblValorCreado');if(vc){vc.textContent=fmtM(r.valorCreado);vc.className='kpi-val '+(r.valorCreado>0?'c-green':'status-bad')}
     $('readInv').innerHTML=`<b>El arbitraje del desarrollador:</b> tu flujo neto (NOI) te cuesta ${pct(r.yieldOnCost*100,2)} de rendimiento sobre costo y el mercado lo valúa a ${pct(r.p.capMercado*100,1)}. ${r.valorCreado>0?'Diferencia a favor: <b>'+fmtM(r.valorCreado)+'</b> de valor creado al terminar y estabilizar.':'<b>⚠ Sin arbitraje:</b> el activo vale menos de lo que cuesta — revisa renta, costo o cap.'}`;
     txt('lblCredito',fmtM(r.montoCredito)+' / '+fmtM(r.equity));txt('lblMensCredito',fmtMoney(r.mensCredito)+'/mes');
