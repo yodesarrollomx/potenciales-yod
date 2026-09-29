@@ -337,7 +337,7 @@
 <div class="sticky-header"><div class="header-inner">
   <div class="brandrow"><img src="img/yod-logo.png" alt="YoDesarrollo"><span class="kick">Potenciales · PPP Patrimonial / Rentas</span></div>
   <div class="suelo-bar" id="rentaBar" title="Cada peso de renta y a dónde se va"></div>
-  <div class="urban-hud" style="margin:4px 0 5px;padding:6px 0"><div class="urban-item"><span>Unidades</span><b id="hudUnidades" class="c-gold">0</b></div><div class="urban-item"><span>m² rentables</span><b id="hudRentable">0</b></div><div class="urban-item"><span>Renta/mes</span><b id="hudRentaMes" class="c-green">$0</b></div><div class="urban-item"><span>Flujo neto (NOI)/año</span><b id="hudNoi" class="c-green">$0</b></div><div class="urban-item"><span>Rendimiento s/costo</span><b id="hudYield" class="c-purple">—</b></div><div class="urban-item"><span>Valor de mercado</span><b id="hudValor" class="c-gold">$0</b></div><div class="urban-item"><span>Retorno de bolsa (CoC)</span><b id="hudCoc" class="c-blue">—</b></div><div class="urban-item"><span>Cobertura (DSCR)</span><b id="hudDscr">—</b></div><div class="urban-item"><span>Recuperación</span><b id="hudRecup" class="c-orange">—</b></div><div class="urban-item"><span>Retener</span><b id="hudOptimo" class="c-purple">—</b></div></div>
+  <div class="urban-hud" style="margin:4px 0 5px;padding:6px 0"><div class="urban-item"><span>Departamentos</span><b id="hudUnidades" class="c-gold">0</b></div><div class="urban-item"><span>m² promedio / depa</span><b id="hudM2Prom">—</b></div><div class="urban-item"><span>Renta por depa</span><b id="hudRentaDepa" class="c-green">$0</b></div><div class="urban-item"><span>Valor por depa</span><b id="hudValorDepa" class="c-gold">$0</b></div><div class="urban-item"><span>Renta/mes total</span><b id="hudRentaMes" class="c-green">$0</b></div><div class="urban-item"><span>Flujo neto (NOI)/año</span><b id="hudNoi" class="c-green">$0</b></div><div class="urban-item"><span>Rendimiento s/costo</span><b id="hudYield" class="c-purple">—</b></div><div class="urban-item"><span>Valor de mercado</span><b id="hudValor" class="c-gold">$0</b></div><div class="urban-item"><span>Recuperación</span><b id="hudRecup" class="c-orange">—</b></div><div class="urban-item"><span>Retener</span><b id="hudOptimo" class="c-purple">—</b></div></div>
 </div></div>
 
 <main class="container">
@@ -445,6 +445,22 @@
         <div class="subheading">Año por año · valor + rentas − crédito</div>
         <div class="flow-scroll" style="max-height:300px"><table class="flow-table"><thead><tr><th>Año</th><th>Valor</th><th>Flujo neto</th><th>Acum.</th><th>Saldo crédito</th><th>Patrimonio</th><th>Crece</th><th>Señal</th></tr></thead><tbody id="rentaRows"></tbody></table></div>
         <div class="micro-readout" id="readHorizonte">Calculando horizonte…</div></div></article>
+  </section>
+
+  <section class="card mercado-card" id="mercadoCard" style="margin:14px 0">
+    <div class="card-header" style="cursor:default"><div class="title-wrap"><div class="icon-box" style="background:#6fa8dc1f;color:var(--blue)"><i class="ti ti-building-store"></i></div><div class="card-title">Mercado de la zona · ¿a cuánto se renta aquí?</div></div></div>
+    <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      <div class="kpi-box"><span class="kpi-lbl">Renta de mercado $/m²</span><span class="kpi-val c-blue" id="mkM2">—</span></div>
+      <div class="kpi-box"><span class="kpi-lbl">Renta promedio del depa</span><span class="kpi-val c-green" id="mkRenta">—</span></div>
+      <div class="kpi-box"><span class="kpi-lbl">Tamaño promedio comparado</span><span class="kpi-val c-gold" id="mkTam">—</span></div>
+      <div class="kpi-box"><span class="kpi-lbl">Tu $/m² vs mercado</span><span class="kpi-val" id="mkDif">—</span></div>
+    </div>
+    <div class="subheading">Comparables · lo que se renta hoy en la zona</div>
+    <div class="comp-scroll"><table class="prof-table" id="mkTabla"><thead><tr><th>Fuente / zona</th><th>Tipo</th><th>m²</th><th>Renta/mes</th><th>$/m²</th><th></th></tr></thead><tbody id="mkRows"></tbody></table></div>
+    <div class="sheet-actions" style="justify-content:flex-start;margin-top:8px"><button class="small-btn secondary" id="mkAdd" type="button"><i class="ti ti-plus"></i>Agregar comparable</button><button class="small-btn" id="mkUsar" type="button"><i class="ti ti-arrows-exchange"></i>Usar la renta de mercado en mi proyecto</button></div>
+    <div class="subheading">Supuestos · tu proyecto a precio de mercado</div>
+    <div class="comp-scroll"><table class="comp-table" id="mkSupuestos"></table></div>
+    <p class="micro-readout" id="mkLectura">Agrega al menos un comparable (portal, anuncio o broker) para ver el cruce.</p>
   </section>
 
   <details class="advanced-board" id="advBoard"><summary>Herramientas avanzadas · proforma, fórmulas y JSON</summary><div class="proforma-grid"><section class="proforma-card"><h3>Proforma anual (año 1)</h3><table class="mini-table"><tbody id="sourcesUses"></tbody></table></section><section class="proforma-card"><h3>Semáforo del caso</h3><div id="covenantPanel">Calculando…</div></section></div><div class="two-advanced"><section><div class="subheading">Relaciones del modelo</div><div class="formula-list" id="formulaList"></div><div class="formula-detail" id="formulaDetail">Selecciona una relación para ver sus valores.</div></section><section><div class="subheading">Verificación automática</div><div class="micro-readout" id="checks">Calculando…</div></section></div><div class="subheading">Editor JSON del supuesto actual</div><textarea class="json-editor" id="jsonEditor" spellcheck="false"></textarea><div class="sheet-actions" style="justify-content:flex-start"><button class="small-btn secondary" id="refreshJson"><i class="ti ti-refresh"></i>Actualizar JSON</button><button class="small-btn" id="applyJson"><i class="ti ti-check"></i>Aplicar JSON</button><button class="small-btn secondary" id="exportJson"><i class="ti ti-download"></i>Descargar JSON</button></div><p class="note">Cada renglón de la hoja PATRIMONIAL del Sheet es un caso.</p></details>
@@ -629,6 +645,28 @@
     const cons=t*cus,rent=cons*(1-pas),n=Math.max(1,Math.round(get('inUnidades')));
     setControl('inM2Construccion',Math.round(cons));setControl('inM2Rentable',Math.round(rent));
     if(rd){rd.style.display='';rd.innerHTML=`<b>El CUS manda:</b> ${fmtN(t)} m² × CUS ${cus.toFixed(1)} = <b>${fmtN(Math.round(cons))} m² construidos</b> − pasillos ${pct(pas*100,1)} = <b>${fmtN(Math.round(rent))} m² rentables</b> ÷ ${n} puertas = <b>${fmtN(Math.round(rent/n))} m² promedio</b>.`}}
+  /* ================== MERCADO DE LA ZONA (comparables) ================== */
+  // Cada versión guarda sus comparables (e.mercado=[{fuente,tipo,m2,renta}]); una versión nueva los hereda.
+  // Mercado $/m² = Σ renta ÷ Σ m² (ponderado por tamaño). Supuestos = ese $/m² ±10% × tu m² promedio.
+  function mkLista(){const e=escGet(escActivo);if(!e)return[];if(!Array.isArray(e.mercado))e.mercado=[];return e.mercado}
+  function mkStats(lista,tipo){const v=lista.filter(c=>Number(c.m2)>0&&Number(c.renta)>0&&(!tipo||(c.tipo||'Depa')===tipo));if(!v.length)return null;
+    const m=v.reduce((s,c)=>s+Number(c.m2),0),r=v.reduce((s,c)=>s+Number(c.renta),0);return{n:v.length,m2:r/m,renta:r/v.length,tam:m/v.length}}
+  function renderMercadoFilas(){
+    const tb=$('mkRows');if(!tb)return;const L=mkLista();
+    tb.innerHTML=L.length?L.map((c,i)=>`<tr><td><input type="text" value="${esc(c.fuente||'')}" data-mk="fuente" data-i="${i}" placeholder="Inmuebles24 · Pitic" style="width:100%;min-width:190px"></td><td><select data-mk="tipo" data-i="${i}">${['Depa','Local'].map(t=>`<option${(c.tipo||'Depa')===t?' selected':''}>${t}</option>`).join('')}</select></td><td><input type="number" min="5" max="2000" value="${Number(c.m2)||''}" data-mk="m2" data-i="${i}"></td><td><input type="number" min="0" max="500000" step="100" value="${Number(c.renta)||''}" data-mk="renta" data-i="${i}"></td><td>${Number(c.m2)>0&&Number(c.renta)>0?fmtMoney(c.renta/c.m2):'—'}</td><td><button type="button" class="small-btn secondary" data-mk-del="${i}" title="Quitar">✕</button></td></tr>`).join(''):'<tr><td colspan="6" style="opacity:.7">Sin comparables todavía.</td></tr>';
+    tb.querySelectorAll('[data-mk]').forEach(inp=>inp.addEventListener('change',()=>{const c=L[+inp.dataset.i];const k=inp.dataset.mk;c[k]=k==='m2'||k==='renta'?Number(inp.value)||0:inp.value.slice(0,60);renderMercadoFilas();calculate()}));
+    tb.querySelectorAll('[data-mk-del]').forEach(b=>b.addEventListener('click',()=>{L.splice(+b.dataset.mkDel,1);renderMercadoFilas();calculate()}))}
+  function renderMercado(r){
+    const st=mkStats(mkLista(),'Depa')||mkStats(mkLista());const tab=$('mkSupuestos'),lec=$('mkLectura');
+    const prom=r.p.m2Rent/r.p.unidades,mio=prom>0?r.p.rentaU/prom:0;
+    if(!st){['mkM2','mkRenta','mkTam','mkDif'].forEach(id=>txt(id,'—'));if(tab)tab.innerHTML='';if(lec)lec.innerHTML='Agrega al menos un comparable (portal, anuncio o broker) para ver el cruce.';return}
+    txt('mkM2',fmtMoney(st.m2)+'/m²');txt('mkRenta',fmtMoney(st.renta));txt('mkTam',fmtN(Math.round(st.tam))+' m²');
+    const dif=st.m2?(mio/st.m2-1)*100:0;const d=$('mkDif');if(d){d.textContent=(dif>=0?'+':'')+dif.toFixed(1)+'%';d.className='kpi-val '+(dif>10?'c-orange':dif<-10?'c-blue':'c-green')}
+    const vals=inputValues(),e=escGet(escActivo);
+    const sup=[['Conservador',-.10],['Base (mercado)',0],['Optimista',.10]].map(([n,f])=>{const rU=st.m2*(1+f)*prom;const v=Object.assign({},vals,{inRentaUnidadMes:rU});const x=computar(v,e&&e.prof?Object.assign({},e,{depas:(e.depas||[]).map(dp=>Object.assign({},dp,{renta:st.m2*(1+f)*(Number(dp.m2)||0)}))}):null);return{n,f,rU,x}});
+    if(tab)tab.innerHTML=`<thead><tr><th>Supuesto</th><th>$/m²</th><th>Renta por depa</th><th>Renta/mes</th><th>NOI/año</th><th>Rendimiento</th><th>Valor por depa</th></tr></thead><tbody>${sup.map(s=>`<tr><td>${s.n}</td><td>${fmtMoney(st.m2*(1+s.f))}</td><td>${fmtMoney(s.rU)}</td><td>${fmtMoney(s.x.rentaMes)}</td><td>${fmtM(s.x.noi)}</td><td>${pct(s.x.yieldOnCost*100,1)}</td><td>${fmtM(s.x.valorCap/s.x.p.unidades)}</td></tr>`).join('')}<tr style="font-weight:700"><td>Tu proyecto hoy</td><td>${fmtMoney(mio)}</td><td>${fmtMoney(r.p.rentaU)}</td><td>${fmtMoney(r.rentaMes)}</td><td>${fmtM(r.noi)}</td><td>${pct(r.yieldOnCost*100,1)}</td><td>${fmtM(r.valorCap/r.p.unidades)}</td></tr></tbody>`;
+    const loc=mkStats(mkLista(),'Local');
+    if(lec)lec.innerHTML=`${st.n} comparable${st.n>1?'s':''}: el mercado renta a <b>${fmtMoney(st.m2)}/m²</b>, un depa promedio de <b>${fmtN(Math.round(st.tam))} m²</b> en <b>${fmtMoney(st.renta)}/mes</b>. Tu depa promedio mide <b>${fmtN(Math.round(prom))} m²</b> (${st.tam?((prom/st.tam-1)*100>=0?'+':'')+((prom/st.tam-1)*100).toFixed(0)+'% vs mercado':''}) y lo rentas a <b>${fmtMoney(mio)}/m²</b>: ${Math.abs(dif)<=10?'en línea con la zona':dif>0?'<b>por encima</b> del mercado — revisa que se sostenga':'<b>por debajo</b> — hay margen para subir'}.${loc?` Locales: ${fmtMoney(loc.m2)}/m² (${loc.n}).`:''}`}
   function calculate(){
     profDerivar();cusDerivar();
     state=computar(inputValues(),escGet(escActivo));
@@ -684,7 +722,7 @@
   function escBaseObj(){return escenarios.find(e=>e.esBase)||escenarios[0]}
   function escInicial(nombre){escenarios=[{id:escId(),nombre:nombre||'Base',esBase:true,inputs:inputValues()}];escActivo=escenarios[0].id;renderProf()}
   function escSyncActivo(){const e=escGet(escActivo);if(e)e.inputs=inputValues()}
-  function escAplicar(e){Object.entries(Object.assign({inTerrenoM2:0,inCus:0,inPasillosPct:0},e.inputs||{})).forEach(([k,v])=>setControl(k,v));renderProf()}
+  function escAplicar(e){setTimeout(renderMercadoFilas,0);Object.entries(Object.assign({inTerrenoM2:0,inCus:0,inPasillosPct:0},e.inputs||{})).forEach(([k,v])=>setControl(k,v));renderProf()}
   function escCambiar(id){if(id===escActivo)return;const e=escGet(id);if(!e)return;escSyncActivo();escActivo=id;escAplicar(e);calculate();toast('Versión activa: «'+e.nombre+'»',1800)}
   function escNueva(){
     if(escenarios.length>=MAX_ESC){toast('Máximo '+MAX_ESC+' versiones por caso');return}
@@ -693,7 +731,8 @@
     escSyncActivo();
     const act=escGet(escActivo);
     const e={id:escId(),nombre:(nombre.trim()||sug).slice(0,40),esBase:false,inputs:inputValues(),
-      prof:!!(act&&act.prof),depas:act&&act.depas?JSON.parse(JSON.stringify(act.depas)):undefined};
+      prof:!!(act&&act.prof),depas:act&&act.depas?JSON.parse(JSON.stringify(act.depas)):undefined,
+      mercado:act&&act.mercado?JSON.parse(JSON.stringify(act.mercado)):undefined};
     escenarios.push(e);escActivo=e.id;renderProf();calculate();
     toast('Versión «'+e.nombre+'» creada: mueve solo los supuestos que cambian')}
   function escRenombrar(id){const e=escGet(id);if(!e)return;const nombre=prompt('Nuevo nombre de la versión:',e.nombre);if(nombre===null)return;e.nombre=(nombre.trim()||e.nombre).slice(0,40);calculate()}
@@ -706,16 +745,17 @@
     if(e.esBase)escenarios[0].esBase=true;
     if(escActivo===id){const b=escBaseObj();escActivo=b.id;escAplicar(b)}
     calculate()}
-  function escParaGuardar(){escSyncActivo();return escenarios.map(e=>Object.assign({id:e.id,nombre:e.nombre,esBase:!!e.esBase,activo:e.id===escActivo,inputs:e.inputs},e.depas&&e.depas.length?{prof:!!e.prof,depas:e.depas}:{}))}
+  function escParaGuardar(){escSyncActivo();return escenarios.map(e=>Object.assign({id:e.id,nombre:e.nombre,esBase:!!e.esBase,activo:e.id===escActivo,inputs:e.inputs},e.depas&&e.depas.length?{prof:!!e.prof,depas:e.depas}:{},Array.isArray(e.mercado)&&e.mercado.length?{mercado:e.mercado}:{}))}
   function escDesdeJson(raw){
     try{const arr=JSON.parse(raw||'null');
       if(!Array.isArray(arr)||!arr.length)return false;
       const limpio=arr.filter(e=>e&&typeof e==='object'&&e.inputs&&typeof e.inputs==='object')
         .slice(0,MAX_ESC).map(e=>({id:String(e.id||escId()),nombre:String(e.nombre||'Versión').slice(0,40),esBase:!!e.esBase,activo:!!e.activo,inputs:e.inputs,
-          prof:!!e.prof,depas:Array.isArray(e.depas)?e.depas.filter(d=>d&&isFinite(Number(d.m2))).map(d=>({m2:Number(d.m2),nivel:NIVELES.includes(d.nivel)?d.nivel:'PB',renta:isFinite(Number(d.renta))?Number(d.renta):undefined,tipo:d.tipo==='Local'?'Local':'Depa'})):undefined}));
+          prof:!!e.prof,depas:Array.isArray(e.depas)?e.depas.filter(d=>d&&isFinite(Number(d.m2))).map(d=>({m2:Number(d.m2),nivel:NIVELES.includes(d.nivel)?d.nivel:'PB',renta:isFinite(Number(d.renta))?Number(d.renta):undefined,tipo:d.tipo==='Local'?'Local':'Depa'})):undefined,
+          mercado:Array.isArray(e.mercado)?e.mercado.filter(c=>c&&typeof c==='object').slice(0,40).map(c=>({fuente:String(c.fuente||'').slice(0,60),tipo:c.tipo==='Local'?'Local':'Depa',m2:Number(c.m2)||0,renta:Number(c.renta)||0})):undefined}));
       if(!limpio.length)return false;
       if(!limpio.some(e=>e.esBase))limpio[0].esBase=true;
-      escenarios=limpio.map(e=>({id:e.id,nombre:e.nombre,esBase:e.esBase,inputs:e.inputs,prof:e.prof,depas:e.depas}));
+      escenarios=limpio.map(e=>({id:e.id,nombre:e.nombre,esBase:e.esBase,inputs:e.inputs,prof:e.prof,depas:e.depas,mercado:e.mercado}));
       const act=limpio.find(e=>e.activo)||limpio.find(e=>e.esBase)||limpio[0];
       escActivo=act.id;escAplicar(escGet(act.id));
       return true}catch(err){return false}}
@@ -854,6 +894,8 @@
     txt('heroOptimoSub',r.anioCorte===null?'el patrimonio crece más que tu '+pct(r.p.tasaAlt*100,0)+' todo el horizonte':'en el año '+r.anioCorte+' cae debajo de tu '+pct(r.p.tasaAlt*100,0));
     const lect=$('heroLectura');if(lect)lect.innerHTML=`${r.p.unidades} unidades rentan <b>${fmtMoney(r.rentaMes)}/mes</b>; tras vacancia y operación queda un flujo neto (NOI) de <b>${fmtM(r.noi)}/año</b> — ${pct(r.yieldOnCost*100,1)} sobre los ${fmtM(r.p.inversion)} invertidos. A cap de mercado ${pct(r.p.capMercado*100,1)} el activo vale <b>${fmtM(r.valorCap)}</b>${r.valorCreado>0?' (creaste <b>'+fmtM(r.valorCreado)+'</b> sin vender)':''}. ${r.montoCredito>0?'Con crédito, el retorno de tu bolsa (Cash-on-Cash) es <b>'+pct((r.coc||0)*100,1)+'</b> y la cobertura de la deuda (DSCR) '+(r.dscr||0).toFixed(2)+'.':'Caso de contado puro (sube el crédito para ver el apalancado).'} Punto dulce: <b>${r.aniosRetener>=r.p.horizonte?'retener todo el horizonte':r.aniosRetener===0?'vender ya':'~'+r.aniosRetener+' años'}</b>.`;
     txt('lblUnidades',r.p.unidades+' · '+fmtN(r.p.m2Rent)+' m² rentables');txt('lblRentaMes',fmtMoney(r.rentaMes));txt('lblRentaAnual',fmtM(r.rentaEfectiva));txt('lblRentaM2',fmtMoney(r.rentaM2)+'/m²');txt('lblM2Prom',fmtN(Math.round(r.p.m2Rent/r.p.unidades))+' m²');
+    txt('hudM2Prom',fmtN(Math.round(r.p.m2Rent/r.p.unidades))+' m²');txt('hudRentaDepa',fmtMoney(r.rentaMes/r.p.unidades));txt('hudValorDepa',fmtM(r.valorCap/r.p.unidades));
+    try{renderMercado(r)}catch(err){console.warn('mercado',err)}
     $('readRenta').innerHTML=`<b>Renta:</b> ${r.p.unidades} × ${fmtMoney(r.p.rentaU)} = ${fmtMoney(r.rentaMes)}/mes (${fmtMoney(r.rentaM2)}/m² rentable). Anual bruta ${fmtM(r.rentaBrutaAnual)} − vacancia ${pct(r.p.vac*100,1)} (${fmtM(r.vacMonto)}) − OpEx ${pct(r.p.opex*100,1)} (${fmtM(r.opexMonto)}) − seguro ${fmtM(r.seguroMonto)} = <b>flujo neto (NOI) ${fmtM(r.noi)}</b>.`;
     txt('lblInversion',fmtM(r.p.inversion)+(r.p.terrenoAportado?' · terreno aportado':''));txt('lblYield',pct(r.yieldOnCost*100,2));txt('lblValorCap',fmtM(r.valorCap));
     const vc=$('lblValorCreado');if(vc){vc.textContent=fmtM(r.valorCreado);vc.className='kpi-val '+(r.valorCreado>0?'c-green':'status-bad')}
@@ -1087,6 +1129,11 @@
   $('casosCerrar').onclick=cerrarOverlays;
   $('btnAbrirPalabra').onclick=()=>abrirPorPalabra($('abrirPalabra').value);
   $('abrirPalabra').addEventListener('keydown',e=>{if(e.key==='Enter')abrirPorPalabra($('abrirPalabra').value)});
+  $('mkAdd').onclick=()=>{const L=mkLista();if(L.length>=40)return;L.push({fuente:'',tipo:'Depa',m2:0,renta:0});renderMercadoFilas();const u=$('mkRows').querySelectorAll('[data-mk="fuente"]');if(u.length)u[u.length-1].focus()};
+  $('mkUsar').onclick=()=>{const st=mkStats(mkLista(),'Depa')||mkStats(mkLista());if(!st){toast('Primero agrega comparables');return}const e=escGet(escActivo);
+    if(e&&e.prof&&Array.isArray(e.depas)){e.depas.forEach(d=>{d.renta=Math.round(st.m2*(Number(d.m2)||0)/100)*100});renderProf()}
+    else{const prom=get('inM2Rentable')/Math.max(1,Math.round(get('inUnidades')));setControl('inRentaUnidadMes',Math.round(st.m2*prom/100)*100)}
+    calculate();renderMercadoFilas();toast('Renta del proyecto = mercado '+fmtMoney(st.m2)+'/m² × tu tamaño')};
   $('btnNuevo').onclick=()=>{Object.entries(DEFAULTS).forEach(([id,v])=>setControl(id,v));caso={caso_id:'',palabra:'',correo:caso.correo,nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};escInicial('Base');calculate();pintaCaso();toast('Caso nuevo: supuestos de Real del Arco (16 deptos)')};
   $('profOn').addEventListener('change',()=>{const e=escGet(escActivo);if(!e)return;e.prof=$('profOn').checked;renderProf();calculate()});
   $('btnSeguimiento').onclick=()=>$('segPanel').classList.toggle('on');
