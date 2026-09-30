@@ -628,11 +628,56 @@
     inLluviaMm:{t:'Lluvia de diseño',k:'Norma por validar',q:'Lámina de lluvia (mm) del evento de diseño para retención en sitio.',m:'Dimensiona el volumen de retención pluvial de referencia.',d:'Norma municipal/CONAGUA e intensidad de tormenta local (Hermosillo: monzón de verano).'},
     inCuotaM2:{t:'Cuota de mantenimiento',k:'Operación / mercado',q:'Pesos por m² vendible al mes para operar el condominio.',m:'Estima la cuota por tipología: dato clave para el comprador.',d:'Amenidades, plantilla de operación, seguros y comparables de la zona.'}
   };
+  // Registered cases read their model from Sheets; no financial calculation here.
+  let sheetModel=null,sheetTimer=null,sheetBusy=false,sheetPending=null,sheetFailure=false;
+  function sheetStatus(message){const d=$('syncDot');if(d)d.textContent=message;const s=$('sheetEstado');if(s)s.textContent=message;}
+  function acceptSheetModel(m,selected=escActivo,keepInputs=false){
+    sheetModel=m;sheetFailure=false;
+    escenarios=m.escenarios.map(e=>({...e,inputs:{...e.inputs}}));
+    escActivo=escenarios.some(e=>e.id===selected)?selected:m.activo;
+    if(!keepInputs)escAplicar(escGet(escActivo));
+    state=m.estados[escActivo];render();renderEscenarios();renderComparador();guardarDraft();
+    sheetStatus(keepInputs?'Cambios pendientes · calculando en Sheets':'Sheets · revisión '+m.revision.slice(0,8)+' · '+new Date(m.actualizado).toLocaleTimeString('es-MX'));
+  }
+  function queueSheetSync(){
+    const canonical=sheetModel.escenarios.find(e=>e.id===escActivo)?.inputs||{};
+    const changed=Object.fromEntries(Object.entries(inputValues()).filter(([k,v])=>canonical[k]!==v));
+    if(!Object.keys(changed).length){sheetPending=null;sheetFailure=false;state=sheetModel.estados[escActivo];render();renderComparador();return state;}
+    sheetPending={scenario:escActivo,inputs:changed};sheetStatus('Cambios pendientes · calculando en Sheets');
+    clearTimeout(sheetTimer);sheetTimer=setTimeout(flushSheetSync,450);return state;
+  }
+  async function flushSheetSync(){
+    if(sheetBusy||!sheetPending||!sheetModel)return;
+    if(modoLocal){sheetFailure=true;sheetStatus('Sin conexión · cantidades pendientes; resultados anteriores');return;}
+    const job=sheetPending;sheetPending=null;sheetBusy=true;
+    try{const m=await apiPost({tipo:'sheet-cantidades',caso_id:caso.caso_id,escenario_id:job.scenario,inputs:job.inputs,revision_esperada:sheetModel.revision,request_id:nuevoRequestId()});
+      if(!m.ok){sheetFailure=true;sheetPending=job;sheetStatus(m.error==='conflicto_revision'?'Conflicto: hay cambios en Sheets. Recarga antes de guardar.':'No se guardó: '+m.error);toast('No se confirmó el cambio: '+m.error);return;}
+      acceptSheetModel(m,escActivo,!!sheetPending);
+    }catch(e){sheetPending=sheetPending?{scenario:job.scenario,inputs:{...job.inputs,...sheetPending.inputs}}:job;sheetFailure=true;sheetStatus('Sin conexión · cambios pendientes; resultados anteriores');}
+    finally{sheetBusy=false;if(sheetPending&&!sheetFailure)flushSheetSync();}
+  }
+  async function reloadSheetModel(){if(!sheetModel||sheetBusy)return;try{const m=await apiGet({recurso:'sheet-model',id:caso.caso_id});if(!m.ok)throw Error(m.error);if(sheetPending&&!confirm("Recargar descartará las cantidades pendientes de este tablero. ¿Leer las actuales de Sheets?"))return;sheetPending=null;sheetFailure=false;acceptSheetModel(m,escActivo);}catch(e){sheetFailure=true;sheetStatus('No se pudo leer Sheets · datos anteriores');}}
+  async function sheetVersion(action,id,name){
+    if(sheetPending||sheetBusy){toast('Espera a que las cantidades queden guardadas');return;}
+    sheetBusy=true;
+    try{const m=await apiPost({tipo:'sheet-version',accion:action,caso_id:caso.caso_id,escenario_id:id,nombre:name,revision_esperada:sheetModel.revision,request_id:nuevoRequestId()});if(!m.ok){toast('No se cambió la versión: '+m.error);return;}acceptSheetModel(m,action==='activar'?id:escActivo);toast('Versión actualizada en Sheets');}catch(e){toast('Sin conexión: versión conservada');}finally{sheetBusy=false;}
+  }
+  function renderSheetPanel(){
+    let panel=$('sheetPanel');if(!panel){panel=document.createElement('section');panel.id='sheetPanel';panel.className='card';panel.style.cssText='display:block;padding:24px;margin:20px 0;';$('mercadoDocumento').before(panel);}
+    panel.hidden=!sheetModel;if(!sheetModel)return;
+    const safe=/^https:\/\/docs.google.com\/spreadsheets\/d\//.test(sheetModel.libro_url)?sheetModel.libro_url:'';
+    let h='<h2 class="serif">Libro conectado · cantidades y resultados</h2><p id="sheetEstado" class="note">Sheets · revisión '+esc(sheetModel.revision.slice(0,8))+'</p><a class="small-btn" target="_blank" rel="noopener" href="'+esc(safe)+'">Abrir el mismo modelo en Sheets</a> <button class="small-btn secondary" id="sheetRecargar">Actualizar desde Sheets</button>';
+    if(sheetModel.reticula){const g=sheetModel.reticula;const colors=['#edf0f2','#bfe2d5','#f7d6b1','#c2d5f2','#edbcb7'];h+='<h3>Retícula 10 × 10 m · huellas conceptuales</h3><p class="note">Norte arriba. 1 sur · 2 cuerpo L · 3 torre · 4 rentas vigentes. Las áreas parciales y las selecciones se leen del libro.</p><svg viewBox="0 0 216 324" style="width:216px;max-width:100%" role="img" aria-label="Retícula conceptual del terreno">';g.uso.forEach((row,y)=>row.forEach((use,x)=>{h+='<rect x="'+x*36+'" y="'+y*36+'" width="35" height="35" fill="'+colors[use]+'" stroke="#97a8ad"/><text x="'+(x*36+18)+'" y="'+(y*36+23)+'" text-anchor="middle" font-size="14">'+esc(use)+'</text>';}));h+='</svg><table><tr><th>Uso / verificación</th><th>Área m²</th></tr>'+g.resumen.filter(r=>r[0]).map(r=>'<tr><td>'+esc(r[0])+'</td><td>'+Number(r[1]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</td></tr>').join('')+'</table>'}
+    h+='<h3>Etapas y protección de rentas</h3><table><tr><th>Condición</th><th>Dato / estado</th><th>Fuente</th></tr>'+sheetModel.etapas.filter(r=>r[0]).map(r=>'<tr><td>'+esc(r[0])+'</td><td>'+esc(r[1]===''?'Pendiente':r[1])+'</td><td>'+esc(r[2])+'</td></tr>').join('')+'</table>';
+    panel.innerHTML=h;$('sheetRecargar').onclick=reloadSheetModel;
+  }
+  function renderSheetMarket(){const panel=$('mercadoDocumento');panel.hidden=false;let h='<h2 class="serif">Mercado · datos del mismo libro</h2><p class="note">Rentas y capitalización documental; cantidades sin respaldo permanecen pendientes. Una capitalización no es cobro si se retiene el comercio.</p><table><tr><th>Dato</th><th>Valor calculado / captura</th><th>Unidad y fuente</th></tr>';h+=sheetModel.mercado.map(r=>{let v=r[1];if(v==='')v='Pendiente';else if(typeof v==='number')v=/rendimiento|cap de salida|renta corta|vacancia/i.test(r[0])?pct(v*100,2):v.toLocaleString('es-MX',{maximumFractionDigits:2});return '<tr><td>'+esc(r[0])+'</td><td>'+esc(v)+'</td><td>'+esc(r[2])+'</td></tr>';}).join('');h+='</table><h3>Comparables documentales</h3><p class="note">Rangos de área y precio sin pares de unidades: no permiten calcular un comparable de $/m² dividiendo extremos.</p><table><tr><th>Comparable</th><th>Área mínima / máxima</th><th>Precio mínimo / máximo</th></tr>'+sheetModel.comparables.map(r=>'<tr><td>'+esc(r[0])+'</td><td>'+esc(r[1])+' / '+esc(r[2])+'</td><td>'+esc(r[3]||'Pendiente')+' / '+esc(r[4]||'Pendiente')+'</td></tr>').join('')+'</table>';panel.innerHTML=h;}
+
   function get(id){return Number($(id).value)||0} function txt(id,value){const e=$(id);if(e)e.textContent=value}
   function inputValues(){return Object.fromEntries(controls.map(c=>[c.id,Number(c.value)]))}
   function updateColor(c){const min=Number(c.min),max=Number(c.max),v=Number(c.value),x=Math.max(0,Math.min(100,(v-min)/(max-min)*100));c.style.background=`linear-gradient(to right, ${c.dataset.color||'var(--gold)'} ${x}%, rgba(35,29,20,.10) ${x}%)`}
   function displayValue(c){const v=Number(c.value),f=c.dataset.format||'';if(f==='pct')return pct(v,0);if(f==='pct1')return pct(v,1);if(f==='money')return fmtMoney(v);if(f==='meters')return v.toFixed(1)+' m';if(f==='decimal')return v.toFixed(1);if(f==='decimal2')return v.toFixed(2);return fmtN(v)}
-  function setControl(id,value){const c=$(id);if(!c||!Number.isFinite(Number(value)))return;const min=Number(c.min),max=Number(c.max);const v=Math.max(min,Math.min(max,Number(value)));c.value=v;updateColor(c)}
+  function setControl(id,value){const c=$(id);if(!c||!Number.isFinite(Number(value)))return;const min=Number(c.min),max=Number(c.max);const v=sheetModel?Number(value):Math.max(min,Math.min(max,Number(value)));if(sheetModel){c.step='any';if(v<min)c.min=v;if(v>max)c.max=v;}c.value=v;updateColor(c)}
   function readPills(){document.querySelectorAll('.val-display[data-input]').forEach(p=>{p.contentEditable='true';p.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();p.blur()}});p.addEventListener('blur',()=>{const raw=p.textContent.replace(/[^0-9.\-]/g,''),n=Number(raw);if(Number.isFinite(n))setControl(p.dataset.input,n);calculate()})})}
   function syncPills(){controls.forEach(c=>{const p=document.querySelector(`.val-display[data-input="${c.id}"]`);if(p&&document.activeElement!==p)p.textContent=displayValue(c);updateColor(c)})}
     const tipNarrow=()=>window.matchMedia('(max-width:700px)').matches;
@@ -756,6 +801,7 @@
     devFlows[devFlows.length-1]+=devDist;const ownerFlows=Array(totalMonths).fill(0);if(ownerCapital>0){ownerFlows[0]=-ownerCapital;ownerFlows[ownerFlows.length-1]+=ownerDist}const devIrr=irr(devFlows),ownerIrr=ownerCapital?irr(ownerFlows):null,ownerMoic=ownerCapital?ownerDist/ownerCapital:null,profit=sales-projectCost-interest-feeDebt,margin=sales?profit/sales:0,marginBeforeFinance=sales?(sales-projectCost)/sales:0,residentialRevenueFactor=preventaEfectiva*(1-p.desc)+(1-preventaEfectiva),breakevenPreViv=resSell&&residentialRevenueFactor?Math.max(0,(projectCost+interest+feeDebt-comRev-parkingRev)/(resSell*residentialRevenueFactor)):0,preventaAtBuild=preventaEfectiva*Math.min(1,Math.max(0,p.buildStartMonth-1)/p.preMonths),preventaMinMonth=preventaEfectiva?Math.ceil(p.minPreventaObra/preventaEfectiva*p.preMonths):Infinity;
     return {p,footprint,areaLibre,greenRequested,greenArea,greenExcess,com,gross,resGross,resSell,comSell,units,mixTotal,mixValid,mixWeightedM2,unitM2Effective,mixLoftUnits,mix2Units,mix3Units,levels,fullLevels,lastFloorUnits,totalFloors,habitantes,m2PorLocal,height,floorPlate,lastFloorPlate,footprintMargin,unallocatedResSell,residentialSpaces,spaces,parkingArea,basementPlate,basements,basementArea,buildingVolume,parkingVolume,totalVolume,priceCushion:breakevenPreViv?p.preViv/breakevenPreViv-1:null,circVertical,amenidades,noVendResid,pasillosHoriz,circDeficit,comunM2,m2Loft,m2Dos,m2Tres,vendTotal,aguaViv,aguaCom,aguaTotal,drenajeDia,cisternaM3,cargaViv,cargaCom,cargaComun,cargaTotalKw,demandaKva,spacesVenta,spacesVisitas,elevadores,gasL,basuraM2,densidadViv,densidadHab,permeable,permeablePct,pluvialM3,cuotaProm,cuotaLoft,cuotaDos,cuotaTres,preventaEfectiva,preventaAtBuild,preventaMinMonth,preventaCovenantPass:preventaAtBuild>=p.minPreventaObra,presaleSellable,presaleUnits,presaleUnitsPerMonth,presaleRev,postRev,comRev,parkingRev,sales,land,landCash,closing,hard,indirect,cont,legal,commission,projectCost,cashCost,debtCap,peakLtc:projectCost?peak/projectCost:0,debtHeadroom:Math.max(0,debtCap-peak),interest,cashInterest,feeDebt,peak,peakMonth,debt,cash,fundingGap,debtDraws,debtRepayments,revTotal,costTotal,cashSourceTotal,cashUsesTotal,cashReconciliation,distributable,ownerSaleProceeds,ownerCapital,devCapital,equityUsed,ownerPrefTarget,devPrefTarget,prefTarget,effectiveOwnerResidual,ownerCapitalReturn,devCapitalReturn,ownerPrefPaid,devPrefPaid,ownerResidual,devResidual,ownerDist,ownerTotalProceeds,ownerGain:ownerDist-ownerCapital,ownerIrr,ownerMoic,devDist,devGain:devDist-devCapital,devIrr,devMoic:devCapital?devDist/devCapital:null,profit,margin,marginBeforeFinance,breakevenPreViv,flows,totalMonths,buildStart,buildFinish}}
   function calculate(){
+    if(sheetModel)return queueSheetSync();
     clampRelations();
     state=computar(inputValues());
     escSyncActivo();
@@ -772,8 +818,9 @@
   function escInicial(nombre){escenarios=[{id:escId(),nombre:nombre||'Base',esBase:true,inputs:inputValues()}];escActivo=escenarios[0].id}
   function escSyncActivo(){const e=escGet(escActivo);if(e)e.inputs=inputValues()}
   function escAplicar(e){setControl('inInventarioExplicito',0);setControl('inUnidadesA',0);setControl('inUnidadesB',0);setControl('inUnidadesC',0);setControl('inComRentableExacto',0);setControl('inCajonesResidExactos',0);setControl('inSotanoAreaExacta',0);setControl('inObraDirectaTotal',0);setControl('inIndirectosTotal',0);Object.entries(e.inputs||{}).forEach(([k,v])=>setControl(k,v))}
-  function escCambiar(id){if(id===escActivo)return;const e=escGet(id);if(!e)return;escSyncActivo();escActivo=id;escAplicar(e);calculate();toast('Versión activa: «'+e.nombre+'»',1800)}
+  function escCambiar(id){if(sheetModel){if(sheetPending||sheetBusy){toast('Espera a guardar cantidades');return;}sheetVersion('activar',id);return;}if(id===escActivo)return;const e=escGet(id);if(!e)return;escSyncActivo();escActivo=id;escAplicar(e);calculate();toast('Versión activa: «'+e.nombre+'»',1800)}
   function escNueva(){
+    if(sheetModel){const n=prompt('Nombre de la nueva versión');if(n)sheetVersion('duplicar',escActivo,n);return;}
     if(escenarios.length>=MAX_ESC){toast('Máximo '+MAX_ESC+' versiones por caso');return}
     const sug=escenarios.length===1?'Escenario B':'Versión '+(escenarios.length+1);
     const nombre=prompt('Nombre de la nueva versión (copia de la activa):',sug);if(nombre===null)return;
@@ -781,9 +828,10 @@
     const e={id:escId(),nombre:(nombre.trim()||sug).slice(0,40),esBase:false,inputs:inputValues()};
     escenarios.push(e);escActivo=e.id;calculate();
     toast('Versión «'+e.nombre+'» creada: mueve solo los supuestos que cambian')}
-  function escRenombrar(id){const e=escGet(id);if(!e)return;const nombre=prompt('Nuevo nombre de la versión:',e.nombre);if(nombre===null)return;e.nombre=(nombre.trim()||e.nombre).slice(0,40);calculate()}
-  function escMarcarBase(id){if(!escGet(id))return;escenarios.forEach(e=>e.esBase=e.id===id);calculate()}
+  function escRenombrar(id){if(sheetModel){const n=prompt('Nuevo nombre de versión',escGet(id)?.nombre);if(n)sheetVersion('renombrar',id,n);return;}const e=escGet(id);if(!e)return;const nombre=prompt('Nuevo nombre de la versión:',e.nombre);if(nombre===null)return;e.nombre=(nombre.trim()||e.nombre).slice(0,40);calculate()}
+  function escMarcarBase(id){if(sheetModel){sheetVersion('base',id);return;}if(!escGet(id))return;escenarios.forEach(e=>e.esBase=e.id===id);calculate()}
   function escBorrar(id){
+    if(sheetModel){if(confirm('Archivar esta versión conservando su hoja e historial?'))sheetVersion('archivar',id);return;}
     const e=escGet(id);if(!e)return;
     if(escenarios.length<=1){toast('Es la única versión del caso');return}
     if(!confirm('¿Borrar la versión "'+e.nombre+'" de este caso?'))return;
@@ -830,7 +878,7 @@
     const secc=$('compSection');if(!secc)return;
     if(escenarios.length<2){secc.style.display='none';return}
     secc.style.display='';
-    const res=escenarios.map(e=>({e,r:e.id===escActivo&&state?state:computar(e.inputs)}));
+    const res=escenarios.map(e=>({e,r:sheetModel?sheetModel.estados[e.id]:(e.id===escActivo&&state?state:computar(e.inputs))}));
     const base=res.find(x=>x.e.esBase)||res[0];
     const otras=res.filter(x=>x!==base);
     $('compMarginal').innerHTML=otras.map(x=>{
@@ -864,6 +912,7 @@
   /* ================== RENDER ================== */
 
   function renderMercadoDocumento(){
+    if(sheetModel){renderSheetMarket();return;}
     const panel=$('mercadoDocumento');if(!panel)return;
     const match=String(caso.notas_caso||'').match(/\[PPP_MERCADO_JSON\]\s*([\s\S]*?)\s*\[\/PPP_MERCADO_JSON\]/);
     let doc;try{doc=match?JSON.parse(match[1]):null}catch(err){doc=null}
@@ -887,6 +936,7 @@
   }
 
   function render(){
+    renderSheetPanel();
     renderMercadoDocumento();
     const r=state;syncPills();
     txt('hudIngresos',fmtM(r.sales));txt('hudCostos',fmtM(r.projectCost+r.interest+r.feeDebt));txt('hudDeuda',fmtM(r.peak));txt('hudUtilidad',fmtM(r.profit));txt('hudMargen',pct(r.margin*100,1));txt('hudTir',r.devIrr===null?'—':pct(r.devIrr*100,1));txt('hudMoic',r.devMoic===null?'—':r.devMoic.toFixed(2)+'x');
@@ -1054,10 +1104,11 @@
      renderReuniones();
   }
   function aplicarCasoRemoto(obj){
+    sheetModel=obj.calculo_sheet||null;sheetPending=null;sheetFailure=false;
     Object.keys(obj).forEach(kk=>{if(/^in[A-Z]/.test(kk)&&$(kk)&&obj[kk]!==''&&isFinite(Number(obj[kk])))setControl(kk,Number(obj[kk]))});
     caso={caso_id:obj.caso_id||'',palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
     if(!escDesdeJson(obj.escenarios_json))escInicial('Base');
-    calculate();pintaCaso();cerrarOverlays();toast('Caso "'+(caso.nombre_caso||caso.palabra)+'" cargado'+(escenarios.length>1?' · '+escenarios.length+' versiones':''))
+    if(sheetModel)acceptSheetModel(sheetModel,sheetModel.activo);else calculate();pintaCaso();if(sheetModel)sheetStatus('Sheets · revisión '+sheetModel.revision.slice(0,8));cerrarOverlays();toast('Caso "'+(caso.nombre_caso||caso.palabra)+'" cargado'+(escenarios.length>1?' · '+escenarios.length+' versiones':''))
   }
   async function abrirPorId(id){try{const r=await apiGet({recurso:'caso',id});if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'Ese caso ya no existe':'No se pudo abrir: '+r.error)}catch(e){toast('Sin conexión: no se pudo abrir el caso')}}
   async function abrirPorPalabra(palabra){if(!palabra.trim())return;try{const r=await apiGet({recurso:'caso',palabra:palabra.trim()});if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'No hay caso con esa palabra':'No se pudo abrir: '+r.error)}catch(e){toast('Sin conexión: no se pudo abrir')}}
@@ -1065,6 +1116,7 @@
   function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
   function fechaCorta(ts){const d=new Date(ts);return isNaN(d)?'':d.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'})}
   async function guardarCaso(enviarCorreo){
+    if(sheetModel&&(sheetPending||sheetBusy||sheetFailure)){toast('Guarda y verifica las cantidades pendientes antes de continuar');return;}
     if(modoLocal){toast('Estás sin nube: entra con la clave para guardar');return}
     const nombre=$('gNombre').value.trim(),palabra=$('gPalabra').value.trim(),correo=$('gCorreo').value.trim(),notas=$('gNotas').value;
     if(!palabra){toast('Elige una palabra para volver a tu caso');return}
@@ -1072,6 +1124,7 @@
     const btns=[$('gGuardarSolo'),$('gGuardarEnviar')];btns.forEach(b=>b.disabled=true);
     const rSt=state||calculate();
     const payload={tipo:'guardar',caso_id:caso.caso_id,palabra,correo,nombre_caso:nombre,notas_caso:notas,estado:caso.estado,inputs:inputValues(),resumen:resumenActual(),escenarios:escParaGuardar(),flujo:rSt.flows.map(f=>[f.m,Math.round(f.rev),Math.round(f.cost),Math.round(f.equity),Math.round(f.pik+f.fee),Math.round(f.debt),Math.round(f.caja)]),sendEmail:!!enviarCorreo,request_id:nuevoRequestId(),website:$('gWeb').value};
+    if(sheetModel){payload.revision_esperada=sheetModel.revision;payload.version_esperada=caso.version;payload.sendEmail=false;}
     try{
       const r=await apiPost(payload);
       btns.forEach(b=>b.disabled=false);
@@ -1082,9 +1135,9 @@
         return}
       if(!r.caso_id){$('gWeb').value='';toast('No se guardó: vuelve a intentar');return}
       caso.caso_id=r.caso_id;caso.palabra=r.palabra||payload.palabra;caso.correo=correo;caso.nombre_caso=nombre||'Caso sin nombre';caso.notas_caso=notas;caso.version=r.version;
-      pintaCaso();guardarDraft();cerrarOverlays();
+      if(r.calculo_sheet)acceptSheetModel(r.calculo_sheet,escActivo);pintaCaso();guardarDraft();cerrarOverlays();if(sheetModel)sheetStatus('Sheets · revisión '+sheetModel.revision.slice(0,8));
       toast(r.emailed?'Caso guardado · correo con la palabra enviado':'Caso guardado · palabra: '+caso.palabra)
-    }catch(e){btns.forEach(b=>b.disabled=false);encolar(payload);toast('Sin conexión: se guardará al reconectar')}
+    }catch(e){btns.forEach(b=>b.disabled=false);if(sheetModel){sheetStatus('No se confirmó el guardado');toast('No se guardó: revisa conexión');return;}encolar(payload);toast('Sin conexión: se guardará al reconectar')}
   }
   async function cambiarEstado(nuevo){
     caso.estado=nuevo;pintaCaso();guardarDraft();
@@ -1145,7 +1198,7 @@
   $('casosCerrar').onclick=cerrarOverlays;
   $('btnAbrirPalabra').onclick=()=>abrirPorPalabra($('abrirPalabra').value);
   $('abrirPalabra').addEventListener('keydown',e=>{if(e.key==='Enter')abrirPorPalabra($('abrirPalabra').value)});
-  $('btnNuevo').onclick=()=>{Object.entries(DEFAULTS).forEach(([id,v])=>setControl(id,v));caso={caso_id:'',palabra:'',correo:caso.correo,nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};escInicial('Base');calculate();pintaCaso();toast('Caso nuevo: supuestos de referencia')};
+  $('btnNuevo').onclick=()=>{sheetModel=null;sheetPending=null;Object.entries(DEFAULTS).forEach(([id,v])=>setControl(id,v));caso={caso_id:'',palabra:'',correo:caso.correo,nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};escInicial('Base');calculate();pintaCaso();toast('Caso nuevo: supuestos de referencia')};
   /* ================== TRACK DE REUNIONES DEL PPP ==================
      Persiste SIN tocar el backend: cada reunión es un renglón de notas_seguimiento
      con el sello 📅. OJO: el Apps Script ANTEPONE su fecha a la nota, así que el
@@ -1257,7 +1310,8 @@
   $('gateBtn').onclick=intentarEntrar;$('gateClave').addEventListener('keydown',e=>{if(e.key==='Enter')intentarEntrar()});
   $('gateLocal').onclick=modoSinConexion;
   document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)cerrarOverlays()}));
-  window.addEventListener('online',drenarCola);setInterval(drenarCola,25000);
+  window.addEventListener('online',()=>{if(sheetModel){sheetFailure=false;flushSheetSync();}else drenarCola();});setInterval(drenarCola,25000);
+  setInterval(()=>{if(sheetModel&&!sheetPending&&!sheetBusy&&!document.hidden)reloadSheetModel();},45000);
   cargarDraft();if(!escenarios.length)escInicial('Base');calculate();pintaCaso();
   if(modoLocal){$('gate').classList.add('off');$('modoLocalBanner').classList.add('on')}
   else if(clave){apiGet({recurso:'lista'}).then(r=>{if(r.ok){casosCache=r.casos||[];cfgBoard=r.config||{};$('gate').classList.add('off');drenarCola();procesarOpen()}else{reabrirGate()}}).catch(()=>{modoSinConexion();toast('Sin conexión: trabajando en modo local')})}
