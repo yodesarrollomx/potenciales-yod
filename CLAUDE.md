@@ -170,3 +170,11 @@ vuelve el bug de "el permiso se pone y se quita solo" ([[accesos-matriz-borraba-
 - No mandar POST al `/exec` para probar (escribe filas y manda correos reales).
 - No poner datos de tratos ni nombres de casos en el HTML público (ya se sacaron una vez, `4248ca9`).
 - No crear implementación nueva del Apps Script. Nunca. Ver regla 1.
+
+
+## 30-sep-2026 · Contrato autorizado de cálculo nativo en Sheets
+
+Dirección exige que **datos y fórmulas vivan en Sheets**. El tablero leerá los resultados calculados y escribirá las mismas cantidades editables; no debe tener un motor financiero paralelo en JavaScript o Apps Script. Las fórmulas se protegen para la cuenta propietaria y las modificaciones de AI autorizada se auditan. Leer **ARQUITECTURA-SHEETS.md** antes de tocar los motores o su backend.
+
+**Estado real:** los cinco HTML todavía calculan con computar(); la migración no está implementada. El commit 9b88384 amplió inventario documental y no trasladó las fórmulas. El contrato, antes/ahora/futuro y pendientes están registrados en **PPP_Arquitectura** y **PPP_Cambios** del Control Maestro; se corrigió la descripción histórica de SYS-POTENCIALES. Toda nueva escritura debe registrar actor, revisión base, antes/después, fuente, validación y siguiente paso, sin sobrescribir trabajo concurrente. No publicar datos privados en Git.
+
