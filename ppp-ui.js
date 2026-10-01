@@ -285,7 +285,7 @@
       });
     });
     const sheet=$('sheetPanel'),stages=$('pppEtapas');if(sheet&&sheet.parentElement!==stages.lastChild)stages.lastChild.prepend(sheet);
-    $('pppVersiones').firstChild.textContent='Versiones · '+(context.scenarioName||'Base');
+    $('pppVersiones').firstChild.textContent='Versiones · '+(context.versionCount||1)+' · '+(context.scenarioName||'Base');
   }
   root.PPPView={mount,update,toggle,adjust,setCaseState};
 })(typeof window==='undefined'?globalThis:window);

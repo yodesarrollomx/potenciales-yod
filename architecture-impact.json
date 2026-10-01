@@ -1,20 +1,20 @@
 {
-  "model_revision": "2026-10-01.22-ppp-terreno-catalogo",
-  "proposal_id": "CHG-PPP-TERRENO-003",
+  "model_revision": "2026-10-01.23-ppp-versiones-lectura",
+  "proposal_id": "CHG-PPP-VERSIONES-004",
   "components": [
     "SYS-POTENCIALES",
     "SYS-YOD-OS",
     "GAS-PORTERO",
-    "SHEET-PORTERO"
+    "SHEET-PORTERO",
+    "SHEET-PPP-MODELOS"
   ],
-  "summary": "Conservar acceso al proyecto desde pines de la misma sesión durante fallos de consulta; categorías y estados visibles con reintento puntual, enlace antiguo normalizado. Mostrar terreno, retícula nativa y condiciones por etapas sin inventar geometría ni alterar cálculo, controles, versiones o backend.",
+  "summary": "Corregir rechazo del modelo nativo: el contrato envía resultados de todas las versiones y flujo solo activo. Seleccionar únicamente una versión con flujo confirmado, validar respuestas antes de aplicarlas y conservar pendientes. Índice completo numerado con base, activa y nombres completos; no modificar hojas, fórmulas, IDs ni backend.",
   "tests": [
-    "node --test tests/ppp-ui.test.cjs tests/ppp-case-loader.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs",
-    "node tests/ppp-identity-browser.cjs: carga directa, catálogo fallido, resultados ausentes, reintento, pendientes restaurados, capítulos completos y ninguna escritura de negocio",
-    "node tests/ppp-terrain-browser.cjs: retícula, áreas y diferencia vs proforma, pendientes y tarjetas cerradas; Chromium/WebKit sin escrituras de negocio",
-    "node tests/ppp-browser.cjs; node tests/ppp-home-browser.cjs; node tests/access-browser.cjs",
-    "Gráficas con denominadores y escalas; 81 controles, 40 KPI y motor original conservados; Chromium/WebKit, 320/390/430/1280 px, movimiento reducido y temas",
-    "Sintaxis, git diff --check, verificadores del atlas y comparación de archivos publicados"
+    "node --test tests/ppp-ui.test.cjs tests/ppp-case-loader.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs: 31 pruebas",
+    "node tests/ppp-versions-browser.cjs: ocho versiones, flujo solo activo, comparación completa, activación y cantidades sintéticas, datos pendientes conservados ante respuesta incompleta, recarga con activa externa; Chromium/WebKit y 320/390/430/1280 px",
+    "Respuesta HTTP real autorizada conciliada con índice Versiones y renderizada por frontend corregido; sin escrituras de negocio",
+    "node tests/ppp-browser.cjs; node tests/ppp-identity-browser.cjs; node tests/ppp-terrain-browser.cjs; node tests/ppp-home-browser.cjs; node tests/access-browser.cjs",
+    "Sintaxis, git diff --check, atlas y comparación byte por byte de archivos públicos"
   ],
   "rollback": "Revertir frontend y referencia fija del atlas por PR. Conservar libros, versiones, contratos y registros privados."
 }

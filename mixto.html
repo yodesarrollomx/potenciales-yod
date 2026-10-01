@@ -303,7 +303,7 @@
 
 #mercadoDocumento[hidden]{display:none}#mercadoDocumento table{width:100%;border-collapse:collapse;font-size:11px}#mercadoDocumento td,#mercadoDocumento th{padding:8px;border-bottom:1px solid var(--linea);text-align:left}#mercadoDocumento h3{font-size:14px}#mercadoDocumento{overflow-wrap:anywhere}#mercadoDocumento button{margin-top:10px}
 </style>
-<link rel="stylesheet" href="ppp-ui.css?v=20261001-4">
+<link rel="stylesheet" href="ppp-ui.css?v=20261001-5">
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -537,8 +537,8 @@
 </div></div>
 
 <div id="toast"></div>
-<script src="ppp-ui.js?v=20261001-4"></script>
-<script src="ppp-case-loader.js?v=20261001-4"></script>
+<script src="ppp-ui.js?v=20261001-5"></script>
+<script src="ppp-case-loader.js?v=20261001-5"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -635,12 +635,13 @@
   let sheetModel=null,sheetTimer=null,sheetBusy=false,sheetPending=null,sheetFailure=false,sheetNeedsRefresh=false;
   function sheetStatus(message){const d=$('syncDot');if(d)d.textContent=message;const s=$('sheetEstado');if(s)s.textContent=message;}
   function acceptSheetModel(m,selected=escActivo,keepInputs=false){
+    if(!window.PPPCaseLoader.validModel(m,caso.caso_id)){sheetFailure=true;sheetStatus('Respuesta de Sheets incompleta · se conserva el modelo anterior');return false;}
     sheetModel=m;sheetFailure=false;sheetNeedsRefresh=false;
     escenarios=m.escenarios.map(e=>({...e,inputs:{...e.inputs}}));
-    escActivo=escenarios.some(e=>e.id===selected)?selected:m.activo;
+    escActivo=window.PPPCaseLoader.selectScenario(m,selected);
     if(!keepInputs)escAplicar(escGet(escActivo));
     state=m.estados[escActivo];render();renderEscenarios();renderComparador();guardarDraft();
-    sheetStatus(keepInputs?'Cambios pendientes · calculando en Sheets':'Sheets · revisión '+m.revision.slice(0,8)+' · '+new Date(m.actualizado).toLocaleTimeString('es-MX'));
+    sheetStatus(keepInputs?'Cambios pendientes · calculando en Sheets':'Sheets · revisión '+m.revision.slice(0,8)+' · '+new Date(m.actualizado).toLocaleTimeString('es-MX'));return true;
   }
   function queueSheetSync(){
     state=sheetModel.estados[escActivo];
@@ -656,7 +657,7 @@
     const job=sheetPending;sheetPending=null;sheetBusy=true;
     try{const m=await apiPost({tipo:'sheet-cantidades',caso_id:caso.caso_id,escenario_id:job.scenario,inputs:job.inputs,revision_esperada:sheetModel.revision,request_id:nuevoRequestId()});
       if(!m.ok){sheetFailure=true;sheetPending=job;sheetStatus(m.error==='conflicto_revision'?'Conflicto: hay cambios en Sheets. Recarga antes de guardar.':'No se guardó: '+m.error);toast('No se confirmó el cambio: '+m.error);return;}
-      acceptSheetModel(m,escActivo,!!sheetPending);
+      if(!acceptSheetModel(m,escActivo,!!sheetPending)){sheetPending=sheetPending?{scenario:job.scenario,inputs:{...job.inputs,...sheetPending.inputs}}:job;guardarDraft();}
     }catch(e){sheetPending=sheetPending?{scenario:job.scenario,inputs:{...job.inputs,...sheetPending.inputs}}:job;sheetFailure=true;sheetStatus('Sin conexión · cambios pendientes; resultados anteriores');}
     finally{sheetBusy=false;if(sheetPending&&!sheetFailure)flushSheetSync();}
   }
@@ -664,7 +665,7 @@
   async function sheetVersion(action,id,name){
     if(sheetPending||sheetBusy||sheetFailure||sheetNeedsRefresh){toast('Verifica conexión y cantidades guardadas antes de modificar versiones');return;}
     sheetBusy=true;
-    try{const m=await apiPost({tipo:'sheet-version',accion:action,caso_id:caso.caso_id,escenario_id:id,nombre:name,revision_esperada:sheetModel.revision,request_id:nuevoRequestId()});if(!m.ok){toast('No se cambió la versión: '+m.error);return;}acceptSheetModel(m,action==='activar'?id:escActivo);toast('Versión actualizada en Sheets');}catch(e){toast('Sin conexión: versión conservada');}finally{sheetBusy=false;}
+    try{const m=await apiPost({tipo:'sheet-version',accion:action,caso_id:caso.caso_id,escenario_id:id,nombre:name,revision_esperada:sheetModel.revision,request_id:nuevoRequestId()});if(!m.ok){toast('No se cambió la versión: '+m.error);return;}if(acceptSheetModel(m,action==='activar'?id:escActivo))toast('Versión actualizada en Sheets');else toast('No se confirmó la versión; se conserva la anterior');}catch(e){toast('Sin conexión: versión conservada');}finally{sheetBusy=false;}
   }
   function renderSheetPanel(){
     let panel=$('sheetPanel');if(!panel){panel=document.createElement('section');panel.id='sheetPanel';panel.className='card';panel.style.cssText='display:block;padding:24px;margin:20px 0;';$('mercadoDocumento').before(panel);}
@@ -860,15 +861,16 @@
       return true}catch(err){return false}}
   function renderEscenarios(){
     const cont=$('escChips');if(!cont)return;
-    cont.innerHTML=escenarios.map(e=>{
+    cont.setAttribute('aria-label','Versiones guardadas del mismo proyecto');
+    cont.innerHTML=escenarios.map((e,i)=>{
       const on=e.id===escActivo;
-      const acciones=on?`<button class="mini" data-esc-ren="${e.id}" title="Renombrar"><i class="ti ti-pencil"></i></button>${e.esBase?'':`<button class="mini" data-esc-base="${e.id}" title="Hacerla base de comparación (★)">☆</button>`}${escenarios.length>1?`<button class="mini" data-esc-del="${e.id}" title="Borrar versión"><i class="ti ti-x"></i></button>`:''}`:'';
-      return `<span class="esc-chip${on?' on':''}" data-esc="${e.id}" role="button" tabindex="0">${e.esBase?'<i class="star" title="Base de comparación">★</i>':''}${esc(e.nombre)}${acciones}</span>`
+      const acciones=on?`<button class="mini" data-esc-ren="${esc(e.id)}" aria-label="Renombrar versión" title="Renombrar"><i class="ti ti-pencil"></i></button>${e.esBase?'':`<button class="mini" data-esc-base="${esc(e.id)}" aria-label="Hacer base de comparación" title="Hacerla base de comparación (★)">☆</button>`}${escenarios.length>1?`<button class="mini" data-esc-del="${esc(e.id)}" aria-label="${sheetModel?'Archivar':'Borrar'} versión" title="${sheetModel?'Archivar conservando hoja e historial':'Borrar versión'}"><i class="ti ti-x"></i></button>`:''}`:'';
+      return `<div class="esc-version${on?' on':''}"><button class="esc-chip${on?' on':''}" data-esc="${esc(e.id)}" type="button" aria-pressed="${on}"><span class="esc-order">${i+1}</span><span class="esc-name">${esc(e.nombre)}</span><span class="esc-tags">${e.esBase?'<span class="star">★ Base</span>':''}${on?'<span>Activa</span>':''}</span></button>${acciones?'<span class="esc-actions">'+acciones+'</span>':''}</div>`
     }).join('')+`<button class="esc-add" id="escAdd" title="Duplicar la versión activa"><i class="ti ti-plus"></i>Nueva versión</button>`;
-    cont.querySelectorAll('[data-esc]').forEach(ch=>{ch.onclick=ev=>{if(ev.target.closest('.mini'))return;escCambiar(ch.dataset.esc)};ch.onkeydown=ev=>{if(ev.key==='Enter'&&!ev.target.closest('.mini'))escCambiar(ch.dataset.esc)}});
-    cont.querySelectorAll('[data-esc-ren]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();escRenombrar(b.dataset.escRen)});
-    cont.querySelectorAll('[data-esc-base]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();escMarcarBase(b.dataset.escBase)});
-    cont.querySelectorAll('[data-esc-del]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();escBorrar(b.dataset.escDel)});
+    cont.querySelectorAll('[data-esc]').forEach(ch=>ch.onclick=()=>escCambiar(ch.dataset.esc));
+    cont.querySelectorAll('[data-esc-ren]').forEach(b=>b.onclick=()=>escRenombrar(b.dataset.escRen));
+    cont.querySelectorAll('[data-esc-base]').forEach(b=>b.onclick=()=>escMarcarBase(b.dataset.escBase));
+    cont.querySelectorAll('[data-esc-del]').forEach(b=>b.onclick=()=>escBorrar(b.dataset.escDel));
     const add=$('escAdd');if(add)add.onclick=escNueva}
   function compCuerpo(res,filas){
     const head=`<tr><th>Métrica</th>${res.map(x=>`<th class="${x.e.esBase?'base':''}${x.e.id===escActivo?' act':''}">${esc(x.e.nombre)}</th>`).join('')}</tr>`;
@@ -977,7 +979,7 @@
     const filasF=[];r.flows.forEach((x,i)=>{if(i%12===0)filasF.push(`<tr class="year-row"><td colspan="7">AÑO ${Math.floor(i/12)+1}</td></tr>`);filasF.push(`<tr><td>${x.m}</td><td>${fmtM(x.rev)}</td><td>${fmtM(x.cost)}</td><td>${fmtM(x.equity)}</td><td>${fmtM(x.pik+x.fee)}</td><td>${fmtM(x.debt)}</td><td>${fmtM(x.caja)}</td></tr>`)});
     filasF.push(`<tr class="tot-row"><td>Σ ${r.totalMonths} meses</td><td>${fmtM(r.revTotal)}</td><td>${fmtM(r.costTotal)}</td><td>${fmtM(r.equityUsed)}</td><td>${fmtM(r.interest+r.feeDebt)}</td><td>${fmtM(r.debt)}</td><td>${fmtM(r.cash)}</td></tr>`);
     $('flowRows').innerHTML=filasF.join('');renderProforma(r);renderLandDeal(r);renderFormulas();refreshJson();
-    window.PPPView?.update(r,{native:!!sheetModel,revision:sheetModel?.revision,caseId:caso.caso_id,scenario:escActivo,scenarioName:escGet(escActivo)?.nombre,projectName:caso.nombre_caso,updated:sheetModel?.actualizado,bookUrl:sheetModel?.libro_url,site:sheetModel?.reticula,stages:sheetModel?.etapas});
+    window.PPPView?.update(r,{native:!!sheetModel,revision:sheetModel?.revision,caseId:caso.caso_id,scenario:escActivo,scenarioName:escGet(escActivo)?.nombre,versionCount:escenarios.length,projectName:caso.nombre_caso,updated:sheetModel?.actualizado,bookUrl:sheetModel?.libro_url,site:sheetModel?.reticula,stages:sheetModel?.etapas});
   }
   function renderProforma(r){
     const row=(label,value,klass='')=>`<tr class="${klass}"><td>${label}</td><td>${value}</td></tr>`,section=label=>`<tr class="section-row"><td colspan="2">${label}</td></tr>`,economicTotal=r.projectCost+r.interest+r.feeDebt,cashOk=Math.abs(r.cashReconciliation)<1;
@@ -1124,7 +1126,7 @@
     $('segSiguiente').value=caso.siguiente_paso||'';
     $('segLog').textContent=caso.notas_seguimiento||'Sin notas todavía.'+(caso.caso_id?'':' Guarda el caso primero para dar seguimiento.');
      renderReuniones();
-     if(state)window.PPPView?.update(state,{native:!!sheetModel,revision:sheetModel?.revision,caseId:caso.caso_id,scenario:escActivo,scenarioName:escGet(escActivo)?.nombre,projectName:caso.nombre_caso,updated:sheetModel?.actualizado,bookUrl:sheetModel?.libro_url,site:sheetModel?.reticula,stages:sheetModel?.etapas});
+     if(state)window.PPPView?.update(state,{native:!!sheetModel,revision:sheetModel?.revision,caseId:caso.caso_id,scenario:escActivo,scenarioName:escGet(escActivo)?.nombre,versionCount:escenarios.length,projectName:caso.nombre_caso,updated:sheetModel?.actualizado,bookUrl:sheetModel?.libro_url,site:sheetModel?.reticula,stages:sheetModel?.etapas});
   }
   function aplicarCasoRemoto(obj){
     if(!window.PPPCaseLoader.validModel(obj.calculo_sheet,obj.caso_id)){
