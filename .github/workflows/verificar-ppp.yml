@@ -1,0 +1,48 @@
+name: Verificar interfaz PPP
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  interfaz:
+    name: PPP · interfaz y contratos
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: yodesarrollomx/yod-portal
+          ref: 7b8103ec63cefe1b98aee32bfdfe72f6e8abde77
+          path: .yod-atlas-ui
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Controles, cálculo original y sintaxis
+        run: |
+          node --check ppp-ui.js
+          node --test tests/ppp-ui.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs
+          git diff --check
+      - name: Instalar navegadores
+        run: |
+          npm install --prefix "$RUNNER_TEMP/ppp-browser" --no-audit --no-fund playwright@1.55.1
+          "$RUNNER_TEMP/ppp-browser/node_modules/.bin/playwright" install --with-deps chromium webkit
+      - name: Recorridos reales del DOM con transporte sintético
+        env:
+          NODE_PATH: ${{ runner.temp }}/ppp-browser/node_modules
+          YOD_ATLAS_DIR: ${{ github.workspace }}/.yod-atlas-ui
+          PPP_SCREENSHOTS: ${{ runner.temp }}/ppp-shots
+        run: node tests/ppp-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ppp-interfaz-sintetica
+          path: ${{ runner.temp }}/ppp-shots
+          if-no-files-found: ignore
