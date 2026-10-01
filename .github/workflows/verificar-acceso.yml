@@ -1,0 +1,49 @@
+name: Verificar acceso PPP
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  acceso:
+    name: Acceso PPP · pruebas aisladas
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Sintaxis y regresiones de sesión y Sheets
+        run: |
+          node --check portero.js
+          node --check tests/access-browser.cjs
+          node --test tests/access-gates.cjs tests/sheets-offline.cjs
+      - name: Instalar navegadores de prueba
+        run: |
+          npm install --prefix "$RUNNER_TEMP/yod-browser" --no-audit --no-fund playwright@1.55.1
+          "$RUNNER_TEMP/yod-browser/node_modules/.bin/playwright" install --with-deps chromium webkit
+      - name: Siete plantillas reales · Chromium y WebKit móvil · sin red de negocio
+        env:
+          NODE_PATH: ${{ runner.temp }}/yod-browser/node_modules
+        run: node tests/access-browser.cjs
+      - name: Comprobar JavaScript realmente publicado en Pages
+        if: github.event_name == 'push'
+        env:
+          REVISION: ${{ github.sha }}
+        run: |
+          for intento in $(seq 1 18); do
+            if curl --fail --silent --show-error --max-time 20 -H 'Cache-Control: no-cache' "https://yodesarrollomx.github.io/potenciales-yod/portero.js?verificar=$REVISION" -o "$RUNNER_TEMP/portero-publicado.js" && cmp -s portero.js "$RUNNER_TEMP/portero-publicado.js"; then
+              echo "Pages verificado: portero.js coincide exactamente con $REVISION"
+              sha256sum portero.js "$RUNNER_TEMP/portero-publicado.js"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'No se confirmó publicación exacta de portero.js; no dar por desplegado.'
+          exit 1
