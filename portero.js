@@ -234,92 +234,101 @@
       else { const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; sc.onload = arma; document.head.appendChild(sc); }
     }
   }
-  // Los candados propios de cada tablero (tablero, obra, tracks) abren este mismo gate de Google
-  window.YODPortero = { entrar: overlayCorreo };
-  /* Una sesión YOD ya validada manda sobre los candados heredados del board.
-     Nunca se vuelve a pedir "Clave del board" después de validar Google. */
-  function quitarSubGates() {
-    ['gate','mapGate','porteroGate'].forEach(id => {
-      const g = document.getElementById(id);
-      if (!g) return;
-      g.classList.add('off');
-      g.style.setProperty('display','none','important');
-      g.setAttribute('aria-hidden','true');
-    });
-  }
+  // La sesión se valida en esta carga. Un cache de rol no concede acceso.
+  let sesionValidada = '';
+  let validacionId = 0;
   function sesionYaValidada() {
-    const k = localStorage.getItem(LSC); if (!k) return false;
-    try {
-      const cache = JSON.parse(sessionStorage.getItem('pyod_rol') || 'null');
-      return !!(cache && cache.f === k.slice(0,14) && cache.rol);
-    } catch(e) { return false; }
+    const k = localStorage.getItem(LSC);
+    return !!k && k === sesionValidada;
   }
-  function engancharGates() {
-    if (sesionYaValidada()) { quitarSubGates(); return; }
-    // modo suave (boards con gate propio): nunca tapar; solo ofrecer la liga dentro de su gate
-    if (MODO_SUAVE) { const iv = setInterval(() => { const g = document.getElementById('gate') || document.getElementById('mapGate'); if (g && g.offsetParent !== null) { const caja = g.querySelector('.gate-box, .mg-box') || g.firstElementChild; if (caja && !caja.querySelector('.pg-alt2')) { const b = document.createElement('button'); b.className = 'pg-alt2'; b.textContent = '○ Entrar con Google'; b.style.cssText = 'display:block;margin:12px auto 0;font-size:11px;color:#c9a96e;background:none;border:0;text-decoration:underline;cursor:pointer;font-family:inherit'; b.onclick = () => overlayCorreo(); caja.appendChild(b); } } }, 1200); setTimeout(() => clearInterval(iv), 20000); return; }
-    // sin credencial → gate de correo encima de todo
-    if (!localStorage.getItem(LSC)) { if (!SIN_GATE) overlayCorreo(); return; }
-    // con credencial pero si el gate del board reaparece (clave vieja), ofrecer la liga
-    setTimeout(() => {
-      const g = document.getElementById('gate') || document.getElementById('mapGate');
-      if (g && !g.classList.contains('off')) {
-        const caja = g.querySelector('.gate-box, .mg-box');
-        if (caja && !caja.querySelector('.pg-alt2')) {
-          const b = document.createElement('button');
-          b.className = 'pg-alt2'; b.textContent = '○ Entrar con Google';
-          b.style.cssText = 'margin-top:12px;font-size:11px;color:#e0c590;background:none;border:0;text-decoration:underline;cursor:pointer;font-family:inherit';
-          b.onclick = () => overlayCorreo();
-          caja.appendChild(b);
-        }
-      }
-    }, 2500);
+  function quitarSubGates(k) {
+    if (!k || k !== localStorage.getItem(LSC) || k !== sesionValidada) return;
+    ['gate', 'mapGate'].forEach(id => {
+      const g = document.getElementById(id);
+      if (!g || !g.querySelector('.gate-box, .mg-box')) return;
+      g.classList.add('off');
+      g.style.setProperty('display', 'none', 'important');
+      g.setAttribute('aria-hidden', 'true');
+    });
+    const pg = document.getElementById('porteroGate');
+    if (pg) pg.remove(); // no dejar un modal oculto que impida reautenticarse
+    const retry = document.getElementById('pyodReintentar');
+    if (retry) retry.remove();
+    window.dispatchEvent(new Event('resize'));
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', engancharGates);
-  else engancharGates();
-
-  /* 4) engrane de admin: valida la credencial una vez por pestaña; si el rol es admin
-   *    muestra ⚙️ (accesos); si el token ya murió, limpia y vuelve a pedir el gate. */
-  async function engraneAdmin() {
-    const k = localStorage.getItem(LSC); if (!k || pagina === 'accesos') return;
-    let rol = '';
-    try {
-      const cache = JSON.parse(sessionStorage.getItem('pyod_rol') || 'null');
-      if (cache && cache.f === k.slice(0, 14)) rol = cache.rol;
-      else {
-        let r = await pyodPide('?recurso=canje&t=' + encodeURIComponent(k));
-        /* El Portero a veces contesta «liga» a una sesion BUENA (parpadeo de
-           Apps Script, visto el 9 y el 14-sep). Antes eso borraba la sesion y
-           ponia el candado encima de una pagina que ya habia cargado con datos.
-           Se repregunta una vez antes de creerle. */
-        if (r && r.ok === false && r.error === 'liga') {
-          await new Promise(ok => setTimeout(ok, 1800));
-          r = await pyodPide('?recurso=canje&t=' + encodeURIComponent(k));
-        }
-        if (r && r.ok) { try { localStorage.removeItem('yod_canje_fail'); } catch (e) {} rol = r.rol || 'vista'; sessionStorage.setItem('pyod_rol', JSON.stringify({ f: k.slice(0, 14), rol })); quitarSubGates(); }
-        else if (r && r.ok === false && r.error === 'liga') {
-          /* Misma regla que la cabina (yod-portal/os/app.js): la credencial es de
-             TODO el OS, así que un tablero solo la suelta tras 3 rechazos seguidos,
-             contados en la misma llave. Un parpadeo del Apps Script ya no te saca. */
-          let n = 0;
-          try { n = (parseInt(localStorage.getItem('yod_canje_fail') || '0', 10) || 0) + 1; localStorage.setItem('yod_canje_fail', String(n)); } catch (e) {}
-          if (n < 3) return;
-          localStorage.removeItem(LSC); localStorage.removeItem('yod_canje_fail'); sessionStorage.removeItem('pyod_rol');
-          if (!SIN_GATE && !MODO_SUAVE) overlayCorreo();
-          return;
-        }
-      }
-    } catch (e) { return; }
-    if (rol !== 'admin' || document.getElementById('engraneBtn')) return;
+  function ofrecerReintento() {
+    if (document.getElementById('pyodReintentar')) return;
+    const g = document.getElementById('gate') || document.getElementById('mapGate');
+    const caja = g && g.querySelector('.gate-box, .mg-box');
+    if (!caja) return;
     const b = document.createElement('button');
-    b.id = 'engraneBtn'; b.type = 'button'; b.textContent = '⚙️';
+    b.id = 'pyodReintentar'; b.type = 'button';
+    b.textContent = 'Reintentar mi sesión de Google';
+    b.onclick = () => engraneAdmin();
+    caja.appendChild(b);
+  }
+  // Entrar de forma explícita conserva el mismo login de Google.
+  window.YODPortero = { entrar: overlayCorreo, verificar: () => engraneAdmin() };
+  function engancharGates() {
+    if (sesionYaValidada()) { quitarSubGates(sesionValidada); return; }
+    if (!localStorage.getItem(LSC)) {
+      if (!SIN_GATE && !MODO_SUAVE) overlayCorreo();
+    }
+    // Los gates propios conservan su salida; nunca crear otra ventana por un fallo de red.
+    const g = document.getElementById('gate') || document.getElementById('mapGate');
+    const caja = g && g.querySelector('.gate-box, .mg-box');
+    if (caja && !caja.querySelector('.pg-alt2')) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'pg-alt2';
+      b.textContent = 'Entrar con Google';
+      b.style.cssText = 'display:block;margin:12px auto 0;font-size:12px;background:none;border:0;text-decoration:underline;cursor:pointer;font-family:inherit';
+      b.onclick = () => localStorage.getItem(LSC) ? engraneAdmin() : overlayCorreo();
+      caja.appendChild(b);
+    }
+  }
+  async function engraneAdmin() {
+    const k = localStorage.getItem(LSC);
+    if (!k || pagina === 'accesos') return;
+    const peticion = ++validacionId;
+    let r;
+    try { r = await pyodPide('?recurso=canje&t=' + encodeURIComponent(k)); }
+    catch (e) { r = null; }
+    // No aplicar respuestas anteriores a otra persona o a un cierre de sesión.
+    if (peticion !== validacionId || k !== localStorage.getItem(LSC)) return;
+    if (!r || r.ok !== true) {
+      sesionValidada = '';
+      const rechazo = r && ['liga','clave','expirado','revocado','sin_sesion','unauthorized','forbidden'].includes(String(r.error || '').toLowerCase());
+      if (rechazo) {
+        sessionStorage.removeItem('pyod_rol');
+        const admin = document.getElementById('engraneBtn'); if (admin) admin.remove();
+        if (!SIN_GATE && !MODO_SUAVE) overlayCorreo();
+      } else ofrecerReintento();
+      return;
+    }
+    sesionValidada = k;
+    const rol = r.rol || 'vista';
+    // Compatibilidad de presentación; esta caché nunca se lee para validar.
+    try {
+      localStorage.removeItem('yod_canje_fail');
+      sessionStorage.setItem('pyod_rol', JSON.stringify({ f: k.slice(0, 14), rol }));
+    } catch (e) {}
+    quitarSubGates(k);
+    if (rol !== 'admin' || document.getElementById('engraneBtn')) return;
+    const b = document.createElement('button'); b.id = 'engraneBtn'; b.type = 'button'; b.textContent = '⚙️';
     b.title = 'Accesos · quién entra a qué (solo tú lo ves)';
     b.style.cssText = 'position:fixed;right:14px;bottom:64px;z-index:1300;width:42px;height:42px;border-radius:50%;border:1px solid var(--lineaf,rgba(255,255,255,.16));background:var(--card,#131317);color:var(--text,#f4f1ea);font-size:17px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center';
     b.onclick = () => { location.href = 'https://yodesarrollomx.github.io/potenciales-yod/accesos.html'; };
     document.body.appendChild(b);
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', engraneAdmin);
-  else engraneAdmin();
+  addEventListener('storage', e => {
+    if (e.key !== LSC && e.key !== null) return;
+    sesionValidada = ''; validacionId++;
+    // Una navegación recarga también las variables de nube privadas de cada board.
+    location.reload();
+  });
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', engancharGates);
+    document.addEventListener('DOMContentLoaded', engraneAdmin);
+  } else { engancharGates(); engraneAdmin(); }
 })();
 
 /* ================== TEMA CLARO / OSCURO ==================
