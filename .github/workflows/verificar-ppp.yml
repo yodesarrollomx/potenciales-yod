@@ -28,6 +28,7 @@ jobs:
           node-version: '22'
       - name: Controles, cálculo original y sintaxis
         run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           node --check ppp-ui.js
           node --check ppp-catalog.js
           node --test tests/ppp-ui.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs
