@@ -1,15 +1,17 @@
 {
-  "model_revision": "2026-10-01.21-ppp-identidad-graficas",
-  "proposal_id": "CHG-PPP-LECTURA-002",
+  "model_revision": "2026-10-01.22-ppp-terreno-catalogo",
+  "proposal_id": "CHG-PPP-TERRENO-003",
   "components": [
     "SYS-POTENCIALES",
+    "SYS-YOD-OS",
     "GAS-PORTERO",
     "SHEET-PORTERO"
   ],
-  "summary": "Recuperar identidad y abrir el proyecto sin depender del catálogo; carga/error/reintento visibles sin sustituir sus resultados por datos de referencia. Cinco gráficas específicas desde el mismo estado confirmado de Sheets, escalas y unidades, animación suave y reducida; controles y datos preservados.",
+  "summary": "Conservar acceso al proyecto desde pines de la misma sesión durante fallos de consulta; categorías y estados visibles con reintento puntual, enlace antiguo normalizado. Mostrar terreno, retícula nativa y condiciones por etapas sin inventar geometría ni alterar cálculo, controles, versiones o backend.",
   "tests": [
     "node --test tests/ppp-ui.test.cjs tests/ppp-case-loader.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs",
     "node tests/ppp-identity-browser.cjs: carga directa, catálogo fallido, resultados ausentes, reintento, pendientes restaurados, capítulos completos y ninguna escritura de negocio",
+    "node tests/ppp-terrain-browser.cjs: retícula, áreas y diferencia vs proforma, pendientes y tarjetas cerradas; Chromium/WebKit sin escrituras de negocio",
     "node tests/ppp-browser.cjs; node tests/ppp-home-browser.cjs; node tests/access-browser.cjs",
     "Gráficas con denominadores y escalas; 81 controles, 40 KPI y motor original conservados; Chromium/WebKit, 320/390/430/1280 px, movimiento reducido y temas",
     "Sintaxis, git diff --check, verificadores del atlas y comparación de archivos publicados"

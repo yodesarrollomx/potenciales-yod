@@ -3,7 +3,7 @@
 (function (root) {
   'use strict';
   const ids = ['dArq', 'dVentas', 'dCostos', 'dMacro', 'dDota'];
-  const titles = ['Arquitectura', 'Ventas e ingresos', 'Costos', 'Macro y crédito', 'Dotaciones'];
+  const titles = ['Terreno y arquitectura', 'Ventas e ingresos', 'Costos', 'Macro y crédito', 'Dotaciones'];
   const valid = v => typeof v === 'number' && Number.isFinite(v);
   const num = (v, d = 0) => valid(v) ? v.toLocaleString('es-MX', {maximumFractionDigits:d}) : '—';
   const money = v => valid(v) ? '$' + num(v / 1e6, 2) + ' M' : '—';
@@ -21,7 +21,7 @@
     const delta=valid(mixedArea)&&valid(r.resSell)?r.resSell-mixedArea:null;
     const area = n => num(n,1)+' m²', volume=n=>num(n,2)+' m³';
     return [
-      {main:num(r.units)+' departamentos', sub:num(r.totalFloors)+' pisos · '+num(r.height,1)+' m · '+area(r.vendTotal)+' vendibles',
+      {main:area(p.terrain)+' de terreno', sub:num(r.units)+' depas · '+num(r.totalFloors)+' pisos · '+area(r.vendTotal)+' vendibles',
         note: valid(delta)&&Math.abs(delta)>.5 ? area(Math.abs(delta))+' por conciliar con la mezcla' : '',
         graphic:{kind:'architecture',values:[ratio(r.floorPlate,p.terrain),ratio(r.height,p.altMax),ratio(r.vendTotal,sum(r.resGross,r.com))],labels:['Terreno','Volumen edificado'],floors:r.totalFloors,plate:r.floorPlate,terrain:p.terrain,height:r.height,efficiency:ratio(r.vendTotal,sum(r.resGross,r.com)),caption:'Volumen conceptual · huella / terreno '+percent(ratio(r.floorPlate,p.terrain))+' · altura / tope supuesto '+percent(ratio(r.height,p.altMax))+' · escala 0–100%. No representa la implantación por cuerpos.'},
         sections:[section('Terreno y capacidad',[metric('Terreno',area(p.terrain),'','lblTerreno'),metric('Huella máxima · COS '+percent(p.cos),area(r.footprint),'','lblHuella'),metric('Sobre rasante · CUS '+num(p.cus,2),area(r.gross),'','lblConstruible'),metric('Altura máxima supuesta',num(p.altMax,1)+' m')],'La envolvente indica capacidad; no acredita un permiso.'),
@@ -51,7 +51,16 @@
           section('Suelo y operación',[metric('Área verde',area(r.greenArea)),metric('Permeable',area(r.permeable)),metric('Volumen pluvial de referencia',volume(r.pluvialM3)),metric('Densidad',num(r.densidadViv,1)+' viviendas/ha'),metric('Mantenimiento promedio','$'+num(r.cuotaProm)+' / mes')],'Dotaciones de anteproyecto; validar factibilidades y proyecto técnico.') ]}
     ];
   }
-  if(typeof module==='object'&&module.exports)module.exports={describe,num,money,valid};
+  function siteSummary(r,site,stages){
+    if(!Array.isArray(site?.uso)||!site.uso.length||!site.uso.every(row=>Array.isArray(row)&&row.every(v=>Number.isInteger(v)&&v>=0&&v<=4)))return null;
+    const rows=(Array.isArray(site.resumen)?site.resumen:[]).filter(row=>Array.isArray(row)&&row[0]);
+    const terrain=rows.find(row=>/^total terreno$/i.test(String(row[0]).trim()))?.[1];
+    const difference=valid(terrain)&&valid(r.p?.terrain)?terrain-r.p.terrain:null;
+    const conditions=(Array.isArray(stages)?stages:[]).filter(row=>Array.isArray(row)&&/traslado.*confirm|continuidad|demol/i.test(String(row[0])));
+    const pending=conditions.filter(row=>row[1]===0||row[1]===null||row[1]===undefined||row[1]===''||/pendiente/i.test(String(row[1]))).length;
+    return {grid:site.uso,rows,terrain,difference,conditions,pending};
+  }
+  if(typeof module==='object'&&module.exports)module.exports={describe,siteSummary,num,money,valid};
   if(!root.document)return;
   const $=id=>document.getElementById(id), reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
   let mounted=false, active=null, originalY=0, records=[], lastContext='', renderToken=0, focusRequest=0;
@@ -101,6 +110,7 @@
   function paintGraphic(el,g){
     el.dataset.kind=g.kind;
     const svg=el.querySelector('svg'), ink='var(--ppp-edge)', muted='var(--muted)';
+    svg.setAttribute('viewBox','0 0 300 190');
     const colors=['var(--ppp-side)','#7c9ca4','#bba780','#6c9276'];
     const label=(x,y,t,anchor='start',cls='')=>`<text class="ppp-chart-text ${cls}" x="${x}" y="${y}" text-anchor="${anchor}" fill="${muted}" font-size="11">${E(t)}</text>`;
     const rect=(x,y,w,h,c)=>`<rect x="${x}" y="${y}" width="${Math.max(0,w)}" height="${h}" rx="2" fill="${c}"/>`;
@@ -158,6 +168,19 @@
       svg.dataset.markup=html;
     }
   }
+  function paintSite(el,data,compact=false){
+    const names=['Libre','Sur','Cuerpo L','Torre','Rentas vigentes'],colors=['var(--ppp-slab)','#bad8c7','#ddc8a4','#a7bed3','#d5aba2'];
+    let h='';const maxCols=Math.max(...data.grid.map(row=>row.length)),rows=data.grid.length;
+    if(compact){
+      data.grid.forEach((row,y)=>row.forEach((v,x)=>{const a=150+(x-y)*12,b=22+(x+y)*6;h+=`<path d="M${a} ${b}l12 6 -12 6 -12 -6Z" fill="${colors[v]}" stroke="var(--ppp-edge)" stroke-width=".65"/>`;}));
+      const svg=el.querySelector('svg');svg.setAttribute('viewBox',`${136-(rows-1)*12} 20 ${(maxCols+rows)*12+4} ${(maxCols+rows)*6+4}`);svg.innerHTML=h;svg.dataset.markup='';return;
+    }
+    data.grid.forEach((row,y)=>row.forEach((v,x)=>{h+=`<rect id="pppSiteCell${y}_${x}" x="${x*30}" y="${y*30+20}" width="29" height="29" fill="${colors[v]}" stroke="var(--ppp-edge)" stroke-width=".6"><title>${E(names[v])} · fila ${y+1}, columna ${x+1}</title></rect>`;}));
+    h='<text x="0" y="12" font-size="10" fill="var(--muted)">N ↑</text>'+h;
+    const areaRows=data.rows.map((row,i)=>`<div class="ppp-site-row" id="pppSiteArea${i}"><span>${E(row[0])}</span><strong>${num(row[1],2)} m²</strong></div>`).join('');
+    const conditions=data.conditions.map((row,i)=>`<div class="ppp-site-row" id="pppSiteCondition${i}"><span>${E(row[0])}</span><strong>${E(row[1]===0?'Pendiente (0)':row[1]===null||row[1]===undefined||row[1]===''?'Pendiente':row[1])}</strong></div>`).join('');
+    el.innerHTML=`<h3>Terreno e implantación por etapas</h3><div class="ppp-site-legend">${names.map((name,i)=>`<span><i style="background:${colors[i]}" aria-hidden="true"></i>${E(name)}</span>`).join('')}</div><div class="ppp-site-grid"><svg viewBox="0 0 ${maxCols*30} ${rows*30+20}" role="img" aria-label="Retícula conceptual del mismo libro, norte arriba">${h}</svg><div class="ppp-site-areas">${areaRows}</div></div><p class="ppp-caption">Celdas de 10 × 10 m. Áreas parciales de los bordes incluidas en la tabla. La retícula indica usos; no es levantamiento ni proyecto aprobado.</p>${valid(data.difference)&&Math.abs(data.difference)>.05?`<p class="ppp-site-warning">Retícula ${num(data.terrain,2)} m² · proforma ${num(data.terrain-data.difference,2)} m² · diferencia ${num(data.difference,2)} m² por conciliar.</p>`:''}${conditions?'<h3>Protección de rentas y traslado</h3>'+conditions:''}`;
+  }
   function brand(){
     const icons={yodBurger:'<path d="M4 6h16M4 12h16M4 18h16"/>',yodBack:'<path d="m12 5-7 7 7 7M5 12h15"/>',yodSearch:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>'};
     Object.entries(icons).forEach(([id,paths])=>{const el=$(id);if(el&&!el.dataset.pppIcon){el.dataset.pppIcon='1';el.setAttribute('aria-label',({yodBurger:'Abrir tableros',yodBack:'Volver a la pantalla anterior',yodSearch:'Buscar un tablero'})[id]);el.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+paths+'</svg>';}});
@@ -204,7 +227,7 @@
       const reveal=element('div','ppp-reveal');reveal.id='pppDetail'+id;reveal.inert=true;reveal.setAttribute('aria-hidden','true');
       const inside=element('div','ppp-reveal-inner');reveal.append(inside);
       const actionbar=element('div','ppp-detail-actions'),source=element('span','ppp-source'),adjustBtn=button('Ajustar','small-btn ppp-adjust');adjustBtn.setAttribute('aria-controls',id);adjustBtn.setAttribute('aria-expanded','false');actionbar.append(source,adjustBtn);
-      const detail=element('div','ppp-detail'),viz=graphic(id),caption=element('p','ppp-caption'),legend=element('div','ppp-legend'),content=element('div','ppp-sections');detail.append(viz,legend,caption,content);
+      const detail=element('div','ppp-detail'),viz=graphic(id),caption=element('p','ppp-caption'),legend=element('div','ppp-legend'),content=element('div','ppp-sections'),sitePanel=element('section','ppp-site-panel');sitePanel.hidden=true;sitePanel.id='pppSite'+id;detail.append(viz,legend,caption,sitePanel,content);
       const all=disclosure('Todos los indicadores y sus fórmulas',[kpis]);all.classList.add('ppp-all');detail.append(all);
       if(id==='dArq'){const chapters=button('Cuerpos, etapas y rentas','small-btn secondary');chapters.onclick=()=>{const target=$('pppEtapas');target.open=true;target.scrollIntoView({block:'start',behavior:reduced()?'instant':'smooth'});};detail.append(chapters);}
       if(id==='dMacro'||id==='dVentas'){const flow=button('Ver flujo mensual','small-btn secondary');flow.onclick=()=>{const target=$('advBoard');if(target.tagName==='DETAILS')target.open=true;else target.querySelector('details')?.setAttribute('open','');target.scrollIntoView({block:'start',behavior:reduced()?'instant':'smooth'});};detail.append(flow);}
@@ -212,7 +235,7 @@
       drawer.prepend(intro);const done=button('Volver al detalle','small-btn secondary');drawer.append(done);
       inside.append(actionbar,detail,drawer);card.append(reveal);
       trigger.onclick=()=>toggle(id);adjustBtn.onclick=()=>adjust(id);done.onclick=()=>adjust(id);
-      records.push({id,card,drawer,trigger,headline,sub,note,mini,reveal,detail,source,adjust:adjustBtn,viz,legend,caption,content});
+      records.push({id,card,drawer,trigger,headline,sub,note,mini,reveal,detail,source,adjust:adjustBtn,viz,legend,caption,content,sitePanel});
       card.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.target.closest('.overlay')){e.preventDefault();if(card.classList.contains('ppp-adjusting'))adjust(id);else toggle(id,false);}});
       drawer.querySelectorAll('input[type=range]').forEach(input=>{const label=input.closest('.input-group')?.querySelector('label');if(label){label.htmlFor=input.id;input.setAttribute('aria-label',label.textContent);}});
     });
@@ -241,10 +264,12 @@
     if(lastContext&&ctx!==lastContext&&active)toggle(active,false);lastContext=ctx;
     $('pppContext').firstChild.textContent=context.native?'Resultados de Sheets · revisión '+String(context.revision||'—').slice(0,8):'Estimación del modelo · '+(context.caseId?'caso guardado':'sin guardar');
     const book=$('pppBookLink'),safeBook=/^https:\/\/docs\.google\.com\/spreadsheets\/d\//.test(context.bookUrl||'');book.hidden=!safeBook;if(safeBook)book.href=context.bookUrl;
-    const descriptions=describe(r);renderToken++;
+    const descriptions=describe(r),land=context.native?siteSummary(r,context.site,context.stages):null;renderToken++;
+    const confirmedDate=new Date(context.updated);if(context.native&&Number.isFinite(confirmedDate.getTime()))$('pppContext').firstChild.textContent+=' · '+confirmedDate.toLocaleString('es-MX',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     descriptions.forEach((d,i)=>{
       const x=records[i];x.headline.textContent=d.main;x.sub.textContent=d.sub;x.note.textContent=d.note;x.note.hidden=!d.note;
       paintGraphic(x.mini,d.graphic);paintGraphic(x.viz,d.graphic);
+      if(i===0){x.sitePanel.hidden=!land;if(land){paintSite(x.mini,land,true);const key=JSON.stringify(land);if(x.sitePanel.dataset.state!==key){paintSite(x.sitePanel,land);x.sitePanel.dataset.state=key;}const notes=[d.note];if(valid(land.difference)&&Math.abs(land.difference)>.05)notes.push('Retícula / proforma: '+num(land.difference,2)+' m² por conciliar');if(land.pending)notes.push('Etapas: '+land.pending+' condiciones pendientes');x.note.textContent=notes.filter(Boolean).join(' · ');x.note.hidden=!x.note.textContent;}}
       const overflow=[...d.graphic.values,...(d.graphic.revenueValues||[])].some(v=>valid(v)&&v>1);
       x.mini.dataset.revision=String(context.revision||renderToken);
       x.legend.replaceChildren(...d.graphic.labels.map((label,i)=>{const el=element('span','ppp-legend-'+i,label);return el;}));

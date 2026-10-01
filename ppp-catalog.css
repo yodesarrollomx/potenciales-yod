@@ -1,0 +1,6 @@
+/* Catalogue remains readable while a project list is slow or unavailable. */
+#listaTodos .lt-feedback{position:sticky;top:0!important;z-index:1;background:var(--bg,#f6f3ec);padding:8px 10px;border-bottom:1px solid var(--linea,#ddd5c5);}
+#listaTodos .lt-feedback .lt-status{margin:0 0 6px;line-height:1.4;font-size:12px;}
+#listaTodos .lt-retry,#listaTodos .lt-retry-type{min-height:44px;border:1px solid var(--linea,#ddd5c5);border-radius:9px;background:var(--card,#fff);color:var(--goldc,#7d5f1e);font:600 12px inherit;padding:8px 12px;cursor:pointer;max-width:100%;}
+#listaTodos .lt-category-status{font-size:12px;line-height:1.45;color:var(--muted,#746b5c);margin:9px 12px;}
+#listaTodos .lt-retry-type{margin:0 12px 10px;}

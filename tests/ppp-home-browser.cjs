@@ -26,7 +26,7 @@ async function fixture(context,options={}){
   }
   if(action==='mapa'){
    if(options.mapFail)return route.abort();
-   return route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,pines:types.map((t,i)=>({tipo:t,lat:20+i,lng:-104+i,nombre:'Pin de prueba',lugar:'Lugar sintético',dato1:'Referencia',dato2:'',link:''}))})});
+   return route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,pines:options.pins||types.map((t,i)=>({tipo:t,lat:20+i,lng:-104+i,nombre:'Pin de prueba',lugar:'Lugar sintético',dato1:'Referencia',dato2:'',link:''}))})});
   }
   return route.fallback();
  });
@@ -43,6 +43,7 @@ async function menuAboveMap(p){
 }
 (async()=>{
  for(const [name,engine] of Object.entries({chromium,webkit})){
+  if(process.env.PPP_ENGINE&&process.env.PPP_ENGINE!==name)continue;
   const browser=await engine.launch({headless:true});
   try{
    const c=await browser.newContext({viewport:{width:430,height:932},isMobile:true,hasTouch:true}),net=await fixture(c),p=await c.newPage(),errors=[];
@@ -79,9 +80,18 @@ async function menuAboveMap(p){
    assert.equal(partial.calls.filter(t=>t==='macrolotes').length,1,'Successful lists are not fetched on partial retry');
    assert.equal(await q.locator('.lt-status').count(),0,'No stale error after recovery');assert.equal(partial.writes.length,0);await d.close();
    console.log('PASS '+name+': catalogue independent of failed map; partial progress, malformed response, retry only failed types, complete count after recovery.');
+   // A saved map access must survive a delayed/failed list, but never denial/empty confirmation.
+   const recovery={status:{vertical:'network'},pins:[{tipo:'vertical',lat:29,lng:-110,nombre:'Terreno de prueba',dato1:'Dato histórico 999',dato2:'Importe histórico 999',link:'https://alexpueblag.github.io/potenciales-yod/mixto.html?open=prueba%20vertical%2F0'},{tipo:'vertical',nombre:'Duplicado',link:'https://alexpueblag.github.io/potenciales-yod/mixto.html?open=prueba%20vertical%2F0'},{tipo:'vertical',nombre:'Ajeno',link:'https://example.org/potenciales-yod/mixto.html?open=bad'}]};
+   const rc=await browser.newContext({viewport:{width:430,height:932},isMobile:true,hasTouch:true}),rn=await fixture(rc,recovery),rp=await rc.newPage();await rp.goto('https://ppp.test/potenciales-yod/index.html');await rp.locator('#btnTodos').click();await rp.waitForFunction(()=>document.getElementById('cntTodos').textContent==='13+');
+   await rp.evaluate(()=>window._pyodMap.eachLayer(layer=>{if(layer.getPopup)layer.openPopup();}));assert.equal(await rp.locator('.pp-a').getAttribute('href'),'mixto.html?open=prueba%20vertical%2F0');await rp.evaluate(()=>window._pyodMap.closePopup());
+   const group=rp.locator('.lt-group[data-type=vertical]');assert.equal(await group.locator('.lt-item').count(),1);assert.equal(await group.locator('a').getAttribute('href'),'mixto.html?open=prueba%20vertical%2F0');assert.match(await group.innerText(),/Acceso del mapa/);assert.equal((await rp.locator('#listaTodos').innerText()).includes('999'),false);assert.equal((await rp.locator('#listaTodos').innerText()).includes('Ajeno'),false);
+   await rp.locator('#listaTodos').evaluate(e=>e.scrollTop=e.scrollHeight);assert.ok(await rp.locator('.lt-feedback').evaluate(e=>{const a=e.getBoundingClientRect(),b=e.parentElement.getBoundingClientRect();return a.top<b.top+8;}),'Failure remains visible above the scroll');
+   recovery.status={};await group.locator('.lt-retry-type').click();await rp.waitForFunction(()=>document.getElementById('cntTodos').textContent==='15');assert.equal(await group.locator('.lt-item').count(),3);assert.equal((await group.innerText()).includes('Acceso del mapa'),false);assert.equal(rn.calls.filter(t=>t==='macrolotes').length,1);assert.equal(rn.writes.length,0);await rp.evaluate(()=>{localStorage.removeItem('pyod_clave_v1');PPPCatalog.load('');PPPCatalog.mapData('old-session',[{tipo:'vertical',nombre:'Private late pin',link:'mixto.html?open=late'}]);});assert.equal(await rp.locator('.lt-item').count(),0);await rc.close();
+   for(const failure of ['denied','empty']){const cc=await browser.newContext({viewport:{width:430,height:932}});const blocked={status:{vertical:failure},pins:recovery.pins};await fixture(cc,blocked);const cp=await cc.newPage();await cp.goto('https://ppp.test/potenciales-yod/mapa.html');await cp.locator('#btnTodos').click();await cp.waitForFunction(expected=>document.getElementById('cntTodos').textContent===expected,failure==='denied'?'12+':'12');assert.equal(await cp.locator('.lt-group[data-type=vertical] .lt-item').count(),0);if(failure==='denied'){blocked.status.vertical='network';await cp.locator('.lt-retry').click();await cp.waitForFunction(()=>document.querySelector('.lt-retry'));assert.equal(await cp.locator('.lt-group[data-type=vertical] .lt-item').count(),0,'Transport retry cannot undo an access rejection');blocked.status.vertical='delay';await cp.locator('.lt-retry').click();assert.equal(await cp.locator('.lt-group[data-type=vertical] .lt-item').count(),0,'Rejected access stays suppressed during retry');await cp.waitForFunction(()=>document.getElementById('cntTodos').textContent==='15');}await cc.close();}
+   console.log('PASS '+name+': saved map access survives missing list, canonical URL, no stale financial data or duplicates, visible feedback, targeted retry; denial and confirmed empty list remain authoritative.');
    const delayed={status:Object.fromEntries(types.map(t=>[t,'delay'])),delay:350};
    const e=await browser.newContext({viewport:{width:430,height:932},isMobile:true,hasTouch:true}),slow=await fixture(e,delayed);
-   await e.addInitScript(()=>{const native=setTimeout;window.setTimeout=(fn,ms,...args)=>native(fn,ms===25000?100:ms,...args);});
+   await e.addInitScript(()=>{const native=setTimeout;window.setTimeout=(fn,ms,...args)=>native(fn,ms===60000?100:ms,...args);});
    const v=await e.newPage();await v.goto('https://ppp.test/potenciales-yod/index.html');await v.locator('#btnTodos').click();await v.locator('.lt-retry').waitFor();assert.match(await v.locator('.lt-status').innerText(),/5 de 5/);assert.equal(await v.locator('#cntTodos').innerText(),'…');
    delayed.status=Object.fromEntries(types.map(t=>[t,'empty']));await v.locator('.lt-retry').click();await v.waitForFunction(()=>document.getElementById('cntTodos').textContent==='0');assert.match(await v.locator('.lt-status').innerText(),/Aún no hay/);
    delayed.status=Object.fromEntries(types.map(t=>[t,'delay']));

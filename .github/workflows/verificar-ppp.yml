@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: yodesarrollomx/yod-portal
-          ref: 730d127909189622dbcd0dc0692e6261d96e61cd
+          ref: eeabfbeb6103acb79429b667e155a6d0a9447ef5
           path: .yod-atlas-ui
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -53,6 +53,7 @@ jobs:
         run: |
           node tests/ppp-browser.cjs
           node tests/ppp-identity-browser.cjs
+          node tests/ppp-terrain-browser.cjs
           node tests/ppp-home-browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
