@@ -1,19 +1,18 @@
 {
-  "model_revision": "2026-10-01.12-ppp-interfaz",
-  "proposal_id": "CHG-PPP-UI-001",
+  "model_revision": "2026-10-01.19-ppp-mapa-catalogo",
+  "proposal_id": "CHG-PPP-MAPA-001",
   "components": [
     "SYS-POTENCIALES",
     "SYS-YOD-OS",
-    "SHEET-PPP-MODELOS",
     "GAS-PORTERO"
   ],
-  "summary": "Implementar resumen, expansión en sitio y ajustes existentes en PPP vertical. Infografías volumétricas del mismo estado confirmado; retiro del selector superior y logotipo YoDesarrollo OS local al PPP. Mantener contratos de cálculo, autenticación, guardado y versiones.",
+  "summary": "Corregir portada y mapa PPP: capas Leaflet aisladas del sidebar; listado progresivo independiente del mapa, con timeout y reintento de las listas fallidas; cinco planificadores en cuadrícula compacta de iconos SVG y descripciones completas en detalles. Mismos endpoints, permisos y motores.",
   "tests": [
-    "node --test tests/ppp-ui.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs: 23 pruebas aprobadas",
-    "node tests/ppp-browser.cjs: Chromium y WebKit; controles 81, KPI 40; detalle, ajustes, guardar, versiones, fórmulas y entrada de casos",
-    "Modelo nativo sintético: revisión confirmada, conflicto y recarga conservan resultados y cantidades; sin POST de producción",
-    "320/390/430/1280 px, transición entre tarjetas, reducción de movimiento, teclado; 20 recorridos previos de acceso",
-    "Motor idéntico a 12213ec, siete sensibilidades sintéticas, git diff --check y sintaxis"
+    "node tests/ppp-home-browser.cjs: Chromium y WebKit, Leaflet y shell reales con 15 casos sintéticos; agrupación, enlaces, scroll, capas y gestos de menú",
+    "Consultas parciales, fallo del mapa, datos malformados, timeout, reintento, listas vacías y descarte de respuestas tras cambio de sesión",
+    "320/390/430/1280 px; cinco SVG locales y todas las descripciones; temas y cero escrituras de negocio",
+    "node tests/ppp-browser.cjs: seis recorridos conservados de tarjetas, ajustes, versiones, confirmación nativa y conflictos",
+    "23 pruebas unitarias PPP y 124 del atlas; verificadores, sintaxis y git diff --check"
   ],
-  "rollback": "Revertir mediante PR el commit de interfaz y la referencia de atlas. Conservar borradores, colas, casos, libros, sesiones y backend."
+  "rollback": "Revertir mediante PR los archivos de portada/mapa/catálogo y la referencia fija del atlas. Conservar sesiones, libros, casos, controles y registros privados."
 }
