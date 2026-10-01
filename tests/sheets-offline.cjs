@@ -1,0 +1,17 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),test=require('node:test');
+const html=fs.readFileSync(require('node:path').join(__dirname,'../mixto.html'),'utf8');
+const between=(a,b)=>html.slice(html.indexOf(a),html.indexOf(b,html.indexOf(a)));
+const functions=between('  function queueSheetSync(){','  async function reloadSheetModel()')+between('  function guardarDraft(){','  function pintaCaso(){')+between('  function calculate(){','  /* ================== VERSIONES')+between('  function aplicarCasoRemoto(obj){','  async function abrirPorId(id)');
+function harness(){
+  const store=new Map();let calls=0,timers=0,computations=0;
+  const ctx={console,localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)},LS:{draft:'test'},sheetModel:null,sheetPending:null,sheetNeedsRefresh:false,sheetFailure:false,sheetBusy:false,sheetTimer:null,state:null,escActivo:'v1',escenarios:[],caso:{caso_id:'test-case'},modoLocal:true,values:{inPrecio:12.345},inputValues:()=>({...ctx.values}),setControl:(k,v)=>ctx.values[k]=v,escGet:id=>ctx.escenarios.find(x=>x.id===id),escAplicar:e=>ctx.values={...e.inputs},render:()=>{},renderComparador:()=>{},renderEscenarios:()=>{},sheetStatus:s=>ctx.status=s,toast:s=>ctx.toast=s,clearTimeout:()=>{},setTimeout:()=>{timers++;return 1},apiPost:async()=>{calls++;return {ok:true}},acceptSheetModel:()=>{},nuevoRequestId:()=> 'request',clampRelations:()=>{},computar:()=>{computations++;return {legacy:true}},escSyncActivo:()=>{}};
+  vm.createContext(ctx);vm.runInContext(functions,ctx);
+  return {ctx,store,counters:()=>({calls,timers,computations})};
+}
+const model=()=>({caso_id:'test-case',revision:'abc123',activo:'v1',escenarios:[{id:'v1',inputs:{inPrecio:10}}],estados:{v1:{profit:123,flows:[]}}});
+test('Native draft restores confirmed results and preserves unconfirmed quantities',()=>{const h=harness();h.ctx.sheetModel=model();h.ctx.escenarios=h.ctx.sheetModel.escenarios;h.ctx.guardarDraft();h.ctx.sheetModel=null;h.ctx.values={};h.ctx.cargarDraft();h.ctx.calculate();assert.equal(h.ctx.values.inPrecio,12.345);assert.equal(h.ctx.state.profit,123);assert.equal(h.ctx.sheetNeedsRefresh,true);assert.equal(h.counters().computations,0);assert.equal(h.counters().timers,0);});
+test('Restored native draft cannot write even if a credential is cached',async()=>{const h=harness();Object.assign(h.ctx,{sheetModel:model(),sheetPending:{scenario:'v1',inputs:{inPrecio:20}},sheetNeedsRefresh:true,modoLocal:false});await h.ctx.flushSheetSync();assert.equal(h.counters().calls,0);assert.equal(h.ctx.sheetPending.inputs.inPrecio,20);});
+test('Native draft with unchanged quantities still remains unverified',()=>{const h=harness();Object.assign(h.ctx,{sheetModel:model(),values:{inPrecio:10},sheetNeedsRefresh:true});h.ctx.calculate();assert.equal(h.ctx.sheetFailure,true);assert.match(h.ctx.status,/verifica conexión/);assert.equal(h.counters().computations,0);});
+test('Unavailable native model does not fall back to a financial client engine',()=>{const h=harness();h.ctx.sheetModel=model();h.ctx.aplicarCasoRemoto({caso_id:'test-case'});assert.equal(h.ctx.sheetNeedsRefresh,true);assert.equal(h.ctx.sheetModel.revision,'abc123');assert.equal(h.counters().computations,0);});
+test('Non-migrated draft retains existing behavior',()=>{const h=harness();h.ctx.calculate();assert.equal(h.ctx.state.legacy,true);assert.equal(h.counters().computations,1);});

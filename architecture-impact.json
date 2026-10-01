@@ -1,15 +1,20 @@
 {
-  "model_revision": "2026-09-30.1",
-  "proposal_id": "CHG-ATLAS-001",
-  "summary": "Incorporar este repositorio al atlas de YOD OS: instrucciones para agentes, declaración de impacto y verificación de propuestas versionadas antes de integrar cambios.",
+  "model_revision": "2026-09-30.3",
+  "proposal_id": "CHG-PPP-SHEETS-001",
   "components": [
     "SYS-POTENCIALES",
     "GAS-PORTERO",
-    "SHEET-PORTERO"
+    "SHEET-PORTERO",
+    "SHEET-PPP-MODELOS",
+    "SYS-CONTROL"
   ],
+  "summary": "Conectar casos registrados con resultados y versiones canónicas en Sheets; mostrar programa por cuerpos, cruce con proforma y flujo por etapas desde el mismo libro. Proteger el borrador nativo sin conexión y fijar la propuesta central antes de integrar.",
   "tests": [
-    "git diff --check",
-    "Revisión sintáctica local de JavaScript/HTML y, cuando corresponde, AST de Python, sin ejecutar integraciones."
+    "Ocho escenarios financieros conciliados con fórmulas nativas",
+    "Diez pruebas de transporte y cinco de frontend de la preparación inicial",
+    "node --test tests/sheets-offline.cjs: 5/5",
+    "Sintaxis de scripts inline validada",
+    "Verificación de impacto con atlas fijado"
   ],
-  "rollback": "Revertir el commit de este cambio mediante revisión y repetir las verificaciones locales. No borrar ni restaurar registros de negocio, Sheets o archivos de clientes como parte del rollback."
+  "rollback": "Revertir este PR; conservar libros, versiones y registros. Backend existente todavía sin actualizar; no modificar Portero ni datos operativos al revertir frontend."
 }
