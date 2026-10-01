@@ -74,7 +74,7 @@
       states[type] = {status: 'ok', rows: data.casos};
     } catch (e) {
       if (generation !== epoch || session !== credential || session !== key()) return;
-      states[type] = {status: 'error', rows: [],denied:!!e.denied};
+      states[type] = {status: 'error', rows: [],denied:!!e.denied||!!states[type]?.denied};
     } finally {
       clearTimeout(timer); controllers.delete(controller);
       if (generation === epoch && session === credential && session === key()) render();
@@ -92,7 +92,7 @@
     credential = session;
     const generation = epoch;
     const requests = Object.keys(tipos).filter(t => (!onlyType||t===onlyType)&&(!states[t] || states[t].status === 'error'));
-    requests.forEach(t => states[t] = {status: 'loading', rows: []}); render();
+    requests.forEach(t => states[t] = {status: 'loading', rows: [],denied:!!states[t]?.denied}); render();
     requests.forEach(t => { void read(t, session, generation); });
   }
   button.setAttribute('aria-expanded', 'false'); button.setAttribute('aria-controls', list.id);
