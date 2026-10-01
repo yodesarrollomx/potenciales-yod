@@ -12,7 +12,8 @@
     "Consultas parciales, fallo del mapa, datos malformados, timeout, reintento, listas vacías y descarte de respuestas tras cambio de sesión",
     "320/390/430/1280 px; cinco SVG locales y todas las descripciones; temas y cero escrituras de negocio",
     "node tests/ppp-browser.cjs: seis recorridos conservados de tarjetas, ajustes, versiones, confirmación nativa y conflictos",
-    "23 pruebas unitarias PPP y 124 del atlas; verificadores, sintaxis y git diff --check"
+    "23 pruebas unitarias PPP y 124 del atlas; verificadores, sintaxis y git diff --check",
+    "CI: entorno oficial Playwright 1.55.1-noble con navegadores preinstalados; mismas pruebas, sin saltar verificaciones ante timeout de descargas del runner"
   ],
   "rollback": "Revertir mediante PR los archivos de portada/mapa/catálogo y la referencia fija del atlas. Conservar sesiones, libros, casos, controles y registros privados."
 }
