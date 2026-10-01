@@ -303,7 +303,7 @@
 
 #mercadoDocumento[hidden]{display:none}#mercadoDocumento table{width:100%;border-collapse:collapse;font-size:11px}#mercadoDocumento td,#mercadoDocumento th{padding:8px;border-bottom:1px solid var(--linea);text-align:left}#mercadoDocumento h3{font-size:14px}#mercadoDocumento{overflow-wrap:anywhere}#mercadoDocumento button{margin-top:10px}
 </style>
-<link rel="stylesheet" href="ppp-ui.css?v=20261001-3">
+<link rel="stylesheet" href="ppp-ui.css?v=20261001-4">
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -537,8 +537,8 @@
 </div></div>
 
 <div id="toast"></div>
-<script src="ppp-ui.js?v=20261001-3"></script>
-<script src="ppp-case-loader.js?v=20261001-3"></script>
+<script src="ppp-ui.js?v=20261001-4"></script>
+<script src="ppp-case-loader.js?v=20261001-4"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -977,7 +977,7 @@
     const filasF=[];r.flows.forEach((x,i)=>{if(i%12===0)filasF.push(`<tr class="year-row"><td colspan="7">AÑO ${Math.floor(i/12)+1}</td></tr>`);filasF.push(`<tr><td>${x.m}</td><td>${fmtM(x.rev)}</td><td>${fmtM(x.cost)}</td><td>${fmtM(x.equity)}</td><td>${fmtM(x.pik+x.fee)}</td><td>${fmtM(x.debt)}</td><td>${fmtM(x.caja)}</td></tr>`)});
     filasF.push(`<tr class="tot-row"><td>Σ ${r.totalMonths} meses</td><td>${fmtM(r.revTotal)}</td><td>${fmtM(r.costTotal)}</td><td>${fmtM(r.equityUsed)}</td><td>${fmtM(r.interest+r.feeDebt)}</td><td>${fmtM(r.debt)}</td><td>${fmtM(r.cash)}</td></tr>`);
     $('flowRows').innerHTML=filasF.join('');renderProforma(r);renderLandDeal(r);renderFormulas();refreshJson();
-    window.PPPView?.update(r,{native:!!sheetModel,revision:sheetModel?.revision,caseId:caso.caso_id,scenario:escActivo,scenarioName:escGet(escActivo)?.nombre,projectName:caso.nombre_caso,updated:sheetModel?.actualizado,bookUrl:sheetModel?.libro_url});
+    window.PPPView?.update(r,{native:!!sheetModel,revision:sheetModel?.revision,caseId:caso.caso_id,scenario:escActivo,scenarioName:escGet(escActivo)?.nombre,projectName:caso.nombre_caso,updated:sheetModel?.actualizado,bookUrl:sheetModel?.libro_url,site:sheetModel?.reticula,stages:sheetModel?.etapas});
   }
   function renderProforma(r){
     const row=(label,value,klass='')=>`<tr class="${klass}"><td>${label}</td><td>${value}</td></tr>`,section=label=>`<tr class="section-row"><td colspan="2">${label}</td></tr>`,economicTotal=r.projectCost+r.interest+r.feeDebt,cashOk=Math.abs(r.cashReconciliation)<1;
@@ -1124,7 +1124,7 @@
     $('segSiguiente').value=caso.siguiente_paso||'';
     $('segLog').textContent=caso.notas_seguimiento||'Sin notas todavía.'+(caso.caso_id?'':' Guarda el caso primero para dar seguimiento.');
      renderReuniones();
-     if(state)window.PPPView?.update(state,{native:!!sheetModel,revision:sheetModel?.revision,caseId:caso.caso_id,scenario:escActivo,scenarioName:escGet(escActivo)?.nombre,projectName:caso.nombre_caso,updated:sheetModel?.actualizado,bookUrl:sheetModel?.libro_url});
+     if(state)window.PPPView?.update(state,{native:!!sheetModel,revision:sheetModel?.revision,caseId:caso.caso_id,scenario:escActivo,scenarioName:escGet(escActivo)?.nombre,projectName:caso.nombre_caso,updated:sheetModel?.actualizado,bookUrl:sheetModel?.libro_url,site:sheetModel?.reticula,stages:sheetModel?.etapas});
   }
   function aplicarCasoRemoto(obj){
     if(!window.PPPCaseLoader.validModel(obj.calculo_sheet,obj.caso_id)){

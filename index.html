@@ -114,6 +114,7 @@
 </style>
 <style>.leaflet-tile{filter:invert(1) hue-rotate(180deg) saturate(.55) brightness(.9) contrast(.9)}.leaflet-container{background:#17140F}</style>
 <link rel="stylesheet" href="ppp-home.css?v=20261001-2">
+<link rel="stylesheet" href="ppp-catalog.css?v=20261001-4">
 </head>
 <body>
 <header id="pppHomeHeader">
@@ -195,7 +196,8 @@
     capa.clearLayers();const activos=pines.filter(p=>filtros.has(p.tipo));
     activos.forEach(p=>{
       const T=TIPOS[p.tipo]||{n:p.tipo,e:'📍',hex:'#B98B3C'};
-      const html=`<div style="min-width:210px"><span class="pp-badge" style="background:${T.hex}">${T.e} ${esc(T.n)}</span><p class="pp-t">${esc(p.nombre)}</p><p class="pp-l">📍 ${esc(p.lugar)}</p><p class="pp-d">${esc(p.dato1)}</p><p class="pp-d"><b>${esc(p.dato2)}</b></p>${urlOk(p.link)?`<a class="pp-a" href="${esc(urlOk(p.link))}" target="_blank" rel="noopener">Abrir ${/docs.google/.test(p.link)?'Sheet':'board'} →</a>`:''}</div>`;
+      const saved=window.PPPCatalog?.projectLink(p),destination=saved?TIPOS[p.tipo]&&({macrolotes:'macrolotes.html',vertical:'mixto.html',unifamiliar:'unifamiliar.html',residencial:'residencial.html',patrimonial:'patrimonial.html'})[p.tipo]+'?open='+encodeURIComponent(saved.caso_id):urlOk(p.link);
+      const html=`<div style="min-width:210px"><span class="pp-badge" style="background:${T.hex}">${T.e} ${esc(T.n)}</span><p class="pp-t">${esc(p.nombre)}</p><p class="pp-l">📍 ${esc(p.lugar)}</p><p class="pp-d">Referencia del pin · validar versión al abrir</p><p class="pp-d">${esc(p.dato1)}</p><p class="pp-d"><b>${esc(p.dato2)}</b></p>${destination?`<a class="pp-a" href="${esc(destination)}" target="_blank" rel="noopener">Abrir ${/docs.google/.test(p.link)?'Sheet':'board'} →</a>`:''}</div>`;
       L.marker([p.lat,p.lng],{icon:icono(p.tipo)}).bindPopup(html).addTo(capa);
     });
     if(activos.length)bounds=L.latLngBounds(activos.map(p=>[p.lat,p.lng])).pad(0.25);
@@ -214,14 +216,16 @@
     document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{const t=b.dataset.t;filtros.has(t)?filtros.delete(t):filtros.add(t);pinta()});
   }
   async function cargar(k){
+    const previous=localStorage.getItem(LSK);
     const r=await fetch(ENDPOINT+'?recurso=mapa&k='+encodeURIComponent(k)).then(x=>x.json());
     if(!r.ok)throw r.error||'error';
-    pines=r.pines||[];initMap();pinta();
+    if(localStorage.getItem(LSK)!==previous&&localStorage.getItem(LSK)!==k)throw Error('sesion_cambio');
+    const loadedPins=Array.isArray(r.pines)?r.pines:[];pines=loadedPins;const feed=()=>{window.PPPCatalog?.mapData(k,loadedPins);if(map&&k===localStorage.getItem(LSK))pinta();};if(window.PPPCatalog)feed();else addEventListener('ppp:catalog-ready',feed,{once:true});initMap();pinta();
   }
   async function entrar(){
     const v=$('mgClave').value.trim();if(!v){$('mgErr').textContent='Escribe la clave';return}
     $('mgBtn').disabled=true;$('mgErr').textContent='';
-    try{await cargar(v);clave=v;localStorage.setItem(LSK,v);window.PPPCatalog?.load(v);$('mapGate').classList.add('off');ajusta()}
+    try{await cargar(v);clave=v;localStorage.setItem(LSK,v);window.PPPCatalog?.mapData(v,pines);$('mapGate').classList.add('off');ajusta()}
     catch(e){$('mgErr').textContent=e==='clave'?'Clave incorrecta':'Sin conexión con el Sheet'}
     $('mgBtn').disabled=false;
   }
@@ -230,7 +234,7 @@
   if(clave){cargar(clave).then(()=>{$('mapGate').classList.add('off');ajusta()}).catch(e=>{if(e==='clave'){localStorage.removeItem(LSK);$('mgErr').textContent='La clave cambió'}})}
 })();
 </script>
-<script src="ppp-catalog.js?v=20261001-2"></script>
+<script src="ppp-catalog.js?v=20261001-4"></script>
 <script src="portero.js?v=relevo9"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=audit-20260930"></script>
 </body>

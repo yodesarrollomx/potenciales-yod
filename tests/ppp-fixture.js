@@ -13,7 +13,7 @@ function native(){const d=draft();return {ok:true,caso_id:d.caso.caso_id,revisio
 const mime=p=>p.endsWith('.css')?'text/css':p.endsWith('.js')?'text/javascript':p.endsWith('.png')?'image/png':p.endsWith('.svg')?'image/svg+xml':'text/html; charset=utf-8';
 async function install(context,opts={}){
  const atlas=process.env.YOD_ATLAS_DIR||path.resolve(root,'../yod-atlas');
- const transport={posts:[],gets:[],conflict:false,listError:opts.listError,caseError:opts.caseError,caseDelay:opts.caseDelay||0,native:opts.native,model:native()};
+ const transport={posts:[],gets:[],conflict:false,listError:opts.listError,caseError:opts.caseError,caseDelay:opts.caseDelay||0,native:opts.native,model:opts.model||native()};
  await context.addInitScript(({seed})=>{localStorage.setItem('pyod_clave_v1','sy-synthetic-browser-session');sessionStorage.setItem('yod_drawer_seen','1');localStorage.setItem('yod_tema','claro');if(seed&&!sessionStorage.getItem('ppp_fixture_seeded')){localStorage.setItem('pyod_draft_v1',JSON.stringify(seed));sessionStorage.setItem('ppp_fixture_seeded','1');}},{seed:opts.seed===undefined?draft():opts.seed});
  await context.route('**/*',async route=>{
   const req=route.request(),u=new URL(req.url());

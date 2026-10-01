@@ -1,7 +1,7 @@
 /* Read-only case selection. A late response can never replace a newer selection. */
 (function(root){
  'use strict';
- function create(read,timeoutMs=20000){
+ function create(read,timeoutMs=60000){
   let generation=0;
   return {invalidate(){generation++;},async load(params){
    const ticket=++generation;let timer;
