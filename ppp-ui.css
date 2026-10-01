@@ -137,3 +137,5 @@ body.ppp-ui{--ppp-slab:#e5dfd2;--ppp-top:#f4ead2;--ppp-face:#decca5;--ppp-side:#
 [data-tema="oscuro"] .ppp-ui .small-btn.secondary{background:var(--surface);color:var(--text)}
 [data-tema="oscuro"] .ppp-ui .sheet,[data-tema="oscuro"] .ppp-ui #toast{background:var(--card);color:var(--text)}
 .ppp-card[data-card=dDota] .ppp-legend-0:before{background:#6e9ca8}.ppp-card[data-card=dDota] .ppp-legend-2:before{background:#859c66}
+
+.ppp-ui #yodSearch{width:44px;min-height:44px;padding:0;justify-content:center;flex:none;margin-left:auto}.ppp-ui .yod-top-actions{margin-left:0}

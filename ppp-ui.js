@@ -119,7 +119,7 @@
   }
   function brand(){
     const icons={yodBurger:'<path d="M4 6h16M4 12h16M4 18h16"/>',yodBack:'<path d="m12 5-7 7 7 7M5 12h15"/>',yodSearch:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>'};
-    Object.entries(icons).forEach(([id,paths])=>{const el=$(id);if(el&&!el.dataset.pppIcon){el.dataset.pppIcon='1';el.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+paths+'</svg>';}});
+    Object.entries(icons).forEach(([id,paths])=>{const el=$(id);if(el&&!el.dataset.pppIcon){el.dataset.pppIcon='1';el.setAttribute('aria-label',({yodBurger:'Abrir tableros',yodBack:'Volver a la pantalla anterior',yodSearch:'Buscar un tablero'})[id]);el.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+paths+'</svg>';}});
     document.querySelectorAll('.yod-topbrand,.yod-brand').forEach(a=>{
       if(a.dataset.pppBrand)return;a.dataset.pppBrand='1';a.setAttribute('aria-label','YoDesarrollo OS');
       a.innerHTML='<span class="ppp-logo-crop"><img src="img/yod-logo.png" alt="YoDesarrollo"></span><span class="ppp-os">OS</span>';
