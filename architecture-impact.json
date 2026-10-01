@@ -1,19 +1,18 @@
 {
-  "model_revision": "2026-10-01.19-ppp-mapa-catalogo",
-  "proposal_id": "CHG-PPP-MAPA-001",
+  "model_revision": "2026-10-01.21-ppp-identidad-graficas",
+  "proposal_id": "CHG-PPP-LECTURA-002",
   "components": [
     "SYS-POTENCIALES",
-    "SYS-YOD-OS",
-    "GAS-PORTERO"
+    "GAS-PORTERO",
+    "SHEET-PORTERO"
   ],
-  "summary": "Corregir portada y mapa PPP: capas Leaflet aisladas del sidebar; listado progresivo independiente del mapa, con timeout y reintento de las listas fallidas; cinco planificadores en cuadrícula compacta de iconos SVG y descripciones completas en detalles. Mismos endpoints, permisos y motores.",
+  "summary": "Recuperar identidad y abrir el proyecto sin depender del catálogo; carga/error/reintento visibles sin sustituir sus resultados por datos de referencia. Cinco gráficas específicas desde el mismo estado confirmado de Sheets, escalas y unidades, animación suave y reducida; controles y datos preservados.",
   "tests": [
-    "node tests/ppp-home-browser.cjs: Chromium y WebKit, Leaflet y shell reales con 15 casos sintéticos; agrupación, enlaces, scroll, capas y gestos de menú",
-    "Consultas parciales, fallo del mapa, datos malformados, timeout, reintento, listas vacías y descarte de respuestas tras cambio de sesión",
-    "320/390/430/1280 px; cinco SVG locales y todas las descripciones; temas y cero escrituras de negocio",
-    "node tests/ppp-browser.cjs: seis recorridos conservados de tarjetas, ajustes, versiones, confirmación nativa y conflictos",
-    "23 pruebas unitarias PPP y 124 del atlas; verificadores, sintaxis y git diff --check",
-    "CI: entorno oficial Playwright 1.55.1-noble con navegadores preinstalados; mismas pruebas, sin saltar verificaciones ante timeout de descargas del runner"
+    "node --test tests/ppp-ui.test.cjs tests/ppp-case-loader.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs",
+    "node tests/ppp-identity-browser.cjs: carga directa, catálogo fallido, resultados ausentes, reintento, pendientes restaurados, capítulos completos y ninguna escritura de negocio",
+    "node tests/ppp-browser.cjs; node tests/ppp-home-browser.cjs; node tests/access-browser.cjs",
+    "Gráficas con denominadores y escalas; 81 controles, 40 KPI y motor original conservados; Chromium/WebKit, 320/390/430/1280 px, movimiento reducido y temas",
+    "Sintaxis, git diff --check, verificadores del atlas y comparación de archivos publicados"
   ],
-  "rollback": "Revertir mediante PR los archivos de portada/mapa/catálogo y la referencia fija del atlas. Conservar sesiones, libros, casos, controles y registros privados."
+  "rollback": "Revertir frontend y referencia fija del atlas por PR. Conservar libros, versiones, contratos y registros privados."
 }

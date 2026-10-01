@@ -303,7 +303,7 @@
 
 #mercadoDocumento[hidden]{display:none}#mercadoDocumento table{width:100%;border-collapse:collapse;font-size:11px}#mercadoDocumento td,#mercadoDocumento th{padding:8px;border-bottom:1px solid var(--linea);text-align:left}#mercadoDocumento h3{font-size:14px}#mercadoDocumento{overflow-wrap:anywhere}#mercadoDocumento button{margin-top:10px}
 </style>
-<link rel="stylesheet" href="ppp-ui.css?v=20261001-1">
+<link rel="stylesheet" href="ppp-ui.css?v=20261001-3">
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -537,7 +537,8 @@
 </div></div>
 
 <div id="toast"></div>
-<script src="ppp-ui.js?v=20261001-1"></script>
+<script src="ppp-ui.js?v=20261001-3"></script>
+<script src="ppp-case-loader.js?v=20261001-3"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -659,7 +660,7 @@
     }catch(e){sheetPending=sheetPending?{scenario:job.scenario,inputs:{...job.inputs,...sheetPending.inputs}}:job;sheetFailure=true;sheetStatus('Sin conexión · cambios pendientes; resultados anteriores');}
     finally{sheetBusy=false;if(sheetPending&&!sheetFailure)flushSheetSync();}
   }
-  async function reloadSheetModel(){if(!sheetModel||sheetBusy)return;try{const m=await apiGet({recurso:'sheet-model',id:caso.caso_id});if(!m.ok)throw Error(m.error);if(sheetPending&&!confirm("Recargar descartará las cantidades pendientes de este tablero. ¿Leer las actuales de Sheets?"))return;sheetPending=null;sheetFailure=false;acceptSheetModel(m,escActivo);}catch(e){sheetFailure=true;sheetStatus('No se pudo leer Sheets · datos anteriores');}}
+  async function reloadSheetModel(){if(!sheetModel||sheetBusy||caseSelection)return;const sourceModel=sheetModel,sourceCase=caso.caso_id;try{const m=await apiGet({recurso:'sheet-model',id:sourceCase});if(sheetModel!==sourceModel||caso.caso_id!==sourceCase||caseSelection)return;if(!window.PPPCaseLoader.validModel(m,sourceCase))throw Error(m.error);if(sheetPending&&!confirm("Recargar descartará las cantidades pendientes de este tablero. ¿Leer las actuales de Sheets?"))return;sheetPending=null;sheetFailure=false;acceptSheetModel(m,escActivo);}catch(e){if(sheetModel!==sourceModel||caso.caso_id!==sourceCase||caseSelection)return;sheetFailure=true;sheetStatus('No se pudo leer Sheets · datos anteriores');}}
   async function sheetVersion(action,id,name){
     if(sheetPending||sheetBusy||sheetFailure||sheetNeedsRefresh){toast('Verifica conexión y cantidades guardadas antes de modificar versiones');return;}
     sheetBusy=true;
@@ -976,7 +977,7 @@
     const filasF=[];r.flows.forEach((x,i)=>{if(i%12===0)filasF.push(`<tr class="year-row"><td colspan="7">AÑO ${Math.floor(i/12)+1}</td></tr>`);filasF.push(`<tr><td>${x.m}</td><td>${fmtM(x.rev)}</td><td>${fmtM(x.cost)}</td><td>${fmtM(x.equity)}</td><td>${fmtM(x.pik+x.fee)}</td><td>${fmtM(x.debt)}</td><td>${fmtM(x.caja)}</td></tr>`)});
     filasF.push(`<tr class="tot-row"><td>Σ ${r.totalMonths} meses</td><td>${fmtM(r.revTotal)}</td><td>${fmtM(r.costTotal)}</td><td>${fmtM(r.equityUsed)}</td><td>${fmtM(r.interest+r.feeDebt)}</td><td>${fmtM(r.debt)}</td><td>${fmtM(r.cash)}</td></tr>`);
     $('flowRows').innerHTML=filasF.join('');renderProforma(r);renderLandDeal(r);renderFormulas();refreshJson();
-    window.PPPView?.update(r,{native:!!sheetModel,revision:sheetModel?.revision,caseId:caso.caso_id,scenario:escActivo,scenarioName:escGet(escActivo)?.nombre});
+    window.PPPView?.update(r,{native:!!sheetModel,revision:sheetModel?.revision,caseId:caso.caso_id,scenario:escActivo,scenarioName:escGet(escActivo)?.nombre,projectName:caso.nombre_caso,updated:sheetModel?.actualizado,bookUrl:sheetModel?.libro_url});
   }
   function renderProforma(r){
     const row=(label,value,klass='')=>`<tr class="${klass}"><td>${label}</td><td>${value}</td></tr>`,section=label=>`<tr class="section-row"><td colspan="2">${label}</td></tr>`,economicTotal=r.projectCost+r.interest+r.feeDebt,cashOk=Math.abs(r.cashReconciliation)<1;
@@ -1104,6 +1105,13 @@
     const values=inputValues(),dirty=Object.keys(values).some(id=>Number(values[id])!==Number(legacySavedInputs[id]));
     return dirty?'Cambios locales · sin guardar':'Guardado · v'+(caso.version||1);
   }
+  const caseReader=window.PPPCaseLoader.create(apiGet);
+  let caseSelection=null;
+  function casePresentation(status,message,id,hasCopy=false,retry){
+    caseSelection=status==='ready'?null:{status,message,id,hasCopy};
+    window.PPPView?.setCaseState(caseSelection,retry||(()=>abrirPorId(id)));
+    if(caseSelection&&!hasCopy){txt('casoNombreBar',status==='loading'?'Cargando proyecto…':'Proyecto sin confirmar');txt('syncDot',message);}
+  }
   function pintaCaso(){
     const nombre=caso.nombre_caso||'Supuestos de referencia';
     $('heroNombre').innerHTML='';$('heroNombre').append(document.createTextNode(nombre));
@@ -1116,10 +1124,19 @@
     $('segSiguiente').value=caso.siguiente_paso||'';
     $('segLog').textContent=caso.notas_seguimiento||'Sin notas todavía.'+(caso.caso_id?'':' Guarda el caso primero para dar seguimiento.');
      renderReuniones();
-     if(state)window.PPPView?.update(state,{native:!!sheetModel,revision:sheetModel?.revision,caseId:caso.caso_id,scenario:escActivo,scenarioName:escGet(escActivo)?.nombre});
+     if(state)window.PPPView?.update(state,{native:!!sheetModel,revision:sheetModel?.revision,caseId:caso.caso_id,scenario:escActivo,scenarioName:escGet(escActivo)?.nombre,projectName:caso.nombre_caso,updated:sheetModel?.actualizado,bookUrl:sheetModel?.libro_url});
   }
   function aplicarCasoRemoto(obj){
+    if(!window.PPPCaseLoader.validModel(obj.calculo_sheet,obj.caso_id)){
+      const copy=!!(sheetModel&&obj.caso_id===caso.caso_id);
+      if(copy){sheetNeedsRefresh=true;sheetFailure=true;}
+      if(!copy){txt('casoNombreBar',obj.nombre_caso||obj.palabra||'Proyecto sin confirmar');}
+      casePresentation('error','No se confirmaron resultados de Sheets. Se conserva el proyecto; reintenta su lectura.',obj.caso_id,copy);
+      if(!copy)txt('casoNombreBar',obj.nombre_caso||obj.palabra||'Proyecto sin confirmar');
+      return false;
+    }
     if(sheetModel&&obj.caso_id===caso.caso_id&&!obj.calculo_sheet){sheetNeedsRefresh=true;sheetFailure=true;sheetStatus('No se confirmó el modelo de Sheets · conserva copia anterior');toast('El servidor no confirmó el modelo nativo. Recarga cuando esté disponible.');return;}
+    casePresentation('ready','',obj.caso_id);
     sheetModel=obj.calculo_sheet||null;sheetPending=null;sheetFailure=false;sheetNeedsRefresh=false;
     Object.keys(obj).forEach(kk=>{if(/^in[A-Z]/.test(kk)&&$(kk)&&obj[kk]!==''&&isFinite(Number(obj[kk])))setControl(kk,Number(obj[kk]))});
     caso={caso_id:obj.caso_id||'',palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
@@ -1127,8 +1144,20 @@
     if(!sheetModel)legacySavedInputs=inputValues();
     if(sheetModel)acceptSheetModel(sheetModel,sheetModel.activo);else calculate();pintaCaso();if(sheetModel)sheetStatus('Sheets · revisión '+sheetModel.revision.slice(0,8));cerrarOverlays();toast('Caso "'+(caso.nombre_caso||caso.palabra)+'" cargado'+(escenarios.length>1?' · '+escenarios.length+' versiones':''))
   }
-  async function abrirPorId(id){try{const r=await apiGet({recurso:'caso',id});if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'Ese caso ya no existe':'No se pudo abrir: '+r.error)}catch(e){toast('Sin conexión: no se pudo abrir el caso')}}
-  async function abrirPorPalabra(palabra){if(!palabra.trim())return;try{const r=await apiGet({recurso:'caso',palabra:palabra.trim()});if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'No hay caso con esa palabra':'No se pudo abrir: '+r.error)}catch(e){toast('Sin conexión: no se pudo abrir')}}
+  async function readSelectedCase(params){
+    const same=!!(params.id&&params.id===caso.caso_id&&sheetModel);
+    casePresentation('loading',same?'Verificando la copia de Sheets…':'Leyendo el proyecto y su versión desde Sheets…',params.id,same,()=>readSelectedCase(params));
+    try{
+      const response=await caseReader.load({recurso:'caso',...params});if(!response)return;
+      if(!response.ok||!response.caso||params.id&&response.caso.caso_id!==params.id)throw Error(response.error||'respuesta_incompleta');
+      aplicarCasoRemoto(response.caso);
+    }catch(error){
+      casePresentation('error',error.message==='no_existe'?'El proyecto no está disponible. Puedes elegir otro en Mis casos.':'No se pudo confirmar el proyecto. Reintenta sin perder tu selección.',params.id,same,()=>readSelectedCase(params));
+      if(error.message==='clave')reabrirGate();
+    }
+  }
+  async function abrirPorId(id){if(id)return readSelectedCase({id});}
+  async function abrirPorPalabra(palabra){if(palabra.trim())return readSelectedCase({palabra:palabra.trim()});}
   async function cargarLista(){const cont=$('listaCasos');cont.innerHTML='<p class="note">Cargando…</p>';try{const r=await apiGet({recurso:'lista'});if(!r.ok){cont.innerHTML='<p class="note">Error: '+r.error+'</p>';if(r.error==='clave')reabrirGate();return}casosCache=r.casos||[];cfgBoard=r.config||cfgBoard;if(!casosCache.length){cont.innerHTML='<p class="note">Aún no hay casos guardados. Guarda el primero con el botón Guardar.</p>';return}cont.innerHTML=casosCache.map(c=>`<div class="caso-item" data-id="${c.caso_id}"><div><div class="ci-n">${esc(c.nombre_caso||c.palabra)}<span class="badge">${esc(c.estado||'—')}</span></div><div class="ci-m">palabra: ${esc(c.palabra)} · v${c.version||1} · ${fechaCorta(c.ts_actualizado)}${c.source==='test'?' · PRUEBA':''}</div></div><div class="ci-kpi">${c.utilidad!==''&&c.utilidad!==undefined?fmtM(Number(c.utilidad)):'—'}<span>utilidad · TIR ${c.tir_dev_pct!==''&&c.tir_dev_pct!==undefined?Number(c.tir_dev_pct).toFixed(1)+'%':'—'}</span></div></div>`).join('');cont.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>abrirPorId(el.dataset.id))}catch(e){cont.innerHTML='<p class="note">Sin conexión. Reintenta.</p>'}}
   function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
   function fechaCorta(ts){const d=new Date(ts);return isNaN(d)?'':d.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'})}
@@ -1202,7 +1231,7 @@
     }catch(e){clave=previa;$('gateErr').textContent='Sin conexión con el Sheet. Verifica internet o entra sin conexión.'}
     $('gateBtn').disabled=false
   }
-  function modoSinConexion(){modoLocal=true;$('gate').classList.add('off');$('modoLocalBanner').classList.add('on');pintaCaso()}
+  function modoSinConexion(){modoLocal=true;$('gate').classList.add('off');$('modoLocalBanner').classList.add('on');pintaCaso();const id=new URLSearchParams(location.search).get('open');if(id&&(id!==caso.caso_id||!sheetModel))casePresentation('error','Conéctate para leer el proyecto solicitado. Los supuestos de referencia no son sus resultados.',id);}
   function procesarOpen(){
     if(modoLocal)return;
     const id=new URLSearchParams(location.search).get('open');
@@ -1225,7 +1254,7 @@
   $('casosCerrar').onclick=cerrarOverlays;
   $('btnAbrirPalabra').onclick=()=>abrirPorPalabra($('abrirPalabra').value);
   $('abrirPalabra').addEventListener('keydown',e=>{if(e.key==='Enter')abrirPorPalabra($('abrirPalabra').value)});
-  $('btnNuevo').onclick=()=>{legacySavedInputs=null;sheetModel=null;sheetPending=null;sheetNeedsRefresh=false;sheetFailure=false;Object.entries(DEFAULTS).forEach(([id,v])=>setControl(id,v));caso={caso_id:'',palabra:'',correo:caso.correo,nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};escInicial('Base');calculate();pintaCaso();toast('Caso nuevo: supuestos de referencia')};
+  $('btnNuevo').onclick=()=>{caseReader.invalidate();casePresentation('ready','');const url=new URL(location.href);url.searchParams.delete('open');history.replaceState(null,'',url);legacySavedInputs=null;sheetModel=null;sheetPending=null;sheetNeedsRefresh=false;sheetFailure=false;Object.entries(DEFAULTS).forEach(([id,v])=>setControl(id,v));caso={caso_id:'',palabra:'',correo:caso.correo,nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};escInicial('Base');calculate();pintaCaso();toast('Caso nuevo: supuestos de referencia')};
   /* ================== TRACK DE REUNIONES DEL PPP ==================
      Persiste SIN tocar el backend: cada reunión es un renglón de notas_seguimiento
      con el sello 📅. OJO: el Apps Script ANTEPONE su fecha a la nota, así que el
@@ -1342,8 +1371,12 @@
   window.PPPHelp=(id,anchor)=>{const info=GLOSARIO[metricHelp[id]];if(info){showMetricTip(anchor,info);metricTip.dataset.for=id;}};
   window.PPPView?.mount();
   cargarDraft();if(!escenarios.length)escInicial('Base');calculate();pintaCaso();
-  if(modoLocal){$('gate').classList.add('off');$('modoLocalBanner').classList.add('on')}
-  else if(clave){apiGet({recurso:'lista'}).then(r=>{if(r.ok){casosCache=r.casos||[];cfgBoard=r.config||{};$('gate').classList.add('off');drenarCola();procesarOpen()}else{reabrirGate()}}).catch(()=>{modoSinConexion();toast('Sin conexión: trabajando en modo local')})}
+  if(modoLocal){$('gate').classList.add('off');$('modoLocalBanner').classList.add('on');const requested=new URLSearchParams(location.search).get('open');if(requested&&requested!==caso.caso_id)casePresentation('error','Conéctate para leer el proyecto solicitado. Los supuestos de referencia no son sus resultados.',requested);}
+  else if(clave){
+    const requested=new URLSearchParams(location.search).get('open');
+    if(requested){$('gate').classList.add('off');procesarOpen();}
+    apiGet({recurso:'lista'}).then(r=>{if(r.ok){casosCache=r.casos||[];cfgBoard=r.config||{};$('gate').classList.add('off');drenarCola();if(!requested)procesarOpen();}else if(!requested){reabrirGate();}}).catch(()=>{if(!requested){modoSinConexion();toast('Sin conexión: trabajando en modo local');}});
+  }
 })();
 </script>
 <!-- El selector de motores se retiró del PPP vertical por decisión de Dirección. -->

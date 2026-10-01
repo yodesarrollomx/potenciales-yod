@@ -3,7 +3,7 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'..'),html=fs.readFileSync(path.join(root,'mixto.html'),'utf8');
 const inputs=Object.fromEntries([...html.matchAll(/<input\b[^>]*type="range"[^>]*>/g)].map(([tag])=>[tag.match(/id="([^"]+)"/)[1],Number(tag.match(/value="([^"]+)"/)[1])]));
-Object.assign(inputs,{inTerreno:1800,inCOS:65,inCUS:4,inCom:200,inMixLoft:30,inMix2Rec:50,inMix3Rec:20,inM2Loft:60,inM22Rec:90,inM23Rec:120,inPreViv:47000,inCostRas:18000,inMaxDeuda:190000000,inMesesObra:24,inMesesEntrega:12,inMesesPreventa:12});
+Object.assign(inputs,{inTerreno:1800,inCOS:65,inCUS:4,inCom:200,inMixLoft:30,inMix2Rec:50,inMix3Rec:20,inM2Loft:60,inM22Rec:90,inM23Rec:120,inPreViv:47000,inCostRas:18000,inMaxDeuda:190000000,inEquity:25000000,inMesesObra:24,inMesesEntrega:12,inMesesPreventa:12});
 const engine=html.slice(html.indexOf('  function parkingPerUnit'),html.indexOf('  function calculate(){'));
 const ctx=vm.createContext({});vm.runInContext(engine,ctx);
 const compute=values=>JSON.parse(JSON.stringify(ctx.computar(values)));
@@ -13,7 +13,7 @@ function native(){const d=draft();return {ok:true,caso_id:d.caso.caso_id,revisio
 const mime=p=>p.endsWith('.css')?'text/css':p.endsWith('.js')?'text/javascript':p.endsWith('.png')?'image/png':p.endsWith('.svg')?'image/svg+xml':'text/html; charset=utf-8';
 async function install(context,opts={}){
  const atlas=process.env.YOD_ATLAS_DIR||path.resolve(root,'../yod-atlas');
- const transport={posts:[],gets:[],conflict:false,model:native()};
+ const transport={posts:[],gets:[],conflict:false,listError:opts.listError,caseError:opts.caseError,caseDelay:opts.caseDelay||0,native:opts.native,model:native()};
  await context.addInitScript(({seed})=>{localStorage.setItem('pyod_clave_v1','sy-synthetic-browser-session');sessionStorage.setItem('yod_drawer_seen','1');localStorage.setItem('yod_tema','claro');if(seed&&!sessionStorage.getItem('ppp_fixture_seeded')){localStorage.setItem('pyod_draft_v1',JSON.stringify(seed));sessionStorage.setItem('ppp_fixture_seeded','1');}},{seed:opts.seed===undefined?draft():opts.seed});
  await context.route('**/*',async route=>{
   const req=route.request(),u=new URL(req.url());
@@ -33,8 +33,8 @@ async function install(context,opts={}){
    }else{
     const action=u.searchParams.get('recurso');transport.gets.push(action);
     if(action==='canje')out={ok:true,token:'sy-synthetic-browser-session',rol:'admin',boards:'PT',nombre:'Usuario de prueba'};
-    else if(action==='lista')out={ok:true,casos:opts.cases||[],config:{titulo:'Prueba'}};
-    else if(action==='caso')out={ok:true,caso:{...draft().caso,escenarios_json:JSON.stringify(draft().escenarios),calculo_sheet:opts.native?transport.model:undefined}};
+    else if(action==='lista')out=transport.listError?{ok:false,error:'catalogo_no_disponible'}:{ok:true,casos:opts.cases||[],config:{titulo:'Prueba'}};
+    else if(action==='caso'){if(transport.caseDelay)await new Promise(r=>setTimeout(r,transport.caseDelay));out=transport.caseError?{ok:false,error:'no_disponible'}:{ok:true,caso:{...draft().caso,escenarios_json:JSON.stringify(draft().escenarios),calculo_sheet:transport.native?transport.model:undefined}};}
     else if(action==='sheet-model')out=transport.model;
     else out={ok:true,actor:'SESSION',rows:[{system_id:'SYS-POTENCIALES',visible:'SI',nombre:'PPP',orden:1}],known_system_ids:['SYS-POTENCIALES']};
    }
