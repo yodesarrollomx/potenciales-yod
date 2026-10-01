@@ -110,6 +110,7 @@
   function paintGraphic(el,g){
     el.dataset.kind=g.kind;
     const svg=el.querySelector('svg'), ink='var(--ppp-edge)', muted='var(--muted)';
+    svg.setAttribute('viewBox','0 0 300 190');
     const colors=['var(--ppp-side)','#7c9ca4','#bba780','#6c9276'];
     const label=(x,y,t,anchor='start',cls='')=>`<text class="ppp-chart-text ${cls}" x="${x}" y="${y}" text-anchor="${anchor}" fill="${muted}" font-size="11">${E(t)}</text>`;
     const rect=(x,y,w,h,c)=>`<rect x="${x}" y="${y}" width="${Math.max(0,w)}" height="${h}" rx="2" fill="${c}"/>`;
@@ -172,7 +173,7 @@
     let h='';const maxCols=Math.max(...data.grid.map(row=>row.length)),rows=data.grid.length;
     if(compact){
       data.grid.forEach((row,y)=>row.forEach((v,x)=>{const a=150+(x-y)*12,b=22+(x+y)*6;h+=`<path d="M${a} ${b}l12 6 -12 6 -12 -6Z" fill="${colors[v]}" stroke="var(--ppp-edge)" stroke-width=".65"/>`;}));
-      el.querySelector('svg').innerHTML=h;return;
+      const svg=el.querySelector('svg');svg.setAttribute('viewBox',`${136-(rows-1)*12} 20 ${(maxCols+rows)*12+4} ${(maxCols+rows)*6+4}`);svg.innerHTML=h;svg.dataset.markup='';return;
     }
     data.grid.forEach((row,y)=>row.forEach((v,x)=>{h+=`<rect id="pppSiteCell${y}_${x}" x="${x*30}" y="${y*30+20}" width="29" height="29" fill="${colors[v]}" stroke="var(--ppp-edge)" stroke-width=".6"><title>${E(names[v])} · fila ${y+1}, columna ${x+1}</title></rect>`;}));
     h='<text x="0" y="12" font-size="10" fill="var(--muted)">N ↑</text>'+h;
