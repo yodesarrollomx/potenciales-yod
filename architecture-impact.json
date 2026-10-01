@@ -8,7 +8,7 @@
     "SHEET-PPP-MODELOS",
     "SYS-CONTROL"
   ],
-  "summary": "Conectar casos registrados con resultados y versiones canónicas en Sheets; proteger el borrador nativo sin conexión y fijar la propuesta central antes de integrar.",
+  "summary": "Conectar casos registrados con resultados y versiones canónicas en Sheets; mostrar programa por cuerpos, cruce con proforma y flujo por etapas desde el mismo libro. Proteger el borrador nativo sin conexión y fijar la propuesta central antes de integrar.",
   "tests": [
     "Ocho escenarios financieros conciliados con fórmulas nativas",
     "Diez pruebas de transporte y cinco de frontend de la preparación inicial",
