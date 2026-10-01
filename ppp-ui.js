@@ -23,29 +23,29 @@
     return [
       {main:num(r.units)+' departamentos', sub:num(r.totalFloors)+' pisos · '+num(r.height,1)+' m · '+area(r.vendTotal)+' vendibles',
         note: valid(delta)&&Math.abs(delta)>.5 ? area(Math.abs(delta))+' por conciliar con la mezcla' : '',
-        graphic:{kind:'architecture',values:[ratio(p.terrain,10000),ratio(r.height,120),ratio(r.floorPlate,p.terrain)],labels:['Terreno','Volumen edificado'],floors:r.totalFloors,plate:r.floorPlate,terrain:p.terrain,caption:'Volumen conceptual · altura 0–120 m · terreno 0–10,000 m²'},
+        graphic:{kind:'architecture',values:[ratio(r.floorPlate,p.terrain),ratio(r.height,p.altMax),ratio(r.vendTotal,sum(r.resGross,r.com))],labels:['Terreno','Volumen edificado'],floors:r.totalFloors,plate:r.floorPlate,terrain:p.terrain,height:r.height,efficiency:ratio(r.vendTotal,sum(r.resGross,r.com)),caption:'Volumen conceptual · huella / terreno '+percent(ratio(r.floorPlate,p.terrain))+' · altura / tope supuesto '+percent(ratio(r.height,p.altMax))+' · escala 0–100%. No representa la implantación por cuerpos.'},
         sections:[section('Terreno y capacidad',[metric('Terreno',area(p.terrain),'','lblTerreno'),metric('Huella máxima · COS '+percent(p.cos),area(r.footprint),'','lblHuella'),metric('Sobre rasante · CUS '+num(p.cus,2),area(r.gross),'','lblConstruible'),metric('Altura máxima supuesta',num(p.altMax,1)+' m')],'La envolvente indica capacidad; no acredita un permiso.'),
           section('Superficies',[metric('Vivienda vendible',area(r.resSell),'','lblVendViv'),metric('Locales vendibles',area(r.comSell),'','lblVendLoc'),metric('Vivienda bruta',area(r.resGross)),metric('Comercio bruto',area(r.com)),metric('Total vendible',area(r.vendTotal),'','lblVendTotal')]),
           section('Mezcla de departamentos',[metric('Tipología A',num(r.mixLoftUnits)+' × '+area(p.m2Loft)),metric('Tipología B',num(r.mix2Units)+' × '+area(p.m22Rec)),metric('Tipología C',num(r.mix3Units)+' × '+area(p.m23Rec))],valid(delta)?'Área de la mezcla '+area(mixedArea)+' · diferencia '+area(delta):'Inventario pendiente de conciliar.'),
           section('Programa y estacionamiento',[metric('Depas por piso',num(p.deptosPiso)),metric('Cajones totales',num(r.spaces),'','lblCajonesTot'),metric('Amenidades',area(r.amenidades),'','lblAmenidades'),metric('Sótanos construidos',area(r.basementArea)),metric('Locales',num(p.localesPB)),metric('Sótanos',num(r.basements))])]},
-      {main:money(r.sales)+' proyectados',sub:'Lista $'+num(p.preViv)+'/m² · preventa modelada '+percent(r.preventaEfectiva),note:'',
-        graphic:{kind:'sales',values:[ratio(sum(r.presaleRev,r.postRev),r.sales),ratio(r.comRev,r.sales),ratio(r.parkingRev,r.sales)],labels:['Vivienda','Locales','Cajones'],caption:'Participación en las ventas · escala 0–100%'},
+      {main:money(r.sales)+' proyectados',sub:'Vivienda '+money(sum(r.presaleRev,r.postRev))+' · locales '+money(r.comRev),note:'',
+        graphic:{kind:'sales',values:[ratio(sum(r.presaleRev,r.postRev),r.sales),ratio(r.comRev,r.sales),ratio(r.parkingRev,r.sales)],labels:['Vivienda','Locales','Cajones'],sales:r.sales,flows:r.flows,months:r.totalMonths,caption:'Participación en las ventas · escala 0–100%'},
         sections:[section('De dónde sale el ingreso',[metric('Vivienda',money(sum(r.presaleRev,r.postRev))),metric('Locales',money(r.comRev)),metric('Cajones',money(r.parkingRev)),metric('Venta total',money(r.sales))],'Proyección del modelo; no son contratos firmados. Confirmar si los cajones se cobran por separado.'),
           section('Precio y ritmo comercial',[metric('Precio lista','$'+num(p.preViv)+'/m²'),metric('Descuento preventa',percent(p.desc)),metric('Preventa efectiva',percent(r.preventaEfectiva)),metric('Unidades equivalentes',num(r.presaleUnits,1)),metric('Ritmo de preventa',num(r.presaleUnitsPerMonth,2)+' / mes'),metric('Captación',num(p.preMonths)+' meses')]),
           section('Calendario de cobro',[metric('Preventa',money(r.presaleRev)),metric('Vivienda en entrega',money(r.postRev)),metric('A la firma',percent(p.eng)+' de preventa'),metric('Durante obra',percent(p.obra)+' de preventa'),metric('Ventana de entrega',num(p.delivery)+' meses')],'Los importes mensuales completos se conservan en Herramientas → flujo.') ]},
-      {main:money(total)+' total',sub:'Obra '+money(r.hard)+' · financiamiento '+money(finance),note:'',
-        graphic:{kind:'costs',values:[ratio(r.hard,total),ratio(valid(r.projectCost)&&valid(r.hard)?r.projectCost-r.hard:null,total),ratio(finance,total)],labels:['Obra','Otros costos','Financiación'],caption:'Composición del costo · escala 0–100%'},
+      {main:money(total)+' total',sub:'Utilidad '+money(r.profit)+' · margen '+percent(r.margin),note:valid(total)&&valid(r.profit)&&valid(r.sales)&&Math.abs(total+r.profit-r.sales)>1?'Costo + utilidad: diferencia de '+money(total+r.profit-r.sales)+' contra ventas':'',
+        graphic:{kind:'costs',values:[ratio(r.hard,total),ratio(valid(r.projectCost)&&valid(r.hard)?r.projectCost-r.hard:null,total),ratio(finance,total)],labels:['Obra','Otros costos','Financiación','Utilidad'],sales:r.sales,total,profit:r.profit,revenueValues:[ratio(r.hard,r.sales),ratio(valid(r.projectCost)&&valid(r.hard)?r.projectCost-r.hard:null,r.sales),ratio(finance,r.sales),ratio(r.profit,r.sales)],caption:'Costo y utilidad antes de impuestos / ventas · escala 0–100%; el costo incluye financiamiento'},
         sections:[section('Costo completo',[metric('Obra directa',money(r.hard),'','lblObraTotal'),metric('Terreno',money(r.land)),metric('Indirectos',money(r.indirect)),metric('Contingencia',money(r.cont)),metric('Legal',money(r.legal)),metric('Comisión de ventas',money(r.commission)),metric('Escrituración',money(r.closing)),metric('Antes de financiar',money(r.projectCost),'','lblCostoDuro')]),
           section('Efectivo y financiamiento',[metric('Costo de caja sin financiar',money(r.cashCost)),metric('Tierra aportada',money(r.ownerCapital)),metric('Intereses',money(r.interest)),metric('Comisión del crédito',money(r.feeDebt)),metric('Costo con financiamiento',money(total))],'El terreno aportado tiene costo económico aunque no salga de caja. Revisar qué partidas incluye un presupuesto consolidado.'),
           section('Programa de obra',[metric('Inicio', 'Mes '+num(p.buildStartMonth)),metric('Construcción',num(p.monthsBuild)+' meses'),metric('Fin de obra','Mes '+num(r.buildFinish)),metric('Horizonte',num(r.totalMonths)+' meses')])]},
-      {main:money(r.peak)+' pico de deuda',sub:'Límite '+money(r.debtCap)+' · holgura '+money(r.debtHeadroom),
+      {main:money(r.peak)+' pico de deuda',sub:'Límite '+money(r.debtCap)+' · uso '+percent(ratio(r.peak,r.debtCap))+' · mes '+num(r.peakMonth),
         note:valid(r.fundingGap)&&r.fundingGap>1?'Faltante reportado '+money(r.fundingGap):'Revisar cobertura de cada mes en el flujo',
-        graphic:{kind:'credit',values:[ratio(r.peak,r.debtCap),ratio(r.ownerCapital,sum(r.ownerCapital,r.devCapital)),ratio(r.devCapital,sum(r.ownerCapital,r.devCapital))],labels:['Uso del límite','Capital dueño','Capital dev.'],caption:'Deuda / límite · capital / aportaciones · escala 0–100%'},
-        sections:[section('Crédito y fondeo',[metric('Pico de deuda',money(r.peak)),metric('Límite modelado',money(r.debtCap)),metric('Holgura al pico',money(r.debtHeadroom)),metric('Mes del pico',num(r.peakMonth)),metric('Tasa anual PIK',percent(p.pik)),metric('Comisión por disposición',percent(p.feeDebt)),metric('Capital desarrollador',money(r.devCapital)),metric('Terreno aportado',money(r.ownerCapital))],'El límite modelado no significa crédito autorizado; revisar cobertura mensual.'),
+        graphic:{kind:'credit',values:[ratio(r.peak,r.debtCap),ratio(r.peak,r.sales),ratio(r.profit,r.sales)],peak:r.peak,limit:r.debtCap,peakMonth:r.peakMonth,flows:r.flows,months:r.totalMonths,profit:r.profit,labels:['Deuda mensual','Límite modelado','Utilidad antes de impuestos'],caption:'Deuda mensual / límite · escala 0–100%. Pico y utilidad se comparan en MXN; no representan garantías ni crédito autorizado.'},
+        sections:[section('Crédito y fondeo',[metric('Pico de deuda',money(r.peak)),metric('Límite modelado',money(r.debtCap)),metric('Holgura al pico',money(r.debtHeadroom)),metric('Mes del pico',num(r.peakMonth)),metric('Deuda / ventas',percent(ratio(r.peak,r.sales))),metric('Utilidad / ventas',percent(ratio(r.profit,r.sales))),metric('Pico / utilidad positiva',valid(r.profit)&&r.profit>0?num(ratio(r.peak,r.profit),2)+'×':'No comparable'),metric('Tasa anual PIK',percent(p.pik)),metric('Comisión por disposición',percent(p.feeDebt)),metric('Capital desarrollador',money(r.devCapital)),metric('Terreno aportado',money(r.ownerCapital))],'El límite modelado no significa crédito autorizado; revisar cobertura mensual.'),
           section('Dueño',[metric('Cobro total',money(r.ownerTotalProceeds)),metric('Capital recuperado',money(r.ownerCapitalReturn)),metric('Ganancia del socio',money(r.ownerGain)),metric('Cobro por venta de terreno',money(r.ownerSaleProceeds)),metric('TIR',percent(r.ownerIrr)),metric('MOIC',valid(r.ownerMoic)?num(r.ownerMoic,2)+'×':'—')]),
           section('Desarrollador',[metric('Cobro total',money(r.devDist)),metric('Capital recuperado',money(r.devCapitalReturn)),metric('Ganancia',money(r.devGain)),metric('TIR',percent(r.devIrr)),metric('MOIC',valid(r.devMoic)?num(r.devMoic,2)+'×':'—')],'Cobro y ganancia son distintos. El flujo conserva fechas, capital, preferente y residual.') ]},
       {main:num(r.aguaTotal,2)+' m³/día · '+num(r.demandaKva,2)+' kVA',sub:num(r.habitantes)+' habitantes · reserva '+num(p.diasReserva)+' días',note:'',
-        graphic:{kind:'utilities',values:[ratio(r.aguaTotal,500),ratio(r.demandaKva,2000),r.permeablePct],labels:['Agua','Energía','Permeable'],caption:'Agua 0–500 m³/día · energía 0–2,000 kVA · permeable 0–100%'},
+        graphic:{kind:'utilities',values:[ratio(r.cisternaM3,500),ratio(r.demandaKva,2000),r.permeablePct],labels:['Reserva de agua','Demanda eléctrica','Suelo permeable'],water:r.aguaTotal,cistern:r.cisternaM3,reserve:p.diasReserva,load:r.cargaTotalKw,demand:r.demandaKva,permeable:r.permeable,terrain:p.terrain,caption:'Cisterna 0–500 m³: fracción que consume un día · demanda 0–2,000 kVA · permeable / terreno 0–100%. No es monitoreo en vivo.'},
         sections:[section('Agua y reserva',[metric('Vivienda',num(r.aguaViv,3)+' m³/día'),metric('Comercio',num(r.aguaCom,3)+' m³/día'),metric('Total diario',num(r.aguaTotal,3)+' m³/día','', 'lblAgua'),metric('Drenaje',num(r.drenajeDia,2)+' m³/día','', 'lblDrenaje'),metric('Cisterna',volume(r.cisternaM3)),metric('Reserva',num(p.diasReserva)+' días')],'Capacidad calculada; no es un sensor de nivel. La reserva contra incendio no está incluida.'),
           section('Energía y servicios',[metric('Carga instalada',num(r.cargaTotalKw,2)+' kW'),metric('Demanda eléctrica',num(r.demandaKva,2)+' kVA'),metric('Elevadores',num(r.elevadores)),metric('Capacidad de gas',num(r.gasL)+' L'),metric('Cuarto de basura',area(r.basuraM2)),metric('Áreas comunes',area(r.comunM2))]),
           section('Suelo y operación',[metric('Área verde',area(r.greenArea)),metric('Permeable',area(r.permeable)),metric('Volumen pluvial de referencia',volume(r.pluvialM3)),metric('Densidad',num(r.densidadViv,1)+' viviendas/ha'),metric('Mantenimiento promedio','$'+num(r.cuotaProm)+' / mes')],'Dotaciones de anteproyecto; validar factibilidades y proyecto técnico.') ]}
@@ -95,27 +95,68 @@
   }
   function graphic(kind,compact=false){
     const wrap=element('div','ppp-graphic'+(compact?' ppp-mini':''));wrap.setAttribute('aria-hidden','true');
-    // Prisms share fixed projection. Height/footprint interpolation is presentation only.
-    wrap.innerHTML='<svg viewBox="0 0 300 190" focusable="false"><defs><linearGradient id="'+kind+(compact?'m':'d')+'gold" x2="1" y2="1"><stop stop-color="#e7d8b8"/><stop offset="1" stop-color="#a98a50"/></linearGradient></defs><ellipse cx="150" cy="154" rx="113" ry="22" fill="currentColor" opacity=".07"/><path d="M28 133L152 90 277 133 153 181Z" fill="var(--ppp-slab)" stroke="var(--linea)"/>'+[0,1,2].map((i)=>'<g class="ppp-prism ppp-prism-'+i+'" style="--x:'+(59+i*70)+'px;--h:0"><path d="M-23 0L0 11 0 -79 -23 -90Z" fill="var(--ppp-face)" stroke="var(--ppp-edge)"/><path d="M0 11L23 0 23 -90 0 -79Z" fill="var(--ppp-side)" stroke="var(--ppp-edge)"/><path d="M-23 -90L0 -101 23 -90 0 -79Z" fill="var(--ppp-top)" stroke="var(--ppp-edge)"/><path d="M-23 -58L0 -47 23 -58M-23 -26L0 -15 23 -26" fill="none" stroke="var(--ppp-edge)" opacity=".45"/></g>').join('')+'</svg>';
-    return wrap;
+    wrap.innerHTML='<svg viewBox="0 0 300 190" focusable="false"></svg>';return wrap;
   }
+  const clamp=v=>valid(v)?Math.min(1,Math.max(0,v)):0;
   function paintGraphic(el,g){
     el.dataset.kind=g.kind;
-    if(g.kind==='architecture'){
-      const svg=el.querySelector('svg');
-      if(!svg.classList.contains('ppp-building')){svg.classList.add('ppp-building');svg.innerHTML='<path class="site" fill="var(--ppp-slab)" stroke="var(--linea)"/><path class="front" fill="var(--ppp-face)" stroke="var(--ppp-edge)"/><path class="side" fill="var(--ppp-side)" stroke="var(--ppp-edge)"/><path class="roof" fill="var(--ppp-top)" stroke="var(--ppp-edge)"/><path class="floors" fill="none" stroke="var(--ppp-edge)" opacity=".55"/>';}
-      const ground=Math.sqrt(Math.min(1,Math.max(0,g.values[0]||0)))*100;
-      const width=valid(g.plate)?Math.sqrt(Math.min(1,Math.max(0,g.plate/10000)))*100:0;
-      const height=Math.min(1,Math.max(0,g.values[1]||0))*140, x=150,y=150,w=width,z=width*.45;
-      const paths={site:`M${x-ground} ${y}L${x} ${y-ground*.45}L${x+ground} ${y}L${x} ${y+ground*.45}Z`,front:`M${x-w} ${y}L${x} ${y+z}L${x} ${y+z-height}L${x-w} ${y-height}Z`,side:`M${x} ${y+z}L${x+w} ${y}L${x+w} ${y-height}L${x} ${y+z-height}Z`,roof:`M${x-w} ${y-height}L${x} ${y-z-height}L${x+w} ${y-height}L${x} ${y+z-height}Z`};
-      Object.entries(paths).forEach(([key,d])=>{const p=svg.querySelector('.'+key);p.setAttribute('d',d);p.style.d='path("'+d+'")';});
-      const count=Math.min(100,Math.max(0,Math.round(g.floors||0)));let lines='';for(let i=1;i<count;i++){const h=height*i/count;lines+=`M${x-w} ${y-h}L${x} ${y+z-h}L${x+w} ${y-h}`;}svg.querySelector('.floors').setAttribute('d',lines);
-      return;
+    const svg=el.querySelector('svg'), ink='var(--ppp-edge)', muted='var(--muted)';
+    const colors=['var(--ppp-side)','#7c9ca4','#bba780','#6c9276'];
+    const label=(x,y,t,anchor='start',cls='')=>`<text class="ppp-chart-text ${cls}" x="${x}" y="${y}" text-anchor="${anchor}" fill="${muted}" font-size="11">${E(t)}</text>`;
+    const rect=(x,y,w,h,c)=>`<rect x="${x}" y="${y}" width="${Math.max(0,w)}" height="${h}" rx="2" fill="${c}"/>`;
+    const axis=(x,y)=>`<path d="M${x} ${y-86}V${y}H280" fill="none" stroke="var(--linea)"/>`;
+    // Monthly paths break at absent values. No interpolation invents an unknown month.
+    function monthly(field,denominator,y=137,height=70,cumulative=false){
+      if(!valid(denominator)||denominator<=0||!valid(g.months)||g.months<=0||!Array.isArray(g.flows))return '';
+      let d='',running=0,connected=false,known=true,previous=null;
+      for(const f of g.flows){
+        if(!valid(f.m)||f.m<1||!valid(f[field])||cumulative&&(!known||previous!==null&&f.m!==previous+1)){connected=false;known=false;continue;}
+        if(cumulative&&previous===null&&f.m!==1){known=false;continue;}
+        if(cumulative)running+=f[field];const value=cumulative?running:f[field];
+        const x=28+(f.m-1)/Math.max(1,g.months-1)*252, yy=y-clamp(value/denominator)*height;
+        d+=(connected?'L':'M')+x.toFixed(2)+' '+yy.toFixed(2);connected=true;previous=f.m;
+      }return d;
     }
-    el.querySelectorAll('.ppp-prism').forEach((p,i)=>{
-      const v=g.values[i];p.style.setProperty('--h',valid(v)?Math.min(1,Math.max(0,v)):0);
-      p.classList.toggle('ppp-no-value',!valid(v));
-    });
+    let html='';
+    if(g.kind==='architecture'){
+      const ground=90,w=Math.sqrt(clamp(g.values[0]))*90,h=clamp(g.values[1])*125,x=136,y=136,z=w*.45;
+      html=`<path d="M${x-ground} ${y}L${x} ${y-ground*.45}L${x+ground} ${y}L${x} ${y+ground*.45}Z" fill="var(--ppp-slab)" stroke="var(--linea)"/><path d="M${x-w} ${y}L${x} ${y+z}L${x} ${y+z-h}L${x-w} ${y-h}Z" fill="var(--ppp-face)" stroke="${ink}"/><path d="M${x} ${y+z}L${x+w} ${y}L${x+w} ${y-h}L${x} ${y+z-h}Z" fill="var(--ppp-side)" stroke="${ink}"/><path d="M${x-w} ${y-h}L${x} ${y-z-h}L${x+w} ${y-h}L${x} ${y+z-h}Z" fill="var(--ppp-top)" stroke="${ink}"/>`;
+      const count=Math.min(100,Math.max(0,Math.round(g.floors||0)));let lines='';for(let i=1;i<count;i++){const t=h*i/count;lines+=`M${x-w} ${y-t}L${x} ${y+z-t}L${x+w} ${y-t}`;}
+      html+=`<path d="${lines}" fill="none" stroke="${ink}" opacity=".55"/><path d="M240 18V138M236 18h8M236 138h8" stroke="${ink}"/>`+label(251,55,num(g.height,1)+' m')+label(251,73,num(g.floors)+' pisos')+label(26,175,num(g.terrain)+' m² terreno')+label(26,189,'Vendible / bruto: '+percent(g.efficiency));
+    }else if(g.kind==='sales'){
+      html+=label(28,20,'Ingreso proyectado · '+money(g.sales));let x=28;
+      g.values.forEach((v,i)=>{const w=clamp(v)*252;html+=rect(x,36,w,31,colors[i])+`<path d="M${x} 36l10 -7h${w}l-10 7Z" fill="${colors[i]}" opacity=".5"/>`;x+=w;});
+      html+=label(28,86,'Cobros acumulados / ventas');const d=monthly('rev',g.sales,150,52,true);
+      html+=`<path d="M28 98H280M28 150H280" stroke="var(--linea)" stroke-dasharray="3 4"/><path class="ppp-live-line" d="${d}" stroke="#6c9276" stroke-width="3" fill="none"/>`+label(280,95,'100%','end')+label(28,166,'M1')+label(280,166,'M'+num(g.months),'end');
+      html+=label(28,187,'Vivienda '+percent(g.values[0])+' · locales '+percent(g.values[1]));
+    }else if(g.kind==='costs'){
+      html+=label(28,20,'Ventas · '+money(g.sales));html+=rect(28,34,252,8,'var(--ppp-slab)');
+      let x=28;g.revenueValues.forEach((v,i)=>{const w=Math.min(280-x,clamp(v)*252);html+=rect(x,53,w,42,colors[i])+`<path d="M${x} 53l9 -6h${w}l-9 6Z" fill="${colors[i]}" opacity=".5"/>`;x+=w;});
+      html+=label(28,114,'Costo '+money(g.total))+label(28,134,'Utilidad '+money(g.profit))+label(28,153,'Utilidad / ventas '+percent(g.revenueValues[3]));
+      if(valid(g.profit)&&g.profit<0)html+=`<path d="M266 109l-9 15h18Z" fill="var(--red)"/>`+label(28,184,'Pérdida · costo superior a ventas');
+      else html+=label(28,184,'Obra · otros · financiación · utilidad');
+    }else if(g.kind==='credit'){
+      html+=label(28,18,'Deuda / límite modelado')+label(280,37,'100% = '+money(g.limit),'end');
+      html+=axis(28,137)+`<path d="M28 67H280" stroke="var(--ppp-edge)" stroke-dasharray="4 4"/><path class="ppp-live-line" d="${monthly('debt',g.limit)}" fill="none" stroke="var(--purple)" stroke-width="3"/>`;
+      const x=valid(g.peakMonth)&&valid(g.months)?28+(g.peakMonth-1)/Math.max(1,g.months-1)*252:28,y=137-clamp(g.values[0])*70;
+      if(valid(g.values[0]))html+=`<circle class="ppp-pulse" cx="${x}" cy="${y}" r="4" fill="var(--purple)"/>`;
+      html+=label(28,153,'M1')+label(280,153,'M'+num(g.months),'end')+label(28,171,'Pico '+money(g.peak)+' · '+percent(g.values[0]))+label(28,188,'Utilidad '+money(g.profit)+' · '+percent(g.values[2])+' / ventas');
+    }else{
+      const fill=ratio(g.water,g.cistern),tankHeight=clamp(g.values[0])*85,top=126-tankHeight,y=126-clamp(fill)*tankHeight;
+      html+=`<path d="M34 ${top}V125a32 10 0 0 0 64 0V${top}" fill="var(--ppp-slab)" stroke="${ink}"/><path class="ppp-water" d="M35 ${y}V125a31 9 0 0 0 62 0V${y}Z" fill="#7cabb7"/><ellipse class="ppp-water" cx="66" cy="${y}" rx="31" ry="9" fill="#afcfd7"/><ellipse cx="66" cy="${top}" rx="32" ry="10" fill="var(--ppp-top)" stroke="${ink}"/>`;
+      html+=label(12,19,'Reserva '+num(g.reserve)+' días')+label(12,153,num(g.cistern,1)+' m³ cisterna')+label(12,171,num(g.water,1)+' m³/día');
+      html+=label(126,23,'Energía estimada')+label(126,43,num(g.load,1)+' kW instalados')+label(126,61,num(g.demand,1)+' kVA demanda');html+=rect(126,72,142,7,'var(--ppp-slab)')+rect(126,72,clamp(g.values[1])*142,7,'#7c9ca4');
+      const v=clamp(g.values[2]);html+=`<path d="M126 113l66 -23 76 23 -66 27Z" fill="var(--ppp-slab)" stroke="var(--linea)"/><path d="M126 113l${66*v} ${-23*v} 76 23 ${-66*v} ${23*v}Z" fill="#86a579"/>`+label(126,156,percent(g.values[2])+' permeable')+label(126,174,num(g.permeable)+' / '+num(g.terrain)+' m²');
+    }
+    if(g.values.every(v=>!valid(v)))html=label(150,94,'Datos pendientes','middle');
+    // Retain SVG nodes so changed geometry transitions in place rather than flashing.
+    if(svg.dataset.markup!==html){
+      const incoming=document.createElementNS('http://www.w3.org/2000/svg','svg');incoming.innerHTML=html;
+      if(svg.children.length===incoming.children.length&&Array.from(svg.children).every((n,i)=>n.tagName===incoming.children[i].tagName)){
+        Array.from(incoming.children).forEach((next,i)=>{const current=svg.children[i];Array.from(current.attributes).forEach(a=>{if(!next.hasAttribute(a.name))current.removeAttribute(a.name);});Array.from(next.attributes).forEach(a=>current.setAttribute(a.name,a.value));current.textContent=next.textContent;if(next.hasAttribute('d'))current.style.d='path("'+next.getAttribute('d')+'")';});
+      }else svg.innerHTML=html;
+      svg.dataset.markup=html;
+    }
   }
   function brand(){
     const icons={yodBurger:'<path d="M4 6h16M4 12h16M4 18h16"/>',yodBack:'<path d="m12 5-7 7 7 7M5 12h15"/>',yodSearch:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>'};
@@ -129,9 +170,10 @@
     if(mounted)return;mounted=true;document.body.classList.add('ppp-ui');
     const main=document.querySelector('main.container'),deck=document.querySelector('.grid-2');deck.classList.add('ppp-deck');deck.id='pppDeck';
     const tools=element('nav','ppp-shortcuts');tools.setAttribute('aria-label','Información complementaria');
-    const context=element('div','ppp-context');context.id='pppContext';context.textContent='Modelo de referencia';
+    const context=element('div','ppp-context');context.id='pppContext';context.append(element('span','','Modelo de referencia'));const book=element('a','','Abrir libro');book.id='pppBookLink';book.target='_blank';book.rel='noopener';book.hidden=true;context.append(book);
     const back=button('‹ Volver al resumen','ppp-back');back.id='pppBack';back.hidden=true;back.onclick=()=>active&&toggle(active,false);
     main.insertBefore(context,main.firstChild);deck.before(back);
+    const status=element('div','ppp-case-status');status.id='pppCaseStatus';status.setAttribute('role','status');status.hidden=true;status.append(element('span'),button('Reintentar','small-btn secondary'));context.after(status);
     // Move existing nodes so their listeners, IDs and server bindings survive unchanged.
     const docs=$('inInventarioExplicito').closest('section');docs.id='pppDocumentos';docs.classList.add('ppp-aux');
     const hero=document.querySelector('.hero'),ref=document.querySelector('.reference-strip'),market=$('mercadoDocumento');
@@ -164,6 +206,8 @@
       const actionbar=element('div','ppp-detail-actions'),source=element('span','ppp-source'),adjustBtn=button('Ajustar','small-btn ppp-adjust');adjustBtn.setAttribute('aria-controls',id);adjustBtn.setAttribute('aria-expanded','false');actionbar.append(source,adjustBtn);
       const detail=element('div','ppp-detail'),viz=graphic(id),caption=element('p','ppp-caption'),legend=element('div','ppp-legend'),content=element('div','ppp-sections');detail.append(viz,legend,caption,content);
       const all=disclosure('Todos los indicadores y sus fórmulas',[kpis]);all.classList.add('ppp-all');detail.append(all);
+      if(id==='dArq'){const chapters=button('Cuerpos, etapas y rentas','small-btn secondary');chapters.onclick=()=>{const target=$('pppEtapas');target.open=true;target.scrollIntoView({block:'start',behavior:reduced()?'instant':'smooth'});};detail.append(chapters);}
+      if(id==='dMacro'||id==='dVentas'){const flow=button('Ver flujo mensual','small-btn secondary');flow.onclick=()=>{const target=$('advBoard');if(target.tagName==='DETAILS')target.open=true;else target.querySelector('details')?.setAttribute('open','');target.scrollIntoView({block:'start',behavior:reduced()?'instant':'smooth'});};detail.append(flow);}
       const intro=element('div','ppp-adjust-intro');intro.append(element('h3','','Ajustar '+titles[index].toLowerCase()),element('p','','Los resultados se actualizan con los controles del escenario activo.'));
       drawer.prepend(intro);const done=button('Volver al detalle','small-btn secondary');drawer.append(done);
       inside.append(actionbar,detail,drawer);card.append(reveal);
@@ -181,16 +225,28 @@
     setTimeout(brand,0);
     const footer=element('div','ppp-footer');[['Mis casos','btnMisCasos'],['Guardar','btnGuardar']].forEach(([label,id])=>{const b=button(label,'small-btn'+(id==='btnGuardar'?'':' secondary'));b.onclick=()=>$(id).click();footer.append(b);});footer.append(element('span','','PPP · Mixto / Depas'));tools.after(footer);
   }
+  function setCaseState(selection,retry){
+    const banner=$('pppCaseStatus');if(!banner)return;
+    banner.hidden=!selection;document.body.classList.toggle('ppp-unconfirmed',!!selection&&!selection.hasCopy);
+    document.body.classList.toggle('ppp-reading',selection?.status==='loading');
+    if(selection){banner.firstChild.textContent=selection.message;banner.lastChild.hidden=selection.status==='loading';banner.lastChild.onclick=retry;}
+    if(selection){$('pppContext').firstChild.textContent=selection.hasCopy?'Copia de Sheets · lectura pendiente de confirmar':'Lectura pendiente · resultados de Sheets sin confirmar';$('pppBookLink').hidden=true;}
+    const blocked=!!selection;records.forEach(x=>{x.trigger.disabled=blocked;x.adjust.disabled=blocked;});
+    $('btnGuardar').disabled=blocked;document.querySelectorAll('.ppp-footer button').forEach(b=>{if(b.textContent==='Guardar')b.disabled=blocked;});
+    if(blocked&&active)toggle(active,false);
+  }
   function update(r,context={}){
     if(!mounted)mount();
     const ctx=[context.caseId,context.scenario].join('|');
     if(lastContext&&ctx!==lastContext&&active)toggle(active,false);lastContext=ctx;
-    $('pppContext').textContent=context.native?'Resultados de Sheets · revisión '+String(context.revision||'—').slice(0,8):'Estimación del modelo · '+(context.caseId?'caso guardado':'sin guardar');
+    $('pppContext').firstChild.textContent=context.native?'Resultados de Sheets · revisión '+String(context.revision||'—').slice(0,8):'Estimación del modelo · '+(context.caseId?'caso guardado':'sin guardar');
+    const book=$('pppBookLink'),safeBook=/^https:\/\/docs\.google\.com\/spreadsheets\/d\//.test(context.bookUrl||'');book.hidden=!safeBook;if(safeBook)book.href=context.bookUrl;
     const descriptions=describe(r);renderToken++;
     descriptions.forEach((d,i)=>{
       const x=records[i];x.headline.textContent=d.main;x.sub.textContent=d.sub;x.note.textContent=d.note;x.note.hidden=!d.note;
       paintGraphic(x.mini,d.graphic);paintGraphic(x.viz,d.graphic);
-      const overflow=d.graphic.values.some(v=>valid(v)&&v>1);
+      const overflow=[...d.graphic.values,...(d.graphic.revenueValues||[])].some(v=>valid(v)&&v>1);
+      x.mini.dataset.revision=String(context.revision||renderToken);
       x.legend.replaceChildren(...d.graphic.labels.map((label,i)=>{const el=element('span','ppp-legend-'+i,label);return el;}));
       x.caption.textContent=d.graphic.caption+(overflow?' · escala visual excedida; consultar cifras':'');
       x.viz.setAttribute('data-revision',String(context.revision||renderToken));
@@ -206,5 +262,5 @@
     const sheet=$('sheetPanel'),stages=$('pppEtapas');if(sheet&&sheet.parentElement!==stages.lastChild)stages.lastChild.prepend(sheet);
     $('pppVersiones').firstChild.textContent='Versiones · '+(context.scenarioName||'Base');
   }
-  root.PPPView={mount,update,toggle,adjust};
+  root.PPPView={mount,update,toggle,adjust,setCaseState};
 })(typeof window==='undefined'?globalThis:window);

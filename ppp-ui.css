@@ -139,3 +139,24 @@ body.ppp-ui{--ppp-slab:#e5dfd2;--ppp-top:#f4ead2;--ppp-face:#decca5;--ppp-side:#
 .ppp-card[data-card=dDota] .ppp-legend-0:before{background:#6e9ca8}.ppp-card[data-card=dDota] .ppp-legend-2:before{background:#859c66}
 
 .ppp-ui #yodSearch{width:44px;min-height:44px;padding:0;justify-content:center;flex:none;margin-left:auto}.ppp-ui .yod-top-actions{margin-left:0}
+/* Each shape communicates its card's measurements, using the confirmed revision. */
+.ppp-case-status{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--linea);border-radius:14px;padding:12px;margin-bottom:12px;font-size:13px;line-height:1.5;background:var(--card);}
+.ppp-unconfirmed #pppDeck,.ppp-unconfirmed .ppp-hud,.ppp-unconfirmed #pppVersiones,.ppp-unconfirmed .ppp-shortcuts,.ppp-unconfirmed #pppDocumentos,.ppp-unconfirmed #pppEtapas,.ppp-unconfirmed #pppLectura,.ppp-unconfirmed #pppHerramientas{display:none!important;}
+.ppp-reading .ppp-case-status:before{content:'';width:14px;height:14px;flex:none;border:2px solid var(--linea);border-top-color:var(--gold);border-radius:50%;animation:ppp-reading 1s linear infinite;}
+.ppp-graphic{max-width:380px;}
+.ppp-detail>.ppp-graphic{max-width:330px;}
+.ppp-graphic svg path,.ppp-graphic svg rect,.ppp-graphic svg circle,.ppp-graphic svg ellipse{transition:d .65s,width .65s,height .65s,y .65s,cy .65s,cx .65s;}
+.ppp-mini .ppp-chart-text{display:none;}
+.ppp-open .ppp-graphic:not(.ppp-mini),.ppp-card:not(.ppp-muted) .ppp-mini{animation:none;}
+.ppp-pulse{animation:ppp-pulse 4s ease-in-out infinite;}
+.ppp-water{animation:ppp-water 7s ease-in-out infinite;}
+@keyframes ppp-reading{to{transform:rotate(360deg)}}
+@keyframes ppp-pulse{0%,100%{opacity:1}50%{opacity:.65}}
+@keyframes ppp-water{0%,100%{opacity:1}50%{opacity:.85}}
+@media(prefers-reduced-motion:reduce){.ppp-ui .ppp-reading,.ppp-ui .ppp-case-status:before,.ppp-ui .ppp-pulse,.ppp-ui .ppp-water{animation:none!important;}.ppp-graphic svg *{transition:none!important;}}
+
+.ppp-unconfirmed #advBoard,.ppp-unconfirmed #pppGestion{display:none!important;}
+.ppp-context{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.ppp-context a{color:var(--gold);text-decoration:underline;}
+
+@media(max-width:700px){.ppp-trigger{grid-template-columns:72px 1fr 20px;gap:8px;}.ppp-mini{width:72px;}}
