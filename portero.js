@@ -236,7 +236,26 @@
   }
   // Los candados propios de cada tablero (tablero, obra, tracks) abren este mismo gate de Google
   window.YODPortero = { entrar: overlayCorreo };
+  /* Una sesión YOD ya validada manda sobre los candados heredados del board.
+     Nunca se vuelve a pedir "Clave del board" después de validar Google. */
+  function quitarSubGates() {
+    ['gate','mapGate','porteroGate'].forEach(id => {
+      const g = document.getElementById(id);
+      if (!g) return;
+      g.classList.add('off');
+      g.style.setProperty('display','none','important');
+      g.setAttribute('aria-hidden','true');
+    });
+  }
+  function sesionYaValidada() {
+    const k = localStorage.getItem(LSC); if (!k) return false;
+    try {
+      const cache = JSON.parse(sessionStorage.getItem('pyod_rol') || 'null');
+      return !!(cache && cache.f === k.slice(0,14) && cache.rol);
+    } catch(e) { return false; }
+  }
   function engancharGates() {
+    if (sesionYaValidada()) { quitarSubGates(); return; }
     // modo suave (boards con gate propio): nunca tapar; solo ofrecer la liga dentro de su gate
     if (MODO_SUAVE) { const iv = setInterval(() => { const g = document.getElementById('gate') || document.getElementById('mapGate'); if (g && g.offsetParent !== null) { const caja = g.querySelector('.gate-box, .mg-box') || g.firstElementChild; if (caja && !caja.querySelector('.pg-alt2')) { const b = document.createElement('button'); b.className = 'pg-alt2'; b.textContent = '○ Entrar con Google'; b.style.cssText = 'display:block;margin:12px auto 0;font-size:11px;color:#c9a96e;background:none;border:0;text-decoration:underline;cursor:pointer;font-family:inherit'; b.onclick = () => overlayCorreo(); caja.appendChild(b); } } }, 1200); setTimeout(() => clearInterval(iv), 20000); return; }
     // sin credencial → gate de correo encima de todo
@@ -277,7 +296,7 @@
           await new Promise(ok => setTimeout(ok, 1800));
           r = await pyodPide('?recurso=canje&t=' + encodeURIComponent(k));
         }
-        if (r && r.ok) { try { localStorage.removeItem('yod_canje_fail'); } catch (e) {} rol = r.rol || 'vista'; sessionStorage.setItem('pyod_rol', JSON.stringify({ f: k.slice(0, 14), rol })); }
+        if (r && r.ok) { try { localStorage.removeItem('yod_canje_fail'); } catch (e) {} rol = r.rol || 'vista'; sessionStorage.setItem('pyod_rol', JSON.stringify({ f: k.slice(0, 14), rol })); quitarSubGates(); }
         else if (r && r.ok === false && r.error === 'liga') {
           /* Misma regla que la cabina (yod-portal/os/app.js): la credencial es de
              TODO el OS, así que un tablero solo la suelta tras 3 rechazos seguidos,
