@@ -64,6 +64,7 @@
   }
 </style>
 <style>.leaflet-tile{filter:invert(1) hue-rotate(180deg) saturate(.55) brightness(.9) contrast(.9)}.leaflet-container{background:#17140F}</style>
+<link rel="stylesheet" href="ppp-home.css?v=20261001-2">
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -85,6 +86,7 @@
     <h1 class="serif">¿Dónde hemos planeado?</h1>
     <p class="sub">Cada pin es un PPP. Toca uno para su ficha y abre su board o su Sheet. Los pines viven en la hoja <b>MAPA</b> del Sheet maestro.</p>
     <div class="chips" id="chips"></div>
+    <div class="todos"><button id="btnTodos" type="button">Todos los PPP <span class="n" id="cntTodos">…</span><span class="lt-chevron" aria-hidden="true">▾</span></button><div id="listaTodos" hidden></div></div>
   </div>
   <div class="pie">pines editables en el Sheet "YOD - POTENCIALES" · hoja MAPA</div>
 </div>
@@ -139,7 +141,7 @@
   async function entrar(){
     const v=$('gateClave').value.trim();if(!v){$('gateErr').textContent='Escribe la clave';return}
     $('gateBtn').disabled=true;$('gateErr').textContent='';
-    try{await cargar(v);clave=v;localStorage.setItem(LSK,v);$('gate').classList.add('off');ajusta()}
+    try{await cargar(v);clave=v;localStorage.setItem(LSK,v);window.PPPCatalog?.load(v);$('gate').classList.add('off');ajusta()}
     catch(e){$('gateErr').textContent=e==='clave'?'Clave incorrecta':'Sin conexión con el Sheet'}
     $('gateBtn').disabled=false;
   }
@@ -147,6 +149,7 @@
   if(clave){cargar(clave).then(()=>{$('gate').classList.add('off');ajusta()}).catch(e=>{if(e==='clave'){localStorage.removeItem(LSK);$('gateErr').textContent='La clave cambió'}else $('gateErr').textContent='Sin conexión con el Sheet'})}
 })();
 </script>
+<script src="ppp-catalog.js?v=20261001-2"></script>
 <script src="portero.js?v=relevo9"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=audit-20260930"></script>
 </body>

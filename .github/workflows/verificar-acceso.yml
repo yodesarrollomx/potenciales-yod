@@ -9,6 +9,7 @@ jobs:
   acceso:
     name: Acceso PPP · pruebas aisladas
     runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.55.1-noble
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +28,6 @@ jobs:
       - name: Instalar navegadores de prueba
         run: |
           npm install --prefix "$RUNNER_TEMP/yod-browser" --no-audit --no-fund playwright@1.55.1
-          "$RUNNER_TEMP/yod-browser/node_modules/.bin/playwright" install --with-deps chromium webkit
       - name: Siete plantillas reales · Chromium y WebKit móvil · sin red de negocio
         env:
           NODE_PATH: ${{ runner.temp }}/yod-browser/node_modules

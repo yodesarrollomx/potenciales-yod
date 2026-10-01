@@ -113,9 +113,10 @@
   }
 </style>
 <style>.leaflet-tile{filter:invert(1) hue-rotate(180deg) saturate(.55) brightness(.9) contrast(.9)}.leaflet-container{background:#17140F}</style>
+<link rel="stylesheet" href="ppp-home.css?v=20261001-2">
 </head>
 <body>
-<header>
+<header id="pppHomeHeader">
   <div class="brand"><img src="img/yod-logo.png" alt="YoDesarrollo"><span class="kick">Planificador de Potencial Inmobiliario</span></div>
   <a class="full" href="mapa.html">Mapa en pantalla completa →</a>
 </header>
@@ -126,8 +127,8 @@
     <h1 class="serif">¿Dónde hemos planeado?</h1>
     <p class="sub2">Escoge por el mapa (toca un pin y abre su board) o por los planificadores de abajo.</p>
     <div class="chips" id="chips"></div>
-    <div class="todos"><button id="btnTodos" type="button"><i class="ti ti-folder"></i> Todos los PPP <span class="n" id="cntTodos">…</span><span>▾</span></button>
-    <div id="listaTodos"></div></div>
+    <div class="todos"><button id="btnTodos" type="button"><i class="ti ti-folder"></i> Todos los PPP <span class="n" id="cntTodos">…</span><span class="lt-chevron" aria-hidden="true">▾</span></button>
+    <div id="listaTodos" hidden></div></div>
   </div>
   <div id="mapGate"><div class="mg-box">
     <h2 class="serif">Mapa de PPPs</h2>
@@ -146,36 +147,26 @@
     <p class="sub">Cada planificador calcula el potencial completo: áreas, producto, ingresos, costos, flujo y reparto. Todo caso se guarda con una palabra y vive en el Sheet maestro.</p>
   </div>
   <div class="grid">
-    <a class="ppp on" href="macrolotes.html">
-      <span class="icono"><i class="ti ti-building-factory"></i></span>
-      <h2 class="serif">PPP Macro Lotes</h2>
-      <p>Parque industrial / polo horizontal: cuadro de áreas, naves PyME, macro-lotes, comercial y vivienda; urbanización por partidas, etapas y gate de agua.</p>
-      <span class="estado">Activo</span><span class="flecha">→</span>
-    </a>
-    <a class="ppp on" href="mixto.html">
-      <span class="icono"><i class="ti ti-building-skyscraper"></i></span>
-      <h2 class="serif">PPP Mixto / Depas</h2>
-      <p>Desarrollo vertical de usos mixtos: COS/CUS, mezcla de tipologías, preventa, PIK y waterfall, dotaciones y corte del edificio en vivo.</p>
-      <span class="estado">Activo</span><span class="flecha">→</span>
-    </a>
-    <a class="ppp on" href="residencial.html">
-      <span class="icono"><i class="ti ti-map-2"></i></span>
-      <h2 class="serif">PPP Desarrollo Lotes Residenciales</h2>
-      <p>Lotificación con tu esquema real: lotes financiados (enganche + mensualidades con interés), comercial, casa club y la cartera como protagonista.</p>
-      <span class="estado">Activo</span><span class="flecha">→</span>
-    </a>
-    <a class="ppp on" href="patrimonial.html">
-      <span class="icono"><i class="ti ti-briefcase"></i></span>
-      <h2 class="serif">PPP Patrimonial / Rentas</h2>
-      <p>Unidades en renta: NOI, yield on cost vs cap de mercado (valor creado), crédito vs contado, recuperación y la curva de cuándo vender.</p>
-      <span class="estado">Activo</span><span class="flecha">→</span>
-    </a>
-    <a class="ppp on" href="unifamiliar.html" style="grid-column:1/-1">
-      <span class="icono"><i class="ti ti-home"></i></span>
-      <h2 class="serif">PPP Unifamiliar</h2>
-      <p>Casa por casa: programa de espacios, obra real por m², vender al terminar o retener en renta — con la curva patrimonial de "¿cuándo vender?".</p>
-      <span class="estado">Activo</span><span class="flecha">→</span>
-    </a>
+    <article class="ppp on">
+      <a class="ppp-main-link" href="macrolotes.html"><span class="icono"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V10l6 3V9l6 3V3h4v18H3Z"/><path d="M6 17h1m4 0h1m5 0h1"/></svg></span><h2>PPP Macro Lotes</h2><span class="estado">Abrir planificador <span aria-hidden="true">↗</span></span></a>
+      <details><summary>Qué calcula</summary><p>Parque industrial / polo horizontal: cuadro de áreas, naves PyME, macro-lotes, comercial y vivienda; urbanización por partidas, etapas y gate de agua.</p></details>
+    </article>
+    <article class="ppp on">
+      <a class="ppp-main-link" href="mixto.html"><span class="icono"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V7l9-4v18m0-12h5v12M3 21h18M8 9h3m-3 4h3m-3 4h3m6-4h1m-1 4h1"/></svg></span><h2>PPP Mixto / Depas</h2><span class="estado">Abrir planificador <span aria-hidden="true">↗</span></span></a>
+      <details><summary>Qué calcula</summary><p>Desarrollo vertical de usos mixtos: COS/CUS, mezcla de tipologías, preventa, PIK y waterfall, dotaciones y corte del edificio en vivo.</p></details>
+    </article>
+    <article class="ppp on">
+      <a class="ppp-main-link" href="residencial.html"><span class="icono"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Zm6-3v15m6-12v15M3 12l6-3 6 3 6-3"/></svg></span><h2>PPP Desarrollo Lotes Residenciales</h2><span class="estado">Abrir planificador <span aria-hidden="true">↗</span></span></a>
+      <details><summary>Qué calcula</summary><p>Lotificación con tu esquema real: lotes financiados (enganche + mensualidades con interés), comercial, casa club y la cartera como protagonista.</p></details>
+    </article>
+    <article class="ppp on">
+      <a class="ppp-main-link" href="patrimonial.html"><span class="icono"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V4h8v3M3 12l9 3 9-3m-9 1v4"/></svg></span><h2>PPP Patrimonial / Rentas</h2><span class="estado">Abrir planificador <span aria-hidden="true">↗</span></span></a>
+      <details><summary>Qué calcula</summary><p>Unidades en renta: NOI, yield on cost vs cap de mercado (valor creado), crédito vs contado, recuperación y la curva de cuándo vender.</p></details>
+    </article>
+    <article class="ppp on">
+      <a class="ppp-main-link" href="unifamiliar.html"><span class="icono"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h14V9m-10 12v-7h6v7"/></svg></span><h2>PPP Unifamiliar</h2><span class="estado">Abrir planificador <span aria-hidden="true">↗</span></span></a>
+      <details><summary>Qué calcula</summary><p>Casa por casa: programa de espacios, obra real por m², vender al terminar o retener en renta — con la curva patrimonial de "¿cuándo vender?".</p></details>
+    </article>
   </div>
 </div>
 <div class="pie"><b>YoDesarrollo · Aurum Arquitectos</b> · cada planificador pide su clave · los casos y los pines se administran desde el Sheet "YOD - POTENCIALES"</div>
@@ -222,29 +213,15 @@
     $('chips').innerHTML=Object.entries(TIPOS).filter(([t])=>counts[t]).map(([t,T])=>`<button class="chip${filtros.has(t)?'':' off'}" data-t="${t}"><i style="background:${T.hex}"></i><i class="ti ${T.ic}"></i> ${T.n}<span class="n">${counts[t]}</span></button>`).join('');
     document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{const t=b.dataset.t;filtros.has(t)?filtros.delete(t):filtros.add(t);pinta()});
   }
-  const PAGINAS={macrolotes:'macrolotes.html',vertical:'mixto.html',unifamiliar:'unifamiliar.html',residencial:'residencial.html',patrimonial:'patrimonial.html'};
-  async function cargarCasos(k){
-    const tipos=Object.keys(TIPOS);
-    const listas=await Promise.all(tipos.map(t=>fetch(ENDPOINT+'?recurso=lista&tipo='+t+'&k='+encodeURIComponent(k)).then(x=>x.json()).catch(()=>null)));
-    let total=0,html='';
-    tipos.forEach((t,i)=>{const r=listas[i];if(!r||!r.ok||!r.casos.length)return;const T=TIPOS[t];total+=r.casos.length;
-      html+=`<div class="lt-tipo" style="color:${T.hex}">${T.e} ${esc(T.n)} · ${r.casos.length}</div>`;
-      html+=r.casos.map(c=>{const dato=[c.utilidad!==''&&c.utilidad!==undefined?(n=>(n<0?'-$':'$')+Math.abs(n).toFixed(1)+' M')(Number(c.utilidad)/1e6):null,c.estado||null].filter(Boolean).join(' · ');
-        return `<a class="lt-item" href="${PAGINAS[t]}?open=${esc(c.caso_id)}"><i style="background:${T.hex}"></i><span class="nm">${esc(c.nombre_caso||c.palabra)}<span class="dt">${esc(c.palabra)}${dato?' · '+esc(dato):''}</span></span><span class="ir">→</span></a>`}).join('');
-    });
-    $('cntTodos').textContent=total;
-    $('listaTodos').innerHTML=html||'<div class="lt-item">Aún no hay casos guardados.</div>';
-  }
-  $('btnTodos').onclick=()=>$('listaTodos').classList.toggle('on');
   async function cargar(k){
     const r=await fetch(ENDPOINT+'?recurso=mapa&k='+encodeURIComponent(k)).then(x=>x.json());
     if(!r.ok)throw r.error||'error';
-    pines=r.pines||[];initMap();pinta();cargarCasos(k);
+    pines=r.pines||[];initMap();pinta();
   }
   async function entrar(){
     const v=$('mgClave').value.trim();if(!v){$('mgErr').textContent='Escribe la clave';return}
     $('mgBtn').disabled=true;$('mgErr').textContent='';
-    try{await cargar(v);clave=v;localStorage.setItem(LSK,v);$('mapGate').classList.add('off');ajusta()}
+    try{await cargar(v);clave=v;localStorage.setItem(LSK,v);window.PPPCatalog?.load(v);$('mapGate').classList.add('off');ajusta()}
     catch(e){$('mgErr').textContent=e==='clave'?'Clave incorrecta':'Sin conexión con el Sheet'}
     $('mgBtn').disabled=false;
   }
@@ -253,6 +230,7 @@
   if(clave){cargar(clave).then(()=>{$('mapGate').classList.add('off');ajusta()}).catch(e=>{if(e==='clave'){localStorage.removeItem(LSK);$('mgErr').textContent='La clave cambió'}})}
 })();
 </script>
+<script src="ppp-catalog.js?v=20261001-2"></script>
 <script src="portero.js?v=relevo9"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=audit-20260930"></script>
 </body>

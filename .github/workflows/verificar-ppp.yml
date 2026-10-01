@@ -9,6 +9,7 @@ jobs:
   interfaz:
     name: PPP · interfaz y contratos
     runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.55.1-noble
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
@@ -19,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: yodesarrollomx/yod-portal
-          ref: 7b8103ec63cefe1b98aee32bfdfe72f6e8abde77
+          ref: 8477bb256182b1a7cb6b9c99c3e95d114efa2308
           path: .yod-atlas-ui
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -27,19 +28,30 @@ jobs:
           node-version: '22'
       - name: Controles, cálculo original y sintaxis
         run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           node --check ppp-ui.js
+          node --check ppp-catalog.js
           node --test tests/ppp-ui.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs
           git diff --check
       - name: Instalar navegadores
         run: |
           npm install --prefix "$RUNNER_TEMP/ppp-browser" --no-audit --no-fund playwright@1.55.1
-          "$RUNNER_TEMP/ppp-browser/node_modules/.bin/playwright" install --with-deps chromium webkit
+      - name: Leaflet real para pruebas aisladas de la portada
+        run: |
+          mkdir -p "$RUNNER_TEMP/ppp-map-assets"
+          curl --fail --location --retry 3 https://unpkg.com/leaflet@1.9.4/dist/leaflet.js -o "$RUNNER_TEMP/ppp-map-assets/leaflet.js"
+          curl --fail --location --retry 3 https://unpkg.com/leaflet@1.9.4/dist/leaflet.css -o "$RUNNER_TEMP/ppp-map-assets/leaflet.css"
+          curl --fail --location --retry 3 https://unpkg.com/leaflet-gesture-handling@1.2.2/dist/leaflet-gesture-handling.min.js -o "$RUNNER_TEMP/ppp-map-assets/gesture.js"
+          curl --fail --location --retry 3 https://unpkg.com/leaflet-gesture-handling@1.2.2/dist/leaflet-gesture-handling.min.css -o "$RUNNER_TEMP/ppp-map-assets/gesture.css"
       - name: Recorridos reales del DOM con transporte sintético
         env:
           NODE_PATH: ${{ runner.temp }}/ppp-browser/node_modules
           YOD_ATLAS_DIR: ${{ github.workspace }}/.yod-atlas-ui
           PPP_SCREENSHOTS: ${{ runner.temp }}/ppp-shots
-        run: node tests/ppp-browser.cjs
+          PPP_MAP_ASSETS: ${{ runner.temp }}/ppp-map-assets
+        run: |
+          node tests/ppp-browser.cjs
+          node tests/ppp-home-browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

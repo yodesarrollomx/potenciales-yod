@@ -1,0 +1,47 @@
+/* Leaflet conserva su orden interno; ninguna capa escapa sobre el shell. */
+#mapWrap, #wrap {isolation:isolate;z-index:0}
+.todos {margin-top:9px}
+#btnTodos {width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(35,29,20,.04);border:1px solid var(--lineaf);border-radius:11px;padding:8px 11px;color:var(--text);font:inherit;font-weight:700;cursor:pointer;min-height:44px;font-size:12px}
+#btnTodos .n {background:rgba(154,123,63,.12);border-radius:9px;padding:1px 8px;font-size:10px}
+#btnTodos[aria-expanded="true"] .lt-chevron {transform:rotate(180deg)}
+.lt-chevron {transition:transform .18s}
+#listaTodos {display:block;max-height:min(340px,38dvh);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;margin-top:7px;border:1px solid var(--linea);border-radius:11px;background:var(--card,#fff);scrollbar-width:thin}
+#listaTodos[hidden] {display:none!important}
+.lt-group {margin:0}
+.lt-tipo {position:sticky;top:0;z-index:1;margin:0;background:var(--card,#fff);color:var(--text);font-size:10px;font-weight:700;letter-spacing:.03em;padding:9px 10px;border-bottom:1px solid var(--linea);display:flex;justify-content:space-between}
+.lt-item {min-height:48px;display:flex;align-items:center;gap:8px;padding:9px 10px;color:var(--text);text-decoration:none;border-bottom:1px solid var(--linea)}
+.lt-item .nm {font-size:12px;font-weight:600;line-height:1.25;overflow-wrap:anywhere}
+.lt-item .dt {display:block;font-size:10px;font-weight:400;color:var(--muted);margin-top:3px}
+.lt-item .ir {margin-left:auto;color:var(--goldc)}
+.lt-dot {width:8px;height:8px;border-radius:50%;flex:none;background:#9a7b3f}
+.lt-vertical {background:#3e6484}.lt-unifamiliar {background:#39744b}.lt-residencial {background:#2f7d8f}.lt-patrimonial {background:#5f5ab0}
+.lt-status {margin:0;padding:14px 12px;font-size:12px;color:var(--muted);line-height:1.4}
+.lt-retry {margin:0 10px 10px;min-height:44px;padding:8px 12px;border:1px solid var(--lineaf);border-radius:9px;background:var(--card);color:var(--goldc);font:inherit;font-size:12px;cursor:pointer}
+#btnTodos:focus-visible,.lt-item:focus-visible,.lt-retry:focus-visible,.ppp-main-link:focus-visible,.ppp details summary:focus-visible {outline:2px solid var(--goldc);outline-offset:-3px}
+/* Cinco accesos compactos; las descripciones completas siguen disponibles. */
+#planificadores {padding:20px 16px 28px}
+#planificadores .titulo-botones {margin-bottom:14px}
+#planificadores .titulo-botones h1 {font-size:26px}
+#planificadores .grid {grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+#planificadores .ppp {padding:0;border-radius:16px;overflow:hidden;align-self:start}
+#planificadores .ppp::after {display:none}
+.ppp-main-link {display:flex;flex-direction:column;gap:8px;align-items:flex-start;min-height:126px;padding:14px;color:inherit;text-decoration:none}
+#planificadores .ppp .icono {display:grid;place-items:center;width:36px;height:36px;margin:0;background:rgba(154,123,63,.12);color:var(--goldc);border-radius:11px}
+.ppp .icono svg {width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+#planificadores .ppp h2 {font-family:inherit;font-size:14px;font-weight:600;line-height:1.25;margin:0}
+#planificadores .ppp .estado {display:flex;gap:6px;align-items:center;padding:0;background:none;color:var(--muted);font-size:10px;letter-spacing:0;text-transform:none;margin:0}
+.ppp .estado::before {content:"";width:5px;height:5px;border-radius:50%;background:var(--green)}
+.ppp details {border-top:1px solid var(--linea)}
+.ppp details summary {min-height:36px;padding:9px 14px;font-size:10px;color:var(--muted);cursor:pointer}
+#planificadores .ppp details p {padding:0 14px 14px;font-size:11px;line-height:1.5}
+@media(max-width:640px) {
+  #pppHomeHeader .brand {min-width:0;flex:1}
+  #pppHomeHeader .brand img {width:clamp(100px,32vw,140px);height:auto;max-width:100%}
+  #pppHomeHeader .full {max-width:48%;white-space:normal;text-align:right}
+  #planificadores .grid {grid-template-columns:repeat(2,minmax(0,1fr))}
+  #planificadores .titulo-botones h1 {font-size:24px}
+  #planificadores .titulo-botones .sub {font-size:11px}
+  .ppp-main-link {min-height:116px;padding:12px;gap:7px}
+  .ppp details summary {min-height:44px;padding:12px}
+}
+@media(prefers-reduced-motion:reduce) {.lt-chevron {transition:none}}
