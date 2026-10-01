@@ -303,6 +303,7 @@
 
 #mercadoDocumento[hidden]{display:none}#mercadoDocumento table{width:100%;border-collapse:collapse;font-size:11px}#mercadoDocumento td,#mercadoDocumento th{padding:8px;border-bottom:1px solid var(--linea);text-align:left}#mercadoDocumento h3{font-size:14px}#mercadoDocumento{overflow-wrap:anywhere}#mercadoDocumento button{margin-top:10px}
 </style>
+<link rel="stylesheet" href="ppp-ui.css?v=20261001-1">
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -329,7 +330,7 @@
   <div class="clave-banner" id="modoLocalBanner">Estás <b>sin conexión a la nube</b>: los cambios viven solo en este navegador. Entra con la clave del board para guardar y compartir casos.</div>
 
   <div class="caso-bar">
-    <div class="caso-activo">Caso de trabajo<b id="casoNombreBar">Caso nuevo (sin guardar)</b><span class="sync-dot" id="syncDot"></span></div>
+    <div class="caso-activo">Caso de trabajo<b id="casoNombreBar">Supuestos de referencia · sin guardar</b><span class="sync-dot" id="syncDot"></span></div>
     <div class="caso-actions">
       <button class="small-btn secondary" id="btnMisCasos"><i class="ti ti-folder"></i>Mis casos</button>
       <button class="small-btn secondary" id="btnNuevo"><i class="ti ti-plus"></i>Nuevo</button>
@@ -536,6 +537,7 @@
 </div></div>
 
 <div id="toast"></div>
+<script src="ppp-ui.js?v=20261001-1"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -545,7 +547,7 @@
   const ESTADOS=['EXPLORACIÓN','ANÁLISIS','PROPUESTA','NEGOCIACIÓN','CERRADO','DESCARTADO'];
   let clave=localStorage.getItem(LS.clave)||'';
   let caso={caso_id:'',palabra:'',correo:'',nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};
-  let cfgBoard={}, casosCache=[], modoLocal=!cloudOn;
+  let cfgBoard={}, casosCache=[], modoLocal=!cloudOn, restoredDraft=false, legacySavedInputs=null;
 
   const $=id=>document.getElementById(id); const controls=[...document.querySelectorAll('input[type=range]')]; let state=null;
   const fmtN=n=>Math.round(n||0).toLocaleString('en-US'); const fmtM=n=>'$'+((n||0)/1e6).toFixed(1)+' M'; const fmtMoney=n=>'$'+Math.round(n||0).toLocaleString('en-US'); const fmtK=n=>'$'+((n||0)/1000).toFixed(1)+'k'; const pct=(n,d=1)=>Number(n||0).toFixed(d)+'%'; const sM=n=>(n<0?'−':'+')+fmtM(Math.abs(n||0));
@@ -809,7 +811,7 @@
     clampRelations();
     state=computar(inputValues());
     escSyncActivo();
-    render();renderEscenarios();renderComparador();guardarDraft();return state}
+    render();renderEscenarios();renderComparador();guardarDraft();sheetStatus(legacyStatus());return state}
 
   /* ================== VERSIONES DEL CASO (comparador) ================== */
   // Hasta 8 versiones del mismo caso. La versión ★ (esBase) es la referencia del comparador.
@@ -973,7 +975,8 @@
     const fc=$('flujoCaption');if(fc)fc.textContent=`Corrida completa: ${r.totalMonths} meses · preventa 1–${r.p.preMonths} · obra ${r.buildStart+1}–${r.buildFinish} · cierre al ${r.totalMonths} · desplaza la tabla para verla toda`;
     const filasF=[];r.flows.forEach((x,i)=>{if(i%12===0)filasF.push(`<tr class="year-row"><td colspan="7">AÑO ${Math.floor(i/12)+1}</td></tr>`);filasF.push(`<tr><td>${x.m}</td><td>${fmtM(x.rev)}</td><td>${fmtM(x.cost)}</td><td>${fmtM(x.equity)}</td><td>${fmtM(x.pik+x.fee)}</td><td>${fmtM(x.debt)}</td><td>${fmtM(x.caja)}</td></tr>`)});
     filasF.push(`<tr class="tot-row"><td>Σ ${r.totalMonths} meses</td><td>${fmtM(r.revTotal)}</td><td>${fmtM(r.costTotal)}</td><td>${fmtM(r.equityUsed)}</td><td>${fmtM(r.interest+r.feeDebt)}</td><td>${fmtM(r.debt)}</td><td>${fmtM(r.cash)}</td></tr>`);
-    $('flowRows').innerHTML=filasF.join('');renderProforma(r);renderLandDeal(r);renderFormulas();refreshJson()
+    $('flowRows').innerHTML=filasF.join('');renderProforma(r);renderLandDeal(r);renderFormulas();refreshJson();
+    window.PPPView?.update(r,{native:!!sheetModel,revision:sheetModel?.revision,caseId:caso.caso_id,scenario:escActivo,scenarioName:escGet(escActivo)?.nombre});
   }
   function renderProforma(r){
     const row=(label,value,klass='')=>`<tr class="${klass}"><td>${label}</td><td>${value}</td></tr>`,section=label=>`<tr class="section-row"><td colspan="2">${label}</td></tr>`,economicTotal=r.projectCost+r.interest+r.feeDebt,cashOk=Math.abs(r.cashReconciliation)<1;
@@ -1076,7 +1079,7 @@
   }
   function labelFor(id){const input=$(id);return input?.closest('.input-group')?.querySelector('label')?.textContent||id}
   function renderFormulas(){$('formulaList').innerHTML=formulaDefs.map((f,i)=>`<div class="formula-row"><b>${f[0]}</b><code>${f[1]}</code><button class="formula-btn" data-formula="${i}">ver</button></div>`).join('');document.querySelectorAll('[data-formula]').forEach(b=>b.onclick=e=>openFormula(Number(e.currentTarget.dataset.formula)))}
-  function openFormula(i){const f=formulaDefs[i],r=state;$('formulaDetail').innerHTML=`<b>${f[0]}</b><br><code>${f[1]}</code><p>${f[3](r)}</p>${f[2].map(id=>`<button class="chip" data-jump="${id}">${labelFor(id)}</button>`).join('')}`;document.querySelectorAll('.chip[data-jump]').forEach(b=>b.onclick=()=>{const el=$(b.dataset.jump);el.closest('.card').scrollIntoView({behavior:'smooth',block:'center'});el.focus()})}
+  function openFormula(i){const f=formulaDefs[i],r=state;$('formulaDetail').innerHTML=`<b>${f[0]}</b><br><code>${f[1]}</code><p>${f[3](r)}</p>${f[2].map(id=>`<button class="chip" data-jump="${id}">${labelFor(id)}</button>`).join('')}`;document.querySelectorAll('.chip[data-jump]').forEach(b=>b.onclick=()=>{const el=$(b.dataset.jump),card=el.closest('.card');if(window.PPPView&&card){window.PPPView.adjust(card.dataset.card,el.id);return;}card?.scrollIntoView({behavior:'smooth',block:'center'});el.focus()})}
   function toggleDrawer(card){const drawer=$(card.dataset.card),was=drawer.classList.contains('active');document.querySelectorAll('.drawer').forEach(d=>d.classList.remove('active'));document.querySelectorAll('.card').forEach(c=>c.classList.remove('open'));document.querySelectorAll('.edit-pill').forEach(e=>e.textContent='AJUSTAR');if(!was){drawer.classList.add('active');card.classList.add('open');card.querySelector('.edit-pill').textContent='CERRAR';setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'center'}),150)}}
 
   /* ================== JSON del supuesto ================== */
@@ -1091,21 +1094,29 @@
   function apiGet(params){const q=new URLSearchParams(Object.assign({k:clave,tipo:NUBE.TIPO},params));return fetch(NUBE.ENDPOINT+'?'+q.toString()).then(r=>r.json())}
   function apiPost(body){body=Object.assign({k:clave,tipo_desarrollo:NUBE.TIPO},body);return fetch(NUBE.ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)}).then(r=>r.json())}
   function nuevoRequestId(){return (crypto.randomUUID?.()||Date.now()+'-'+Math.random())}
-  function guardarDraft(){try{localStorage.setItem(LS.draft,JSON.stringify({inputs:inputValues(),caso,escenarios,escActivo,sheetModel,sheetPending}))}catch(e){}}
-  function cargarDraft(){try{const d=JSON.parse(localStorage.getItem(LS.draft)||'null');if(!d)return;if(d.sheetModel&&d.caso?.caso_id===d.sheetModel.caso_id&&d.sheetModel.revision&&Array.isArray(d.sheetModel.escenarios)&&d.sheetModel.estados){sheetModel=d.sheetModel;sheetNeedsRefresh=true;sheetFailure=true;sheetPending=d.sheetPending||null;}if(d.inputs)Object.entries(d.inputs).forEach(([id,v])=>setControl(id,v));if(d.caso)caso=Object.assign(caso,d.caso);
+  function guardarDraft(){try{localStorage.setItem(LS.draft,JSON.stringify({inputs:inputValues(),caso,escenarios,escActivo,sheetModel,sheetPending,savedInputs:legacySavedInputs}))}catch(e){}}
+  function cargarDraft(){try{const d=JSON.parse(localStorage.getItem(LS.draft)||'null');if(!d)return;restoredDraft=true;legacySavedInputs=d.savedInputs||null;if(d.sheetModel&&d.caso?.caso_id===d.sheetModel.caso_id&&d.sheetModel.revision&&Array.isArray(d.sheetModel.escenarios)&&d.sheetModel.estados){sheetModel=d.sheetModel;sheetNeedsRefresh=true;sheetFailure=true;sheetPending=d.sheetPending||null;}if(d.inputs)Object.entries(d.inputs).forEach(([id,v])=>setControl(id,v));if(d.caso)caso=Object.assign(caso,d.caso);
     if(Array.isArray(d.escenarios)&&d.escenarios.length){escenarios=d.escenarios;escActivo=d.escActivo&&escGet(d.escActivo)?d.escActivo:escenarios[0].id;const e=escGet(escActivo);if(e)escAplicar(e)}if(sheetModel&&d.inputs)Object.entries(d.inputs).forEach(([id,v])=>setControl(id,v));}catch(e){}}
+  function legacyStatus(){
+    if(modoLocal)return 'Sin conexión · copia local';
+    if(!caso.caso_id)return 'Supuestos de referencia · sin guardar';
+    if(!legacySavedInputs)return 'Copia local · v'+(caso.version||1)+' · verificar guardado';
+    const values=inputValues(),dirty=Object.keys(values).some(id=>Number(values[id])!==Number(legacySavedInputs[id]));
+    return dirty?'Cambios locales · sin guardar':'Guardado · v'+(caso.version||1);
+  }
   function pintaCaso(){
-    const nombre=caso.nombre_caso||'Caso nuevo';
+    const nombre=caso.nombre_caso||'Supuestos de referencia';
     $('heroNombre').innerHTML='';$('heroNombre').append(document.createTextNode(nombre));
     const pill=document.createElement('span');pill.className='estado-pill';pill.id='heroEstado';pill.textContent=caso.estado||'EXPLORACIÓN';$('heroNombre').append(pill);
     txt('heroSub',caso.caso_id?`palabra: ${caso.palabra} · v${caso.version||1}${caso.siguiente_paso?' · siguiente: '+caso.siguiente_paso:''}`:'Mueve los supuestos y guarda el caso con una palabra para volver.');
-    txt('casoNombreBar',caso.caso_id?`${nombre} · ${caso.palabra}`:'Caso nuevo (sin guardar)');
-    const dot=$('syncDot');dot.className='sync-dot';dot.textContent=sheetModel?(sheetNeedsRefresh?'Copia de Sheets · conexión por verificar':sheetPending||sheetBusy||sheetFailure?'Sheets · cambios pendientes de confirmar':'Sheets · revisión '+sheetModel.revision.slice(0,8)):modoLocal?'· sin nube':caso.caso_id?'· guardado en Sheet v'+(caso.version||1):'· sin guardar';
+    txt('casoNombreBar',caso.caso_id?`${nombre} · ${caso.palabra}`:'Supuestos de referencia · sin guardar');
+    const dot=$('syncDot');dot.className='sync-dot';dot.textContent=sheetModel?(sheetNeedsRefresh?'Copia de Sheets · conexión por verificar':sheetPending||sheetBusy||sheetFailure?'Sheets · cambios pendientes de confirmar':'Sheets · revisión '+sheetModel.revision.slice(0,8)):legacyStatus();
     $('estadoChips').innerHTML=ESTADOS.map(e=>`<button class="echip${(caso.estado||'EXPLORACIÓN')===e?' on':''}" data-estado="${e}">${e}</button>`).join('');
     document.querySelectorAll('[data-estado]').forEach(b=>b.onclick=()=>cambiarEstado(b.dataset.estado));
     $('segSiguiente').value=caso.siguiente_paso||'';
     $('segLog').textContent=caso.notas_seguimiento||'Sin notas todavía.'+(caso.caso_id?'':' Guarda el caso primero para dar seguimiento.');
      renderReuniones();
+     if(state)window.PPPView?.update(state,{native:!!sheetModel,revision:sheetModel?.revision,caseId:caso.caso_id,scenario:escActivo,scenarioName:escGet(escActivo)?.nombre});
   }
   function aplicarCasoRemoto(obj){
     if(sheetModel&&obj.caso_id===caso.caso_id&&!obj.calculo_sheet){sheetNeedsRefresh=true;sheetFailure=true;sheetStatus('No se confirmó el modelo de Sheets · conserva copia anterior');toast('El servidor no confirmó el modelo nativo. Recarga cuando esté disponible.');return;}
@@ -1113,6 +1124,7 @@
     Object.keys(obj).forEach(kk=>{if(/^in[A-Z]/.test(kk)&&$(kk)&&obj[kk]!==''&&isFinite(Number(obj[kk])))setControl(kk,Number(obj[kk]))});
     caso={caso_id:obj.caso_id||'',palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
     if(!escDesdeJson(obj.escenarios_json))escInicial('Base');
+    if(!sheetModel)legacySavedInputs=inputValues();
     if(sheetModel)acceptSheetModel(sheetModel,sheetModel.activo);else calculate();pintaCaso();if(sheetModel)sheetStatus('Sheets · revisión '+sheetModel.revision.slice(0,8));cerrarOverlays();toast('Caso "'+(caso.nombre_caso||caso.palabra)+'" cargado'+(escenarios.length>1?' · '+escenarios.length+' versiones':''))
   }
   async function abrirPorId(id){try{const r=await apiGet({recurso:'caso',id});if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'Ese caso ya no existe':'No se pudo abrir: '+r.error)}catch(e){toast('Sin conexión: no se pudo abrir el caso')}}
@@ -1139,7 +1151,7 @@
         else toast('No se guardó: '+r.error);
         return}
       if(!r.caso_id){$('gWeb').value='';toast('No se guardó: vuelve a intentar');return}
-      caso.caso_id=r.caso_id;caso.palabra=r.palabra||payload.palabra;caso.correo=correo;caso.nombre_caso=nombre||'Caso sin nombre';caso.notas_caso=notas;caso.version=r.version;
+      caso.caso_id=r.caso_id;caso.palabra=r.palabra||payload.palabra;caso.correo=correo;caso.nombre_caso=nombre||'Caso sin nombre';caso.notas_caso=notas;caso.version=r.version;if(!sheetModel)legacySavedInputs={...payload.inputs};
       if(r.calculo_sheet)acceptSheetModel(r.calculo_sheet,escActivo);pintaCaso();guardarDraft();cerrarOverlays();if(sheetModel)sheetStatus('Sheets · revisión '+sheetModel.revision.slice(0,8));
       toast(r.emailed?'Caso guardado · correo con la palabra enviado':'Caso guardado · palabra: '+caso.palabra)
     }catch(e){btns.forEach(b=>b.disabled=false);if(sheetModel){sheetStatus('No se confirmó el guardado');toast('No se guardó: revisa conexión');return;}encolar(payload);toast('Sin conexión: se guardará al reconectar')}
@@ -1191,7 +1203,17 @@
     $('gateBtn').disabled=false
   }
   function modoSinConexion(){modoLocal=true;$('gate').classList.add('off');$('modoLocalBanner').classList.add('on');pintaCaso()}
-  function procesarOpen(){const id=new URLSearchParams(location.search).get('open');if(id&&!modoLocal)abrirPorId(id)}
+  function procesarOpen(){
+    if(modoLocal)return;
+    const id=new URLSearchParams(location.search).get('open');
+    if(id){
+      // A same-case link must not discard unconfirmed quantities restored from this device.
+      if(id===caso.caso_id&&sheetPending){sheetStatus('Copia recuperada · cantidades pendientes de confirmar');return;}
+      abrirPorId(id);return;
+    }
+    if(caso.caso_id){if(sheetModel&&!sheetPending)reloadSheetModel();return;}
+    if(!restoredDraft&&casosCache.length){abrirOverlay('ovCasos');cargarLista();}
+  }
   function abrirOverlay(id){$(id).classList.add('on')}
   function cerrarOverlays(){document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('on'))}
   /* ================== ARRANQUE ================== */
@@ -1203,7 +1225,7 @@
   $('casosCerrar').onclick=cerrarOverlays;
   $('btnAbrirPalabra').onclick=()=>abrirPorPalabra($('abrirPalabra').value);
   $('abrirPalabra').addEventListener('keydown',e=>{if(e.key==='Enter')abrirPorPalabra($('abrirPalabra').value)});
-  $('btnNuevo').onclick=()=>{sheetModel=null;sheetPending=null;sheetNeedsRefresh=false;sheetFailure=false;Object.entries(DEFAULTS).forEach(([id,v])=>setControl(id,v));caso={caso_id:'',palabra:'',correo:caso.correo,nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};escInicial('Base');calculate();pintaCaso();toast('Caso nuevo: supuestos de referencia')};
+  $('btnNuevo').onclick=()=>{legacySavedInputs=null;sheetModel=null;sheetPending=null;sheetNeedsRefresh=false;sheetFailure=false;Object.entries(DEFAULTS).forEach(([id,v])=>setControl(id,v));caso={caso_id:'',palabra:'',correo:caso.correo,nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};escInicial('Base');calculate();pintaCaso();toast('Caso nuevo: supuestos de referencia')};
   /* ================== TRACK DE REUNIONES DEL PPP ==================
      Persiste SIN tocar el backend: cada reunión es un renglón de notas_seguimiento
      con el sello 📅. OJO: el Apps Script ANTEPONE su fecha a la nota, así que el
@@ -1317,12 +1339,14 @@
   document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)cerrarOverlays()}));
   window.addEventListener('online',()=>{if(sheetModel){sheetFailure=false;flushSheetSync();}else drenarCola();});setInterval(drenarCola,25000);
   setInterval(()=>{if(sheetModel&&!sheetPending&&!sheetBusy&&!document.hidden)reloadSheetModel();},45000);
+  window.PPPHelp=(id,anchor)=>{const info=GLOSARIO[metricHelp[id]];if(info){showMetricTip(anchor,info);metricTip.dataset.for=id;}};
+  window.PPPView?.mount();
   cargarDraft();if(!escenarios.length)escInicial('Base');calculate();pintaCaso();
   if(modoLocal){$('gate').classList.add('off');$('modoLocalBanner').classList.add('on')}
   else if(clave){apiGet({recurso:'lista'}).then(r=>{if(r.ok){casosCache=r.casos||[];cfgBoard=r.config||{};$('gate').classList.add('off');drenarCola();procesarOpen()}else{reabrirGate()}}).catch(()=>{modoSinConexion();toast('Sin conexión: trabajando en modo local')})}
 })();
 </script>
-<script src="modelos.js?v=1"></script>
+<!-- El selector de motores se retiró del PPP vertical por decisión de Dirección. -->
 <script src="portero.js?v=relevo9"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=audit-20260930"></script>
 </body>
