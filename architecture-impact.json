@@ -1,6 +1,6 @@
 {
-  "model_revision": "2026-10-01.23-ppp-versiones-lectura",
-  "proposal_id": "CHG-PPP-VERSIONES-004",
+  "model_revision": "2026-10-01.24-chinches-cierre",
+  "proposal_id": "CHG-CHINCHES-CIERRE-001",
   "components": [
     "SYS-POTENCIALES",
     "SYS-YOD-OS",
@@ -8,13 +8,11 @@
     "SHEET-PORTERO",
     "SHEET-PPP-MODELOS"
   ],
-  "summary": "Corregir rechazo del modelo nativo: el contrato envía resultados de todas las versiones y flujo solo activo. Seleccionar únicamente una versión con flujo confirmado, validar respuestas antes de aplicarlas y conservar pendientes. Índice completo numerado con base, activa y nombres completos; no modificar hojas, fórmulas, IDs ni backend.",
+  "summary": "Completar índice de versiones de Macrolotes, cinco accesos en una fila y proporciones visuales vinculadas al estado confirmado. Conservar contratos, motores financieros, IDs, entradas, Sheets, Portero y backend.",
   "tests": [
-    "node --test tests/ppp-ui.test.cjs tests/ppp-case-loader.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs: 31 pruebas",
-    "node tests/ppp-versions-browser.cjs: ocho versiones, flujo solo activo, comparación completa, activación y cantidades sintéticas, datos pendientes conservados ante respuesta incompleta, recarga con activa externa; Chromium/WebKit y 320/390/430/1280 px",
-    "Respuesta HTTP real autorizada conciliada con índice Versiones y renderizada por frontend corregido; sin escrituras de negocio",
-    "node tests/ppp-browser.cjs; node tests/ppp-identity-browser.cjs; node tests/ppp-terrain-browser.cjs; node tests/ppp-home-browser.cjs; node tests/access-browser.cjs",
-    "Sintaxis, git diff --check, atlas y comparación byte por byte de archivos públicos"
+    "Regresiones originales de acceso, versiones y transporte sintético; casos móvil 320/390/430 y escritorio 1280.",
+    "Relaciones visuales ausentes, 0%, 85%, excedentes y cambios de escenario; no escribir datos negocio.",
+    "CI del commit exacto, arquitectura y archivos estáticos publicados comparados byte por byte."
   ],
   "rollback": "Revertir frontend y referencia fija del atlas por PR. Conservar libros, versiones, contratos y registros privados."
 }

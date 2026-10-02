@@ -13,7 +13,7 @@ La interfaz de `mixto.html` conserva los 81 controles y los 40 cuadros KPI origi
 
 | Tarjeta | Resumen | Gráfico |
 | --- | --- | --- |
-| Arquitectura | Unidades, pisos, altura y área vendible | Volumen conceptual: terreno y placa mediante raíz de superficie, altura 0–120 m, líneas por nivel; terreno 0–10,000 m². No es plano ni permiso. |
+| Arquitectura | Unidades, pisos, altura y área vendible | Volumen conceptual: terreno y placa mediante raíz de superficie con la misma referencia fija 0–10,000 m²; altura 0–120 m y líneas por nivel. No es plano ni permiso. |
 | Ventas e ingresos | Venta modelada, precio y preventa efectiva | Participación de vivienda, locales y cajones sobre ventas, escala 0–100 %. |
 | Costos | Costo económico con intereses y comisión de deuda | Obra, otros costos y financiación sobre el costo total, escala 0–100 %. |
 | Macro y crédito | Pico de deuda, límite y holgura | Deuda/límite y aportaciones de dueño/desarrollador respecto al capital total; no implica crédito autorizado. |
@@ -39,3 +39,9 @@ Las pruebas interceptan todas las peticiones de negocio. No envían correos ni e
 ## Reversión
 
 Revertir mediante PR los archivos de presentación, los hooks mínimos de `mixto.html` y la referencia de atlas. No borrar borradores, colas, casos, libros ni sesiones. Propuesta `CHG-PPP-UI-001` en el atlas central.
+
+## Cierre de chinches · 1 octubre
+
+Las cinco tarjetas muestran dos barras cuya longitud representa las razones etiquetadas del mismo estado confirmado. Un 85% ocupa 85% de su barra; los ausentes aparecen como — y patrón discontinuo, y los excedentes conservan su cifra. Son referencias de comparación, no niveles de avance ni sensores. Macrolotes usa un índice numerado con nombre completo, Base y Activa explícitas, acciones de edición independientes y explicación de que todas las versiones corresponden al mismo proyecto. Se conservan IDs, entradas, comparador y guardado.
+
+`tests/ppp-cierre-browser.cjs` verifica proporciones, cambios, datos ausentes, ocho alternativas con nombres completos y conservación de IDs en Chromium/WebKit. Todo transporte de negocio se intercepta. No acredita una sesión real ni edición en un libro de producción.

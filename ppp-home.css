@@ -22,7 +22,7 @@
 #planificadores {padding:20px 16px 28px}
 #planificadores .titulo-botones {margin-bottom:14px}
 #planificadores .titulo-botones h1 {font-size:26px}
-#planificadores .grid {grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+#planificadores .grid {grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:14px}
 #planificadores .ppp {padding:0;border-radius:16px;overflow:hidden;align-self:start}
 #planificadores .ppp::after {display:none}
 .ppp-main-link {display:flex;flex-direction:column;gap:8px;align-items:flex-start;min-height:126px;padding:14px;color:inherit;text-decoration:none}
@@ -38,10 +38,22 @@
   #pppHomeHeader .brand {min-width:0;flex:1}
   #pppHomeHeader .brand img {width:clamp(100px,32vw,140px);height:auto;max-width:100%}
   #pppHomeHeader .full {max-width:48%;white-space:normal;text-align:right}
-  #planificadores .grid {grid-template-columns:repeat(2,minmax(0,1fr))}
+  #planificadores .grid {grid-template-columns:repeat(5,minmax(0,1fr))}
   #planificadores .titulo-botones h1 {font-size:24px}
   #planificadores .titulo-botones .sub {font-size:11px}
   .ppp-main-link {min-height:116px;padding:12px;gap:7px}
   .ppp details summary {min-height:44px;padding:12px}
 }
 @media(prefers-reduced-motion:reduce) {.lt-chevron {transition:none}}
+
+/* Una sola fila de acceso también en móvil, con objetivos táctiles completos. */
+#planificadores .grid{gap:5px;position:relative}
+#planificadores .ppp{overflow:visible}
+#planificadores .ppp-main-link{align-items:center;text-align:center;min-height:110px;padding:10px 5px;gap:7px}
+#planificadores .ppp h2{font-size:12px;overflow-wrap:anywhere}
+#planificadores .ppp .estado{font-size:9px;line-height:1.3}
+#planificadores .ppp details{position:static}
+#planificadores .ppp details summary{font-size:10px;padding:10px 3px;text-align:center;min-height:44px}
+#planificadores .ppp details[open] p{position:absolute;z-index:2;left:0;top:100%;width:100%;box-sizing:border-box;padding:12px;background:var(--card);border:1px solid var(--linea);border-radius:12px;box-shadow:0 8px 24px #0002}
+
+@media(max-width:640px){#planificadores{padding:10px 10px 14px}#planificadores .titulo-botones h1{font-size:20px}#planificadores .titulo-botones .sub{display:none}#planificadores .ppp h2{font-size:10px;line-height:1.3}#planificadores .ppp .estado{display:none}#planificadores .ppp-main-link{min-height:94px;padding:10px 3px}#mapWrap{height:clamp(280px,45dvh,480px)}}

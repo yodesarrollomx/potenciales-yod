@@ -4,7 +4,7 @@ La portada y el mapa completo conservan los mismos cinco motores y endpoints. `p
 
 `ppp-catalog.js` consulta `recurso=lista` por cada tipo y muestra los casos conforme termina cada consulta, independientemente de `recurso=mapa`. El desplegable abre inmediatamente, comunica carga/error, limita cada consulta a 25 segundos y reintenta únicamente listas fallidas. `15` significa cinco consultas completas; `9+` indica casos disponibles y lista incompleta. Un error nunca se convierte en una lista vacía. Cambiar credencial cancela las consultas y descarta respuestas tardías; no guarda datos privados en caché. La cifra real depende de las filas que el backend autoriza a cada sesión: 15 es solo el ejemplo sintético de prueba.
 
-Los cinco planificadores forman dos columnas en móvil y tres en escritorio. Cada acceso tiene un SVG local; las descripciones originales completas se conservan en «Qué calcula». Los destinos y controles de los motores se conservan.
+Los cinco planificadores forman una sola fila en móvil y escritorio. Cada acceso conserva al menos 44 px de ancho; las descripciones completas se abren debajo de la fila sin salir de la pantalla. Cada acceso tiene un SVG local; las descripciones originales completas se conservan en «Qué calcula». Los destinos y controles de los motores se conservan.
 
 ## Verificación
 

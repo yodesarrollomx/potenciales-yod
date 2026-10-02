@@ -185,3 +185,9 @@ body.ppp-ui{--ppp-slab:#e5dfd2;--ppp-top:#f4ead2;--ppp-face:#decca5;--ppp-side:#
 .ppp-ui .esc-actions .mini{min-width:36px;min-height:44px;border:0;background:transparent;color:var(--ink);font-size:14px;cursor:pointer}
 .ppp-ui #escAdd{justify-self:start;min-height:44px}
 @media(min-width:800px){.ppp-ui #escChips{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.ppp-summary-measures{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:6px}
+.ppp-summary-measure{font-size:9px;line-height:1.3;color:var(--muted);display:block}
+.ppp-measure-track{display:block;height:4px;border-radius:3px;background:var(--linea);margin-top:3px;overflow:hidden}
+.ppp-measure-fill{display:block;height:100%;background:var(--goldc);border-radius:3px}
+.ppp-measure-pending .ppp-measure-track{background:repeating-linear-gradient(90deg,var(--linea),var(--linea) 3px,transparent 3px,transparent 6px)}
