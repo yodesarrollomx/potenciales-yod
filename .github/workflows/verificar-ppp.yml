@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: yodesarrollomx/yod-portal
-          ref: faa172f0d13496a1d925572ba4fb0594ef53ff8c
+          ref: 4bcff83904b282aaa5287d599f4fe57773ed980f
           path: .yod-atlas-ui
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -30,9 +30,10 @@ jobs:
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           node --check ppp-ui.js
+          node --check ppp-patrimonial-native.js
           node --check ppp-case-loader.js
           node --check ppp-catalog.js
-          node --test tests/ppp-ui.test.cjs tests/ppp-case-loader.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs
+          node --test tests/ppp-ui.test.cjs tests/ppp-case-loader.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs tests/patrimonial-native.test.cjs
           git diff --check
       - name: Instalar navegadores
         run: |
@@ -57,6 +58,7 @@ jobs:
           node tests/ppp-versions-browser.cjs
           node tests/ppp-cierre-browser.cjs
           node tests/ppp-home-browser.cjs
+          node tests/patrimonial-native-browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
