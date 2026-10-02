@@ -8,7 +8,7 @@ const {install}=require('./ppp-fixture.js');const fixture=require('./fixtures/pa
   let model=copy(fixture),posts=[],fail=false,hold=false,release;const errors=[];
   await context.route('https://script.google.com/**',async route=>{
    const req=route.request(),url=new URL(req.url());let out={ok:true};
-   if(req.method()==='POST'){const b=req.postDataJSON();if(b.tipo!=='bitacora')posts.push(b);
+   if(req.method()==='POST'){const b=req.postDataJSON();if(!b)return route.abort();if(b.tipo!=='bitacora')posts.push(b);
     if(b.tipo==='sheet-cantidades'){if(hold)await new Promise(r=>release=r);if(fail)out={ok:false,error:'conflicto_revision'};else if(b.inputs.inCus===null){model=copy(pendingFixture);out=model;}else{model.revision+='x';Object.assign(model.escenarios[0].inputs,b.inputs);out=model;}}
    }else if(url.searchParams.get('recurso')==='caso')out={ok:true,caso:{caso_id:'synthetic-case',nombre_caso:'Patrimonial sintético',palabra:'ensayo',version:1,calculo_sheet:model}};
    else if(url.searchParams.get('recurso')==='sheet-model')out=model;
