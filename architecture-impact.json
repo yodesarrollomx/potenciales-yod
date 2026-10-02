@@ -1,6 +1,6 @@
 {
-  "model_revision": "2026-10-01.24-chinches-cierre",
-  "proposal_id": "CHG-CHINCHES-CIERRE-001",
+  "model_revision": "2026-10-01.28-chinches-complementos",
+  "proposal_id": "CHG-PPP-PATRIMONIAL-001",
   "components": [
     "SYS-POTENCIALES",
     "SYS-YOD-OS",
@@ -8,11 +8,11 @@
     "SHEET-PORTERO",
     "SHEET-PPP-MODELOS"
   ],
-  "summary": "Completar índice de versiones de Macrolotes, cinco accesos en una fila y proporciones visuales vinculadas al estado confirmado. Conservar contratos, motores financieros, IDs, entradas, Sheets, Portero y backend.",
+  "summary": "Patrimonial nativo por caso conforme CTR-PPP-PATRIMONIAL-NATIVO: CUS máximo también en detalle, pasillos porcentuales, puertas y rentas independientes. Fórmulas protegidas en Sheets; transporte tipado, CAS por campo y última lectura confirmada. Preservar lectura vertical, endpoint, ACL, IDs e históricos.",
   "tests": [
-    "Regresiones originales de acceso, versiones y transporte sintético; casos móvil 320/390/430 y escritorio 1280.",
-    "Relaciones visuales ausentes, 0%, 85%, excedentes y cambios de escenario; no escribir datos negocio.",
-    "CI del commit exacto, arquitectura y archivos estáticos publicados comparados byte por byte."
+    "Fórmulas nativas recalculadas con cantidades sintéticas: CUS ausente/cero, pasillos 0/20, mezcla Depa/Local, rentas cero/distintas, 1/N puertas y exceso sin recorte.",
+    "Transporte/DOM con dobles: allowlist, tipos/null, CAS, reintentos, borrador, respuestas tardías, resultados confirmados, versiones y móvil 320/390/430/1280; cero POST de prueba de negocio.",
+    "Regresión vertical/acceso/otras interfaces; CI exacto, fuentes/despliegue mismo endpoint y GET servido cotejado con libro privado."
   ],
   "rollback": "Revertir frontend y referencia fija del atlas por PR. Conservar libros, versiones, contratos y registros privados."
 }

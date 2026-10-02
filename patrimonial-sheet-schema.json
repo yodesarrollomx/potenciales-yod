@@ -1,0 +1,3423 @@
+{
+  "schema": "ppp/patrimonial-sheet/v1",
+  "model_revision": "patrimonial-sheet-v1",
+  "fields": [
+    {
+      "id": "inUnidades",
+      "row": 8,
+      "column": 2,
+      "min": 1.0,
+      "max": 60.0,
+      "step": 1.0,
+      "editable": true,
+      "nullable": false,
+      "kind": "integer"
+    },
+    {
+      "id": "inRentaUnidadMes",
+      "row": 9,
+      "column": 2,
+      "min": 2000.0,
+      "max": 60000.0,
+      "step": 1.0,
+      "editable": true,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inTerrenoM2",
+      "row": 10,
+      "column": 2,
+      "min": 0.0,
+      "max": 20000.0,
+      "step": 1.0,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "inCus",
+      "row": 11,
+      "column": 2,
+      "min": 0.0,
+      "max": 12.0,
+      "step": 0.1,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "inPasillosPct",
+      "row": 12,
+      "column": 2,
+      "min": 0.0,
+      "max": 45.0,
+      "step": 0.5,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "inM2Construccion",
+      "row": 13,
+      "column": 2,
+      "min": 80.0,
+      "max": 8000.0,
+      "step": 1.0,
+      "editable": false,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inM2Rentable",
+      "row": 14,
+      "column": 2,
+      "min": 50.0,
+      "max": 8000.0,
+      "step": 1.0,
+      "editable": false,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inPasillosM2",
+      "row": 15,
+      "column": 2,
+      "min": 0.0,
+      "max": 600.0,
+      "step": 1.0,
+      "editable": false,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inOpexBase",
+      "row": 16,
+      "column": 2,
+      "min": 0.0,
+      "max": 1.0,
+      "step": 1.0,
+      "editable": true,
+      "nullable": false,
+      "kind": "integer"
+    },
+    {
+      "id": "inVacanciaPct",
+      "row": 17,
+      "column": 2,
+      "min": 0.0,
+      "max": 25.0,
+      "step": 0.5,
+      "editable": true,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inOpexPct",
+      "row": 18,
+      "column": 2,
+      "min": 0.0,
+      "max": 35.0,
+      "step": 0.5,
+      "editable": true,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inSeguroPct",
+      "row": 19,
+      "column": 2,
+      "min": 0.0,
+      "max": 2.0,
+      "step": 0.05,
+      "editable": true,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inCostoRentM2",
+      "row": 20,
+      "column": 2,
+      "min": 0.0,
+      "max": 40000.0,
+      "step": 50.0,
+      "editable": true,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inCostoNoRentM2",
+      "row": 21,
+      "column": 2,
+      "min": 0.0,
+      "max": 30000.0,
+      "step": 50.0,
+      "editable": true,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inProyectoM2",
+      "row": 22,
+      "column": 2,
+      "min": 0.0,
+      "max": 3000.0,
+      "step": 1.0,
+      "editable": true,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inPermisosM2",
+      "row": 23,
+      "column": 2,
+      "min": 0.0,
+      "max": 3000.0,
+      "step": 1.0,
+      "editable": true,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inTerrenoCosto",
+      "row": 24,
+      "column": 2,
+      "min": 0.0,
+      "max": 100000000.0,
+      "step": 1000.0,
+      "editable": true,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inLegales",
+      "row": 25,
+      "column": 2,
+      "min": 0.0,
+      "max": 10000000.0,
+      "step": 1000.0,
+      "editable": true,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inValorM2Zona",
+      "row": 26,
+      "column": 2,
+      "min": 0.0,
+      "max": 80000.0,
+      "step": 100.0,
+      "editable": true,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inInversionTotal",
+      "row": 27,
+      "column": 2,
+      "min": 500000.0,
+      "max": 150000000.0,
+      "step": 1.0,
+      "editable": true,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inTerrenoAportado",
+      "row": 28,
+      "column": 2,
+      "min": 0.0,
+      "max": 1.0,
+      "step": 1.0,
+      "editable": true,
+      "nullable": false,
+      "kind": "integer"
+    },
+    {
+      "id": "inCapRateMercado",
+      "row": 29,
+      "column": 2,
+      "min": 5.0,
+      "max": 14.0,
+      "step": 0.25,
+      "editable": true,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inPlusvaliaPct",
+      "row": 30,
+      "column": 2,
+      "min": 0.0,
+      "max": 15.0,
+      "step": 0.25,
+      "editable": true,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inCreditoPct",
+      "row": 31,
+      "column": 2,
+      "min": 0.0,
+      "max": 80.0,
+      "step": 5.0,
+      "editable": true,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inTasaCredito",
+      "row": 32,
+      "column": 2,
+      "min": 6.0,
+      "max": 20.0,
+      "step": 0.25,
+      "editable": true,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inPlazoCredito",
+      "row": 33,
+      "column": 2,
+      "min": 5.0,
+      "max": 25.0,
+      "step": 1.0,
+      "editable": true,
+      "nullable": false,
+      "kind": "integer"
+    },
+    {
+      "id": "inHorizonte",
+      "row": 34,
+      "column": 2,
+      "min": 3.0,
+      "max": 25.0,
+      "step": 1.0,
+      "editable": true,
+      "nullable": false,
+      "kind": "integer"
+    },
+    {
+      "id": "inTasaAlternativa",
+      "row": 35,
+      "column": 2,
+      "min": 4.0,
+      "max": 25.0,
+      "step": 0.5,
+      "editable": true,
+      "nullable": false,
+      "kind": "number"
+    },
+    {
+      "id": "inProf",
+      "row": 36,
+      "column": 2,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": false,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad01_tipo",
+      "row": 8,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad01_nivel",
+      "row": 8,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad01_m2",
+      "row": 8,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad01_renta",
+      "row": 8,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad02_tipo",
+      "row": 9,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad02_nivel",
+      "row": 9,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad02_m2",
+      "row": 9,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad02_renta",
+      "row": 9,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad03_tipo",
+      "row": 10,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad03_nivel",
+      "row": 10,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad03_m2",
+      "row": 10,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad03_renta",
+      "row": 10,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad04_tipo",
+      "row": 11,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad04_nivel",
+      "row": 11,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad04_m2",
+      "row": 11,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad04_renta",
+      "row": 11,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad05_tipo",
+      "row": 12,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad05_nivel",
+      "row": 12,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad05_m2",
+      "row": 12,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad05_renta",
+      "row": 12,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad06_tipo",
+      "row": 13,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad06_nivel",
+      "row": 13,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad06_m2",
+      "row": 13,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad06_renta",
+      "row": 13,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad07_tipo",
+      "row": 14,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad07_nivel",
+      "row": 14,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad07_m2",
+      "row": 14,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad07_renta",
+      "row": 14,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad08_tipo",
+      "row": 15,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad08_nivel",
+      "row": 15,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad08_m2",
+      "row": 15,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad08_renta",
+      "row": 15,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad09_tipo",
+      "row": 16,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad09_nivel",
+      "row": 16,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad09_m2",
+      "row": 16,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad09_renta",
+      "row": 16,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad10_tipo",
+      "row": 17,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad10_nivel",
+      "row": 17,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad10_m2",
+      "row": 17,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad10_renta",
+      "row": 17,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad11_tipo",
+      "row": 18,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad11_nivel",
+      "row": 18,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad11_m2",
+      "row": 18,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad11_renta",
+      "row": 18,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad12_tipo",
+      "row": 19,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad12_nivel",
+      "row": 19,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad12_m2",
+      "row": 19,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad12_renta",
+      "row": 19,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad13_tipo",
+      "row": 20,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad13_nivel",
+      "row": 20,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad13_m2",
+      "row": 20,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad13_renta",
+      "row": 20,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad14_tipo",
+      "row": 21,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad14_nivel",
+      "row": 21,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad14_m2",
+      "row": 21,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad14_renta",
+      "row": 21,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad15_tipo",
+      "row": 22,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad15_nivel",
+      "row": 22,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad15_m2",
+      "row": 22,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad15_renta",
+      "row": 22,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad16_tipo",
+      "row": 23,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad16_nivel",
+      "row": 23,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad16_m2",
+      "row": 23,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad16_renta",
+      "row": 23,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad17_tipo",
+      "row": 24,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad17_nivel",
+      "row": 24,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad17_m2",
+      "row": 24,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad17_renta",
+      "row": 24,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad18_tipo",
+      "row": 25,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad18_nivel",
+      "row": 25,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad18_m2",
+      "row": 25,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad18_renta",
+      "row": 25,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad19_tipo",
+      "row": 26,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad19_nivel",
+      "row": 26,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad19_m2",
+      "row": 26,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad19_renta",
+      "row": 26,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad20_tipo",
+      "row": 27,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad20_nivel",
+      "row": 27,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad20_m2",
+      "row": 27,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad20_renta",
+      "row": 27,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad21_tipo",
+      "row": 28,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad21_nivel",
+      "row": 28,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad21_m2",
+      "row": 28,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad21_renta",
+      "row": 28,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad22_tipo",
+      "row": 29,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad22_nivel",
+      "row": 29,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad22_m2",
+      "row": 29,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad22_renta",
+      "row": 29,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad23_tipo",
+      "row": 30,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad23_nivel",
+      "row": 30,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad23_m2",
+      "row": 30,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad23_renta",
+      "row": 30,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad24_tipo",
+      "row": 31,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad24_nivel",
+      "row": 31,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad24_m2",
+      "row": 31,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad24_renta",
+      "row": 31,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad25_tipo",
+      "row": 32,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad25_nivel",
+      "row": 32,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad25_m2",
+      "row": 32,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad25_renta",
+      "row": 32,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad26_tipo",
+      "row": 33,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad26_nivel",
+      "row": 33,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad26_m2",
+      "row": 33,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad26_renta",
+      "row": 33,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad27_tipo",
+      "row": 34,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad27_nivel",
+      "row": 34,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad27_m2",
+      "row": 34,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad27_renta",
+      "row": 34,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad28_tipo",
+      "row": 35,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad28_nivel",
+      "row": 35,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad28_m2",
+      "row": 35,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad28_renta",
+      "row": 35,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad29_tipo",
+      "row": 36,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad29_nivel",
+      "row": 36,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad29_m2",
+      "row": 36,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad29_renta",
+      "row": 36,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad30_tipo",
+      "row": 37,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad30_nivel",
+      "row": 37,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad30_m2",
+      "row": 37,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad30_renta",
+      "row": 37,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad31_tipo",
+      "row": 38,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad31_nivel",
+      "row": 38,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad31_m2",
+      "row": 38,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad31_renta",
+      "row": 38,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad32_tipo",
+      "row": 39,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad32_nivel",
+      "row": 39,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad32_m2",
+      "row": 39,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad32_renta",
+      "row": 39,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad33_tipo",
+      "row": 40,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad33_nivel",
+      "row": 40,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad33_m2",
+      "row": 40,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad33_renta",
+      "row": 40,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad34_tipo",
+      "row": 41,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad34_nivel",
+      "row": 41,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad34_m2",
+      "row": 41,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad34_renta",
+      "row": 41,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad35_tipo",
+      "row": 42,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad35_nivel",
+      "row": 42,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad35_m2",
+      "row": 42,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad35_renta",
+      "row": 42,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad36_tipo",
+      "row": 43,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad36_nivel",
+      "row": 43,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad36_m2",
+      "row": 43,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad36_renta",
+      "row": 43,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad37_tipo",
+      "row": 44,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad37_nivel",
+      "row": 44,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad37_m2",
+      "row": 44,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad37_renta",
+      "row": 44,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad38_tipo",
+      "row": 45,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad38_nivel",
+      "row": 45,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad38_m2",
+      "row": 45,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad38_renta",
+      "row": 45,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad39_tipo",
+      "row": 46,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad39_nivel",
+      "row": 46,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad39_m2",
+      "row": 46,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad39_renta",
+      "row": 46,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad40_tipo",
+      "row": 47,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad40_nivel",
+      "row": 47,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad40_m2",
+      "row": 47,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad40_renta",
+      "row": 47,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad41_tipo",
+      "row": 48,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad41_nivel",
+      "row": 48,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad41_m2",
+      "row": 48,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad41_renta",
+      "row": 48,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad42_tipo",
+      "row": 49,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad42_nivel",
+      "row": 49,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad42_m2",
+      "row": 49,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad42_renta",
+      "row": 49,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad43_tipo",
+      "row": 50,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad43_nivel",
+      "row": 50,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad43_m2",
+      "row": 50,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad43_renta",
+      "row": 50,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad44_tipo",
+      "row": 51,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad44_nivel",
+      "row": 51,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad44_m2",
+      "row": 51,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad44_renta",
+      "row": 51,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad45_tipo",
+      "row": 52,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad45_nivel",
+      "row": 52,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad45_m2",
+      "row": 52,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad45_renta",
+      "row": 52,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad46_tipo",
+      "row": 53,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad46_nivel",
+      "row": 53,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad46_m2",
+      "row": 53,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad46_renta",
+      "row": 53,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad47_tipo",
+      "row": 54,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad47_nivel",
+      "row": 54,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad47_m2",
+      "row": 54,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad47_renta",
+      "row": 54,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad48_tipo",
+      "row": 55,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad48_nivel",
+      "row": 55,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad48_m2",
+      "row": 55,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad48_renta",
+      "row": 55,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad49_tipo",
+      "row": 56,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad49_nivel",
+      "row": 56,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad49_m2",
+      "row": 56,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad49_renta",
+      "row": 56,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad50_tipo",
+      "row": 57,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad50_nivel",
+      "row": 57,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad50_m2",
+      "row": 57,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad50_renta",
+      "row": 57,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad51_tipo",
+      "row": 58,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad51_nivel",
+      "row": 58,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad51_m2",
+      "row": 58,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad51_renta",
+      "row": 58,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad52_tipo",
+      "row": 59,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad52_nivel",
+      "row": 59,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad52_m2",
+      "row": 59,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad52_renta",
+      "row": 59,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad53_tipo",
+      "row": 60,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad53_nivel",
+      "row": 60,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad53_m2",
+      "row": 60,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad53_renta",
+      "row": 60,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad54_tipo",
+      "row": 61,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad54_nivel",
+      "row": 61,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad54_m2",
+      "row": 61,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad54_renta",
+      "row": 61,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad55_tipo",
+      "row": 62,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad55_nivel",
+      "row": 62,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad55_m2",
+      "row": 62,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad55_renta",
+      "row": 62,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad56_tipo",
+      "row": 63,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad56_nivel",
+      "row": 63,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad56_m2",
+      "row": 63,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad56_renta",
+      "row": 63,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad57_tipo",
+      "row": 64,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad57_nivel",
+      "row": 64,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad57_m2",
+      "row": 64,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad57_renta",
+      "row": 64,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad58_tipo",
+      "row": 65,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad58_nivel",
+      "row": 65,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad58_m2",
+      "row": 65,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad58_renta",
+      "row": 65,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad59_tipo",
+      "row": 66,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad59_nivel",
+      "row": 66,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad59_m2",
+      "row": 66,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad59_renta",
+      "row": 66,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad60_tipo",
+      "row": 67,
+      "column": 10,
+      "min": 0,
+      "max": 1,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad60_nivel",
+      "row": 67,
+      "column": 11,
+      "min": 0,
+      "max": 2,
+      "editable": true,
+      "nullable": true,
+      "kind": "integer"
+    },
+    {
+      "id": "unidad60_m2",
+      "row": 67,
+      "column": 12,
+      "min": 0,
+      "max": 20000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    },
+    {
+      "id": "unidad60_renta",
+      "row": 67,
+      "column": 13,
+      "min": 0,
+      "max": 1000000,
+      "editable": true,
+      "nullable": true,
+      "kind": "number"
+    }
+  ],
+  "metric_formulas": {
+    "capacidadConstruida": {
+      "row": 8,
+      "column": 7,
+      "formula": "=IF(OR(NOT(ISNUMBER($B$10)),NOT(ISNUMBER($B$11)),$B$10<=0,$B$11<=0),\"\",$B$10*$B$11)"
+    },
+    "capacidadRentable": {
+      "row": 9,
+      "column": 7,
+      "formula": "=IF(OR(NOT(ISNUMBER($G$8)),NOT(ISNUMBER($B$12))),\"\",$G$8*(1-$B$12/100))"
+    },
+    "promedioCapacidad": {
+      "row": 10,
+      "column": 7,
+      "formula": "=IF(OR(NOT(ISNUMBER($G$9)),$B$8<=0),\"\",$G$9/$B$8)"
+    },
+    "rentableSeleccionado": {
+      "row": 11,
+      "column": 7,
+      "formula": "=IF(NOT(ISNUMBER($G$9)),\"\",IF($B$36=1,SUM(N8:N67),$G$9))"
+    },
+    "geometriaEstado": {
+      "row": 12,
+      "column": 7,
+      "formula": "=IF(NOT(ISNUMBER($G$9)),\"PENDIENTE\",IF($G$11>$G$9+0.000001,\"EXCEDE_CUS\",\"CONFIRMADA\"))"
+    },
+    "p.unidades": {
+      "row": 13,
+      "column": 7,
+      "formula": "=$B$8"
+    },
+    "p.rentaU": {
+      "row": 14,
+      "column": 7,
+      "formula": "=$B$9"
+    },
+    "p.m2Const": {
+      "row": 15,
+      "column": 7,
+      "formula": "=$G$8"
+    },
+    "p.m2Rent": {
+      "row": 16,
+      "column": 7,
+      "formula": "=$G$11"
+    },
+    "p.vac": {
+      "row": 17,
+      "column": 7,
+      "formula": "=$B$17/100"
+    },
+    "p.opex": {
+      "row": 18,
+      "column": 7,
+      "formula": "=$B$18/100"
+    },
+    "p.seguro": {
+      "row": 19,
+      "column": 7,
+      "formula": "=$B$19/100"
+    },
+    "p.capMercado": {
+      "row": 20,
+      "column": 7,
+      "formula": "=$B$29/100"
+    },
+    "p.plus": {
+      "row": 21,
+      "column": 7,
+      "formula": "=$B$30/100"
+    },
+    "p.credito": {
+      "row": 22,
+      "column": 7,
+      "formula": "=$B$31/100"
+    },
+    "p.tasa": {
+      "row": 23,
+      "column": 7,
+      "formula": "=$B$32/100"
+    },
+    "p.tasaAlt": {
+      "row": 24,
+      "column": 7,
+      "formula": "=$B$35/100"
+    },
+    "p.terrenoAportado": {
+      "row": 25,
+      "column": 7,
+      "formula": "=$B$28"
+    },
+    "p.plazo": {
+      "row": 26,
+      "column": 7,
+      "formula": "=$B$33"
+    },
+    "p.horizonte": {
+      "row": 27,
+      "column": 7,
+      "formula": "=$B$34"
+    },
+    "p.valorM2": {
+      "row": 28,
+      "column": 7,
+      "formula": "=$B$26"
+    },
+    "p.opexBruta": {
+      "row": 29,
+      "column": 7,
+      "formula": "=$B$16=1"
+    },
+    "p.inversion": {
+      "row": 30,
+      "column": 7,
+      "formula": "=IF($B$20>0,IF($G$12<>\"CONFIRMADA\",\"\",$G$11*$B$20+($G$8-$G$11)*$B$21+$G$8*($B$22+$B$23)+$B$25+IF($B$28=1,0,$B$24)),$B$27)"
+    },
+    "rentaMes": {
+      "row": 31,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",IF($B$36=1,SUM(O8:O67),$B$8*$B$9))"
+    },
+    "rentaBrutaAnual": {
+      "row": 32,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",$G$31*12)"
+    },
+    "vacMonto": {
+      "row": 33,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",$G$32*$G$17)"
+    },
+    "rentaEfectiva": {
+      "row": 34,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",$G$32-$G$33)"
+    },
+    "opexMonto": {
+      "row": 35,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",IF($G$29,$G$32,$G$34)*$G$18)"
+    },
+    "seguroMonto": {
+      "row": 36,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",$G$30*$G$19)"
+    },
+    "noi": {
+      "row": 37,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",$G$34-$G$35-$G$36)"
+    },
+    "rentaM2": {
+      "row": 38,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",IF($G$11>0,$G$31/$G$11,\"\"))"
+    },
+    "porM2": {
+      "row": 39,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",$G$28>0)"
+    },
+    "valorCap": {
+      "row": 40,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",IF($G$28>0,$G$11*$G$28,$G$37/$G$20))"
+    },
+    "yieldOnCost": {
+      "row": 41,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",$G$37/$G$30)"
+    },
+    "valorCreado": {
+      "row": 42,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",$G$40-$G$30)"
+    },
+    "capImplicito": {
+      "row": 43,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",IF($G$40>0,$G$37/$G$40,\"\"))"
+    },
+    "retornoBruto": {
+      "row": 44,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",$G$32/$G$30)"
+    },
+    "recupBruta": {
+      "row": 45,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",IF($G$32>0,$G$30/$G$32,\"\"))"
+    },
+    "recupAnios": {
+      "row": 46,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",IF($G$37>0,$G$30/$G$37,\"\"))"
+    },
+    "montoCredito": {
+      "row": 47,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",$G$30*$G$22)"
+    },
+    "equity": {
+      "row": 48,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",$G$30-$G$47)"
+    },
+    "mensCredito": {
+      "row": 49,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",IF($G$47>0,-PMT($G$23/12,$G$26*12,$G$47),0))"
+    },
+    "servicioAnual": {
+      "row": 50,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",$G$49*12)"
+    },
+    "flujoConCredito": {
+      "row": 51,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",$G$37-$G$50)"
+    },
+    "coc": {
+      "row": 52,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",IF($G$48>0,$G$51/$G$48,\"\"))"
+    },
+    "dscr": {
+      "row": 53,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",IF($G$50>0,$G$37/$G$50,\"\"))"
+    },
+    "patrim0": {
+      "row": 54,
+      "column": 7,
+      "formula": "=IF($G$12<>\"CONFIRMADA\",\"\",$G$40-$G$47)"
+    },
+    "modeloValido": {
+      "row": 55,
+      "column": 7,
+      "formula": "=AND($G$12=\"CONFIRMADA\",ISNUMBER($G$37),ISNUMBER($G$40),ISNUMBER($G$30),$G$30>0,$B$8=INT($B$8))"
+    },
+    "anioCorte": {
+      "row": 56,
+      "column": 7,
+      "formula": "=IF(COUNTIFS(AB8:AB32,1)>0,MATCH(1,AB8:AB32,0),\"\")"
+    },
+    "aniosRetener": {
+      "row": 57,
+      "column": 7,
+      "formula": "=IF($G$55,IF(ISNUMBER($G$56),$G$56-1,$G$27),\"\")"
+    },
+    "patrimH": {
+      "row": 58,
+      "column": 7,
+      "formula": "=IF($G$55,INDEX(Z8:Z32,$G$27),\"\")"
+    },
+    "valorH": {
+      "row": 59,
+      "column": 7,
+      "formula": "=IF($G$55,INDEX(U8:U32,$G$27),\"\")"
+    },
+    "acumH": {
+      "row": 60,
+      "column": 7,
+      "formula": "=IF($G$55,INDEX(X8:X32,$G$27),\"\")"
+    },
+    "roiPat": {
+      "row": 61,
+      "column": 7,
+      "formula": "=IF($G$55,($G$58-$G$54)/$G$30,\"\")"
+    }
+  },
+  "readonly_aliases": {
+    "inM2Construccion": "$G$8",
+    "inM2Rentable": "$G$11",
+    "inPasillosM2": "$G$8-$G$9"
+  },
+  "unit_formulas": [
+    {
+      "row": 8,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L8),L8,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M8),M8,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L8),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M8),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 9,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L9),L9,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M9),M9,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L9),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M9),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 10,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L10),L10,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M10),M10,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L10),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M10),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 11,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L11),L11,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M11),M11,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L11),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M11),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 12,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L12),L12,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M12),M12,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L12),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M12),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 13,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L13),L13,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M13),M13,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L13),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M13),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 14,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L14),L14,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M14),M14,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L14),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M14),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 15,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L15),L15,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M15),M15,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L15),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M15),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 16,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L16),L16,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M16),M16,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L16),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M16),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 17,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L17),L17,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M17),M17,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L17),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M17),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 18,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L18),L18,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M18),M18,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L18),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M18),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 19,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L19),L19,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M19),M19,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L19),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M19),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 20,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L20),L20,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M20),M20,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L20),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M20),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 21,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L21),L21,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M21),M21,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L21),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M21),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 22,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L22),L22,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M22),M22,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L22),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M22),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 23,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L23),L23,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M23),M23,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L23),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M23),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 24,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L24),L24,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M24),M24,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L24),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M24),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 25,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L25),L25,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M25),M25,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L25),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M25),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 26,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L26),L26,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M26),M26,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L26),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M26),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 27,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L27),L27,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M27),M27,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L27),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M27),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 28,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L28),L28,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M28),M28,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L28),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M28),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 29,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L29),L29,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M29),M29,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L29),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M29),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 30,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L30),L30,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M30),M30,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L30),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M30),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 31,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L31),L31,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M31),M31,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L31),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M31),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 32,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L32),L32,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M32),M32,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L32),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M32),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 33,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L33),L33,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M33),M33,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L33),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M33),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 34,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L34),L34,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M34),M34,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L34),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M34),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 35,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L35),L35,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M35),M35,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L35),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M35),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 36,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L36),L36,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M36),M36,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L36),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M36),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 37,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L37),L37,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M37),M37,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L37),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M37),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 38,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L38),L38,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M38),M38,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L38),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M38),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 39,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L39),L39,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M39),M39,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L39),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M39),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 40,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L40),L40,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M40),M40,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L40),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M40),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 41,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L41),L41,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M41),M41,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L41),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M41),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 42,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L42),L42,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M42),M42,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L42),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M42),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 43,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L43),L43,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M43),M43,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L43),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M43),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 44,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L44),L44,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M44),M44,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L44),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M44),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 45,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L45),L45,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M45),M45,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L45),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M45),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 46,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L46),L46,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M46),M46,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L46),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M46),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 47,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L47),L47,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M47),M47,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L47),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M47),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 48,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L48),L48,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M48),M48,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L48),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M48),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 49,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L49),L49,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M49),M49,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L49),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M49),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 50,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L50),L50,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M50),M50,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L50),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M50),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 51,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L51),L51,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M51),M51,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L51),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M51),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 52,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L52),L52,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M52),M52,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L52),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M52),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 53,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L53),L53,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M53),M53,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L53),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M53),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 54,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L54),L54,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M54),M54,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L54),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M54),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 55,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L55),L55,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M55),M55,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L55),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M55),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 56,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L56),L56,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M56),M56,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L56),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M56),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 57,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L57),L57,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M57),M57,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L57),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M57),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 58,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L58),L58,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M58),M58,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L58),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M58),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 59,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L59),L59,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M59),M59,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L59),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M59),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 60,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L60),L60,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M60),M60,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L60),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M60),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 61,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L61),L61,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M61),M61,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L61),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M61),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 62,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L62),L62,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M62),M62,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L62),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M62),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 63,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L63),L63,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M63),M63,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L63),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M63),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 64,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L64),L64,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M64),M64,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L64),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M64),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 65,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L65),L65,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M65),M65,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L65),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M65),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 66,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L66),L66,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M66),M66,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L66),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M66),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    },
+    {
+      "row": 67,
+      "N_m2_efectivo": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L67),L67,$G$10))",
+      "O_renta_efectiva": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M67),M67,$B$9))",
+      "P_m2_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(L67),\"CAPTURADO\",\"PROMEDIO_CUS\"))",
+      "Q_renta_estado": "=IF(ROW()-7>$B$8,\"\",IF(ISNUMBER(M67),\"CAPTURADA\",\"SUPUESTO_GLOBAL\"))"
+    }
+  ]
+}
