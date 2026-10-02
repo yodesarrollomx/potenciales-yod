@@ -23,7 +23,7 @@
     return [
       {main:area(p.terrain)+' de terreno', sub:num(r.units)+' depas · '+num(r.totalFloors)+' pisos · '+area(r.vendTotal)+' vendibles',
         note: valid(delta)&&Math.abs(delta)>.5 ? area(Math.abs(delta))+' por conciliar con la mezcla' : '',
-        graphic:{kind:'architecture',values:[ratio(r.floorPlate,p.terrain),ratio(r.height,p.altMax),ratio(r.vendTotal,sum(r.resGross,r.com))],labels:['Terreno','Volumen edificado'],floors:r.totalFloors,plate:r.floorPlate,terrain:p.terrain,height:r.height,efficiency:ratio(r.vendTotal,sum(r.resGross,r.com)),caption:'Volumen conceptual · huella / terreno '+percent(ratio(r.floorPlate,p.terrain))+' · altura / tope supuesto '+percent(ratio(r.height,p.altMax))+' · escala 0–100%. No representa la implantación por cuerpos.'},
+        graphic:{kind:'architecture',values:[ratio(r.floorPlate,p.terrain),ratio(r.height,p.altMax),ratio(r.vendTotal,sum(r.resGross,r.com))],labels:['Terreno','Volumen edificado'],floors:r.totalFloors,plate:r.floorPlate,terrain:p.terrain,height:r.height,efficiency:ratio(r.vendTotal,sum(r.resGross,r.com)),caption:'Volumen conceptual · superficies 0–10,000 m² · altura 0–120 m. Huella / terreno '+percent(ratio(r.floorPlate,p.terrain))+' · altura / tope supuesto '+percent(ratio(r.height,p.altMax))+'. No representa la implantación por cuerpos.'},
         sections:[section('Terreno y capacidad',[metric('Terreno',area(p.terrain),'','lblTerreno'),metric('Huella máxima · COS '+percent(p.cos),area(r.footprint),'','lblHuella'),metric('Sobre rasante · CUS '+num(p.cus,2),area(r.gross),'','lblConstruible'),metric('Altura máxima supuesta',num(p.altMax,1)+' m')],'La envolvente indica capacidad; no acredita un permiso.'),
           section('Superficies',[metric('Vivienda vendible',area(r.resSell),'','lblVendViv'),metric('Locales vendibles',area(r.comSell),'','lblVendLoc'),metric('Vivienda bruta',area(r.resGross)),metric('Comercio bruto',area(r.com)),metric('Total vendible',area(r.vendTotal),'','lblVendTotal')]),
           section('Mezcla de departamentos',[metric('Tipología A',num(r.mixLoftUnits)+' × '+area(p.m2Loft)),metric('Tipología B',num(r.mix2Units)+' × '+area(p.m22Rec)),metric('Tipología C',num(r.mix3Units)+' × '+area(p.m23Rec))],valid(delta)?'Área de la mezcla '+area(mixedArea)+' · diferencia '+area(delta):'Inventario pendiente de conciliar.'),
@@ -60,7 +60,13 @@
     const pending=conditions.filter(row=>row[1]===0||row[1]===null||row[1]===undefined||row[1]===''||/pendiente/i.test(String(row[1]))).length;
     return {grid:site.uso,rows,terrain,difference,conditions,pending};
   }
-  if(typeof module==='object'&&module.exports)module.exports={describe,siteSummary,num,money,valid};
+  function architectureScale(g){
+    // Fixed references preserve area and height differences across cases.
+    return {ground:valid(g.terrain)?Math.sqrt(Math.max(0,Math.min(1,g.terrain/10000)))*90:null,
+      plate:valid(g.plate)?Math.sqrt(Math.max(0,Math.min(1,g.plate/10000)))*90:null,
+      height:valid(g.height)?Math.max(0,Math.min(1,g.height/120))*125:null};
+  }
+  if(typeof module==='object'&&module.exports)module.exports={describe,siteSummary,num,money,valid,architectureScale};
   if(!root.document)return;
   const $=id=>document.getElementById(id), reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
   let mounted=false, active=null, originalY=0, records=[], lastContext='', renderToken=0, focusRequest=0;
@@ -129,7 +135,7 @@
     }
     let html='';
     if(g.kind==='architecture'){
-      const ground=90,w=Math.sqrt(clamp(g.values[0]))*90,h=clamp(g.values[1])*125,x=136,y=136,z=w*.45;
+      const scale=architectureScale(g),ground=scale.ground??0,w=scale.plate??0,h=scale.height??0,x=136,y=136,z=w*.45;
       html=`<path d="M${x-ground} ${y}L${x} ${y-ground*.45}L${x+ground} ${y}L${x} ${y+ground*.45}Z" fill="var(--ppp-slab)" stroke="var(--linea)"/><path d="M${x-w} ${y}L${x} ${y+z}L${x} ${y+z-h}L${x-w} ${y-h}Z" fill="var(--ppp-face)" stroke="${ink}"/><path d="M${x} ${y+z}L${x+w} ${y}L${x+w} ${y-h}L${x} ${y+z-h}Z" fill="var(--ppp-side)" stroke="${ink}"/><path d="M${x-w} ${y-h}L${x} ${y-z-h}L${x+w} ${y-h}L${x} ${y+z-h}Z" fill="var(--ppp-top)" stroke="${ink}"/>`;
       const count=Math.min(100,Math.max(0,Math.round(g.floors||0)));let lines='';for(let i=1;i<count;i++){const t=h*i/count;lines+=`M${x-w} ${y-t}L${x} ${y+z-t}L${x+w} ${y-t}`;}
       html+=`<path d="${lines}" fill="none" stroke="${ink}" opacity=".55"/><path d="M240 18V138M236 18h8M236 138h8" stroke="${ink}"/>`+label(251,55,num(g.height,1)+' m')+label(251,73,num(g.floors)+' pisos')+label(26,175,num(g.terrain)+' m² terreno')+label(26,189,'Vendible / bruto: '+percent(g.efficiency));
@@ -223,7 +229,7 @@
       card.onclick=null;card.classList.add('ppp-card');card.setAttribute('aria-label',titles[index]);
       const trigger=button('','ppp-trigger');trigger.id='pppToggle'+id;trigger.setAttribute('aria-expanded','false');trigger.setAttribute('aria-controls','pppDetail'+id);
       const mini=graphic(id,true),copy=element('span','ppp-summary-copy'),title=element('span','ppp-title',titles[index]),headline=element('strong','ppp-main','—'),sub=element('span','ppp-sub'),note=element('span','ppp-alert');note.hidden=true;
-      copy.append(title,headline,sub,note);const chevron=element('span','ppp-chevron','⌄');chevron.setAttribute('aria-hidden','true');trigger.append(mini,copy,chevron);oldHeader.replaceWith(trigger);
+      const measures=element('span','ppp-summary-measures');copy.append(title,headline,sub,measures,note);const chevron=element('span','ppp-chevron','⌄');chevron.setAttribute('aria-hidden','true');trigger.append(mini,copy,chevron);oldHeader.replaceWith(trigger);
       const reveal=element('div','ppp-reveal');reveal.id='pppDetail'+id;reveal.inert=true;reveal.setAttribute('aria-hidden','true');
       const inside=element('div','ppp-reveal-inner');reveal.append(inside);
       const actionbar=element('div','ppp-detail-actions'),source=element('span','ppp-source'),adjustBtn=button('Ajustar','small-btn ppp-adjust');adjustBtn.setAttribute('aria-controls',id);adjustBtn.setAttribute('aria-expanded','false');actionbar.append(source,adjustBtn);
@@ -235,7 +241,7 @@
       drawer.prepend(intro);const done=button('Volver al detalle','small-btn secondary');drawer.append(done);
       inside.append(actionbar,detail,drawer);card.append(reveal);
       trigger.onclick=()=>toggle(id);adjustBtn.onclick=()=>adjust(id);done.onclick=()=>adjust(id);
-      records.push({id,card,drawer,trigger,headline,sub,note,mini,reveal,detail,source,adjust:adjustBtn,viz,legend,caption,content,sitePanel});
+      records.push({id,card,drawer,trigger,headline,sub,measures,note,mini,reveal,detail,source,adjust:adjustBtn,viz,legend,caption,content,sitePanel});
       card.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.target.closest('.overlay')){e.preventDefault();if(card.classList.contains('ppp-adjusting'))adjust(id);else toggle(id,false);}});
       drawer.querySelectorAll('input[type=range]').forEach(input=>{const label=input.closest('.input-group')?.querySelector('label');if(label){label.htmlFor=input.id;input.setAttribute('aria-label',label.textContent);}});
     });
@@ -271,6 +277,11 @@
       paintGraphic(x.mini,d.graphic);paintGraphic(x.viz,d.graphic);
       if(i===0){x.sitePanel.hidden=!land;if(land){paintSite(x.mini,land,true);const key=JSON.stringify(land);if(x.sitePanel.dataset.state!==key){paintSite(x.sitePanel,land);x.sitePanel.dataset.state=key;}const notes=[d.note];if(valid(land.difference)&&Math.abs(land.difference)>.05)notes.push('Retícula / proforma: '+num(land.difference,2)+' m² por conciliar');if(land.pending)notes.push('Etapas: '+land.pending+' condiciones pendientes');x.note.textContent=notes.filter(Boolean).join(' · ');x.note.hidden=!x.note.textContent;}}
       const overflow=[...d.graphic.values,...(d.graphic.revenueValues||[])].some(v=>valid(v)&&v>1);
+      const measureLabels={architecture:['Huella / terreno','Altura / tope'],sales:['Vivienda / ventas','Locales / ventas'],costs:['Obra / costo','Otros / costo'],credit:['Deuda / límite','Deuda / ventas'],utilities:['Cisterna / 500 m³','Demanda / 2,000 kVA']}[d.graphic.kind];
+      x.measures.replaceChildren(...measureLabels.map((name,index)=>{
+        const value=d.graphic.values[index],part=element('span','ppp-summary-measure'),label=element('span','',name+' '+percent(value)),track=element('span','ppp-measure-track'),fill=element('span','ppp-measure-fill');
+        track.setAttribute('aria-hidden','true');fill.style.width=valid(value)?Math.max(0,Math.min(1,value))*100+'%':'0%';track.append(fill);part.append(label,track);part.dataset.value=valid(value)?String(value):'pending';if(!valid(value))part.classList.add('ppp-measure-pending');if(valid(value)&&value>1)part.title='Rebasa la escala: '+percent(value);return part;
+      }));
       x.mini.dataset.revision=String(context.revision||renderToken);
       x.legend.replaceChildren(...d.graphic.labels.map((label,i)=>{const el=element('span','ppp-legend-'+i,label);return el;}));
       x.caption.textContent=d.graphic.caption+(overflow?' · escala visual excedida; consultar cifras':'');

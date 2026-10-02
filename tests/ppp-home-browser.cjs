@@ -61,7 +61,7 @@ async function menuAboveMap(p){
      assert.equal(await p.locator('#planificadores .ppp details p').count(),5,'All descriptions retained');
      for(const width of [320,390,430,1280]){
       await p.setViewportSize({width,height:932});await p.waitForFunction(()=>document.documentElement.scrollWidth<=innerWidth+1,{},{timeout:5000}).catch(async e=>{console.error(await p.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,body:document.body.getBoundingClientRect().toJSON(),wide:[...document.querySelectorAll('body *')].filter(e=>{const r=e.getBoundingClientRect();return r.right>innerWidth+1&&r.width>1}).slice(0,20).map(e=>({tag:e.tagName,cls:e.className,id:e.id,rect:e.getBoundingClientRect().toJSON()}))})));throw e;});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'No overflow at '+width);
-      const boxes=await p.locator('.ppp-main-link').evaluateAll(es=>es.slice(0,2).map(e=>e.getBoundingClientRect().toJSON()));assert.ok(Math.abs(boxes[0].top-boxes[1].top)<2,'Two icons share a row at '+width);
+      const boxes=await p.locator('.ppp-main-link').evaluateAll(es=>es.map(e=>e.getBoundingClientRect().toJSON()));assert.ok(boxes.every(box=>Math.abs(boxes[0].top-box.top)<2&&box.width>=44),'Five touch targets share a row at '+width);
      }
      await p.setViewportSize({width:430,height:932});await p.locator('.ppp details summary').first().click();assert.equal(await p.locator('.ppp details p').first().isVisible(),true);
      await p.locator('#temaBtn').click();assert.equal(await p.locator('html').getAttribute('data-tema'),'oscuro');

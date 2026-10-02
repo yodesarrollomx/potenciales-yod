@@ -290,6 +290,7 @@
     .factor-help.hov .factor-tooltip{display:none}.factor-help.open .factor-tooltip{display:block}
   }
   .factor-tooltip .tip-fuente{margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.22);color:#E7D8AE;font-size:11px;line-height:1.45}
+
 </style>
 <style>
   /* ===== Extras del módulo Macro Lotes ===== */
@@ -390,6 +391,20 @@
   .comp-lectura{font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:14px;line-height:1.55;color:var(--text);margin:12px 2px 2px;max-width:70ch}
   .comp-lectura b{color:var(--goldc);font-style:normal}
 </style>
+<style>
+/* Índice legible de alternativas; conserva IDs, inputs y guardado originales. */
+.esc-guide{flex-basis:100%;font-size:11px;color:var(--muted);margin:0;line-height:1.5}
+.esc-chips{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.esc-version{display:flex;align-items:stretch;gap:4px;border:1px solid var(--linea);border-radius:13px;background:var(--card);min-width:0}
+.esc-version.on{border-color:var(--gold)}
+.esc-version .esc-chip{border:0;border-radius:12px;white-space:normal;text-align:left;flex:1;min-width:0;min-height:48px;display:grid;grid-template-columns:22px 1fr;gap:4px 8px;padding:9px 12px}
+.esc-name{overflow-wrap:anywhere;font-size:12px;line-height:1.45}
+.esc-order{grid-row:1/3;align-self:center;opacity:.65}
+.esc-tags{grid-column:2;display:flex;gap:12px;font-size:10px}
+.esc-actions{display:flex;align-items:center;flex-wrap:wrap;max-width:88px;padding:3px}
+.esc-actions .mini{min-width:36px;min-height:44px;border:0;background:transparent;color:var(--ink)}
+@media(max-width:640px){.esc-chips{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -428,7 +443,7 @@
 
 
   <div class="esc-bar" id="escBar" title="Versiones del mismo caso: la ★ es la base de comparación">
-    <span class="esc-lbl"><i class="ti ti-versions"></i> Versiones</span>
+    <span class="esc-lbl"><i class="ti ti-versions"></i> Versiones del mismo proyecto</span><p class="esc-guide">Cada versión conserva una alternativa de este proyecto. Activa es la que estás editando; Base solo sirve para comparar. Nueva versión copia la activa; guardar conserva todas.</p>
     <div class="esc-chips" id="escChips"></div>
   </div>
   <section class="seguimiento" id="segPanel">
@@ -1310,7 +1325,7 @@
     try{const arr=JSON.parse(raw||'null');
       if(!Array.isArray(arr)||!arr.length)return false;
       const limpio=arr.filter(e=>e&&typeof e==='object'&&e.inputs&&typeof e.inputs==='object')
-        .slice(0,MAX_ESC).map(e=>({id:String(e.id||escId()),nombre:String(e.nombre||'Versión').slice(0,40),esBase:!!e.esBase,activo:!!e.activo,inputs:e.inputs}));
+        .slice(0,MAX_ESC).map(e=>({id:String(e.id||escId()),nombre:String(e.nombre||'Versión'),esBase:!!e.esBase,activo:!!e.activo,inputs:e.inputs}));
       if(!limpio.length)return false;
       if(!limpio.some(e=>e.esBase))limpio[0].esBase=true;
       escenarios=limpio.map(e=>({id:e.id,nombre:e.nombre,esBase:e.esBase,inputs:e.inputs}));
@@ -1319,15 +1334,16 @@
       return true}catch(err){return false}}
   function renderEscenarios(){
     const cont=$('escChips');if(!cont)return;
-    cont.innerHTML=escenarios.map(e=>{
+    cont.setAttribute('aria-label','Versiones guardadas del mismo proyecto');
+    cont.innerHTML=escenarios.map((e,i)=>{
       const on=e.id===escActivo;
-      const acciones=on?`<button class="mini" data-esc-ren="${e.id}" title="Renombrar"><i class="ti ti-pencil"></i></button>${e.esBase?'':`<button class="mini" data-esc-base="${e.id}" title="Hacerla base de comparación (★)">☆</button>`}${escenarios.length>1?`<button class="mini" data-esc-del="${e.id}" title="Borrar versión"><i class="ti ti-x"></i></button>`:''}`:'';
-      return `<span class="esc-chip${on?' on':''}" data-esc="${e.id}" role="button" tabindex="0">${e.esBase?'<i class="star" title="Base de comparación">★</i>':''}${esc(e.nombre)}${acciones}</span>`
+      const acciones=on?`<button class="mini" data-esc-ren="${esc(e.id)}" aria-label="Renombrar versión" title="Renombrar"><i class="ti ti-pencil"></i></button>${e.esBase?'':`<button class="mini" data-esc-base="${esc(e.id)}" aria-label="Hacer base de comparación" title="Hacerla base de comparación (★)">☆</button>`}${escenarios.length>1?`<button class="mini" data-esc-del="${esc(e.id)}" aria-label="Borrar versión" title="Borrar versión"><i class="ti ti-x"></i></button>`:''}`:'';
+      return `<div class="esc-version${on?' on':''}"><button class="esc-chip${on?' on':''}" data-esc="${esc(e.id)}" type="button" aria-pressed="${on}"><span class="esc-order">${i+1}</span><span class="esc-name">${esc(e.nombre)}</span><span class="esc-tags">${e.esBase?'<span class="star">★ Base</span>':''}${on?'<span>Activa</span>':''}</span></button>${acciones?'<span class="esc-actions">'+acciones+'</span>':''}</div>`
     }).join('')+`<button class="esc-add" id="escAdd" title="Duplicar la versión activa"><i class="ti ti-plus"></i>Nueva versión</button>`;
-    cont.querySelectorAll('[data-esc]').forEach(ch=>{ch.onclick=ev=>{if(ev.target.closest('.mini'))return;escCambiar(ch.dataset.esc)};ch.onkeydown=ev=>{if(ev.key==='Enter'&&!ev.target.closest('.mini'))escCambiar(ch.dataset.esc)}});
-    cont.querySelectorAll('[data-esc-ren]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();escRenombrar(b.dataset.escRen)});
-    cont.querySelectorAll('[data-esc-base]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();escMarcarBase(b.dataset.escBase)});
-    cont.querySelectorAll('[data-esc-del]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();escBorrar(b.dataset.escDel)});
+    cont.querySelectorAll('[data-esc]').forEach(ch=>ch.onclick=()=>escCambiar(ch.dataset.esc));
+    cont.querySelectorAll('[data-esc-ren]').forEach(b=>b.onclick=()=>escRenombrar(b.dataset.escRen));
+    cont.querySelectorAll('[data-esc-base]').forEach(b=>b.onclick=()=>escMarcarBase(b.dataset.escBase));
+    cont.querySelectorAll('[data-esc-del]').forEach(b=>b.onclick=()=>escBorrar(b.dataset.escDel));
     const add=$('escAdd');if(add)add.onclick=escNueva}
   function compCuerpo(res,filas){
     const head=`<tr><th>Métrica</th>${res.map(x=>`<th class="${x.e.esBase?'base':''}${x.e.id===escActivo?' act':''}">${esc(x.e.nombre)}</th>`).join('')}</tr>`;
