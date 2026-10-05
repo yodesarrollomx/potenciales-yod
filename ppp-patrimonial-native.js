@@ -65,8 +65,9 @@
   function mount({model,metadata,get,post,labelFor=id=>id,onNew,onCases,cache=null}){
     const root=document.createElement('main');root.id='patrimonialNative';root.className='container';document.querySelector('main.container').before(root);
     const legacy=[...document.querySelectorAll('main.container, header.sticky-header')].filter(e=>e!==root);legacy.forEach(e=>e.hidden=true);document.body.classList.add('patrimonial-native');
-    let timer=null,destroyed=false;const meta=clone(metadata);
-    const store=new Store({id:meta.caso_id,get,post,changed:()=>paint()});
+    let timer=null,destroyed=false,agentBridge=null;const meta=clone(metadata);
+    const store=new Store({id:meta.caso_id,get,post,changed:()=>{paint();agentBridge?.publish();}});
+    agentBridge=globalThis.PPPAgentBridge?.mount(store,{labelFor});
     function paint(){
       if(destroyed||!store.model)return;
       const m=store.model,v=store.values(),st=m.estados[m.activo],blocked=store.busy||store.dirty()||!store.verified||!!store.error;
@@ -94,7 +95,7 @@
       try{localStorage.setItem(CACHE,JSON.stringify({metadata:meta,...store.snapshot()}));}catch(e){}
     }
     if(cache)store.restore(cache);else store.load(model);
-    return {store,destroy(){destroyed=true;clearTimeout(timer);store.destroy();root.remove();legacy.forEach(e=>e.hidden=false);document.body.classList.remove('patrimonial-native');},clearCache(){localStorage.removeItem(CACHE);}};
+    return {store,destroy(){destroyed=true;agentBridge?.dispose();clearTimeout(timer);store.destroy();root.remove();legacy.forEach(e=>e.hidden=false);document.body.classList.remove('patrimonial-native');},clearCache(){localStorage.removeItem(CACHE);}};
   }
   function cached(){try{return JSON.parse(localStorage.getItem(CACHE)||'null');}catch(e){return null;}}
   return {Store,validate,mount,cached};
