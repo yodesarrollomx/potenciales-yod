@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: yodesarrollomx/yod-portal
-          ref: 4bcff83904b282aaa5287d599f4fe57773ed980f
+          ref: e1558615c410271e43855e2a69f649b6ddb33493
           path: .yod-atlas-ui
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -29,6 +29,8 @@ jobs:
       - name: Controles, cálculo original y sintaxis
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          node --check ppp-agent-bridge.js
+          node --test tests/ppp-agent-bridge.test.cjs
           node --check ppp-ui.js
           node --check ppp-patrimonial-native.js
           node --check ppp-case-loader.js
