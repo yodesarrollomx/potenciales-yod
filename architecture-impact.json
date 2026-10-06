@@ -1,24 +1,19 @@
 {
-  "model_revision": "2026-10-05.83-despacho-puesto-ppp",
-  "proposal_id": "CHG-DESPACHO-PUESTO-VISIBLE-077",
+  "model_revision": "2026-10-05.85-despacho-conocimiento",
+  "proposal_id": "CHG-DESPACHO-CONOCIMIENTO-078",
   "components": [
-    "SYS-YOD-OS",
-    "SYS-DESPACHO",
-    "GAS-PORTERO",
-    "EXT-DRIVE",
     "SYS-POTENCIALES",
-    "SHEET-PORTERO"
+    "GAS-PORTERO",
+    "SHEET-PORTERO",
+    "SHEET-PPP-MODELOS"
   ],
-  "summary": "Integrar puesto visible del agente con navegador real de lectura en servidor y capturas fechadas, dirección y actividad por expediente; conectarlo a voz, texto e investigación de objetivos. Montar conversación junto al PPP/fuentes y pendientes recuperables, sin cerrar el audio al cambiar de panel. Guardar el encargo antes de prometer continuidad y mostrar recibos y límites. Revisar referencia Cubefarm y chinches publicadas; mantener permisos, IDs, JSON Live y fuentes canónicas. La conversación solicita PPP junto a voz: enlazar el tablero Patrimonial autenticado con lectura de revisión/escenario/cantidades/resultados confirmados y propuestas del agente aplicables por el propietario mediante el Store y contrato CAS existentes. Cálculos sólo en Sheets; cambios no confirmados no se tratan como resultados vigentes.",
+  "summary": "Conservar modalidad y revisión real del modelo en la lectura PPP compartida. Adjuntar horizonte del escenario activo y descriptores de unidades sólo para el contrato Patrimonial conocido, sin inferir moneda, recalcular resultados, cambiar permisos ni escribir datos. Los consumidores de conocimiento conservarán los metadatos para distinguir versiones y límites de comparación.",
   "tests": [
-    "node scripts/arquitectura.cjs --check",
-    "node --test tests/*.cjs",
-    "node verify-os.cjs",
-    "node verify-portal.cjs",
-    "node verify-accesos.cjs",
-    "node verify-obra-app.cjs",
-    "Navegador real aislado: captura/navegación/enlaces y exclusión de redes privadas; revocación, móvil/escritorio, voz al cambiar panel y recibo durable.",
-    "Pruebas del puente PPP: origen/ventana/caso, revisión concurrente, propuesta sin escritura hasta Aplicar, resultados sólo tras recibo y copia local no confirmada."
+    "node --check ppp-agent-bridge.js",
+    "node --test tests/ppp-agent-bridge.test.cjs",
+    "node --test tests/ppp-ui.test.cjs tests/ppp-case-loader.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs tests/patrimonial-native.test.cjs",
+    "Recorridos sintéticos de navegador del workflow Verificar interfaz PPP; cero escrituras de negocio.",
+    "git diff --check"
   ],
-  "rollback": "Revertir módulo de puesto y ampliaciones de herramientas; conservar audio, JSON Live, permisos, fuentes, expedientes, outbox, objetivos y evidencias. No restaurar datos de negocio."
+  "rollback": "Revertir la ampliación de metadatos del puente y sus consumidores mediante PR. Conservar cantidades, fórmulas, escenarios, revisiones, permisos y registros de negocio; no restaurar Sheets."
 }
