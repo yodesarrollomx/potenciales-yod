@@ -7,13 +7,14 @@
     "SHEET-PORTERO",
     "SHEET-PPP-MODELOS"
   ],
-  "summary": "Conservar modalidad y revisión real del modelo en la lectura PPP compartida. Adjuntar horizonte del escenario activo y descriptores de unidades sólo para el contrato Patrimonial conocido, sin inferir moneda, recalcular resultados, cambiar permisos ni escribir datos. Los consumidores de conocimiento conservarán los metadatos para distinguir versiones y límites de comparación.",
+  "summary": "Conservar modalidad y revisión real del modelo en la lectura PPP compartida. Adjuntar horizonte del escenario activo y descriptores de unidades sólo para el contrato Patrimonial conocido, sin inferir moneda, recalcular resultados, cambiar permisos ni escribir datos. Los consumidores de conocimiento conservarán los metadatos para distinguir versiones y límites de comparación. Corregir la precondición del recorrido sintético del menú: esperar el ajuste inicial de Leaflet antes de comprobar que el gesto no mueve el mapa, manteniendo la comparación exacta y ejercitando una animación inicial explícita. No modifica comportamiento de producto.",
   "tests": [
     "node --check ppp-agent-bridge.js",
     "node --test tests/ppp-agent-bridge.test.cjs",
     "node --test tests/ppp-ui.test.cjs tests/ppp-case-loader.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs tests/patrimonial-native.test.cjs",
     "Recorridos sintéticos de navegador del workflow Verificar interfaz PPP; cero escrituras de negocio.",
-    "git diff --check"
+    "git diff --check",
+    "node tests/ppp-home-browser.cjs: Leaflet real Chromium/WebKit con pan inicial animado, mapa estable antes de abrir menú y centro exactamente conservado al cerrar."
   ],
   "rollback": "Revertir la ampliación de metadatos del puente y sus consumidores mediante PR. Conservar cantidades, fórmulas, escenarios, revisiones, permisos y registros de negocio; no restaurar Sheets."
 }
