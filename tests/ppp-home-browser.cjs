@@ -32,7 +32,20 @@ async function fixture(context,options={}){
  });
  return {base,calls,writes};
 }
+async function waitForMapIdle(p){
+ // Loading the catalogue does not finish ajusta(): it schedules fitBounds after 300 ms.
+ // Observe a stable viewport before the menu gesture, without stopping map animation.
+ await p.waitForFunction(()=>{
+  const map=window._pyodMap;if(!map||map._panAnim?._inProgress||map._animatingZoom)return false;
+  const center=map.getCenter(),size=map.getSize(),key=JSON.stringify([center.lat,center.lng,map.getZoom(),size.x,size.y]);
+  if(size.x<=0||size.y<=0)return false;
+  const now=performance.now(),last=window.__pppMapIdle;
+  if(!last||last.key!==key){window.__pppMapIdle={key,since:now};return false;}
+  return now-last.since>=400;
+ },null,{timeout:5000});
+}
 async function menuAboveMap(p){
+ await waitForMapIdle(p);
  await p.locator('#yodBurger').click();await p.waitForFunction(()=>document.querySelector('.yod-sidebar').getBoundingClientRect().left>=-1);
  assert.ok(await p.evaluate(()=>{const side=document.querySelector('.yod-sidebar'),r=side.getBoundingClientRect();return document.elementFromPoint(Math.min(r.right-16,100),300)?.closest('.yod-sidebar')===side;}),'Sidebar is above map, controls and catalogue');
  assert.ok(await p.evaluate(()=>document.elementFromPoint(innerWidth-10,300)?.closest('.yod-scrim')),'Scrim receives taps above map');
@@ -54,6 +67,8 @@ async function menuAboveMap(p){
     await p.locator('#btnTodos').click();assert.equal(await p.locator('#btnTodos').getAttribute('aria-expanded'),'true');assert.equal(await p.locator('#listaTodos .lt-item').count(),15);assert.equal(await p.locator('.lt-group').count(),5);
     for(let i=0;i<types.length;i++)assert.equal(await p.locator('.lt-group').nth(i).locator('a').first().getAttribute('href'),pages[i]+'.html?open=prueba%20'+types[i]+'%2F0');
     const scroll=await p.locator('#listaTodos').evaluate(e=>{e.scrollTop=e.scrollHeight;return e.scrollTop;});assert.ok(scroll>0,'Catalogue scrolls independently');
+    // Force an in-flight initial pan so readiness cannot depend on machine speed.
+    await p.evaluate(()=>window._pyodMap.panBy([24,-12],{animate:true,duration:.6}));
     await menuAboveMap(p);
     await p.locator('#btnTodos').click();assert.equal(await p.locator('#listaTodos').isVisible(),false);
     if(page==='index'){
