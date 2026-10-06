@@ -12,3 +12,26 @@ test('Cached draft cannot send until fresh revision confirmed',async()=>{let pos
 test('Version changes require confirmed synchronized quantities',async()=>{let posts=0;const s=setup(async()=>{posts++;return copy(fixture)});s.change('inCus',3);await assert.rejects(s.version('duplicar','synthetic','Next'),/pendientes/);assert.equal(posts,0);});
 test('Late response after leaving the case cannot alter model or notify',async()=>{let release,notified=0;const s=setup(()=>new Promise(r=>release=r));s.changed=()=>notified++;s.change('inCus',3);const p=s.flush();s.destroy();const n=notified;release({...copy(fixture),revision:'late'});await p;assert.equal(s.model.revision,'synthetic-revision');assert.equal(notified,n);});
 test('Malformed server response retains job and confirmed quantities',async()=>{const s=setup(async()=>({ok:true,revision:'bad'}));s.change('inCus',3);assert.equal(await s.flush(),false);assert.equal(s.error,'sin_confirmacion');assert.equal(s.values().inCus,3);assert.equal(s.model.revision,'synthetic-revision');});
+test('Lost ACK survives reload: fresh read permits only the exact receipt replay',async()=>{
+ let body;const receipt=copy(fixture);receipt.revision='receipt';receipt.escenarios[0].inputs.unidad01_renta=0;
+ const s=setup(async b=>{body=b;throw Error('ACK lost');});s.change('unidad01_renta',0);await s.flush();
+ const latest=copy(receipt);latest.revision='later';latest.escenarios[0].inputs.unidad02_renta=17000;
+ let calls=[];const restored=setup(async b=>{calls.push(b);return receipt;},async()=>latest);restored.restore(s.snapshot());
+ assert.equal(await restored.flush(),false);assert.equal(await restored.refresh(),false);assert.equal(restored.retryable(),true);
+ assert.equal(await restored.flush(),true);assert.deepEqual(calls,[body]);assert.equal(restored.job,null);assert.equal(restored.model.revision,'later');assert.equal(restored.verified,true);
+});
+test('Expired receipt preserves job and later edits without changing CAS or request ID',async()=>{
+ let request;const s=setup(async b=>{request=b;throw Error('ACK lost');});s.change('unidad01_renta',0);await s.flush();s.change('unidad02_renta',18000);
+ let sent;const restored=setup(async b=>{sent=b;return {ok:false,error:'conflicto_revision'};},async()=>({...copy(fixture),revision:'later'}));restored.restore(s.snapshot());await restored.refresh();
+ assert.equal(await restored.flush(),false);assert.deepEqual(sent,request);assert.equal(restored.values().unidad02_renta,18000);assert.equal(restored.job.request_id,request.request_id);assert.equal(restored.retryable(),false);
+});
+test('Restored cache cannot substitute an operation or introduce readonly quantities',()=>{
+ const s=setup();s.change('inCus',null);for(const job of [{tipo:'archivar',caso_id:s.id,escenario_id:'synthetic',revision_esperada:'x',request_id:'x',inputs:{}},{tipo:'sheet-cantidades',caso_id:s.id,escenario_id:'synthetic',revision_esperada:'x',request_id:'x',inputs:{inM2Rentable:10}}])assert.throws(()=>setup().restore({...s.snapshot(),job}));
+});
+test('Per-case cache preserves Local, rent zero, missing CUS and metadata drafts across cases',()=>{
+ const {saveCache,cached,removeCache}=require('../ppp-patrimonial-native.js');const data=new Map();const storage={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};
+ const a=setup();a.change('unidad01_tipo',1);a.change('unidad01_renta',0);a.change('inCus',null);const first={metadata:{caso_id:a.id},metadataDraft:{notas_caso:'Pendiente para A'},...a.snapshot()};saveCache(first,storage);
+ const b=copy(fixture);b.caso_id='case-B';saveCache({metadata:{caso_id:b.caso_id},model:b,pending:{},job:null},storage);
+ const restored=setup();restored.restore(cached(a.id,storage));assert.deepEqual(restored.pending,first.pending);assert.equal(cached(a.id,storage).metadataDraft.notas_caso,'Pendiente para A');removeCache('case-B',storage);assert.ok(cached(a.id,storage));
+ data.set('pyod_patrimonial_native_v1',JSON.stringify(first));data.delete('pyod_patrimonial_native_v1:'+a.id);assert.deepEqual(cached(a.id,storage),first);assert.equal(cached('foreign',storage),null);
+});

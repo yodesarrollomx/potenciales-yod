@@ -61,6 +61,7 @@ jobs:
           node tests/ppp-cierre-browser.cjs
           node tests/ppp-home-browser.cjs
           node tests/patrimonial-native-browser.cjs
+          node tests/patrimonial-drafts-browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -502,7 +502,7 @@
 
 <div id="toast"></div>
 <link rel="stylesheet" href="ppp-patrimonial-native.css?v=1">
-<script src="ppp-agent-bridge.js?v=1"></script><script src="ppp-patrimonial-native.js?v=20261005-agent1"></script>
+<script src="ppp-agent-bridge.js?v=1"></script><script src="ppp-patrimonial-native.js?v=20261005-recovery47"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -1073,7 +1073,7 @@
   }
   let nativeAdapter=null;
   function montarNativo(obj,cache=null){
-    if(!cache)PPPPatrimonialNative.validate(obj.calculo_sheet,obj.caso_id);
+    if(!cache){PPPPatrimonialNative.validate(obj.calculo_sheet,obj.caso_id);cache=PPPPatrimonialNative.cached(obj.caso_id);}
     if(nativeAdapter)nativeAdapter.destroy();
     caso={caso_id:obj.caso_id,palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
     state=null;cerrarOverlays();
@@ -1082,7 +1082,7 @@
   function aplicarCasoRemoto(obj){
     if(obj.calculo_sheet&&obj.calculo_sheet.modelo_tipo==='patrimonial'){try{if(nativeAdapter&&nativeAdapter.store.id===obj.caso_id)nativeAdapter.store.acceptRead(obj.calculo_sheet);else montarNativo(obj);toast('Caso cargado desde su libro canónico')}catch(e){toast('Modelo nativo sin confirmar; se conserva la lectura anterior')}return}
     if(nativeAdapter&&nativeAdapter.store.id===obj.caso_id){toast('No se confirmó el modelo del caso. Se conserva la copia anterior');return}
-    if(nativeAdapter){nativeAdapter.destroy();nativeAdapter.clearCache();nativeAdapter=null;}
+    if(nativeAdapter){nativeAdapter.destroy();nativeAdapter=null;}
     Object.keys(obj).forEach(kk=>{if(/^in[A-Z]/.test(kk)&&obj[kk]!==''&&isFinite(Number(obj[kk])))setControl(kk,Number(obj[kk]))});
     caso={caso_id:obj.caso_id||'',palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
     // Versiones del caso: si la fila trae escenarios_json se restauran; si no (casos viejos), versión única desde las columnas in*.
@@ -1182,7 +1182,7 @@
     if(e&&e.prof&&Array.isArray(e.depas)){e.depas.forEach(d=>{d.renta=Math.round(st.m2*(Number(d.m2)||0)/100)*100});renderProf()}
     else{const prom=get('inM2Rentable')/Math.max(1,Math.round(get('inUnidades')));setControl('inRentaUnidadMes',Math.round(st.m2*prom/100)*100)}
     calculate();renderMercadoFilas();toast('Renta del proyecto = mercado '+fmtMoney(st.m2)+'/m² × tu tamaño')};
-  $('btnNuevo').onclick=()=>{if(nativeAdapter){nativeAdapter.destroy();nativeAdapter.clearCache();nativeAdapter=null;}Object.entries(DEFAULTS).forEach(([id,v])=>setControl(id,v));caso={caso_id:'',palabra:'',correo:caso.correo,nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};escInicial('Base');calculate();pintaCaso();toast('Caso nuevo: supuestos de Real del Arco (16 deptos)')};
+  $('btnNuevo').onclick=()=>{if(nativeAdapter){nativeAdapter.destroy();nativeAdapter=null;}Object.entries(DEFAULTS).forEach(([id,v])=>setControl(id,v));caso={caso_id:'',palabra:'',correo:caso.correo,nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};escInicial('Base');calculate();pintaCaso();toast('Caso nuevo: supuestos de Real del Arco (16 deptos)')};
   $('profOn').addEventListener('change',()=>{const e=escGet(escActivo);if(!e)return;e.prof=$('profOn').checked;renderProf();calculate()});
   $('btnSeguimiento').onclick=()=>$('segPanel').classList.toggle('on');
   $('btnSegPaso').onclick=()=>{const v=$('segSiguiente').value.trim();caso.siguiente_paso=v;pintaCaso();guardarDraft();if(caso.caso_id&&!modoLocal)postSeguimiento({tipo:'estado',caso_id:caso.caso_id,siguiente_paso:v,request_id:nuevoRequestId()},'Siguiente paso fijado')};
@@ -1196,7 +1196,7 @@
   $('gateLocal').onclick=modoSinConexion;
   document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)cerrarOverlays()}));
   window.addEventListener('online',drenarCola);setInterval(drenarCola,25000);
-  const nativeCache=PPPPatrimonialNative.cached();
+  const nativeCache=PPPPatrimonialNative.cached(new URLSearchParams(location.search).get('open')||undefined);
   if(nativeCache&&nativeCache.metadata){try{montarNativo(nativeCache.metadata,nativeCache)}catch(e){toast('Copia nativa inválida; abre el caso desde la nube')}}
   if(!nativeAdapter){cargarDraft();if(!escenarios.length)escInicial('Base');calculate();pintaCaso();}
   if(modoLocal){$('gate').classList.add('off');$('modoLocalBanner').classList.add('on')}

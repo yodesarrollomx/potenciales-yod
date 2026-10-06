@@ -1,4 +1,4 @@
-.patrimonial-native main[hidden],.patrimonial-native header[hidden]{display:none!important}
+.patrimonial-native main[hidden],.patrimonial-native .sticky-header[hidden]{display:none!important}
 #patrimonialNative{max-width:1100px}#patrimonialNative h1{font-size:28px;margin:8px 0}
 .pn-status{padding:12px;border:1px solid var(--gold);border-radius:12px;background:var(--card)}
 .pn-card{background:var(--card);border:1px solid var(--linea);border-radius:16px;padding:16px;margin:16px 0}.pn-card h2{font-size:18px;margin:0 0 12px}
