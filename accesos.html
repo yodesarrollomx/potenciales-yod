@@ -97,6 +97,7 @@
     <span class="kick" style="color:var(--gold);font-size:9px;font-weight:800;letter-spacing:.24em;text-transform:uppercase">¿Quién entra a los boards?</span>
     <h1 class="serif">Accesos y bitácora</h1>
     <p>Dar acceso = agregar el correo aquí (o una fila en la hoja ACCESOS). La persona escribe su correo en cualquier board y recibe su <b>liga mágica</b> de 90 días. Revocar mata sus sesiones al instante.</p>
+    <button class="btn ghost" id="aRetry" type="button" disabled style="margin-top:12px">Reintentar validación</button>
   </section>
 
   <section class="card">
@@ -142,38 +143,67 @@
       <b>(28m ×7)</b> — al cerrar: minutos de la visita × eventos totales &nbsp;|&nbsp; renglón lleno (60 visitas) → renglón nuevo "correo <b>·cont2</b>"<br><b>Permisos por tablero</b>: el campo <b>boards</b> de cada usuario acepta <b>*</b> (ve todos) o los códigos de la matriz de arriba separados por coma — <b>PT</b> Potenciales · <b>CO</b> Codesarrollos · <b>RM</b> Miramar · <b>TA</b> Operación · <b>FL</b> Flujo · <b>IN</b> Interiores · <b>IV</b> Inversionistas · <b>MK</b> Métricas · <b>OB</b> Obra. Ej.: alguien que solo ve Flujo y Miramar = "FL,RM". <br><span style="color:var(--muted)">Nota: hoy filtran de verdad <b>Flujo, Interiores, Miramar y Operación</b>; los otros 4 abren para cualquier sesión válida hasta que su backend mande su código (te dejo esa línea aparte).</span>
     </div>
   </section>
-<div id="avisoPortero" hidden style="margin:12px auto;max-width:900px;padding:10px 14px;border-radius:8px;
-  background:rgba(160,90,30,.12);border:1px solid rgba(160,90,30,.35);color:#8a5f18;font-size:13.5px">
-  Estás administrando en el <b>portero de respaldo</b> (cuenta personal). El de siempre no respondió —
-  normal mientras la cuenta de Google del dominio está suspendida. Todo lo que hagas aquí queda guardado.
-</div>
 </main>
 
 <script>
 (()=>{
-  /* Portero: el de siempre y el de respaldo. El original vive en el dominio
-     suspendido; si no contesta o rechaza la clave, se usa el respaldo (cuenta
-     personal) sin que nadie tenga que hacer nada. Al reactivar el dominio, el
-     original retoma solo. */
-  const PORTERO_ORIGINAL=(window.YOD_PORTERO||{}).original;   // única copia: yod-portal/os/yod-acceso.js
-  const PORTERO_RESPALDO=(window.YOD_PORTERO||{}).respaldo;
-  const LSP='pyod_portero_activo';
-  let ENDPOINT = localStorage.getItem(LSP) || PORTERO_ORIGINAL;
-  function usarRespaldo(){ ENDPOINT = PORTERO_RESPALDO; try{localStorage.setItem(LSP, PORTERO_RESPALDO);}catch(e){}
-    const b=document.getElementById('avisoPortero'); if(b){b.hidden=false;} }
+  // Cada solicitud usa ORIGINAL. Un rechazo no cambia de autoridad.
+  const PORTERO_ORIGINAL=(window.YOD_PORTERO||{}).original;
+  try{localStorage.removeItem('pyod_portero_activo')}catch(e){}
   const LSC='pyod_clave_v1';
   const $=id=>document.getElementById(id);
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const k=()=>localStorage.getItem(LSC)||'';
-  // POST robusto: con timeout y detección de respuestas que NO son JSON
-  // (páginas de error de Apps Script, HTML de login, etc.) para que NUNCA
-  // se quede colgado en silencio.
-  async function post(b){
+  let tokenActual=null,generacion=0,admin=false,listado=0;
+  // Portero procesa las ligas y recarga; esta carga nunca usa la sesión anterior.
+  const entradaLiga=!!new URLSearchParams(location.search).get('liga');
+  const sesion=()=>({token:tokenActual,generacion});
+  function limpiarVista(mensaje){
+    admin=false;listado++;
+    $('lista').innerHTML='<p class="u-meta">'+esc(mensaje)+'</p>';
+    $('matriz').innerHTML='<tbody><tr><td class="u">'+esc(mensaje)+'</td></tr></tbody>';
+    $('uCnt').textContent='';
+    ['aCorreo','aNombre','aBoards'].forEach(id=>{$(id).value='';$(id).disabled=true});
+    $('aRol').value='vista';$('aRol').disabled=true;
+    $('aRetry').disabled=!tokenActual;
+    $('aBtn').disabled=true;$('aBtn').classList.remove('is-saving');$('aBtnT').textContent='Dar acceso';
+    ['aMsg','mMsg','aVera','ligaUrl','ligaWho','toast'].forEach(id=>{
+      const n=$(id);if(!n)return;
+      n.textContent='';
+      if(id==='aMsg'||id==='mMsg')n.className='msg';
+      if(id==='toast')n.className='';
+    });
+    ligaActual='';if($('ligaOv'))cerrarLiga();clearTimeout(toastT);
+  }
+  function observarSesion(){
+    const q=new URLSearchParams(location.search);
+    if(entradaLiga||q.get('sesion')||q.get('liga'))return;
+    const token=k();
+    if(token===tokenActual)return;
+    tokenActual=token;generacion++;
+    limpiarVista(token?'Validando sesión…':'Inicia sesión para ver los accesos.');
+    if(token)esperarAdminYcargar(sesion());
+  }
+  function vigente(s,exigeAdmin=false){
+    observarSesion();
+    return s.token===k()&&s.token===tokenActual&&s.generacion===generacion&&(!exigeAdmin||admin);
+  }
+  async function leer(recurso,s){
+    const ctrl=new AbortController(),to=setTimeout(()=>ctrl.abort(),20000);
+    try{
+      const param=recurso==='canje'?'t':'k';
+      const r=await fetch(PORTERO_ORIGINAL+'?recurso='+recurso+'&'+param+'='+encodeURIComponent(s.token),{credentials:'omit',cache:'no-store',signal:ctrl.signal});
+      return await r.text();
+    }finally{clearTimeout(to)}
+  }
+  // Escritura única, con timeout; nunca se reenvía al respaldo ni se reintenta.
+  async function post(b,s){
+    if(!vigente(s,true))throw new Error('La sesión cambió');
     const ctrl=new AbortController();
     const to=setTimeout(()=>ctrl.abort(),20000);
     try{
-      const res=await fetch(ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body:JSON.stringify(Object.assign({k:k(),request_id:(crypto.randomUUID?.()||Date.now()+'')},b)),signal:ctrl.signal});
+      const res=await fetch(PORTERO_ORIGINAL,{method:'POST',credentials:'omit',headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify(Object.assign({k:s.token,request_id:(crypto.randomUUID?.()||Date.now()+'')},b)),signal:ctrl.signal});
       const txt=await res.text();
       let j; try{j=JSON.parse(txt)}catch(_){
         // respuesta no-JSON: casi siempre sesión caducada o permiso
@@ -228,7 +258,7 @@
   (function(){const pv=()=>{const b=document.getElementById('aBoards'),r=document.getElementById('aRol'),o=document.getElementById('aVera');
       if(b&&o) o.textContent=b.value.trim()?'Esta persona verá: '+vera(b.value,r?r.value:'vista'):'';};
     document.addEventListener('input',e=>{if(e.target&&(e.target.id==='aBoards'))pv()});document.addEventListener('change',e=>{if(e.target&&e.target.id==='aRol')pv()});})();
-  function renderMatriz(usuarios){
+  function renderMatriz(usuarios,s){
     const tb=$('matriz');
     tb.innerHTML='<thead><tr><th>Usuario</th>'+CODES.map(c=>'<th class="'+(c[0]==='*'?'todo':'')+'" title="'+esc(c[1])+'">'+esc(c[1])+'</th>').join('')+'</tr></thead><tbody>'+
       usuarios.map(u=>{
@@ -237,6 +267,7 @@
           CODES.map(c=>{const es=c[0]==='*'?todo:tieneCode(b,c[0]);
             return '<td class="'+(c[0]==='*'?'todo':'')+'"><input type="checkbox" data-code="'+c[0]+'" '+(es?'checked':'')+(rev||(todo&&c[0]!=='*')?' disabled':'')+'></td>'}).join('')+'</tr>'}).join('')+'</tbody>';
     tb.querySelectorAll('input[type=checkbox]').forEach(ch=>ch.onchange=async()=>{
+      if(!vigente(s,true))return;
       const tr=ch.closest('tr'),correo=tr.dataset.correo,mMsg=$('mMsg'),was=!ch.checked;
       let boards;
       if(ch.dataset.code==='*'){boards=ch.checked?'*':CODES.slice(1).map(c=>c[0]).join(',')}
@@ -256,31 +287,29 @@
         // acceso-alta hace UPSERT de la fila completa: mandar solo 'boards'
         // dejaba el rol y el nombre a lo que el backend adivinara (o borrara).
         // Los 4 campos siempre van juntos y tomados de la fila en pantalla.
-        const r=await post({tipo:'acceso-alta',correo,nombre:tr.dataset.nombre,rol:tr.dataset.rol,boards});
+        const r=await post({tipo:'acceso-alta',correo,nombre:tr.dataset.nombre,rol:tr.dataset.rol,boards},s);
+        if(!vigente(s,true))return;
         if(r.ok){mMsg.className='msg ok';mMsg.textContent='✓ '+correo+' → '+r.boards;toast('✓ Permisos guardados');cargar()}
         else{const det=r.error==='admin'?'necesitas sesión de administrador':(r.error||'error');mMsg.className='msg err';mMsg.textContent='No se pudo: '+det;toast('No se pudo: '+det,'err');ch.checked=was;ch.disabled=false}
       }catch(e){
+        if(!vigente(s,true))return;
         // revierte el check para no mentir sobre lo guardado
         ch.checked=was;ch.disabled=false;
         mMsg.className='msg err';mMsg.textContent='No se pudo guardar: '+e.message;toast('No se pudo guardar — reintenta','err');
       }
     });
   }
-  async function cargar(){
-    const cont=$('lista');
+  async function cargar(s=sesion()){
+    if(!vigente(s,true))return;
+    const solicitud=++listado,cont=$('lista');
+    const actual=()=>vigente(s,true)&&solicitud===listado;
     try{
-      let raw=await fetch(ENDPOINT+'?recurso=accesos-lista&k='+encodeURIComponent(k())).then(x=>x.text()).catch(()=>'');
-      // Relevo: si el portero de siempre no contesta JSON o rechaza, probamos el respaldo.
-      if(ENDPOINT===PORTERO_ORIGINAL){
-        let malo=false;
-        try{ const t=JSON.parse(raw); if(!t.ok) malo=true; }catch(_){ malo=true; }
-        if(malo){ usarRespaldo();
-          raw=await fetch(ENDPOINT+'?recurso=accesos-lista&k='+encodeURIComponent(k())).then(x=>x.text()).catch(()=>''); }
-      }
+      const raw=await leer('accesos-lista',s);
+      if(!actual())return;
       let r; try{r=JSON.parse(raw)}catch(_){throw new Error(/sign in|accounts\.google/i.test(raw)?'sesión de Google caducada':'respuesta inesperada')}
-      if(!r.ok){cont.innerHTML='<p class="u-meta">'+(r.error==='admin'?'Necesitas sesión de administrador (o la clave maestra) para ver esto.':'Error: '+esc(r.error))+'</p>';$('matriz').innerHTML='<tbody><tr><td class="u">Solo administrador.</td></tr></tbody>';return}
+      if(!r.ok){limpiarVista(r.error==='admin'?'Necesitas sesión de administrador para ver esto.':'Error: '+(r.error||'sesión no validada'));return}
       $('uCnt').textContent='· '+r.usuarios.length;
-      renderMatriz(r.usuarios);
+      renderMatriz(r.usuarios,s);
       cont.innerHTML=r.usuarios.map(u=>`
         <div class="usuario">
           <div class="u-top">
@@ -288,107 +317,73 @@
             <span class="u-correo">${esc(u.correo)}</span>
             <span class="badge ${u.estado==='activo'?'activo':'revocado'}">${esc(u.estado)}</span>
             ${u.rol==='admin'?'<span class="badge admin">admin</span>':''}
-            <span class="u-acciones">${u.estado==='activo'?`<button class="btn mini" data-rol="${esc(u.correo)}" data-cur="${esc(u.rol||'vista')}" data-nom="${esc(u.nombre||'')}" data-boards="${esc(u.boards||'*')}">${u.rol==='admin'?'↓ Colaborador':'↑ Dirección'}</button><button class="btn mini" data-liga="${esc(u.correo)}">🔗 Liga directa</button><button class="btn rojo mini" data-rev="${esc(u.correo)}">Revocar</button>`:`<button class="btn mini" data-rea="${esc(u.correo)}" data-nom="${esc(u.nombre||'')}" data-rolrea="${esc(u.rol||'vista')}" data-boardsrea="${esc(u.boards||'*')}">Reactivar</button>`}</span>
+            <span class="u-acciones">${u.estado==='activo'?`<button class="btn mini" data-rol="${esc(u.correo)}" data-cur="${esc(u.rol||'vista')}" data-nom="${esc(u.nombre||'')}" data-boards="${esc(boardsDe(u))}">${u.rol==='admin'?'↓ Colaborador':'↑ Dirección'}</button><button class="btn mini" data-liga="${esc(u.correo)}">🔗 Liga directa</button><button class="btn rojo mini" data-rev="${esc(u.correo)}">Revocar</button>`:`<button class="btn mini" data-rea="${esc(u.correo)}" data-nom="${esc(u.nombre||'')}" data-rolrea="${esc(u.rol||'vista')}" data-boardsrea="${esc(boardsDe(u))}">Reactivar</button>`}</span>
           </div>
           <div class="u-meta">boards: ${esc(u.boards)} · sesiones vivas: ${u.sesiones_vivas} · visitas registradas: ${u.visitas_n}${u.ts_alta?' · alta: '+esc(String(u.ts_alta).slice(0,10)):''}</div>
           ${u.ultimas&&u.ultimas.length?`<div class="u-visitas">${u.ultimas.map(esc).join('\n')}</div>`:''}
         </div>`).join('')||'<p class="u-meta">Sin usuarios aún.</p>';
       cont.querySelectorAll('[data-rol]').forEach(b=>b.onclick=async()=>{
+        if(!vigente(s,true))return;
         var nuevo=b.dataset.cur==='admin'?'vista':'admin';
         var aviso=nuevo==='admin'?'darle DIRECCIÓN a '+b.dataset.rol+' (verá TODOS los tableros)':'volver COLABORADOR a '+b.dataset.rol+' (solo verá los tableros que le palomees)';
         if(!confirm('¿Seguro? '+aviso))return;
         b.disabled=true;const tp=b.textContent;b.textContent='…';
         try{
-          const r=await post({tipo:'acceso-alta',correo:b.dataset.rol,rol:nuevo,nombre:b.dataset.nom,boards:b.dataset.boards});
+          const r=await post({tipo:'acceso-alta',correo:b.dataset.rol,rol:nuevo,nombre:b.dataset.nom,boards:b.dataset.boards},s);
+          if(!vigente(s,true))return;
           if(r.ok){toast('✓ Rol actualizado → '+(nuevo==='admin'?'Dirección':'Colaborador'));cargar();}
           else{b.disabled=false;b.textContent=tp;toast('No se pudo: '+(r.error||''),'err');}
-        }catch(e){b.disabled=false;b.textContent=tp;toast('No se pudo cambiar el rol: '+e.message,'err');}
+        }catch(e){if(!vigente(s,true))return;b.disabled=false;b.textContent=tp;toast('No se pudo cambiar el rol: '+e.message,'err');}
       });
       cont.querySelectorAll('[data-liga]').forEach(b=>b.onclick=async()=>{
+        if(!vigente(s,true))return;
         b.disabled=true;const t0=b.textContent;b.textContent='…';
-        try{const r2=await post({tipo:'sesion-crear',correo:b.dataset.liga,destino:'https://yodesarrollomx.github.io/potenciales-yod/'});
+        try{const r2=await post({tipo:'sesion-crear',correo:b.dataset.liga,destino:'https://yodesarrollomx.github.io/potenciales-yod/'},s);
+          if(!vigente(s,true))return;
           if(!r2.ok){toast('No se pudo crear la liga: '+(r2.error||''),'err');return}
           try{await navigator.clipboard.writeText(r2.liga)}catch(e){}
+          if(!vigente(s,true))return;
           toast('✓ Liga lista y copiada');
           abrirLiga(r2.liga,b.dataset.liga);
-        }catch(e){toast('No se pudo crear la liga: '+e.message,'err')}finally{b.disabled=false;b.textContent=t0}
+        }catch(e){if(!vigente(s,true))return;toast('No se pudo crear la liga: '+e.message,'err')}finally{if(vigente(s,true)){b.disabled=false;b.textContent=t0}}
       });
       cont.querySelectorAll('[data-rev]').forEach(b=>b.onclick=async()=>{
+        if(!vigente(s,true))return;
         if(!confirm('¿Revocar acceso y matar sesiones de '+b.dataset.rev+'?'))return;
-        b.disabled=true;try{const r=await post({tipo:'acceso-revocar',correo:b.dataset.rev});if(r.ok){toast('Acceso revocado')}else{toast('No se pudo revocar: '+(r.error||''),'err')}cargar()}catch(e){b.disabled=false;toast('No se pudo revocar: '+e.message,'err')}
+        b.disabled=true;try{const r=await post({tipo:'acceso-revocar',correo:b.dataset.rev},s);if(!vigente(s,true))return;if(r.ok){toast('Acceso revocado')}else{toast('No se pudo revocar: '+(r.error||''),'err')}cargar()}catch(e){if(!vigente(s,true))return;b.disabled=false;toast('No se pudo revocar: '+e.message,'err')}
       });
       cont.querySelectorAll('[data-rea]').forEach(b=>b.onclick=async()=>{
+        if(!vigente(s,true))return;
         b.disabled=true;
         // Reactivar es un acceso-alta más: sin rol y boards, el backend los
         // rellena con su default (rol vista, boards '*') y puede devolverle
         // a esa persona acceso a TODO. Se recuperan del rol/boards que ya
         // tenía (guardados en el botón desde la última lista cargada).
-        try{const r=await post({tipo:'acceso-alta',correo:b.dataset.rea,nombre:b.dataset.nom,rol:b.dataset.rolrea,boards:b.dataset.boardsrea});if(r.ok){toast('✓ Acceso reactivado')}else{toast('No se pudo reactivar: '+(r.error||''),'err')}cargar()}catch(e){b.disabled=false;toast('No se pudo reactivar: '+e.message,'err')}
+        try{const r=await post({tipo:'acceso-alta',correo:b.dataset.rea,nombre:b.dataset.nom,rol:b.dataset.rolrea,boards:b.dataset.boardsrea},s);if(!vigente(s,true))return;if(r.ok){toast('✓ Acceso reactivado')}else{toast('No se pudo reactivar: '+(r.error||''),'err')}cargar()}catch(e){if(!vigente(s,true))return;b.disabled=false;toast('No se pudo reactivar: '+e.message,'err')}
       });
-    }catch(e){cont.innerHTML='<p class="u-meta">No se pudo cargar la lista ('+esc(e.message||'sin conexión')+'). Recarga con Ctrl/⌘+Shift+R o vuelve a entrar con tu Google.</p>'}
+    }catch(e){if(!actual())return;limpiarVista('No se pudo cargar la lista.');cont.innerHTML='<p class="u-meta">No se pudo cargar la lista ('+esc(e.message||'sin conexión')+'). Recarga con Ctrl/⌘+Shift+R o vuelve a entrar con tu Google.</p>'}
   }
-  async function rolDeLaClave(kk){
-    /* El engrane de portero.js (rol admin → ⚙️) SE SALTA esta página a
-       propósito (portero.js: "if (!k || pagina === 'accesos') return"), así
-       que aquí no hay evento ni variable de la que colgarse. Repetimos su
-       mismo canje — GET, sin costo, cacheado 10 min en el backend — y su
-       misma caché de pestaña (sessionStorage.pyod_rol), en vez de adivinar
-       el rol o fiarnos de que el backend sea la única puerta. */
+  async function esperarAdminYcargar(s){
     try{
-      const cache=JSON.parse(sessionStorage.getItem('pyod_rol')||'null');
-      if(cache&&cache.f===kk.slice(0,14))return cache.rol||'';
-    }catch(e){}
-    async function pide(){
-      const raw=await fetch(ENDPOINT+'?recurso=canje&t='+encodeURIComponent(kk)).then(x=>x.text()).catch(()=>'');
-      try{return JSON.parse(raw)}catch(_){return null}
-    }
-    let j=await pide();
-    if((!j||!j.ok)&&ENDPOINT===PORTERO_ORIGINAL){usarRespaldo();j=await pide();}
-    if(j&&j.ok){const rol=j.rol||'vista';try{sessionStorage.setItem('pyod_rol',JSON.stringify({f:kk.slice(0,14),rol}))}catch(e){}return rol}
-    return '';
-  }
-  async function esperarAdminYcargar(){
-    /* cargar() pide 'accesos-lista' — correos, roles, boards y bitácora de
-       TODOS — y antes se llamaba en la última línea del script, ANTES de
-       que portero.js (que carga después, en un <script> aparte) canjee
-       ?sesion=/?liga= y pueda mostrar su puerta. Esa carrera mandaba la
-       primera llamada con la credencial vacía y dependía solo de que el
-       backend la rechazara. Ahora se espera a que haya sesión y, además, a
-       que esa sesión sea admin, antes de pedir nada. */
-    const cont=$('lista');
-    let canjesFallidos=0;
-    for(let i=0;i<400;i++){ // ~60s de margen: cubre el canje de una liga que aún no ha entrado
-      const kk=k();
-      if(kk){
-        const rol=await rolDeLaClave(kk);
-        if(rol==='admin'){cargar();return}
-        if(rol){ // sesión válida pero no admin: no va a cambiar sola, no insistas
-          cont.innerHTML='<p class="u-meta">Necesitas sesión de administrador (o la clave maestra) para ver esto.</p>';
-          $('matriz').innerHTML='<tbody><tr><td class="u">Solo administrador.</td></tr></tbody>';
-          return;
-        }
-        /* Credencial presente pero el canje no la reconoció (token viejo, o el
-           backend todavía resolviendo el respaldo). Se reintenta MUY POCAS
-           veces y despacio: sin este freno, el ciclo de 150 ms mandaba
-           cuatrocientas peticiones de canje en un minuto. */
-        if(++canjesFallidos>=4){
-          cont.innerHTML='<p class="u-meta">Tu sesión no se pudo validar. Vuelve a entrar con tu Google o pide una liga nueva.</p>';
-          return;
-        }
-        await new Promise(r=>setTimeout(r,2500));
-        continue;
-      }
-      await new Promise(r=>setTimeout(r,150));
-    }
-    cont.innerHTML='<p class="u-meta">Inicia sesión para ver los accesos.</p>';
+      const raw=await leer('canje',s);
+      if(!vigente(s))return;
+      const j=JSON.parse(raw);
+      if(!j.ok){limpiarVista('Tu sesión no se pudo validar: '+(j.error||'rechazada')+'. Vuelve a entrar.');return}
+      if(j.rol!=='admin'){limpiarVista('Necesitas sesión de administrador para ver esto.');return}
+      admin=true;
+      ['aCorreo','aNombre','aBoards','aRol'].forEach(id=>{$(id).disabled=false});
+      actualizarBotonAlta();
+      await cargar(s);
+    }catch(e){if(vigente(s))limpiarVista('No se pudo comprobar tu sesión. Pulsa Reintentar validación o vuelve a entrar con tu Google.')}
   }
   // El campo de boards ya no trae '*' de fábrica (antes regalaba TODOS los
   // tableros a quien diera de alta llenando solo correo y nombre): el botón
   // se habilita solo cuando hay al menos un tablero escrito.
-  function actualizarBotonAlta(){$('aBtn').disabled=!$('aBoards').value.trim()}
+  function actualizarBotonAlta(){$('aBtn').disabled=!admin||!$('aBoards').value.trim()}
   $('aBoards').addEventListener('input',actualizarBotonAlta);
   actualizarBotonAlta();
   $('aBtn').onclick=async()=>{
+    const s=sesion();if(!vigente(s,true))return;
     const correo=$('aCorreo').value.trim(),nombre=$('aNombre').value.trim(),boards=$('aBoards').value.trim();
     const msg=$('aMsg');
     if(!correo||correo.indexOf('@')<1){msg.className='msg err';msg.textContent='Correo inválido — escribe algo como nombre@correo.com';$('aCorreo').focus();return}
@@ -396,7 +391,8 @@
     setBusy($('aBtn'),true,'aBtnT','Guardando…','Dar acceso');
     msg.className='msg';msg.textContent='Guardando '+correo+'…';
     try{
-      const r=await post({tipo:'acceso-alta',correo,nombre,rol:$('aRol').value,boards});
+      const r=await post({tipo:'acceso-alta',correo,nombre,rol:$('aRol').value,boards},s);
+      if(!vigente(s,true))return;
       if(r.ok){
         msg.className='msg ok';msg.textContent='✓ '+correo+' ya puede pedir su liga mágica en cualquier board';
         toast('✓ Acceso guardado');
@@ -407,14 +403,25 @@
         toast('No se pudo: '+det,'err');
       }
     }catch(e){
+      if(!vigente(s,true))return;
       msg.className='msg err';msg.textContent='No se pudo guardar: '+e.message+'. Revisa tu conexión/sesión y vuelve a intentar.';
       toast('No se pudo guardar — reintenta','err');
     }finally{
-      setBusy($('aBtn'),false,'aBtnT','Guardando…','Dar acceso');
-      actualizarBotonAlta();
+      if(vigente(s,true)){
+        setBusy($('aBtn'),false,'aBtnT','Guardando…','Dar acceso');
+        actualizarBotonAlta();
+      }
     }
   };
-  esperarAdminYcargar();
+  function iniciar(){
+    limpiarVista('Inicia sesión para ver los accesos.');
+    observarSesion();
+    setInterval(observarSesion,150);
+    window.addEventListener('storage',e=>{if(e.key===LSC||e.key===null){tokenActual=null;observarSesion()}});
+    window.addEventListener('focus',observarSesion);
+  }
+  $('aRetry').onclick=()=>{tokenActual=null;observarSesion()};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',iniciar);else iniciar();
 })();
 </script>
 <div id="toast" role="status" aria-live="polite"></div>
