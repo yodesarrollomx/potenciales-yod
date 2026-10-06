@@ -2,13 +2,35 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.PPPAgentBridge=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
  'use strict';
  const safeId=v=>typeof v==='string'&&/^[A-Za-z0-9_.:-]{1,256}$/.test(v);
+ // Units are descriptors of patrimonial-sheet-v1, not conversions or financial calculations.
+ // See patrimonial-sheet-schema.json and the labelled inputs in patrimonial.html.
+ // Monetary outputs deliberately have no inferred currency.
+ const patrimonialInputUnits={inUnidades:'count',inTerrenoM2:'m2',inCus:'ratio',inPasillosPct:'percent',
+  inM2Construccion:'m2',inM2Rentable:'m2',inPasillosM2:'m2',inVacanciaPct:'percent',inOpexPct:'percent',
+  inSeguroPct:'percent',inCapRateMercado:'percent',inPlusvaliaPct:'percent',inCreditoPct:'percent',
+  inTasaCredito:'percent',inPlazoCredito:'year',inHorizonte:'year',inTasaAlternativa:'percent'};
+ const patrimonialResultUnits={capacidadConstruida:'m2',yieldOnCost:'ratio',dscr:'ratio',coc:'ratio',recupAnios:'year'};
+ function metadataFor(m,state,inputs,results){
+  if(!safeId(m.modelo_tipo)||!safeId(m.modelo_revision))return null;
+  const metadata={model_type:m.modelo_tipo,model_revision:m.modelo_revision};
+  if(m.modelo_tipo!=='patrimonial'||m.modelo_revision!=='patrimonial-sheet-v1')return metadata;
+  const years=state.p?.horizonte;
+  if(Number.isInteger(years)&&years>=1&&years<=25)metadata.horizon={value:years,unit:'year'};
+  const inputUnits=Object.fromEntries(Object.keys(inputs).map(key=>[key,patrimonialInputUnits[key]||
+   (/^unidad(?:0[1-9]|[1-5][0-9]|60)_m2$/.test(key)?'m2':null)]).filter(([,unit])=>typeof unit==='string'));
+  const resultUnits=Object.fromEntries(Object.entries(patrimonialResultUnits).filter(([key])=>Object.prototype.hasOwnProperty.call(results,key)));
+  if(Object.keys(inputUnits).length)metadata.input_units=inputUnits;
+  if(Object.keys(resultUnits).length)metadata.result_units=resultUnits;
+  return metadata;
+ }
  function snapshot(store,labelFor=id=>id){
   if(!store.model)return null;
   const m=store.model,active=store.active(),state=m.estados[m.activo],results={};
   for(const key of ['modeloValido','geometriaEstado','noi','rentaMes','valorCap','equity','patrimH','mensCredito','yieldOnCost','dscr','coc','capacidadConstruida','areaUtil','recupAnios','unidades']){
    const v=state[key];if(v===null||['string','boolean'].includes(typeof v)||typeof v==='number'&&Number.isFinite(v))results[key]=v;
   }
-  return{case_id:store.id,revision:m.revision,scenario_id:m.activo,scenario_name:active.nombre,
+  const metadata=metadataFor(m,state,active.inputs,results);
+  return{case_id:store.id,revision:m.revision,scenario_id:m.activo,scenario_name:active.nombre,...(metadata?{metadata}:{}),
    confirmed:store.verified&&!store.busy&&!store.error,pending:store.dirty(),observed_at:new Date().toISOString(),
    fields:m.campos.map(c=>({id:c.id,label:String(labelFor(c.id)||c.id).slice(0,160),min:c.min,max:c.max,editable:c.editable,nullable:c.nullable,kind:c.kind})),
    inputs:{...active.inputs},results};
