@@ -14,7 +14,8 @@
     "Chromium/WebKit con transporte aislado: A/B/A Local, renta0, CUSnull, nombre/notas, reload sin envíos implícitos, headerlegacy oculto; CI del commit exacto.",
     "Mock GAS: restauración del adaptador, CAS/allowlist/null/integer/protecciones/PTPA/lock/idempotencia; 99 funciones y siete archivos conservados.",
     "GET real V66 Patrimonial:166 celdas directas Sheets coincidentes;2 versiones/269campos; rechazo anónimo. VerticalGET inconcluso por timeout/HTTPerror; su código y regresión aislada preservados.",
-    "git diff --check; revisión sintáctica JS y script HTML; verificar-impacto contra Atlas89 fijado."
+    "git diff --check; revisión sintáctica JS y script HTML; verificar-impacto contra Atlas89 fijado.",
+    "Conservar la estabilización inicial de Leaflet de PR14 y ejecutar su recorrido original; no cambia el mapa ni sus cálculos."
   ],
   "rollback": "Revertir frontend compatible por PR conservando snapshots/jobs/borradores. GAS sólo sobre implementación existente y fuentes actuales revisadas con lock/CAS; conciliar editor y versión, no restaurar editor obsoleto ni datos/formulas. Conservar todos los otros módulos."
 }
