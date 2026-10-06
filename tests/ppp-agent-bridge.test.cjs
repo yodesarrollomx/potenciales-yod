@@ -24,3 +24,42 @@ test('uncertain application retries exact request and payload once confirmed',as
  assert.equal(await bridge.apply(store,proposal()),false);assert.equal(store.job.request_id,proposal().request_id);
  assert.equal(await bridge.apply(store,proposal()),true);assert.deepEqual(writes[0],writes[1]);assert.equal(store.job,null);
 });
+
+test('snapshot preserves model identity and the selected scenario horizon',()=>{
+ const {store,writes}=setup(),first=bridge.snapshot(store);
+ assert.deepEqual(first.metadata,{model_type:'patrimonial',model_revision:'patrimonial-sheet-v1',horizon:{value:1,unit:'year'}});
+ store.model.escenarios.push({...store.active(),id:'scenario-second',nombre:'Alternativa sintética',activo:true,esBase:false});
+ store.model.escenarios[0].activo=false;store.model.activo='scenario-second';store.model.revision='r3';
+ store.model.estados['scenario-second']={...store.model.estados['scenario-base'],p:{horizonte:12}};
+ const second=bridge.snapshot(store);
+ assert.equal(second.scenario_id,'scenario-second');assert.equal(second.revision,'r3');
+ assert.deepEqual(second.metadata.horizon,{value:12,unit:'year'});
+ assert.deepEqual(first.metadata.horizon,{value:1,unit:'year'});assert.equal(writes.length,0);
+ store.verified=false;assert.equal(bridge.snapshot(store).confirmed,false);
+});
+test('metadata names known units without converting numbers or assuming currency',()=>{
+ const {store,writes}=setup(),inputs=store.active().inputs,state=store.model.estados[store.model.activo];
+ Object.assign(inputs,{inTerrenoM2:null,inVacanciaPct:5,inCus:2,inHorizonte:12,unidad01_m2:30,unidad61_m2:40,inInversionTotal:1000});
+ Object.assign(state,{noi:100,rentaMes:10,yieldOnCost:.05,dscr:1.2,coc:null,capacidadConstruida:200,recupAnios:10});
+ const before=JSON.stringify(store.model),snapshot=bridge.snapshot(store);
+ assert.deepEqual(snapshot.metadata.input_units,{inTerrenoM2:'m2',inVacanciaPct:'percent',inCus:'ratio',inHorizonte:'year',unidad01_m2:'m2'});
+ assert.deepEqual(snapshot.metadata.result_units,{capacidadConstruida:'m2',yieldOnCost:'ratio',dscr:'ratio',coc:'ratio',recupAnios:'year'});
+ assert.equal(snapshot.inputs.inVacanciaPct,5);assert.equal(snapshot.results.yieldOnCost,.05);
+ assert.equal(snapshot.inputs.inTerrenoM2,null);assert.equal(snapshot.results.coc,null);
+ assert.equal(snapshot.metadata.input_units.inInversionTotal,undefined);assert.equal(snapshot.metadata.result_units.noi,undefined);
+ assert.equal(JSON.stringify(store.model),before);assert.equal(writes.length,0);
+});
+test('missing and invalid horizons remain absent instead of becoming zero or a default',()=>{
+ for(const value of [undefined,null,'10',0,26,-1,1.5,Infinity]){
+  const {store}=setup();store.model.estados[store.model.activo].p.horizonte=value;
+  assert.equal(bridge.snapshot(store).metadata.horizon,undefined);
+ }
+});
+test('unknown model contracts retain identity without borrowing patrimonial semantics',()=>{
+ for(const change of [{modelo_tipo:'vertical'},{modelo_revision:'patrimonial-sheet-v2'}]){
+  const {store}=setup();Object.assign(store.model,change);store.active().inputs.inHorizonte=10;
+  store.model.estados[store.model.activo].yieldOnCost=.05;
+  assert.deepEqual(bridge.snapshot(store).metadata,{model_type:store.model.modelo_tipo,model_revision:store.model.modelo_revision});
+ }
+ const {store}=setup();delete store.model.modelo_revision;assert.equal(bridge.snapshot(store).metadata,undefined);
+});
