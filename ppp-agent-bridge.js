@@ -17,7 +17,7 @@
   const years=state.p?.horizonte;
   if(Number.isInteger(years)&&years>=1&&years<=25)metadata.horizon={value:years,unit:'year'};
   const inputUnits=Object.fromEntries(Object.keys(inputs).map(key=>[key,patrimonialInputUnits[key]||
-   (/^unidad(?:0[1-9]|[1-5]\\d|60)_m2$/.test(key)?'m2':null)]).filter(([,unit])=>typeof unit==='string'));
+   (/^unidad(?:0[1-9]|[1-5][0-9]|60)_m2$/.test(key)?'m2':null)]).filter(([,unit])=>typeof unit==='string'));
   const resultUnits=Object.fromEntries(Object.entries(patrimonialResultUnits).filter(([key])=>Object.prototype.hasOwnProperty.call(results,key)));
   if(Object.keys(inputUnits).length)metadata.input_units=inputUnits;
   if(Object.keys(resultUnits).length)metadata.result_units=resultUnits;

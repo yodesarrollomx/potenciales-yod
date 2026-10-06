@@ -39,10 +39,10 @@ test('snapshot preserves model identity and the selected scenario horizon',()=>{
 });
 test('metadata names known units without converting numbers or assuming currency',()=>{
  const {store,writes}=setup(),inputs=store.active().inputs,state=store.model.estados[store.model.activo];
- Object.assign(inputs,{inTerrenoM2:null,inVacanciaPct:5,inCus:2,inHorizonte:12,unidad01_m2:30,unidad61_m2:40,inInversionTotal:1000});
+ Object.assign(inputs,{inTerrenoM2:null,inVacanciaPct:5,inCus:2,inHorizonte:12,unidad01_m2:30,unidad10_m2:31,unidad59_m2:32,unidad60_m2:null,unidad00_m2:0,unidad61_m2:40,inInversionTotal:1000});
  Object.assign(state,{noi:100,rentaMes:10,yieldOnCost:.05,dscr:1.2,coc:null,capacidadConstruida:200,recupAnios:10});
  const before=JSON.stringify(store.model),snapshot=bridge.snapshot(store);
- assert.deepEqual(snapshot.metadata.input_units,{inTerrenoM2:'m2',inVacanciaPct:'percent',inCus:'ratio',inHorizonte:'year',unidad01_m2:'m2'});
+ assert.deepEqual(snapshot.metadata.input_units,{inTerrenoM2:'m2',inVacanciaPct:'percent',inCus:'ratio',inHorizonte:'year',unidad01_m2:'m2',unidad10_m2:'m2',unidad59_m2:'m2',unidad60_m2:'m2'});
  assert.deepEqual(snapshot.metadata.result_units,{capacidadConstruida:'m2',yieldOnCost:'ratio',dscr:'ratio',coc:'ratio',recupAnios:'year'});
  assert.equal(snapshot.inputs.inVacanciaPct,5);assert.equal(snapshot.results.yieldOnCost,.05);
  assert.equal(snapshot.inputs.inTerrenoM2,null);assert.equal(snapshot.results.coc,null);
