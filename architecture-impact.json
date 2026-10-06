@@ -1,21 +1,20 @@
 {
-  "model_revision": "2026-10-05.89-ppp-patrimonial-evidencia-final",
-  "proposal_id": "CHG-PPP-PATRIMONIAL-RECOVERY-047",
+  "model_revision": "2026-10-05.94-accesos-sesion-172",
+  "proposal_id": "CHG-SALA-ACCESOS-SESION-172-094",
   "components": [
     "SYS-POTENCIALES",
     "SYS-YOD-OS",
     "GAS-PORTERO",
-    "SHEET-PORTERO",
-    "SHEET-PPP-MODELOS"
+    "SHEET-PORTERO"
   ],
-  "summary": "Recuperar transporte Patrimonial tipado y conservar borradores por caso, metadatos y recibos exactos tras ACK perdido; ocultar KPI legacy incompatibles con el modelo nativo. Preservar fórmulas/cantidades Sheets, CAS, endpoint/ACL y la metadata del puente PPP de PR13. Backend V66 coincide con editor; siete archivos y99 funciones ajenas conservadas.",
+  "summary": "Sala172: administración ligada a token completo y generación vigentes tras procesar entrada; canje autoritativo sin caché local de rol. Descartar canjes, listados y resultados de acciones de sesiones anteriores; limpiar vista y controles al cambiar/cerrar sesión. ORIGINAL por solicitud, sin respaldo persistido/fallback ni retry de escrituras. Conservar DP, códigos no dibujados y upserts completos. Sin cambios GAS ni datos.",
   "tests": [
-    "54 pruebas Node de cantidades, cache por caso, ACK perdido/expirado, campos tipados, metadata bridge y regresiones legacy.",
-    "Chromium/WebKit con transporte aislado: A/B/A Local, renta0, CUSnull, nombre/notas, reload sin envíos implícitos, headerlegacy oculto; CI del commit exacto.",
-    "Mock GAS: restauración del adaptador, CAS/allowlist/null/integer/protecciones/PTPA/lock/idempotencia; 99 funciones y siete archivos conservados.",
-    "GET real V66 Patrimonial:166 celdas directas Sheets coincidentes;2 versiones/269campos; rechazo anónimo. VerticalGET inconcluso por timeout/HTTPerror; su código y regresión aislada preservados.",
-    "git diff --check; revisión sintáctica JS y script HTML; verificar-impacto contra Atlas89 fijado.",
-    "Conservar la estabilización inicial de Leaflet de PR14 y ejecutar su recorrido original; no cambia el mapa ni sus cálculos."
+    "APROBADO 12/12: node --test tests/access-gates.cjs; regresiones existentes del Portero compartido.",
+    "APROBADO 30/30: node --test tests/accesos-admin-session.test.cjs: JavaScript inline real con VM/DOM/red sintéticos; cachés admin/vista opuestas, prefijo común, generación A/B/A, canjes y listados tardíos, cambio/logout, entrada sesion/liga, backup guardado y rechazo ORIGINAL sin fallback.",
+    "Regresiones de acciones: DP/preview y códigos adicionales, upserts completos con nombre/rol/boards incluso vacíos; escritura perdida/rechazada sin retry, callbacks y liga directa tardíos sin restaurar datos ni controles.",
+    "APROBADO: 67/67 en node --test tests/*.test.cjs (30 nuevas + 37 existentes), sintaxis de JS inline HTML/CJS y git diff --check; verificar-impacto sobre los cuatro archivos editados contra Atlas 7c015e062d7d06cee4cba02b4a106e109fd3fc5b. Cuatro regresiones seleccionadas fallan en la base anterior, como se esperaba. CI agregado, todavía no ejecutado para este cambio sin commit.",
+    "Publicación y sesión real administradora pendientes del coordinador. Captura real previa muestra login Google sin sesión; pruebas aisladas no acreditan producción ni cierran Sala172.",
+    "Canje/listado abortan tras20s sin borrar token ni reintentar solos; Reintentar validación vuelve a consultar rol antes de mostrar usuarios.33 nuevas+12 gates PASS, además de37 Node adicionales."
   ],
-  "rollback": "Revertir frontend compatible por PR conservando snapshots/jobs/borradores. GAS sólo sobre implementación existente y fuentes actuales revisadas con lock/CAS; conciliar editor y versión, no restaurar editor obsoleto ni datos/formulas. Conservar todos los otros módulos."
+  "rollback": "Revertir frontend, pruebas, manifest y pin Atlas mediante revisión, sin borrar/restaurar filas, usuarios, permisos, sesiones, bitácoras ni fórmulas; conservar endpoint y despliegue GAS. Publicación y verificación humana corresponden al coordinador."
 }

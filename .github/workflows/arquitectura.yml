@@ -45,7 +45,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: yodesarrollomx/yod-portal
-          ref: f8134dd3857f939c0a9423cbddc7f1a4ef2f4271
+          ref: 7c015e062d7d06cee4cba02b4a106e109fd3fc5b
           path: .yod-atlas
           persist-credentials: false
           sparse-checkout-cone-mode: false
@@ -55,6 +55,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Regresiones de acceso y administración por sesión
+        run: node --test tests/access-gates.cjs tests/accesos-admin-session.test.cjs
       - name: Resolver comparación
         id: refs
         env:
