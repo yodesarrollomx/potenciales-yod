@@ -1,20 +1,17 @@
 {
-  "model_revision": "2026-10-07.104-puesto-recuperable",
-  "proposal_id": "CHG-DESPACHO-PUESTO-104",
+  "model_revision": "2026-10-07.109-portero-sesion-persistente",
+  "proposal_id": "CHG-PORTERO-SESION-PERSISTENTE-109",
   "components": [
     "SYS-POTENCIALES",
     "GAS-PORTERO",
     "SHEET-PORTERO",
-    "SYS-YOD-OS",
-    "SYS-DESPACHO",
-    "SYS-DESPACHO-3D",
-    "SVC-AUTON-CLOUD"
+    "SYS-YOD-OS"
   ],
-  "summary": "Conservar recibos mínimos del ACK observado y validado en el caché existente. Relectura del caso antes de conciliar recibos actuales e históricos exclusivamente por /board/resolve idempotente; sólo el acuse exacto del puesto elimina un recibo. Cola limitada, estado pendiente visible y bloqueo de nuevas escrituras del autón a ocho recibos no conciliados. No inferir guardado por valores, repetir escrituras, almacenar nuevas cantidades/credenciales ni modificar fórmulas/backend.",
+  "summary": "Conservar una sesión ya validada cuando el Portero sufre un timeout o caída temporal: no recrear el gate ni expulsar al usuario, mantener la validación de esta carga y reintentar automáticamente. Los rechazos explícitos (revocado, expirado, sin_sesion, forbidden) siguen limpiando la validación y mostrando el acceso. No se amplían permisos ni se acepta una sesión no validada.",
   "tests": [
-    "Node Store/bridge: ACK validado, relectura obligatoria, históricos exactos y ocho posiciones recuperables por ACK; nonce/origen/padre, cola llena y caché inválido.",
-    "Chromium/WebKit con createWorkspace y PPP HTML reales, APIs sintéticas: una escritura, ACK, resolve503, recarga total, relectura, acuse exacto; históricos ya registrados vs rechazado y nuevo ajuste independiente.",
-    "Regresiones existentes de acceso, cálculo/Store/PPP y contraste con atlas fijo."
+    "Portero: sesión validada + error transitorio conserva sesionValidada y reintenta.",
+    "Seguridad: sesión no validada ante error sigue ofreciendo reintento; rechazo explícito vuelve al gate.",
+    "Regresiones de acceso PPP, interfaz y Arquitectura YOD."
   ],
-  "rollback": "Revertir PR y cachés de assets. Conservar recibos y datos de negocio; no reenviar operaciones ni desplegar un Apps Script nuevo."
+  "rollback": "Revertir PR 19. No cambia datos de negocio, roles, boards ni sesiones almacenadas."
 }
