@@ -21,6 +21,7 @@ const {install}=require('./ppp-fixture.js'),fixture=require('./fixtures/patrimon
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('https://ppp.test/yod-portal/despacho3d/__cards');
   const frame=page.frameLocator('iframe');await frame.locator('.pn-data-card').first().waitFor();
+  await page.evaluate(()=>send('yod:ppp:hello'));
   await page.waitForFunction(()=>window.board?.confirmed);
   assert.equal(await frame.locator('.pn-data-card').count(),6);assert.equal(await frame.locator('.pn-data-card[open]').count(),0);
   assert.equal(await frame.locator('#patrimonialNative input').count(),0);
