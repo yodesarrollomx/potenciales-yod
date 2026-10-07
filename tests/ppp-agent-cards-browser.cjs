@@ -36,6 +36,7 @@ const {install}=require('./ppp-fixture.js'),fixture=require('./fixtures/patrimon
   assert.equal(await frame.locator('.pn-data-card[open]').count(),1);
   assert.equal(await page.evaluate(()=>board.inputs.inTerrenoM2),644);
   await frame.locator('[data-card=ingresos] summary').click();
+  await frame.locator('[data-card=terreno]:not([open])').waitFor();
   assert.equal(await frame.locator('.pn-data-card[open]').count(),1);
   await frame.locator('[data-card=ingresos] summary').press('Enter');
   assert.equal(await frame.locator('.pn-data-card[open]').count(),0);
