@@ -10,10 +10,10 @@
     "SYS-DESPACHO-3D",
     "SVC-AUTON-CLOUD"
   ],
-  "summary": "Conservar recibos mínimos del ACK validado de cantidades del autón en el caché existente; relectura del libro antes de reproducir el mismo recibo tras recarga completa; acuse exacto del puesto elimina el recibo. Cola limitada que bloquea nuevas solicitudes antes de escribir sin descartar confirmaciones. No almacenar cantidades ni credenciales en recibos, inferir guardado por coincidencia de valores, reenviar escrituras o modificar fórmulas/backend.",
+  "summary": "Conservar recibos mínimos del ACK observado y validado en el caché existente. Relectura del caso antes de conciliar recibos actuales e históricos exclusivamente por /board/resolve idempotente; sólo el acuse exacto del puesto elimina un recibo. Cola limitada, estado pendiente visible y bloqueo de nuevas escrituras del autón a ocho recibos no conciliados. No inferir guardado por valores, repetir escrituras, almacenar nuevas cantidades/credenciales ni modificar fórmulas/backend.",
   "tests": [
-    "Node Store/bridge: ACK validado, relectura obligatoria, identidad/revisión exacta, nonce/origen/padre, cola llena y caché inválido.",
-    "Chromium/WebKit con HTML real y transporte sintético: una escritura, ACK, registro503, recarga completa, nueva lectura, mismo recibo, acuse y eliminación.",
+    "Node Store/bridge: ACK validado, relectura obligatoria, históricos exactos y ocho posiciones recuperables por ACK; nonce/origen/padre, cola llena y caché inválido.",
+    "Chromium/WebKit con createWorkspace y PPP HTML reales, APIs sintéticas: una escritura, ACK, resolve503, recarga total, relectura, acuse exacto; históricos ya registrados vs rechazado y nuevo ajuste independiente.",
     "Regresiones existentes de acceso, cálculo/Store/PPP y contraste con atlas fijo."
   ],
   "rollback": "Revertir PR y cachés de assets. Conservar recibos y datos de negocio; no reenviar operaciones ni desplegar un Apps Script nuevo."

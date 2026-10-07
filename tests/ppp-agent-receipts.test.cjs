@@ -19,7 +19,7 @@ test('receipt derives only from a validated ACK and contains no quantities or cr
   const x=setup();x.store.post=async()=>response;assert.equal(await bridge.apply(x.store,proposal()),false);assert.deepEqual(x.store.receipts,[]);assert.ok(x.store.job);
  }
 });
-test('full reload retains the exact ACK but requires a fresh same-revision read before replay',async()=>{
+test('full reload retains the exact ACK but requires a fresh confirmed read before replay',async()=>{
  const s=setup();await bridge.apply(s.store,proposal());let newWrites=0;
  const restored=new Store({id:ID,get:async()=>copy(s.model),post:async()=>{newWrites++;throw Error('forbidden replay');}});
  restored.restore(s.cache);assert.deepEqual(restored.readyReceipts(),[]);
@@ -27,15 +27,30 @@ test('full reload retains the exact ACK but requires a fresh same-revision read 
  assert.equal(restored.acknowledgeReceipt({...s.cache.receipts[0],revision:'wrong'}),false);
  assert.equal(restored.acknowledgeReceipt(s.cache.receipts[0]),true);assert.deepEqual(restored.receipts,[]);assert.equal(s.writes,1);assert.equal(newWrites,0);
 });
-test('different case, scenario, revision and failed read cannot turn cache into a receipt',async()=>{
+test('historical ACKs remain exact reconciliation candidates after later scenario/revision reads',async()=>{
  const s=setup();await bridge.apply(s.store,proposal());
  assert.throws(()=>new Store({id:'other'}).restore(s.cache));
  for(const mode of ['revision','scenario','read-failed']){
   const changed=copy(s.model);if(mode==='revision')changed.revision='later';
   if(mode==='scenario'){changed.escenarios[0].activo=false;changed.escenarios.push({...copy(changed.escenarios[0]),id:'other-scenario',activo:true,esBase:false});changed.activo='other-scenario';changed.estados['other-scenario']=copy(changed.estados[fixture.activo]);}
   const restored=new Store({id:ID,get:async()=>{if(mode==='read-failed')throw Error('offline');return changed;}});
-  restored.restore(s.cache);await restored.refresh();assert.deepEqual(restored.readyReceipts(),[]);assert.equal(restored.receipts.length,1);
+  restored.restore(s.cache);assert.deepEqual(restored.readyReceipts(),[]);await restored.refresh();
+  assert.deepEqual(restored.readyReceipts(),mode==='read-failed'?[]:s.cache.receipts);
+  assert.equal(restored.receipts.length,1,'candidate delivery alone never removes the receipt');
  }
+});
+test('eight validated old ACKs drain by exact ack after a newer read, without replaying a write',async()=>{
+ let model=copy(fixture),cache,writes=0;
+ const store=new Store({id:ID,get:async()=>copy(model),post:async p=>{writes++;Object.assign(model.escenarios.find(e=>e.id===model.activo).inputs,p.inputs);model.revision='historical-r'+writes;return copy(model);},changed:s=>{cache=copy(s.snapshot());}});
+ store.load(model);
+ for(let i=0;i<MAX_AGENT_RECEIPTS;i++)assert.equal(await bridge.apply(store,{...proposal(),request_id:'board-historical-'+i,revision:model.revision}),true);
+ assert.equal(writes,8);assert.equal(store.receipts.length,8);model.revision='later-book-revision';
+ const restored=new Store({id:ID,get:async()=>copy(model),post:async()=>{throw Error('no replay');}});restored.restore(cache);await restored.refresh();
+ const candidates=restored.readyReceipts();assert.equal(candidates.length,8);assert.equal(candidates[0].revision,'historical-r1');
+ for(const r of candidates.slice(0,7))assert.equal(restored.acknowledgeReceipt(r),true);
+ assert.equal(restored.receipts.length,1,'a server-rejected pending receipt is retained');
+ assert.equal(restored.receipts[0].request_id,'board-historical-7');assert.equal(restored.canRecordReceipt('board-next'),true);
+ assert.equal(restored.acknowledgeReceipt(candidates[7]),true);assert.equal(restored.receipts.length,0);assert.equal(writes,8);
 });
 test('bounded outbox blocks another autonomous write before a job is created',async()=>{
  const s=setup();s.store.receipts=Array.from({length:MAX_AGENT_RECEIPTS},(_,i)=>receipt(i));const before=copy(s.store.receipts);
