@@ -237,6 +237,16 @@
   // La sesión se valida en esta carga. Un cache de rol no concede acceso.
   let sesionValidada = '';
   let validacionId = 0;
+  let reintentosCanje = 0;
+  function reintentoCanje(k,peticion) {
+    reintentosCanje++;
+    // También en una apertura nueva: esperar a Google sin pedir login de nuevo.
+    // El candado permanece hasta una validación auténtica del servidor.
+    const demora = Math.min(300000,15000*Math.pow(2,Math.min(5,reintentosCanje-1)));
+    setTimeout(() => {
+      if (peticion === validacionId && k === localStorage.getItem(LSC)) engraneAdmin();
+    }, demora);
+  }
   function sesionYaValidada() {
     const k = localStorage.getItem(LSC);
     return !!k && k === sesionValidada;
@@ -298,21 +308,20 @@
     if (!r || r.ok !== true) {
       const rechazo = r && ['liga','clave','expirado','revocado','sin_sesion','unauthorized','forbidden'].includes(String(r.error || '').toLowerCase());
       if (rechazo) {
+        reintentosCanje = 0;
         sesionValidada = '';
         sessionStorage.removeItem('pyod_rol');
         const admin = document.getElementById('engraneBtn'); if (admin) admin.remove();
         if (!SIN_GATE && !MODO_SUAVE) overlayCorreo();
-      } else if (yaValidada) {
-        // Un timeout o caída temporal del Portero no saca a alguien que ya fue
-        // validado en esta sesión. Conservamos el gate abierto y reintentamos solos.
-        quitarSubGates(k);
-        setTimeout(() => {
-          if (k === localStorage.getItem(LSC) && k === sesionValidada) engraneAdmin();
-        }, 15000);
-      } else ofrecerReintento();
+      } else {
+        if (yaValidada) quitarSubGates(k);
+        else ofrecerReintento(); // sigue cerrado hasta canje de la identidad actual
+        reintentoCanje(k,peticion);
+      }
       return;
     }
     sesionValidada = k;
+    reintentosCanje = 0;
     const rol = r.rol || 'vista';
     // Compatibilidad de presentación; esta caché nunca se lee para validar.
     try {

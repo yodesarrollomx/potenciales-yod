@@ -13,7 +13,7 @@ const KEY = 'pyod_clave_v1';
 const A = 'sy-synthetic-session-A', B = 'sy-synthetic-session-B';
 function harness({key = A, response = {ok:true,rol:'vista'}, page = 'mixto'} = {}) {
   const store = new Map(key ? [[KEY, key]] : []), cache = new Map();
-  const nodes = new Map(), events = {}; let calls = 0, prompts = 0, resizes = 0, reloads = 0;
+  const nodes = new Map(), events = {}, timers = []; let calls = 0, prompts = 0, resizes = 0, reloads = 0;
   function node(id) {
     const classes = new Set();
     const n = {id, type:'', textContent:'', children:[], attributes:{}, hidden:false,
@@ -33,12 +33,12 @@ function harness({key = A, response = {ok:true,rol:'vista'}, page = 'mixto'} = {
     sessionStorage:{getItem:k=>cache.get(k)||null,setItem:(k,v)=>cache.set(k,v),removeItem:k=>cache.delete(k)},
     document:{readyState:'loading',getElementById:id=>nodes.get(id)||null,createElement:()=>node(''),body:node(''),addEventListener:()=>{}},
     window:{dispatchEvent:()=>{resizes++;}}, Event:function(type){this.type=type;},
-    addEventListener:(name,fn)=>events[name]=fn,
+    addEventListener:(name,fn)=>events[name]=fn, setTimeout:(f,ms)=>{timers.push({f,ms});return timers.length;},
     location:{reload:()=>reloads++}, overlayCorreo:()=>{prompts++;node('porteroGate');},
     pyodPide:async()=>{calls++;return typeof response==='function'?response():response;}
   };
   vm.createContext(ctx);vm.runInContext(code,ctx);
-  return {ctx,store,cache,nodes,events,stats:()=>({calls,prompts,resizes,reloads})};
+  return {ctx,store,cache,nodes,events,timers,stats:()=>({calls,prompts,resizes,reloads})};
 }
 const open=h=>h.nodes.get('gate').classList.contains('off');
 test('Una sesión aceptada retira ambos candados sin alterar el permiso del shell',async()=>{
@@ -53,6 +53,18 @@ test('Una caché heredada no concede acceso ni evita el canje',async()=>{
 test('Sin red se conserva la sesión, se ofrece reintento y no se abre otro login',async()=>{
   const h=harness({response:()=>{throw Error('offline');}});await h.ctx.engraneAdmin();assert.equal(open(h),false);
   assert.ok(h.nodes.has('pyodReintentar'));assert.equal(h.store.get(KEY),A);assert.equal(h.stats().prompts,0);
+});
+test('Portero reintenta automáticamente una sesión nueva sin red sin otro login',async()=>{
+  let on=false;const h=harness({response:()=>on?{ok:true,rol:'vista'}:{ok:false,error:'servidor'}});
+  await h.ctx.engraneAdmin();assert.equal(open(h),false);assert.equal(h.stats().prompts,0);
+  assert.equal(h.timers.length,1);assert.equal(h.timers[0].ms,15000);
+  on=true;h.timers[0].f();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(open(h),true);assert.equal(h.store.get(KEY),A);
+});
+test('Portero no vuelve a abrir sesión revocada durante un reintento',async()=>{
+  let on=false;const h=harness({response:()=>on?{ok:false,error:'revocado'}:{ok:false,error:'servidor'}});
+  await h.ctx.engraneAdmin();on=true;h.timers[0].f();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(open(h),false);assert.equal(h.timers.length,1);assert.equal(h.stats().prompts,1);
 });
 test('Respuesta aceptada tardía no afecta a otra persona',async()=>{
   let finish;const h=harness({response:()=>new Promise(r=>finish=r)});const p=h.ctx.engraneAdmin();h.store.set(KEY,B);finish({ok:true,rol:'admin'});await p;
