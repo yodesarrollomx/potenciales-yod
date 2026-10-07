@@ -33,7 +33,7 @@
   return{case_id:store.id,revision:m.revision,scenario_id:m.activo,scenario_name:active.nombre,...(metadata?{metadata}:{}),
    confirmed:store.verified&&!store.busy&&!store.error,pending:store.dirty(),observed_at:new Date().toISOString(),
    fields:m.campos.map(c=>({id:c.id,label:String(labelFor(c.id)||c.id).slice(0,160),min:c.min,max:c.max,editable:c.editable,nullable:c.nullable,kind:c.kind})),
-   inputs:{...active.inputs},results};
+   inputs:{...active.inputs},results,...(store.viewFocus?{focus:store.viewFocus}:{})};
  }
  function validateProposal(store,p){
   if(!p||p.case_id!==store.id||!safeId(p.request_id)||p.scenario_id!==store.model.activo||!Array.isArray(p.cambios)||!p.cambios.length||p.cambios.length>12)throw Error('propuesta_invalida');
@@ -77,7 +77,7 @@
    finally{busy=false;}
   }
   win.addEventListener('message',receive);
-  return{publish,dispose(){disposed=true;nonce=null;win.removeEventListener('message',receive);}};
+  return{publish,receipt(receipt){publish();send({receipt});},dispose(){disposed=true;nonce=null;win.removeEventListener('message',receive);}};
  }
  return{snapshot,validateProposal,apply,mount};
 });

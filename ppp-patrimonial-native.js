@@ -80,6 +80,7 @@
   function mount({model,metadata,get,post,labelFor=id=>id,onNew,onCases,cache=null}){
     const root=document.createElement('main');root.id='patrimonialNative';root.className='container';document.querySelector('main.container').before(root);
     const legacy=[...document.querySelectorAll('main.container, .sticky-header')].filter(e=>e!==root);legacy.forEach(e=>e.hidden=true);document.body.classList.add('patrimonial-native');
+    const compact=new URL(globalThis.location.href).searchParams.get('agent')==='1'&&!!globalThis.PPPAgentCards;
     let timer=null,destroyed=false,agentBridge=null;const meta=clone(metadata);
     const metaKeys=['nombre_caso','palabra','notas_caso'];let metadataDraft=Object.fromEntries(metaKeys.map(k=>[k,String(cache?.metadataDraft?.[k]??meta[k]??'')]));
     const persist=()=>saveCache({metadata:meta,metadataDraft,...store.snapshot()});
@@ -89,6 +90,7 @@
       if(destroyed||!store.model)return;
       const m=store.model,v=store.values(),st=m.estados[m.activo],blocked=store.busy||store.dirty()||!store.verified||!!store.error;
       const status=store.busy?'Sincronizando cantidades…':store.error==='conflicto_revision'?'Otra edición cambió el libro. Tus cantidades pendientes siguen conservadas.':!store.verified?'Copia local: requiere verificar el libro.':store.error?'Sin confirmación: se conservan los resultados y cambios.':store.dirty()?'Cambios pendientes. Resultados de la última lectura confirmada.':'Lectura confirmada de Sheets';
+      if(compact){globalThis.PPPAgentCards.render(root,{store,metadata:meta,labelFor,status,refresh:async()=>{const id=store.job?.request_id;await store.refresh();if(id&&store.job?.request_id===id){const ok=await store.flush();agentBridge?.receipt?.({request_id:id,ok,revision:store.model.revision,error:ok?null:'sin_confirmacion'});}},onFocus:focus=>{store.viewFocus=focus;agentBridge?.publish();}});persist();return;}
       const fields=m.campos.filter(c=>c.id.startsWith('in'));
       const editor=c=>`<label class="pn-field"><span>${escape(c.id==='inProf'?'Profundizar (0 no / 1 sí)':labelFor(c.id))}</span><input type="number" data-native-field="${c.id}" value="${v[c.id]===null?'':escape(v[c.id])}" min="${c.min}" max="${c.max}" step="${c.kind==='integer'?1:c.step||'any'}" ${!c.editable?'disabled':''} ${!c.nullable?'required':''} placeholder="Pendiente"><small>${c.editable?(c.nullable?'Puede quedar pendiente':'Cantidad capturada'):'Calculado en Sheets'}</small></label>`;
       const resultNames={capacidadConstruida:'Construcción máxima por CUS (m²)',capacidadRentable:'Capacidad rentable (m²)',promedioCapacidad:'Promedio rentable por puerta (m²)',rentableSeleccionado:'Rentable seleccionado (m²)',rentaMes:'Renta mensual',noi:'NOI anual',valorCap:'Valor del activo',yieldOnCost:'Rendimiento sobre inversión',equity:'Equity',mensCredito:'Pago mensual del crédito',coc:'Cash-on-Cash',dscr:'DSCR',patrimH:'Patrimonio al horizonte'};
