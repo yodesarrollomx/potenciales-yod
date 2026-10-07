@@ -38,3 +38,5 @@ body.patrimonial-native:has(.pn-agent-cards){background:#f5f7f4}body:has(.pn-age
 body:has(.pn-agent-cards) :is(#pppModelos,#temaBtn,#engraneBtn,#toast){display:none!important}
 .pn-agent-cards .pn-board-heading{position:static;top:auto;z-index:auto;background:transparent;backdrop-filter:none;box-shadow:none;border:0;padding:0;margin:0;display:flex}
 .pn-agent-cards h1,.pn-agent-cards .pn-card-copy>strong,.pn-agent-cards .pn-data-row strong{color:#23362f}
+
+.pn-agent-cards .pn-model-warning{padding:10px 12px;border-left:3px solid #a37a36;background:#fbf4e8;color:#785724;font-size:13px;line-height:1.5;border-radius:4px}
