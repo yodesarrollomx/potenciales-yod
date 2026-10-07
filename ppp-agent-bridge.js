@@ -77,7 +77,7 @@
    finally{busy=false;}
   }
   win.addEventListener('message',receive);
-  return{publish,dispose(){disposed=true;nonce=null;win.removeEventListener('message',receive);}};
+  return{publish,receipt(receipt){publish();send({receipt});},dispose(){disposed=true;nonce=null;win.removeEventListener('message',receive);}};
  }
  return{snapshot,validateProposal,apply,mount};
 });
