@@ -56,6 +56,7 @@ jobs:
           PPP_SCREENSHOTS: ${{ runner.temp }}/ppp-shots
           PPP_MAP_ASSETS: ${{ runner.temp }}/ppp-map-assets
         run: |
+          node tests/ppp-agent-cards-browser.cjs
           node tests/ppp-browser.cjs
           node tests/ppp-identity-browser.cjs
           node tests/ppp-terrain-browser.cjs
@@ -63,7 +64,6 @@ jobs:
           node tests/ppp-cierre-browser.cjs
           node tests/ppp-home-browser.cjs
           node tests/patrimonial-native-browser.cjs
-          node tests/ppp-agent-cards-browser.cjs
           node tests/patrimonial-drafts-browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
