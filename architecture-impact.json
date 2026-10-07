@@ -1,19 +1,20 @@
 {
-  "model_revision": "2026-10-06.95-accesos-sesion-172",
-  "proposal_id": "CHG-SALA-ACCESOS-SESION-172-094",
+  "model_revision": "2026-10-07.102-ppp-tarjetas",
+  "proposal_id": "CHG-DESPACHO-PPP-TARJETAS-102",
   "components": [
-    "SYS-POTENCIALES",
     "SYS-YOD-OS",
+    "SYS-DESPACHO",
+    "SYS-POTENCIALES",
     "GAS-PORTERO",
-    "SHEET-PORTERO"
+    "SHEET-PORTERO",
+    "SHEET-PPP-MODELOS",
+    "EXT-DRIVE"
   ],
-  "summary": "Sala172: administración ligada a token completo y generación vigentes tras procesar entrada; canje autoritativo sin caché local de rol. Descartar canjes, listados y resultados de acciones de sesiones anteriores; limpiar vista y controles al cambiar/cerrar sesión. ORIGINAL por solicitud, sin respaldo persistido/fallback ni retry de escrituras. Conservar DP, códigos no dibujados y upserts completos. Sin cambios GAS ni datos.",
+  "summary": "PPP compartido con tarjetas de datos plegadas y detalle accesible, sin infográficos ni captura manual en el puesto del autón. Conservar el modelo/Store nativo y las fórmulas de Sheets. Añadir ejecución explícita de ajustes solicitados en conversación, separada de propuestas: intención durable por actor/caso/revisión, envío idempotente por el puente existente y recibo confirmado antes de afirmar guardado. Tarjeta abierta aporta contexto observado, nunca autoridad. No modificar datos reales durante pruebas.",
   "tests": [
-    "APROBADO45/45: node --test tests/access-gates.cjs tests/accesos-admin-session.test.cjs (33 nuevas +12 existentes). Red, DOM y sesiones sintéticos; rol obsoleto, respuestas tardías, entrada, cambio/logout, DP y permisos adicionales, upserts, ORIGINAL sin fallback ni retry de escritura.",
-    "APROBADO37/37: pruebas Node adicionales de calculadores y puentes; sintaxis inline HTML/CJS y git diff --check.",
-    "Canje/listado abortan tras20s; reintento manual vuelve a validar rol. Cuatro regresiones seleccionadas fallan en la base anterior.",
-    "Impacto contra Atlas d72c4fd5d04207f053ab0458253039edf78c7632; CI requerido sobre head exacto.",
-    "Pages, recurso público y administración real pendientes. Sesión real previa muestra login sin sesión; no acredita producción ni cierra Sala172."
+    "Controles Node de autorización, revisión, límites, expiración, idempotencia y recibo confirmado.",
+    "Chromium/WebKit con página PPP real y transporte sintético: tarjetas cerradas, expansión, 500→644, persistencia/recarga, conflicto y móvil.",
+    "Verificaciones requeridas de Portal y contratos de voz; capturas de interfaz real con datos sintéticos."
   ],
-  "rollback": "Revertir frontend, pruebas, manifest y pin Atlas mediante revisión, sin borrar/restaurar filas, usuarios, permisos, sesiones, bitácoras ni fórmulas; conservar endpoint y despliegue GAS. Publicación y verificación humana corresponden al coordinador."
+  "rollback": "Revertir código y versiones de caché mediante PR; conservar propuestas, recibos, datos, versiones, fórmulas y permisos."
 }

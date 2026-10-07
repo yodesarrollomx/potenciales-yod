@@ -10,3 +10,26 @@
 .pn-versions{display:grid;gap:10px}.pn-versions>div{padding:10px;border:1px solid var(--linea);border-radius:12px;overflow-wrap:anywhere}.pn-versions span{display:block;color:var(--muted);font-size:12px;margin-top:5px}
 .pn-table{overflow:auto}.pn-table table{width:100%;border-collapse:collapse;font-size:12px}.pn-table th,.pn-table td{padding:8px;border-bottom:1px solid var(--linea);text-align:left}.pn-table input{min-width:100px}.pn-table select{min-width:100px}.pn-card p{line-height:1.5;color:var(--suave)}
 @media(max-width:430px){.pn-grid{grid-template-columns:1fr}.pn-card{padding:12px}.pn-result b{font-size:20px}}
+
+/* The agent opens the same model as a quiet, readable card deck. */
+#patrimonialNative.pn-agent-cards{max-width:960px;padding:26px 30px 40px;color:#23362f}
+.pn-agent-cards .pn-board-heading{display:flex;justify-content:space-between;align-items:start;gap:16px}
+.pn-agent-cards .pn-eyebrow{font-size:10px;letter-spacing:.16em;color:#6c7972;font-weight:700}
+.pn-agent-cards h1{font-size:25px;letter-spacing:-.6px;line-height:1.2}
+.pn-board-heading p,.pn-board-hint{font-size:13px;color:#68756e;line-height:1.5;margin:8px 0 20px}
+.pn-read-state{flex-shrink:0;font-size:11px;border:1px solid #d3dfd5;background:#eef5ef;color:#43684f;border-radius:20px;padding:6px 10px}
+.pn-agent-cards .pn-status{font-size:12px;padding:0;border:0;border-radius:0;background:none;color:#6c7972;margin:0 0 8px}
+.pn-data-deck{display:grid;gap:10px}.pn-data-card{min-width:0;background:#fff;border:1px solid #dce3dd;border-radius:14px;overflow:hidden;box-shadow:0 3px 12px #18302504}
+.pn-data-card summary{display:flex;align-items:center;gap:16px;cursor:pointer;list-style:none;padding:20px;min-height:84px;box-sizing:border-box}
+.pn-data-card summary::-webkit-details-marker{display:none}.pn-data-card summary:focus-visible{outline:2px solid #456c54;outline-offset:-3px;border-radius:12px}
+.pn-card-number{font-size:12px;color:#86988a;font-variant-numeric:tabular-nums}
+.pn-card-copy{display:grid;gap:7px;min-width:0;flex:1}.pn-card-copy>strong{font-size:15px;font-weight:600}.pn-card-copy>span{font-size:12px;color:#65736a;line-height:1.5;overflow-wrap:anywhere}
+.pn-card-arrow{color:#7a8c80;transition:transform .15s}.pn-data-card[open] .pn-card-arrow{transform:rotate(180deg)}.pn-data-card[open]{border-color:#95af9d}
+.pn-card-data{padding:0 20px 20px 49px;border-top:1px solid #edf0ed}.pn-card-data h2{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:#7b8b80;margin:20px 0 8px}
+.pn-data-row{display:flex;justify-content:space-between;gap:24px;padding:10px 0;border-bottom:1px solid #f0f2ef;font-size:13px;line-height:1.4}
+.pn-data-row span{color:#65736a;overflow-wrap:anywhere}.pn-data-row strong{font-weight:600;font-variant-numeric:tabular-nums;text-align:right;flex-shrink:0}
+.pn-board-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;font-size:11px;color:#7b8b80}
+.pn-board-footer button{font:inherit;background:none;color:#456c54;border:0;min-height:44px;cursor:pointer;text-decoration:underline}
+@media(max-width:560px){#patrimonialNative.pn-agent-cards{padding:18px 14px 28px}.pn-agent-cards h1{font-size:21px}.pn-data-card summary{padding:16px;gap:12px}.pn-card-data{padding:0 16px 16px}.pn-read-state{font-size:10px;padding:5px 7px}.pn-data-row{gap:12px}}
+
+body.patrimonial-native:has(.pn-agent-cards){background:#f5f7f4}body:has(.pn-agent-cards) .yod-topbar{display:none!important}
