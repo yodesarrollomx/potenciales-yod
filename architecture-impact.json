@@ -1,13 +1,13 @@
 {
-  "model_revision": "2026-10-07.108-sesion-persistente",
-  "proposal_id": "CHG-YOD-OS-SESION-PERSISTENTE-108",
+  "model_revision": "2026-10-07.104-puesto-recuperable",
+  "proposal_id": "CHG-DESPACHO-PUESTO-104",
   "components": [
     "SYS-POTENCIALES",
     "GAS-PORTERO",
     "SHEET-PORTERO",
     "SYS-YOD-OS"
   ],
-  "summary": "Conservar una sesión ya validada cuando el Portero sufre un timeout o caída temporal: no recrear el gate ni expulsar al usuario, mantener la validación de esta carga y reintentar automáticamente. Los rechazos explícitos siguen limpiando la validación. El cambio se alinea con la política de sesión persistente registrada en el atlas YOD OS; no amplía permisos ni acepta sesiones sin validar.",
+  "summary": "Ajuste acotado del Portero compartido dentro del alcance de CHG-DESPACHO-PUESTO-104: si una sesión ya fue validada en la carga actual y el Portero sufre un fallo transitorio, conservar la validación y reintentar sin recrear el gate. Revocación/caducidad explícita sigue retirando acceso. No amplía permisos, no altera datos PPP ni acepta identidad sin validación.",
   "tests": [
     "Portero: sesión validada + error transitorio conserva sesionValidada y reintenta.",
     "Seguridad: sesión no validada ante error sigue ofreciendo reintento; rechazo explícito vuelve al gate.",
