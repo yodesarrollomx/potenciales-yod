@@ -7,11 +7,12 @@
     "SHEET-PORTERO",
     "SYS-YOD-OS"
   ],
-  "summary": "Ajuste acotado del Portero compartido dentro del alcance de CHG-DESPACHO-PUESTO-104: si una sesión ya fue validada en la carga actual y el Portero sufre un fallo transitorio, conservar la validación y reintentar sin recrear el gate. Revocación/caducidad explícita sigue retirando acceso. No amplía permisos, no altera datos PPP ni acepta identidad sin validación.",
+  "summary": "Seguimiento acotado del Portero compartido: si el canje falla por timeout o error del servidor, reintentar automáticamente en segundo plano con backoff incluso en primera carga, sin reabrir Google ni borrar token de dispositivo. En una carga nueva el contenido sigue cerrado hasta validar; rechazos definitivos revocan el estado validado. No se modifican datos PPP ni se amplían permisos.",
   "tests": [
-    "Portero: sesión validada + error transitorio conserva sesionValidada y reintenta.",
-    "Seguridad: sesión no validada ante error sigue ofreciendo reintento; rechazo explícito vuelve al gate.",
-    "Regresiones de acceso PPP, interfaz y Arquitectura YOD."
+    "Portero: canje nuevo offline sigue bloqueado y reintenta automáticamente hasta confirmar el token.",
+    "Portero: revocación explícita bloquea y detiene reintentos; sin reactivación local.",
+    "Portero: durante falla transitoria en pestaña previamente validada se mantiene el estado de esta sesión, sin conceder acceso nuevo.",
+    "Regresiones sintéticas de accesos, interfaz PPP y validación de impacto."
   ],
-  "rollback": "Revertir PR 19. No cambia datos de negocio, roles, boards ni sesiones almacenadas."
+  "rollback": "Revertir cambios del PR20 en portero.js y tests/access-gates.cjs, sin tocar el backend ni permisos de personas."
 }
