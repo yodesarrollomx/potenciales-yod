@@ -19,19 +19,33 @@
     if(active!==1||base!==1||!ids.has(m.activo)||!m.escenarios.find(e=>e.id===m.activo&&e.activo))throw Error('version_activa_invalida');
     const result=clone(m);result.state=result.estados[result.activo];result.inputs=result.escenarios.find(e=>e.id===result.activo).inputs;return result;
   }
+  const MAX_AGENT_RECEIPTS=8;
+  const agentRequest=id=>typeof id==='string'&&/^board-[A-Za-z0-9_.:-]{1,249}$/.test(id);
+  function validateReceipts(value,id){
+    if(value===undefined)return [];
+    if(!Array.isArray(value)||value.length>MAX_AGENT_RECEIPTS)throw Error('recibos_invalidos');
+    const seen=new Set();
+    return value.map(r=>{
+      if(!r||Object.keys(r).sort().join(',')!=='acknowledged_at,case_id,request_id,revision,scenario_id'||!agentRequest(r.request_id)||seen.has(r.request_id)||r.case_id!==id||typeof r.scenario_id!=='string'||!r.scenario_id||r.scenario_id.length>256||typeof r.revision!=='string'||!r.revision||r.revision.length>256||typeof r.acknowledged_at!=='string'||!/^\d{4}-\d\d-\d\dT/.test(r.acknowledged_at)||!Number.isFinite(Date.parse(r.acknowledged_at)))throw Error('recibos_invalidos');
+      seen.add(r.request_id);return {request_id:r.request_id,case_id:r.case_id,scenario_id:r.scenario_id,revision:r.revision,acknowledged_at:r.acknowledged_at};
+    });
+  }
   class Store{
-    constructor({id,get,post,changed=()=>{},requestId=()=>globalThis.crypto.randomUUID()}){Object.assign(this,{id,get,post,changed,requestId});this.model=null;this.pending={};this.job=null;this.busy=false;this.verified=false;this.error='';this.generation=0;this.replayReady=false;}
+    constructor({id,get,post,changed=()=>{},requestId=()=>globalThis.crypto.randomUUID()}){Object.assign(this,{id,get,post,changed,requestId});this.model=null;this.pending={};this.job=null;this.busy=false;this.verified=false;this.error='';this.generation=0;this.replayReady=false;this.receipts=[];this.receiptsPersisted=true;}
     notify(){this.changed(this);}
     load(model){this.model=validate(model,this.id);this.pending={};this.job=null;this.replayReady=false;this.verified=true;this.error='';this.notify();}
     restore(cache){
-      this.model=validate(cache.model,this.id);this.pending={};this.job=null;
+      this.model=validate(cache.model,this.id);this.receipts=validateReceipts(cache.receipts,this.id);this.pending={};this.job=null;
       for(const [id,value] of Object.entries(cache.pending||{})){this.check(id,value);this.pending[id]=value;}
       if(cache.job){const j=cache.job;if(j.tipo!=='sheet-cantidades'||j.caso_id!==this.id||j.escenario_id!==this.model.activo||typeof j.revision_esperada!=='string'||!j.revision_esperada||typeof j.request_id!=='string'||!j.request_id||!j.inputs||Array.isArray(j.inputs))throw Error('borrador_invalido');
         for(const [id,value] of Object.entries(j.inputs))this.check(id,value);
         this.job={tipo:j.tipo,caso_id:this.id,escenario_id:j.escenario_id,revision_esperada:j.revision_esperada,inputs:clone(j.inputs),request_id:j.request_id};}
       this.verified=false;this.replayReady=false;this.error='copia_local';this.notify();
     }
-    snapshot(){return {model:this.model,pending:this.pending,job:this.job};}
+    snapshot(){return {model:this.model,pending:this.pending,job:this.job,receipts:clone(this.receipts)};}
+    canRecordReceipt(id){return !agentRequest(id)||(this.receipts.length<MAX_AGENT_RECEIPTS&&!this.receipts.some(r=>r.request_id===id));}
+    readyReceipts(){return this.model&&this.verified&&!this.busy&&!this.error&&!this.dirty()?this.receipts.filter(r=>r.case_id===this.id&&r.scenario_id===this.model.activo&&r.revision===this.model.revision).map(clone):[];}
+    acknowledgeReceipt(receipt){const index=this.receipts.findIndex(r=>r.request_id===receipt?.request_id&&r.revision===receipt?.revision);if(index<0)return false;this.receipts.splice(index,1);this.notify();return true;}
     active(){return this.model.escenarios.find(e=>e.id===this.model.activo);}
     dirty(){return !!this.job||Object.keys(this.pending).length>0;}
     acceptRead(model,discard=false){const m=validate(model,this.id);this.replayReady=!!this.job&&!discard;if(this.dirty()&&!discard&&(m.revision!==this.model.revision||m.activo!==this.model.activo)){this.verified=false;this.error='conflicto_revision';this.notify();return false;}this.model=m;this.verified=true;this.error='';if(discard){this.pending={};this.job=null;this.replayReady=false;}this.notify();return true;}
@@ -48,8 +62,11 @@
     async flush(){
       if(!this.retryable())return false;
       if(!this.job){this.job={tipo:'sheet-cantidades',caso_id:this.id,escenario_id:this.model.activo,revision_esperada:this.model.revision,inputs:clone(this.pending),request_id:this.requestId()};this.pending={};}
+      if(!this.canRecordReceipt(this.job.request_id)){this.error='recibos_pendientes';this.notify();return false;}
       const replay=!this.verified&&this.replayReady;this.replayReady=false;this.busy=true;this.error='';this.notify();const gen=this.generation;
-      try{const r=await this.post(clone(this.job));if(gen!==this.generation)return false;if(!r.ok)throw Error(r.error||'no_confirmado');const m=validate(r,this.id);if(m.activo!==this.job.escenario_id)throw Error('version_invalida');this.model=m;this.job=null;this.error='';this.verified=true;
+      try{const r=await this.post(clone(this.job));if(gen!==this.generation)return false;if(!r.ok)throw Error(r.error||'no_confirmado');const m=validate(r,this.id);if(m.activo!==this.job.escenario_id)throw Error('version_invalida');
+        if(agentRequest(this.job.request_id))this.receipts.push({request_id:this.job.request_id,case_id:this.id,scenario_id:this.job.escenario_id,revision:m.revision,acknowledged_at:new Date().toISOString()});
+        this.model=m;this.job=null;this.error='';this.verified=true;
         if(replay){const fresh=await this.get({recurso:'sheet-model',id:this.id});if(gen!==this.generation)return false;if(!fresh.ok)throw Error('sin_confirmacion');this.acceptRead(fresh);}
         return true;}
       catch(e){if(gen===this.generation){this.error=e.message==='conflicto_revision'?'conflicto_revision':'sin_confirmacion';if(replay)this.verified=false;}return false;}
@@ -83,13 +100,14 @@
     const compact=new URL(globalThis.location.href).searchParams.get('agent')==='1'&&!!globalThis.PPPAgentCards;
     let timer=null,destroyed=false,agentBridge=null;const meta=clone(metadata);
     const metaKeys=['nombre_caso','palabra','notas_caso'];let metadataDraft=Object.fromEntries(metaKeys.map(k=>[k,String(cache?.metadataDraft?.[k]??meta[k]??'')]));
-    const persist=()=>saveCache({metadata:meta,metadataDraft,...store.snapshot()});
+    const persist=()=>{store.receiptsPersisted=saveCache({metadata:meta,metadataDraft,...store.snapshot()});return store.receiptsPersisted;};
     const store=new Store({id:meta.caso_id,get,post,changed:()=>{paint();agentBridge?.publish();}});
     agentBridge=globalThis.PPPAgentBridge?.mount(store,{labelFor});
     function paint(){
       if(destroyed||!store.model)return;
+      persist();
       const m=store.model,v=store.values(),st=m.estados[m.activo],blocked=store.busy||store.dirty()||!store.verified||!!store.error;
-      const status=store.busy?'Sincronizando cantidades…':store.error==='conflicto_revision'?'Otra edición cambió el libro. Tus cantidades pendientes siguen conservadas.':!store.verified?'Copia local: requiere verificar el libro.':store.error?'Sin confirmación: se conservan los resultados y cambios.':store.dirty()?'Cambios pendientes. Resultados de la última lectura confirmada.':'Lectura confirmada de Sheets';
+      const status=(store.busy?'Sincronizando cantidades…':store.error==='conflicto_revision'?'Otra edición cambió el libro. Tus cantidades pendientes siguen conservadas.':!store.verified?'Copia local: requiere verificar el libro.':store.error?'Sin confirmación: se conservan los resultados y cambios.':store.dirty()?'Cambios pendientes. Resultados de la última lectura confirmada.':'Lectura confirmada de Sheets')+(store.receipts.length&&!store.receiptsPersisted?' · No se pudo conservar la confirmación en este navegador; mantén abierta esta pestaña.':'');
       if(compact){globalThis.PPPAgentCards.render(root,{store,metadata:meta,labelFor,status,refresh:async()=>{const id=store.job?.request_id;await store.refresh();if(id&&store.job?.request_id===id){const ok=await store.flush();agentBridge?.receipt?.({request_id:id,ok,revision:store.model.revision,error:ok?null:'sin_confirmacion'});}},onFocus:focus=>{store.viewFocus=focus;agentBridge?.publish();}});persist();return;}
       const fields=m.campos.filter(c=>c.id.startsWith('in'));
       const editor=c=>`<label class="pn-field"><span>${escape(c.id==='inProf'?'Profundizar (0 no / 1 sí)':labelFor(c.id))}</span><input type="number" data-native-field="${c.id}" value="${v[c.id]===null?'':escape(v[c.id])}" min="${c.min}" max="${c.max}" step="${c.kind==='integer'?1:c.step||'any'}" ${!c.editable?'disabled':''} ${!c.nullable?'required':''} placeholder="Pendiente"><small>${c.editable?(c.nullable?'Puede quedar pendiente':'Cantidad capturada'):'Calculado en Sheets'}</small></label>`;
@@ -119,5 +137,5 @@
     if(cache){store.restore(cache);if(model)store.acceptRead(model);}else store.load(model);
     return {store,destroy(){persist();destroyed=true;agentBridge?.dispose();clearTimeout(timer);store.destroy();root.remove();legacy.forEach(e=>e.hidden=false);document.body.classList.remove('patrimonial-native');},clearCache(){removeCache(store.id);}};
   }
-  return {Store,validate,mount,cached,saveCache,removeCache};
+  return {Store,validate,validateReceipts,MAX_AGENT_RECEIPTS,mount,cached,saveCache,removeCache};
 });

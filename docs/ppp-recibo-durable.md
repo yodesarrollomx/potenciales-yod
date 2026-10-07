@@ -15,3 +15,9 @@ Pruebas previstas: Node con Store/puente reales y transporte doble; Chromium y W
 Compatibilidad: padres anteriores pueden recibir el recibo sin contestar el acuse; la cola se conserva y no vuelve a escribir cantidades. La entrega coordinada requiere el acuse del puesto de YOD OS. Reversión: revertir código y cachés de assets; nunca borrar datos, recibos ni registros de negocio.
 
 Estado: propuesta registrada. Implementación, CI y publicación pendientes.
+
+## 2026-10-07 06:21:46 UTC · Implementación preparada
+
+Store conserva el recibo mínimo desde la respuesta validada y lo incorpora al caché existente. El puente conserva version:1, reproduce recibos sólo con caso/escenario/revisión confirmados y acepta únicamente el acuse de su padre, origen y nonce vigentes. Una cola llena rechaza otra propuesta antes de crear trabajo o escribir. La pantalla advierte si no puede conservar la confirmación localmente.
+
+Cinco secuencias de Store/puente pasaron ejecutando el JavaScript real en un aislado V8 con transporte sintético: captura desde ACK; recarga con relectura; casos/revisiones/escenarios incompatibles; cola llena sin segunda escritura; caché inválido y cuota. La sintaxis del código y del HTML del ensayo de navegador compila. Esta evidencia todavía no equivale a Node/Chromium/WebKit ni a una escritura privada. Se agregaron regresiones para los tres entornos; CI y publicación pendientes.
