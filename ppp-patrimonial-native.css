@@ -33,3 +33,8 @@
 @media(max-width:560px){#patrimonialNative.pn-agent-cards{padding:18px 14px 28px}.pn-agent-cards h1{font-size:21px}.pn-data-card summary{padding:16px;gap:12px}.pn-card-data{padding:0 16px 16px}.pn-read-state{font-size:10px;padding:5px 7px}.pn-data-row{gap:12px}}
 
 body.patrimonial-native:has(.pn-agent-cards){background:#f5f7f4}body:has(.pn-agent-cards) .yod-topbar{display:none!important}
+
+/* The office owns navigation and settings; retain only the PPP reading here. */
+body:has(.pn-agent-cards) :is(#pppModelos,#temaBtn,#engraneBtn,#toast){display:none!important}
+.pn-agent-cards .pn-board-heading{position:static;top:auto;z-index:auto;background:transparent;backdrop-filter:none;box-shadow:none;border:0;padding:0;margin:0;display:flex}
+.pn-agent-cards h1,.pn-agent-cards .pn-card-copy>strong,.pn-agent-cards .pn-data-row strong{color:#23362f}
