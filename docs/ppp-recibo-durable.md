@@ -37,3 +37,9 @@ Fuente del puesto para la regresión conjunta: Portal `e1dfb5232fc8aabf175c5c0a2
 En la revisión `f2bc376`, Chromium pasó las tres fases con módulos reales de puesto y PPP: una sola escritura 500→644 pese a resolve503 y recarga completa; conciliación de siete históricos registrados conservando uno rechazado; otro ajuste explícito 644→700 con su solicitud independiente. Se obtuvo una captura del DOM real del ensayo, con terreno644 y recibo confirmado; no es una captura de producción ni del despacho 3D completo.
 
 WebKit interrumpió el ensayo por una excepción del adaptador sintético al recibir un POST sin cuerpo y acceder a `tipo` sobre null. Se corrige solamente ese adaptador para devolver un error400 de petición vacía, sin contarla como escritura ni respuesta del libro. El flujo de cantidades conserva sus comprobaciones estrictas y deberá pasar íntegro en ambas implementaciones del navegador. Node, arquitectura y acceso pasaron; la aceptación final sigue pendiente de la nueva CI.
+
+## 2026-10-07 06:42:00 UTC · Recorrido conjunto completo y espera de catálogo corregida
+
+En `9110434`, Chromium y WebKit pasaron las tres fases del puesto real con PPP real y APIs sintéticas. La prueba WebKit finalizó esas fases a las 06:39:08 UTC. Los ensayos existentes de tarjetas, cantidades, versiones, identidad, terreno y continuidad también pasaron hasta la prueba de portada.
+
+La CI se detuvo en `tests/ppp-home-browser.cjs:110`: esperaba la aparición del primer botón de reintento y, sin esperar los otros cuatro vencimientos, exigía cinco listas fallidas. La pantalla estaba correctamente mostrando «Cargando 4 de 5 listas… No se pudieron consultar 1 de 5 listas». Se ajusta únicamente el ensayo para esperar el estado terminal observable de cinco fallos y ausencia de «Cargando» antes de las mismas aserciones. Se mantienen la prueba de vacío verdadero, descarte de resultados de otra sesión y cero escrituras. La CI final completa continúa pendiente.
