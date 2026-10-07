@@ -38,6 +38,7 @@
  function validateProposal(store,p){
   if(!p||p.case_id!==store.id||!safeId(p.request_id)||p.scenario_id!==store.model.activo||!Array.isArray(p.cambios)||!p.cambios.length||p.cambios.length>12)throw Error('propuesta_invalida');
   if(store.busy||store.versionBusy||!store.verified||store.error||store.dirty()||p.revision!==store.model.revision)throw Error('conflicto_revision');
+  if(store.canRecordReceipt?.(p.request_id)===false)throw Error('recibos_pendientes');
   const inputs={},seen=new Set();
   for(const c of p.cambios){
    const f=store.model.campos.find(f=>f.id===c.campo),v=c.valor;
@@ -63,21 +64,22 @@
   if(reference.origin!==origin||!/^\/yod-portal\/despacho3d\//.test(reference.pathname))return{publish(){},dispose(){}};
   let nonce=null,disposed=false,busy=false;
   function send(payload){if(nonce&&!disposed)win.parent.postMessage({type:'yod:ppp:state',version:1,nonce,...payload},origin);}
-  function publish(){const value=snapshot(store,labelFor);if(value)send({board:value});}
+  function publish(replay=true){const value=snapshot(store,labelFor);if(value)send({board:value});if(replay&&!busy)for(const receipt of store.readyReceipts?.()||[])send({receipt:{ok:true,...receipt}});}
   async function receive(e){
    if(disposed||e.origin!==origin||e.source!==win.parent)return;
    const m=e.data;if(!m||m.version!==1||m.case_id!==store.id)return;
    if(m.type==='yod:ppp:hello'&&safeId(m.nonce)){nonce=m.nonce;publish();return;}
    if(m.nonce!==nonce||!nonce)return;
    if(m.type==='yod:ppp:read'){publish();return;}
+   if(m.type==='yod:ppp:receipt-ack'){store.acknowledgeReceipt?.({request_id:m.request_id,revision:m.revision});return;}
    if(m.type!=='yod:ppp:apply'||busy)return;
    busy=true;
-   try{const ok=await apply(store,m.proposal);publish();send({receipt:{request_id:m.proposal.request_id,ok,revision:store.model.revision,error:ok?null:'sin_confirmacion'}});}
-   catch(e){send({receipt:{request_id:m.proposal?.request_id,ok:false,error:e.message==='conflicto_revision'?'conflicto_revision':'propuesta_invalida'}});}
+   try{const ok=await apply(store,m.proposal);publish();const saved=store.receipts?.find(r=>r.request_id===m.proposal.request_id);send({receipt:ok&&saved?{ok:true,...saved}:{request_id:m.proposal.request_id,ok,revision:store.model.revision,error:ok?null:'sin_confirmacion'}});}
+   catch(e){send({receipt:{request_id:m.proposal?.request_id,ok:false,error:e.message==='conflicto_revision'?'conflicto_revision':e.message==='recibos_pendientes'?'recibos_pendientes':'propuesta_invalida'}});}
    finally{busy=false;}
   }
   win.addEventListener('message',receive);
-  return{publish,receipt(receipt){publish();send({receipt});},dispose(){disposed=true;nonce=null;win.removeEventListener('message',receive);}};
+  return{publish,receipt(receipt){publish(false);const saved=store.receipts?.find(r=>r.request_id===receipt.request_id);send({receipt:receipt.ok&&saved?{ok:true,...saved}:receipt});},dispose(){disposed=true;nonce=null;win.removeEventListener('message',receive);}};
  }
  return{snapshot,validateProposal,apply,mount};
 });

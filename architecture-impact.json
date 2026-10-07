@@ -1,20 +1,20 @@
 {
-  "model_revision": "2026-10-07.102-ppp-tarjetas",
-  "proposal_id": "CHG-DESPACHO-PPP-TARJETAS-102",
+  "model_revision": "2026-10-07.104-puesto-recuperable",
+  "proposal_id": "CHG-DESPACHO-PUESTO-104",
   "components": [
-    "SYS-YOD-OS",
-    "SYS-DESPACHO",
     "SYS-POTENCIALES",
     "GAS-PORTERO",
     "SHEET-PORTERO",
-    "SHEET-PPP-MODELOS",
-    "EXT-DRIVE"
+    "SYS-YOD-OS",
+    "SYS-DESPACHO",
+    "SYS-DESPACHO-3D",
+    "SVC-AUTON-CLOUD"
   ],
-  "summary": "PPP compartido con tarjetas de datos plegadas y detalle accesible, sin infográficos ni captura manual en el puesto del autón. Conservar el modelo/Store nativo y las fórmulas de Sheets. Añadir ejecución explícita de ajustes solicitados en conversación, separada de propuestas: intención durable por actor/caso/revisión, envío idempotente por el puente existente y recibo confirmado antes de afirmar guardado. Tarjeta abierta aporta contexto observado, nunca autoridad. No modificar datos reales durante pruebas.",
+  "summary": "Conservar recibos mínimos del ACK observado y validado en el caché existente. Relectura del caso antes de conciliar recibos actuales e históricos exclusivamente por /board/resolve idempotente; sólo el acuse exacto del puesto elimina un recibo. Cola limitada, estado pendiente visible y bloqueo de nuevas escrituras del autón a ocho recibos no conciliados. No inferir guardado por valores, repetir escrituras, almacenar nuevas cantidades/credenciales ni modificar fórmulas/backend.",
   "tests": [
-    "Controles Node de autorización, revisión, límites, expiración, idempotencia y recibo confirmado.",
-    "Chromium/WebKit con página PPP real y transporte sintético: tarjetas cerradas, expansión, 500→644, persistencia/recarga, conflicto y móvil.",
-    "Verificaciones requeridas de Portal y contratos de voz; capturas de interfaz real con datos sintéticos."
+    "Node Store/bridge: ACK validado, relectura obligatoria, históricos exactos y ocho posiciones recuperables por ACK; nonce/origen/padre, cola llena y caché inválido.",
+    "Chromium/WebKit con createWorkspace y PPP HTML reales, APIs sintéticas: una escritura, ACK, resolve503, recarga total, relectura, acuse exacto; históricos ya registrados vs rechazado y nuevo ajuste independiente.",
+    "Regresiones existentes de acceso, cálculo/Store/PPP y contraste con atlas fijo."
   ],
-  "rollback": "Revertir código y versiones de caché mediante PR; conservar propuestas, recibos, datos, versiones, fórmulas y permisos."
+  "rollback": "Revertir PR y cachés de assets. Conservar recibos y datos de negocio; no reenviar operaciones ni desplegar un Apps Script nuevo."
 }
