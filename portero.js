@@ -288,6 +288,7 @@
   async function engraneAdmin() {
     const k = localStorage.getItem(LSC);
     if (!k || pagina === 'accesos') return;
+    const yaValidada = k === sesionValidada;
     const peticion = ++validacionId;
     let r;
     try { r = await pyodPide('?recurso=canje&t=' + encodeURIComponent(k)); }
@@ -295,12 +296,19 @@
     // No aplicar respuestas anteriores a otra persona o a un cierre de sesión.
     if (peticion !== validacionId || k !== localStorage.getItem(LSC)) return;
     if (!r || r.ok !== true) {
-      sesionValidada = '';
       const rechazo = r && ['liga','clave','expirado','revocado','sin_sesion','unauthorized','forbidden'].includes(String(r.error || '').toLowerCase());
       if (rechazo) {
+        sesionValidada = '';
         sessionStorage.removeItem('pyod_rol');
         const admin = document.getElementById('engraneBtn'); if (admin) admin.remove();
         if (!SIN_GATE && !MODO_SUAVE) overlayCorreo();
+      } else if (yaValidada) {
+        // Un timeout o caída temporal del Portero no saca a alguien que ya fue
+        // validado en esta sesión. Conservamos el gate abierto y reintentamos solos.
+        quitarSubGates(k);
+        setTimeout(() => {
+          if (k === localStorage.getItem(LSC) && k === sesionValidada) engraneAdmin();
+        }, 15000);
       } else ofrecerReintento();
       return;
     }
