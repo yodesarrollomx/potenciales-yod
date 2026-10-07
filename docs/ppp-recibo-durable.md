@@ -31,3 +31,9 @@ La revisión detectó otro límite: ocho recibos ya registrados cuyo acuse se pe
 Pruebas añadidas: ocho ACK reales del Store sobreviven a recarga y relectura posterior; acuses exactos liberan posiciones sin repetir escrituras. El ensayo conjunto siembra metadatos sintéticos de ocho recibos anteriores, concilia siete previamente registrados por el servicio doble y conserva el octavo rechazado. Los metadatos locales describen un ACK previamente observado; no son prueba criptográfica de autoría del servidor.
 
 Fuente del puesto para la regresión conjunta: Portal `e1dfb5232fc8aabf175c5c0a2806faf83fa63ae1`. Se prueba además otro ajuste explícito después del histórico rechazado: una escritura por solicitud distinta, sin perder el histórico ni bloquear las posiciones libres. Siete casos de Store/puente pasaron en V8; Node y navegadores en esta revisión todavía requieren CI.
+
+## 2026-10-07 06:36:23 UTC · Primer resultado del recorrido conjunto
+
+En la revisión `f2bc376`, Chromium pasó las tres fases con módulos reales de puesto y PPP: una sola escritura 500→644 pese a resolve503 y recarga completa; conciliación de siete históricos registrados conservando uno rechazado; otro ajuste explícito 644→700 con su solicitud independiente. Se obtuvo una captura del DOM real del ensayo, con terreno644 y recibo confirmado; no es una captura de producción ni del despacho 3D completo.
+
+WebKit interrumpió el ensayo por una excepción del adaptador sintético al recibir un POST sin cuerpo y acceder a `tipo` sobre null. Se corrige solamente ese adaptador para devolver un error400 de petición vacía, sin contarla como escritura ni respuesta del libro. El flujo de cantidades conserva sus comprobaciones estrictas y deberá pasar íntegro en ambas implementaciones del navegador. Node, arquitectura y acceso pasaron; la aceptación final sigue pendiente de la nueva CI.

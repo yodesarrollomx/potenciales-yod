@@ -30,7 +30,7 @@ const parentHTML='<!doctype html><html lang="es"><meta name="viewport" content="
   await context.route('https://script.google.com/**',async route=>{
    const req=route.request(),u=new URL(req.url());let out={ok:true};
    if(req.method()==='POST'){
-    const p=req.postDataJSON();if(p.tipo==='sheet-cantidades'){
+    const p=req.postDataJSON();if(!p){console.log('Rejected empty synthetic Apps Script POST in '+name);return route.fulfill({status:400,contentType:'application/json',body:'{"ok":false,"error":"empty_request"}'});}if(p.tipo==='sheet-cantidades'){
      assert.equal(writes.filter(w=>w.request_id===p.request_id).length,0,'receipt delivery must never replay a quantity write');assert.equal(p.request_id,expectedRequest);writes.push(p);assert.equal(p.revision_esperada,model.revision);
      Object.assign(model.escenarios.find(e=>e.id===model.activo).inputs,p.inputs);model.revision='receipt-revision-104-'+writes.length;out=model;
     }
