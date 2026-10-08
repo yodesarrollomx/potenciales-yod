@@ -53,6 +53,23 @@ const {install}=require('./ppp-fixture.js'),fixture=require('./fixtures/patrimon
   const canonical=await context.newPage();await canonical.goto('https://ppp.test/potenciales-yod/patrimonial.html?open=synthetic-case');
   await canonical.locator('#patrimonialNative').waitFor();
   assert.equal(await canonical.locator('[data-native-field=inTerrenoM2]').inputValue(),'700');
+  // The station uses the original board while retaining the exact same collaboration protocol.
+  loseReceipt=false;
+  await page.evaluate(()=>{window.board=null;document.querySelector('iframe').src='/potenciales-yod/patrimonial.html?open=synthetic-case&agent=1&embed=1&view=board';});
+  await frame.locator('[data-native-field=inTerrenoM2]').waitFor();
+  await page.evaluate(()=>send('yod:ppp:hello'));
+  await page.waitForFunction(()=>window.board?.confirmed);
+  assert.equal(await frame.locator('.pn-data-card').count(),0);
+  assert.equal(await frame.locator('[data-native-field=inTerrenoM2]').inputValue(),'700');
+  await page.evaluate(()=>send('yod:ppp:apply',{proposal:{request_id:'board-original-119',case_id:board.case_id,scenario_id:board.scenario_id,revision:board.revision,motivo:'Corrección en tablero original',cambios:[{campo:'inTerrenoM2',valor:800}]}}));
+  await page.waitForFunction(()=>messages.some(m=>m.receipt?.request_id==='board-original-119'&&m.receipt.ok));
+  assert.equal(await frame.locator('[data-native-field=inTerrenoM2]').inputValue(),'800');
+  await canonical.reload();
+  await canonical.locator('[data-native-field=inTerrenoM2]').waitFor();
+  assert.equal(await canonical.locator('[data-native-field=inTerrenoM2]').inputValue(),'800');
+  assert.ok(await frame.locator('body').evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  if(process.env.PPP_SCREENSHOTS){await page.screenshot({path:path.join(process.env.PPP_SCREENSHOTS,name+'-original-shared-'+width+'.png')});if(name==='chromium')console.log('PPP_ORIGINAL_'+width+'='+ (await page.screenshot({type:'jpeg',quality:65})).toString('base64'));}
+  console.log('PASS original embedded board: shared correction, receipt and canonical reload');
   assert.deepEqual(errors,[]);await context.close();
   console.log('PASS '+name+' '+width+': original cards/Store/bridge, 500→644 receipt, focus, keyboard, canonical reload; synthetic book.');
  }}finally{await browser.close();}
