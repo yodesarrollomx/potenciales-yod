@@ -502,7 +502,7 @@
 
 <div id="toast"></div>
 <link rel="stylesheet" href="ppp-patrimonial-native.css?v=3">
-<script src="ppp-agent-bridge.js?v=3"></script><script src="ppp-agent-cards.js?v=2"></script><script src="ppp-patrimonial-native.js?v=20261007-receipt104"></script>
+<script src="ppp-version-bridge.js?v=2"></script><script src="ppp-agent-bridge.js?v=3"></script><script src="ppp-agent-cards.js?v=2"></script><script src="ppp-patrimonial-native.js?v=20261007-receipt104"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -708,7 +708,7 @@
     profDerivar();cusDerivar();costoDerivar();
     state=computar(inputValues(),escGet(escActivo));
     escSyncActivo();
-    render();renderEscenarios();renderComparador();guardarDraft();return state}
+    render();renderEscenarios();renderComparador();guardarDraft();versionBridge?.publish();return state}
 
   /* ================== PROFUNDIZAR · DEPA POR DEPA ================== */
   // Detalle opcional por versión (e.prof + e.depas=[{m2,nivel}]): la tabla manda —
@@ -1071,8 +1071,14 @@
     $('segSiguiente').value=caso.siguiente_paso||'';
     $('segLog').textContent=caso.notas_seguimiento||'Sin notas todavía.'+(caso.caso_id?'':' Guarda el caso primero.');
   }
-  let nativeAdapter=null;
+  let nativeAdapter=null,versionBridge=null;
+  function rememberLegacyVersions(){
+    if(nativeAdapter)return;
+    if(!versionBridge)versionBridge=window.PPPVersionBridge.create({modelType:'patrimonial',read:()=>({caseId:caso.caso_id,scenarios:escenarios,active:escActivo,busy:false,pending:modoLocal})});
+    versionBridge.remember({caseId:caso.caso_id,revision:String(caso.version),scenarios:escenarios,active:escActivo});
+  }
   function montarNativo(obj,cache=null){
+    if(versionBridge){versionBridge.dispose();versionBridge=null;}
     if(!cache){PPPPatrimonialNative.validate(obj.calculo_sheet,obj.caso_id);cache=PPPPatrimonialNative.cached(obj.caso_id);}
     if(nativeAdapter)nativeAdapter.destroy();
     caso={caso_id:obj.caso_id,palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
@@ -1087,7 +1093,7 @@
     caso={caso_id:obj.caso_id||'',palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
     // Versiones del caso: si la fila trae escenarios_json se restauran; si no (casos viejos), versión única desde las columnas in*.
     if(!escDesdeJson(obj.escenarios_json))escInicial('Base');
-    calculate();pintaCaso();cerrarOverlays();toast('Caso "'+(caso.nombre_caso||caso.palabra)+'" cargado'+(escenarios.length>1?' · '+escenarios.length+' versiones':''))
+    rememberLegacyVersions();calculate();pintaCaso();cerrarOverlays();toast('Caso "'+(caso.nombre_caso||caso.palabra)+'" cargado'+(escenarios.length>1?' · '+escenarios.length+' versiones':''))
   }
   async function abrirPorId(id){try{const r=await apiGet({recurso:'caso',id});if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'Ese caso ya no existe':'No se pudo abrir: '+r.error)}catch(e){toast('Sin conexión: no se pudo abrir el caso')}}
   async function abrirPorPalabra(palabra){if(!palabra.trim())return;try{const r=await apiGet({recurso:'caso',palabra:palabra.trim()});if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'No hay caso con esa palabra':'No se pudo abrir: '+r.error)}catch(e){toast('Sin conexión: no se pudo abrir')}}
@@ -1109,7 +1115,7 @@
         return}
       if(!r.caso_id){$('gWeb').value='';toast('No se guardó: vuelve a intentar');return}
       caso.caso_id=r.caso_id;caso.palabra=r.palabra||payload.palabra;caso.correo=correo;caso.nombre_caso=nombre||'Caso sin nombre';caso.notas_caso=notas;caso.version=r.version;
-      pintaCaso();guardarDraft();cerrarOverlays();
+      versionBridge?.invalidate();pintaCaso();guardarDraft();cerrarOverlays();
       toast(r.emailed?'Caso guardado · correo con la palabra enviado':'Caso guardado · palabra: '+caso.palabra)
     }catch(e){btns.forEach(b=>b.disabled=false);encolar(payload);toast('Sin conexión: se guardará al reconectar')}
   }
