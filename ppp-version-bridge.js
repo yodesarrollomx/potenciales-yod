@@ -15,7 +15,7 @@
  // Preserve that registration order; never manufacture a date from a label.
  function latestRegistered(value){return versions(value).at(-1).id;}
  function create({modelType,read,win=globalThis.window}={}){
-  if(!['macrolotes','vertical'].includes(modelType)||typeof read!=='function')throw Error('invalid_adapter');
+  if(!['macrolotes','vertical','patrimonial'].includes(modelType)||typeof read!=='function')throw Error('invalid_adapter');
   let saved=null,defended=null,binding=null,nonce=null,disposed=false,verified=false;
   const embedded=win&&win.parent!==win&&new URL(win.location.href).searchParams.get('agent')==='1';
   let permitted=false;

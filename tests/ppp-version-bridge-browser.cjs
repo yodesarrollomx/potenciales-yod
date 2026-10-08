@@ -1,7 +1,7 @@
 'use strict';
 const {chromium}=require('playwright'),assert=require('node:assert/strict');
 const {install,native}=require('./ppp-fixture.js');
-(async()=>{const browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE,args:['--no-sandbox','--disable-dev-shm-usage']}:{})});try{for(const page of ['mixto.html','macrolotes.html']){
+(async()=>{const browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE,args:['--no-sandbox','--disable-dev-shm-usage']}:{})});try{for(const page of ['mixto.html','macrolotes.html','patrimonial.html']){
  const context=await browser.newContext({viewport:{width:430,height:932}}),m=native(),first=m.escenarios[0];
  m.escenarios=[{...first,id:'old',nombre:'Anterior'},{...first,id:'new',nombre:'Última inscrita',inputs:{...first.inputs,inTerreno:1900}}];m.activo='old';m.estados={old:m.estados[first.id],new:m.estados[first.id]};
  const net=await install(context,{seed:null,native:page==='mixto.html',model:m});

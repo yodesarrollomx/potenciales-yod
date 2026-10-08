@@ -1,7 +1,7 @@
 {
-  "model_revision": "2026-10-08.118-autones-conciliados",
+  "model_revision": "2026-10-08.120-autones-continuidad",
   "proposal_id": "CHG-DESPACHO-AUTONES-116",
-  "summary": "Conservar los tableros originales de Macro Lotes y Vertical y agregar un puente de observación autorizado. Separar versión defendida y versión consultada; registrar datos guardados sin conceder escritura al autón. No modifica versiones de negocio ni cálculos existentes.",
+  "summary": "Puentes de observación para Macro Lotes, Vertical y Patrimonial legacy, conservando tablero, versiones e integración nativa. Separar versión defendida y consultada sin dar escritura al autón.",
   "components": [
     "SYS-YOD-OS",
     "SYS-DESPACHO",
@@ -15,7 +15,8 @@
     "Dos casos sintéticos sin mezcla ni selección no autorizada.",
     "Última versión inscrita separada de versión consultada, sin fechas inventadas ni sobrescrituras.",
     "Puente de observación Macro Lotes/Vertical sin escritura ni resultados locales presentados como Sheets.",
-    "Regresiones del piloto, comprobaciones del portal y pruebas de motor."
+    "Regresiones del piloto, comprobaciones del portal y pruebas de motor.",
+    "Patrimonial legacy en navegador móvil: versiones originales, defensa fijada y cero escrituras."
   ],
   "rollback": "Revertir el PR del puente y mantener apagado AUTONES_MULTIPLES en portal; conservar datos guardados y versiones."
 }
