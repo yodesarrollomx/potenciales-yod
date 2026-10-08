@@ -1,17 +1,21 @@
 {
-  "model_revision": "2026-10-07.104-puesto-recuperable",
-  "proposal_id": "CHG-DESPACHO-PUESTO-104",
+  "model_revision": "2026-10-08.116-autones-versiones",
+  "proposal_id": "CHG-DESPACHO-AUTONES-116",
+  "summary": "Conservar los tableros originales de Macro Lotes y Vertical y agregar un puente de observación autorizado. Separar versión defendida y versión consultada; registrar datos guardados sin conceder escritura al autón. No modifica versiones de negocio ni cálculos existentes.",
   "components": [
+    "SYS-YOD-OS",
+    "SYS-DESPACHO",
+    "SYS-DESPACHO-3D",
     "SYS-POTENCIALES",
     "GAS-PORTERO",
     "SHEET-PORTERO",
-    "SYS-YOD-OS"
+    "SVC-AUTON-CLOUD"
   ],
-  "summary": "Ajuste acotado del Portero compartido dentro del alcance de CHG-DESPACHO-PUESTO-104: si una sesión ya fue validada en la carga actual y el Portero sufre un fallo transitorio, conservar la validación y reintentar sin recrear el gate. Revocación/caducidad explícita sigue retirando acceso. No amplía permisos, no altera datos PPP ni acepta identidad sin validación.",
   "tests": [
-    "Portero: sesión validada + error transitorio conserva sesionValidada y reintenta.",
-    "Seguridad: sesión no validada ante error sigue ofreciendo reintento; rechazo explícito vuelve al gate.",
-    "Regresiones de acceso PPP, interfaz y Arquitectura YOD."
+    "Dos casos sintéticos sin mezcla ni selección no autorizada.",
+    "Última versión inscrita separada de versión consultada, sin fechas inventadas ni sobrescrituras.",
+    "Puente de observación Macro Lotes/Vertical sin escritura ni resultados locales presentados como Sheets.",
+    "Regresiones del piloto, comprobaciones del portal y pruebas de motor."
   ],
-  "rollback": "Revertir PR 19. No cambia datos de negocio, roles, boards ni sesiones almacenadas."
+  "rollback": "Revertir el PR del puente y mantener apagado AUTONES_MULTIPLES en portal; conservar datos guardados y versiones."
 }
