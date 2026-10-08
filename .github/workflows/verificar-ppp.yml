@@ -34,10 +34,11 @@ jobs:
           node --check ppp-agent-bridge.js
           node --test tests/ppp-agent-bridge.test.cjs tests/ppp-agent-receipts.test.cjs
           node --check ppp-ui.js
+          node --check ppp-version-bridge.js
           node --check ppp-patrimonial-native.js
           node --check ppp-case-loader.js
           node --check ppp-catalog.js
-          node --test tests/ppp-ui.test.cjs tests/ppp-case-loader.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs tests/patrimonial-native.test.cjs
+          node --test tests/ppp-ui.test.cjs tests/ppp-case-loader.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs tests/patrimonial-native.test.cjs tests/ppp-version-bridge.test.cjs
           git diff --check
       - name: Instalar navegadores
         run: |

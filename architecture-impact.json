@@ -1,7 +1,7 @@
 {
-  "model_revision": "2026-10-08.119-puesto-ppp-original",
+  "model_revision": "2026-10-08.121-puesto-ppp-original",
   "proposal_id": "CHG-DESPACHO-PPP-119",
-  "summary": "Separar presentación y protocolo: agent=1 conserva el puente; view=board muestra el PPP nativo original. El modo compacto anterior sigue disponible. No se cambian fórmulas, persistencia, permisos ni contratos.",
+  "summary": "Separar presentación y protocolo; conservar puentes de versiones de main, fórmulas, persistencia y permisos.",
   "components": [
     "SYS-POTENCIALES"
   ],

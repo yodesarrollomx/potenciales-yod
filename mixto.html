@@ -539,6 +539,7 @@
 <div id="toast"></div>
 <script src="ppp-ui.js?v=20261001-5"></script>
 <script src="ppp-case-loader.js?v=20261001-5"></script>
+<script src="ppp-version-bridge.js?v=1"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -641,6 +642,7 @@
     escActivo=window.PPPCaseLoader.selectScenario(m,selected);
     if(!keepInputs)escAplicar(escGet(escActivo));
     state=m.estados[escActivo];render();renderEscenarios();renderComparador();guardarDraft();
+    versionBridge.remember({caseId:caso.caso_id,revision:m.revision,scenarios:m.escenarios,active:m.activo,states:m.estados,native:true});
     sheetStatus(keepInputs?'Cambios pendientes · calculando en Sheets':'Sheets · revisión '+m.revision.slice(0,8)+' · '+new Date(m.actualizado).toLocaleTimeString('es-MX'));return true;
   }
   function queueSheetSync(){
@@ -821,6 +823,7 @@
   let escenarios=[],escActivo='';
   const MAX_ESC=8;
   const escId=()=>'e'+Math.random().toString(36).slice(2,8);
+  const versionBridge=window.PPPVersionBridge.create({modelType:'vertical',read:()=>({caseId:caso.caso_id,scenarios:escenarios,active:escActivo,busy:sheetBusy||!!caseSelection,pending:!!sheetPending||modoLocal,error:sheetFailure||sheetNeedsRefresh,labels:Object.fromEntries(Object.entries(factorHelp).map(([k,v])=>[k,v.t]))})});
   function escGet(id){return escenarios.find(e=>e.id===id)}
   function escBaseObj(){return escenarios.find(e=>e.esBase)||escenarios[0]}
   function escInicial(nombre){escenarios=[{id:escId(),nombre:nombre||'Base',esBase:true,inputs:inputValues()}];escActivo=escenarios[0].id}
