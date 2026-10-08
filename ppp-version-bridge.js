@@ -51,7 +51,7 @@
     if(!id(m.nonce)||(m.board_case_id||m.case_id)!==saved.caseId)return;
     if(m.scenario_id!==undefined&&!saved.list.some(v=>v.id===m.scenario_id))return;
     // Binding and pinned version cannot be replaced within one handshake.
-    if(nonce&&(nonce!==m.nonce||binding.case_id!==m.case_id))return;
+    if(nonce&&(nonce!==m.nonce||binding.case_id!==m.case_id||(m.scenario_id!==undefined&&m.scenario_id!==defended)))return;
     binding={case_id:m.case_id,scenario_id:m.scenario_id};nonce=m.nonce;
     if(m.scenario_id)defended=m.scenario_id;publish();return;
    }

@@ -1,5 +1,5 @@
 {
-  "model_revision": "2026-10-08.116-autones-versiones",
+  "model_revision": "2026-10-08.118-autones-conciliados",
   "proposal_id": "CHG-DESPACHO-AUTONES-116",
   "summary": "Conservar los tableros originales de Macro Lotes y Vertical y agregar un puente de observación autorizado. Separar versión defendida y versión consultada; registrar datos guardados sin conceder escritura al autón. No modifica versiones de negocio ni cálculos existentes.",
   "components": [
