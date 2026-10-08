@@ -8,7 +8,7 @@ const {install}=require('./ppp-fixture.js'),fixture=require('./fixtures/patrimon
   let model=structuredClone(fixture),posts=[],loseReceipt=false;const receipts=new Map();model.escenarios.find(e=>e.id===model.activo).inputs.inTerrenoM2=500;
   await context.route('https://script.google.com/**',async route=>{
    const req=route.request(),u=new URL(req.url());let out={ok:true};
-   if(req.method()==='POST'){const b=req.postDataJSON();if(b.tipo==='sheet-cantidades'){
+   if(req.method()==='POST'){const b=req.postDataJSON();if(!b)return route.abort();if(b.tipo==='sheet-cantidades'){
     posts.push(b);assert.equal(b.caso_id,model.caso_id);if(receipts.has(b.request_id))out=receipts.get(b.request_id);else{assert.equal(b.revision_esperada,model.revision);
     Object.assign(model.escenarios.find(e=>e.id===model.activo).inputs,b.inputs);model.revision+='x';receipts.set(b.request_id,structuredClone(model));out=loseReceipt?{ok:false,error:'sin_confirmacion'}:model;}
    }}else if(u.searchParams.get('recurso')==='caso')out={ok:true,caso:{caso_id:model.caso_id,nombre_caso:'Proyecto de prueba',palabra:'ensayo',version:1,calculo_sheet:model}};
