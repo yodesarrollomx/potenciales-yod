@@ -1,15 +1,15 @@
 {
   "model_revision": "2026-10-08.121-puesto-ppp-original",
-  "proposal_id": "CHG-DESPACHO-PPP-119",
-  "summary": "Separar presentación y protocolo; conservar puentes de versiones de main, fórmulas, persistencia y permisos.",
+  "proposal_id": "PPP",
+  "summary": "Presentar el libro e historial documental enlazados desde notas del caso en los cinco motores. Sólo navegación autorizada existente; sin nuevas APIs, permisos ni fórmulas.",
   "components": [
     "SYS-POTENCIALES"
   ],
   "tests": [
-    "Tablero original con puente habilitado y caso exacto; modo compacto compatible.",
-    "Un solo control de señalamiento por superficie, selección de tarjetas e iframe sin ejecutar acciones.",
-    "Voz e iframe se conservan al cambiar de vista; escritorio y móvil; aislamiento de proyecto.",
-    "Arquitectura, suites y verificadores de ambos repositorios."
+    "Sintaxis JavaScript y cinco inserciones HTML comprobadas en V8.",
+    "Dobles DOM: cambio de caso limpia enlaces anteriores; URLs ajenas rechazadas y texto no se interpreta como HTML.",
+    "CI: node --test tests/ppp-expediente.test.cjs; git diff --check; regresiones de acceso y Arquitectura YOD.",
+    "Pendiente: recorrido autenticado, móvil y escritorio en publicación real; NotebookLM y sincronización Obsidian local no verificadas."
   ],
-  "rollback": "Revertir presentación y parámetros del puesto; conservar datos, versiones financieras y permisos."
+  "rollback": "Revertir módulo visual e inclusiones HTML mediante PR; conservar notas, Sheets, archivos, fuentes e historial."
 }
