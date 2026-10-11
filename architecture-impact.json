@@ -11,7 +11,8 @@
     "Puente: versión defendida fija, campos presentes/ausentes, borrador pendiente, nonce y origen.",
     "Navegador móvil con tres motores: tarjeta nativa Mixto, versiones originales, cero POST de negocio.",
     "Accesos, interfaz PPP e impacto del atlas aprobados.",
-    "Tras push de main, GET público y SHA-256 de los cinco archivos publicados; sin identidad ni escrituras."
+    "Tras push de main, GET público y SHA-256 de los cinco archivos publicados; sin identidad ni escrituras.",
+    "Recibos bajo view=board del Portal publicado: mismos ACK, único POST por solicitud, lectura fresca, desconocidos retenidos; no exigir DOM compacto retirado."
   ],
   "rollback": "Revertir observación y pruebas; preservar escenarios, cantidades y recibos."
 }
