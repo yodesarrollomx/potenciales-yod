@@ -16,14 +16,19 @@
  function latestRegistered(value){return versions(value).at(-1).id;}
  function create({modelType,read,win=globalThis.window}={}){
   if(!['macrolotes','vertical','patrimonial'].includes(modelType)||typeof read!=='function')throw Error('invalid_adapter');
-  let saved=null,defended=null,binding=null,nonce=null,disposed=false,verified=false;
+  let saved=null,defended=null,binding=null,nonce=null,disposed=false,verified=false,focus=null;
+  function observeFocus(event){
+   const card=event?.target?.closest?.('.ppp-card[data-card],.card[data-card]');
+   if(card){const title=card.querySelector('.ppp-title,h3,h2')?.textContent?.trim()||card.dataset.card;focus={card:card.dataset.card,title:String(title).slice(0,160),fields:[...card.querySelectorAll('input[id]')].map(n=>n.id).filter(k=>/^in[A-Z]\w*$/.test(k))};}
+   publish();
+  }
   const embedded=win&&win.parent!==win&&new URL(win.location.href).searchParams.get('agent')==='1';
   let permitted=false;
   if(embedded)try{const u=new URL(win.document.referrer);permitted=u.origin===win.location.origin&&/^\/yod-portal\/despacho3d\//.test(u.pathname);}catch{}
   function remember({caseId,revision,scenarios,active,states=null,native=false}){
    if(!id(caseId)||typeof revision!=='string'||!revision)throw Error('invalid_case');
    const list=versions(scenarios);if(!list.some(v=>v.id===active))throw Error('invalid_active');
-   if(saved?.caseId!==caseId){defended=null;binding=null;nonce=null;}
+   if(saved?.caseId!==caseId){defended=null;binding=null;nonce=null;focus=null;}
    saved={caseId,revision,list,active,states:copy(states||{}),native:native===true};verified=true;
    if(!defended)defended=binding?.scenario_id||latestRegistered(list);
    publish();
@@ -34,14 +39,19 @@
    if(!version||current.caseId!==saved.caseId)return null;
    const live=versions(current.scenarios),viewed=live.find(v=>v.id===current.active);
    const same=JSON.stringify(live)===JSON.stringify(saved.list);
+   const keys=[...new Set([...saved.list,...live].flatMap(v=>Object.keys(v.inputs)))];
+   const canonical=Object.fromEntries(keys.map(k=>[k,Object.hasOwn(version.inputs,k)?version.inputs[k]:null]));
+   const observed={...(viewed?.inputs||{})};
+   if(current.pending&&current.draftInputs&&typeof current.draftInputs==='object')for(const[k,v]of Object.entries(current.draftInputs))if(keys.includes(k)&&(v===null||typeof v==='number'&&Number.isFinite(v)))observed[k]=v;
+   const sharedFocus=focus&&id(focus.card)&&focus.title?{card:focus.card,title:focus.title,fields:focus.fields.filter(k=>keys.includes(k))}:null;
    const results={};if(saved.native){for(const [k,v]of Object.entries(saved.states[defended]||{}))if(/^[a-zA-Z][a-zA-Z0-9_]{0,60}$/.test(k)&&(v===null||typeof v==='boolean'||typeof v==='number'&&Number.isFinite(v)||typeof v==='string'&&v.length<160))results[k]=v;}
    return {case_id:binding.case_id,revision:saved.revision,scenario_id:defended,scenario_name:version.nombre,
     confirmed:verified&&!current.busy&&!current.error,pending:!same||!!current.pending,observed_at:new Date().toISOString(),
-    fields:Object.keys(version.inputs).map(k=>({id:k,label:String(current.labels?.[k]||k).slice(0,160),min:-Number.MAX_VALUE,max:Number.MAX_VALUE,editable:false,nullable:true,kind:'number'})),
-    inputs:copy(version.inputs),results,metadata:{model_type:modelType,model_revision:saved.native?'sheet-observation-v1':'saved-inputs-v1'},
+    fields:keys.map(k=>({id:k,label:String(current.labels?.[k]||k).slice(0,160),min:-Number.MAX_VALUE,max:Number.MAX_VALUE,editable:false,nullable:true,kind:'number'})),
+    inputs:copy(canonical),results,...(sharedFocus?{focus:sharedFocus}:{}),metadata:{model_type:modelType,model_revision:saved.native?'sheet-observation-v1':'saved-inputs-v1'},
     version_context:{board_case_id:saved.caseId,defended_scenario_id:defended,viewed_scenario_id:current.active,
      viewed_scenario_name:viewed?.nombre||'',registration_basis:'saved_array_order',read_only:true,
-     versions:saved.list.map(v=>({id:v.id,name:v.nombre})),...(viewed?{viewed_inputs:copy(viewed.inputs)}:{})}};
+     versions:saved.list.map(v=>({id:v.id,name:v.nombre})),...(viewed?{viewed_inputs:copy(observed)}:{})}};
   }
   function publish(){if(disposed||!permitted||!nonce)return;try{const board=snapshot();if(board)win.parent.postMessage({type:'yod:ppp:state',version:1,nonce,board},win.location.origin);}catch{/* A local draft cannot be promoted to an authorized snapshot. */}}
   function receive(e){
@@ -59,8 +69,8 @@
    if(m.type==='yod:ppp:read')publish();
    if(m.type==='yod:ppp:apply')win.parent.postMessage({type:'yod:ppp:state',version:1,nonce,receipt:{ok:false,request_id:m.proposal?.request_id,error:'read_only_model'}},win.location.origin);
   }
-  if(permitted)win.addEventListener('message',receive);
-  return {remember,publish,snapshot,invalidate(){verified=false;publish();},dispose(){disposed=true;saved=null;binding=null;nonce=null;if(permitted)win.removeEventListener('message',receive);}};
+  if(permitted){win.addEventListener('message',receive);for(const name of ['click','input','focusin'])win.document.addEventListener?.(name,observeFocus);}
+  return {remember,publish,snapshot,invalidate(){verified=false;publish();},dispose(){disposed=true;saved=null;binding=null;nonce=null;if(permitted){win.removeEventListener('message',receive);for(const name of ['click','input','focusin'])win.document.removeEventListener?.(name,observeFocus);}}};
  }
  return {create,latestRegistered,versions};
 });
