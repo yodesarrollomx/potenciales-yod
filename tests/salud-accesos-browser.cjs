@@ -22,7 +22,7 @@ async function run(){
   for(const [name,type,viewport]of[['Chromium',chromium,{width:1280,height:800}],['WebKit móvil',webkit,{width:390,height:844}]]){
    const browser=await type.launch({headless:true});
    try{
-    for(const mode of ['admin','sin-admin','respuesta-tardia','rol-revocado']){
+    for(const mode of ['admin','sin-admin','respuesta-tardia','rol-revocado','nube','nube-caida']){
      const ctx=await browser.newContext({viewport});
      await ctx.addInitScript(()=>localStorage.setItem('pyod_clave_v1','synthetic-session-never-real'));
      const page=await ctx.newPage(),errors=[],requests=[];let release,healthRequests=0,roleRevoked=false;
@@ -36,6 +36,16 @@ async function run(){
       if(u.pathname.endsWith('/yod-acceso.js'))return respond("window.YOD_PORTERO={original:'https://synthetic.invalid/exec'};",'text/javascript');
       if(u.pathname.endsWith('/yod-salud.js'))return respond(client,'text/javascript');
       if(u.pathname.endsWith('/salud-catalogo.json'))return respond(catalog);
+      if(u.hostname==='yod-cloud-room.onrender.com'){
+       assert.equal(u.pathname,'/horarios/estado.json');
+       assert.ok(!req.url().includes('synthetic-session'));assert.ok(!req.headers().authorization);
+       if(mode==='nube')return respond({...report,source:'render',run_id:undefined,
+        generado_en:new Date(Date.parse(now)+1).toISOString(),cycle_id:'h-00000000-0000-4000-8000-000000000001',
+        checks:[...report.checks,{id:'conexion-horarios',nombre:'Recuperación de horarios',components:['SYS-CONTROL'],
+         estado:'sin_confirmar',revisado_en:now,vence_en:new Date(Date.now()+300000).toISOString(),
+         detalle:'Instalación sintética pendiente',alcance:'Conexión para recuperar'}]});
+       return route.fulfill({status:503,contentType:'application/json',body:'{"ok":false}'});
+      }
       if(u.pathname.endsWith('/estado-online.json')){
        healthRequests++;
        if(mode==='respuesta-tardia')await new Promise(resolve=>release=resolve);
@@ -52,11 +62,16 @@ async function run(){
      if(mode==='sin-admin'){
       await page.waitForFunction(()=>document.querySelector('#lista').textContent.includes('administrador'));
       assert.equal(await page.locator('#salud-sistemas').isVisible(),false);assert.equal(healthRequests,0);
-     }else if(mode==='admin'||mode==='rol-revocado'){
+     }else if(mode==='admin'||mode==='rol-revocado'||mode==='nube'||mode==='nube-caida'){
       await page.waitForSelector('#salud-sistemas .salud-row');
       assert.equal(await page.locator('#salud-sistemas .salud-verde').count()>=1,true);
       assert.equal(await page.locator('#salud-sistemas .salud-rojo').count()>=1,true);
       assert.match(await page.locator('#salud-sistemas').textContent(),/Pruebas por proceso/);
+      if(mode==='nube'){
+       const link=page.locator('#salud-sistemas a[href="https://yod-cloud-room.onrender.com/horarios/conectar"]');
+       assert.equal(await link.count(),1);
+      }
+      if(mode==='nube-caida')assert.equal(await page.locator('#salud-sistemas a[href*="/horarios/conectar"]').count(),0);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true);
       if(mode==='rol-revocado'){
        roleRevoked=true;
@@ -77,7 +92,7 @@ async function run(){
      checks++;await ctx.close();
     }
    }finally{await browser.close();}
-   console.log(name+': admin, rechazo, respuesta tardía y rol revocado correctos');
+   console.log(name+': admin, rechazo, respuesta tardía, rol revocado, nube y respaldo correctos');
   }
  }finally{await new Promise(resolve=>server.close(resolve));}
  console.log('SALUD_ACCESOS: '+checks+' recorridos; endpoints y usuarios exclusivamente sintéticos');

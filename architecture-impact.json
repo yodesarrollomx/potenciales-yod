@@ -1,14 +1,38 @@
 {
-  "model_revision": "2026-10-11.salud-accesos",
-  "proposal_id": "CHG-SALUD-ACCESOS-20261011",
-  "summary": "Comprobación de sesión cada minuto y estados por proceso en Accesos; revocación/cambio de rol limpian la vista.",
+  "model_revision": "2026-10-11.horarios-render.1",
+  "proposal_id": "CHG-HORARIOS-NUBE-20261011",
+  "summary": "Actualizar cliente de vigilancia independiente de nube en Accesos con selección vigente y vínculo de conexión personal. Mantener matriz, roles y Portero.",
   "components": [
+    "SYS-YOD-OS",
+    "SYS-CONTROL",
     "SYS-POTENCIALES",
-    "SYS-CONTROL"
+    "SYS-SALA",
+    "GAS-SALA",
+    "SVC-SALA-PRODUCTOR",
+    "SVC-SALA-EJECUTOR",
+    "EXT-ACTIONS",
+    "EXT-RENDER",
+    "SVC-AUTON-CLOUD",
+    "SVC-HORARIOS-CLOUD",
+    "STORE-HORARIOS-CLOUD",
+    "SYS-TRACK",
+    "SYS-OBRA",
+    "SYS-OBRA-CLIENTE",
+    "GAS-PORTERO",
+    "EXT-DRIVE",
+    "EXT-GMAIL",
+    "SYS-MARKETING",
+    "SYS-PLAN-POTENCIAL",
+    "EXT-MOTORES-MEDIA",
+    "SYS-DESPACHO",
+    "SYS-DESPACHO-3D",
+    "GAS-PLAN-POTENCIAL",
+    "SHEET-PLAN-POTENCIAL",
+    "SHEET-SALA"
   ],
   "tests": [
-    "Regresiones de matriz y sesión intactas; ocho recorridos Chromium/WebKit móvil: admin, rechazo, respuesta tardía y revocación de rol.",
-    "Cliente aprobado fijado a de33d90af87e9b5b225b0405841145348d42b8b0; publicación de Accesos byte exacta."
+    "Doce recorridos Chromium/WebKit móvil con nube correcta, nube caída/respaldo, sesión/revocación y respuesta tardía. Datos y redes sintéticos; fuentes fijadas al commit aprobado.",
+    "Regresiones existentes de acceso/Sheets; publicación byte exacta de Accesos y Portero."
   ],
-  "rollback": "Revertir panel y cliente por PR, sin modificar matriz, usuarios, roles, permisos o backend."
+  "rollback": "Revertir versión del cliente y panel por PR. Conservar matriz, usuarios, tokens y backend original."
 }
