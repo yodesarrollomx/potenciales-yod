@@ -68,9 +68,10 @@ const parentHTML='<!doctype html><html lang="es"><meta name="viewport" content="
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   try{
    await page.goto(BASE+'__receipt');await page.bringToFront();
-   const frame=page.frameLocator('iframe');await frame.locator('.pn-data-card').first().waitFor();
+   const frame=page.frameLocator('iframe');await frame.locator('[data-native-field="inTerrenoM2"]').waitFor();
+   assert.equal(new URL(page.frames().find(f=>f.url().includes('/potenciales-yod/')).url()).searchParams.get('view'),'board');
    await page.waitForFunction(()=>document.querySelector('.workspace-ppp-summary')?.textContent.includes('Lectura confirmada'));
-   assert.equal(await frame.locator('.pn-data-card').count(),6);
+   assert.equal(await frame.locator('[data-native-field="inTerrenoM2"]').inputValue(),'500');
    proposals=[{request_id:'board-reload-104',case_id:model.caso_id,scenario_id:model.activo,revision:model.revision,motivo:'Corrección explícita de prueba',cambios:[{campo:'inTerrenoM2',label:'Terreno',antes:500,valor:644}],apply_requested_at:new Date().toISOString(),apply_expires_at:new Date(Date.now()+120000).toISOString()}];
    await page.getByText('Conexión y variantes',{exact:true}).click();await page.getByRole('button',{name:'Actualizar conexión',exact:true}).click();
    await page.getByRole('button',{name:'Comprobar confirmación',exact:true}).waitFor();
@@ -83,7 +84,7 @@ const parentHTML='<!doctype html><html lang="es"><meta name="viewport" content="
    await page.waitForFunction(()=>document.querySelector('.workspace-apply-status')?.textContent.includes('guardado y confirmado'));
    assert.ok(reads>priorReads,'full reload must obtain a new server read before receipt replay');
    assert.equal(writes.length,1);assert.equal(resolved.size,1);assert.deepEqual(resolveCalls.at(-1),firstReceipt);
-   await frame.locator('[data-card=terreno] summary').click();assert.equal(await frame.locator('[data-input=inTerrenoM2] strong').innerText(),'644');
+   assert.equal(await frame.locator('[data-native-field="inTerrenoM2"]').inputValue(),'644');
    assert.deepEqual(errors,[]);
    if(process.env.PPP_SCREENSHOTS){fs.mkdirSync(process.env.PPP_SCREENSHOTS,{recursive:true});await page.screenshot({path:path.join(process.env.PPP_SCREENSHOTS,name+'-receipt-workspace.png'),fullPage:true});}
    if(name==='chromium')console.log('RECEIPT_WORKSPACE_PREVIEW='+(await page.screenshot({type:'jpeg',quality:60})).toString('base64'));
