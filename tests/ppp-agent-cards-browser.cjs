@@ -8,7 +8,7 @@ const {install}=require('./ppp-fixture.js'),fixture=require('./fixtures/patrimon
   let model=structuredClone(fixture),posts=[],loseReceipt=false;const receipts=new Map();model.escenarios.find(e=>e.id===model.activo).inputs.inTerrenoM2=500;
   await context.route('https://script.google.com/**',async route=>{
    const req=route.request(),u=new URL(req.url());let out={ok:true};
-   if(req.method()==='POST'){const b=req.postDataJSON();if(b.tipo==='sheet-cantidades'){
+   if(req.method()==='POST'){const b=req.postDataJSON();if(!b)return route.abort();if(b.tipo==='sheet-cantidades'){
     posts.push(b);assert.equal(b.caso_id,model.caso_id);if(receipts.has(b.request_id))out=receipts.get(b.request_id);else{assert.equal(b.revision_esperada,model.revision);
     Object.assign(model.escenarios.find(e=>e.id===model.activo).inputs,b.inputs);model.revision+='x';receipts.set(b.request_id,structuredClone(model));out=loseReceipt?{ok:false,error:'sin_confirmacion'}:model;}
    }}else if(u.searchParams.get('recurso')==='caso')out={ok:true,caso:{caso_id:model.caso_id,nombre_caso:'Proyecto de prueba',palabra:'ensayo',version:1,calculo_sheet:model}};
@@ -53,6 +53,23 @@ const {install}=require('./ppp-fixture.js'),fixture=require('./fixtures/patrimon
   const canonical=await context.newPage();await canonical.goto('https://ppp.test/potenciales-yod/patrimonial.html?open=synthetic-case');
   await canonical.locator('#patrimonialNative').waitFor();
   assert.equal(await canonical.locator('[data-native-field=inTerrenoM2]').inputValue(),'700');
+  // The station uses the original board while retaining the exact same collaboration protocol.
+  loseReceipt=false;
+  await page.evaluate(()=>{window.board=null;document.querySelector('iframe').src='/potenciales-yod/patrimonial.html?open=synthetic-case&agent=1&embed=1&view=board';});
+  await frame.locator('[data-native-field=inTerrenoM2]').waitFor();
+  await page.evaluate(()=>send('yod:ppp:hello'));
+  await page.waitForFunction(()=>window.board?.confirmed);
+  assert.equal(await frame.locator('.pn-data-card').count(),0);
+  assert.equal(await frame.locator('[data-native-field=inTerrenoM2]').inputValue(),'700');
+  await page.evaluate(()=>send('yod:ppp:apply',{proposal:{request_id:'board-original-119',case_id:board.case_id,scenario_id:board.scenario_id,revision:board.revision,motivo:'Corrección en tablero original',cambios:[{campo:'inTerrenoM2',valor:800}]}}));
+  await page.waitForFunction(()=>messages.some(m=>m.receipt?.request_id==='board-original-119'&&m.receipt.ok));
+  assert.equal(await frame.locator('[data-native-field=inTerrenoM2]').inputValue(),'800');
+  await canonical.reload();
+  await canonical.locator('[data-native-field=inTerrenoM2]').waitFor();
+  assert.equal(await canonical.locator('[data-native-field=inTerrenoM2]').inputValue(),'800');
+  assert.ok(await frame.locator('body').evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  if(process.env.PPP_SCREENSHOTS){await page.screenshot({path:path.join(process.env.PPP_SCREENSHOTS,name+'-original-shared-'+width+'.png')});if(name==='chromium')console.log('PPP_ORIGINAL_'+width+'='+ (await page.screenshot({type:'jpeg',quality:65})).toString('base64'));}
+  console.log('PASS original embedded board: shared correction, receipt and canonical reload');
   assert.deepEqual(errors,[]);await context.close();
   console.log('PASS '+name+' '+width+': original cards/Store/bridge, 500→644 receipt, focus, keyboard, canonical reload; synthetic book.');
  }}finally{await browser.close();}

@@ -97,7 +97,8 @@
   function mount({model,metadata,get,post,labelFor=id=>id,onNew,onCases,cache=null}){
     const root=document.createElement('main');root.id='patrimonialNative';root.className='container';document.querySelector('main.container').before(root);
     const legacy=[...document.querySelectorAll('main.container, .sticky-header')].filter(e=>e!==root);legacy.forEach(e=>e.hidden=true);document.body.classList.add('patrimonial-native');
-    const compact=new URL(globalThis.location.href).searchParams.get('agent')==='1'&&!!globalThis.PPPAgentCards;
+    const presentation=new URL(globalThis.location.href).searchParams;
+    const compact=presentation.get('agent')==='1'&&presentation.get('view')!=='board'&&!!globalThis.PPPAgentCards;
     let timer=null,destroyed=false,agentBridge=null;const meta=clone(metadata);
     const metaKeys=['nombre_caso','palabra','notas_caso'];let metadataDraft=Object.fromEntries(metaKeys.map(k=>[k,String(cache?.metadataDraft?.[k]??meta[k]??'')]));
     const persist=()=>{store.receiptsPersisted=saveCache({metadata:meta,metadataDraft,...store.snapshot()});return store.receiptsPersisted;};

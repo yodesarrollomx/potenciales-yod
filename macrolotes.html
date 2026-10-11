@@ -725,6 +725,7 @@
 </div></div>
 
 <div id="toast"></div>
+<script src="ppp-version-bridge.js?v=1"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -1288,7 +1289,7 @@
   function calculate(){
     state=computar(inputValues());
     escSyncActivo();
-    render();renderEscenarios();renderComparador();guardarDraft();return state}
+    render();renderEscenarios();renderComparador();guardarDraft();versionBridge.publish();return state}
 
   /* ================== VERSIONES DEL CASO (comparador) ================== */
   // Hasta 8 versiones del mismo caso. La versión ★ (esBase) es la referencia del comparador.
@@ -1296,6 +1297,8 @@
   let escenarios=[],escActivo='';
   const MAX_ESC=8;
   const escId=()=>'e'+Math.random().toString(36).slice(2,8);
+  const versionBridge=window.PPPVersionBridge.create({modelType:'macrolotes',read:()=>({caseId:caso.caso_id,scenarios:escenarios,active:escActivo,busy:false,pending:modoLocal})});
+  function rememberVersions(){versionBridge.remember({caseId:caso.caso_id,revision:String(caso.version),scenarios:escenarios,active:escActivo});}
   function escGet(id){return escenarios.find(e=>e.id===id)}
   function escBaseObj(){return escenarios.find(e=>e.esBase)||escenarios[0]}
   function escInicial(nombre){escenarios=[{id:escId(),nombre:nombre||'Base',esBase:true,inputs:inputValues()}];escActivo=escenarios[0].id}
@@ -1791,6 +1794,7 @@
     Object.keys(obj).forEach(kk=>{if(/^in[A-Z]/.test(kk)&&obj[kk]!==''&&isFinite(Number(obj[kk])))setControl(kk,Number(obj[kk]))});
     caso={caso_id:obj.caso_id||'',palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
     if(!escDesdeJson(obj.escenarios_json))escInicial('Base');
+    rememberVersions();
     calculate();pintaCaso();cerrarOverlays();toast('Caso "'+(caso.nombre_caso||caso.palabra)+'" cargado'+(escenarios.length>1?' · '+escenarios.length+' versiones':''))
   }
   async function abrirPorId(id){try{const r=await apiGet({recurso:'caso',id});if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'Ese caso ya no existe':'No se pudo abrir: '+r.error)}catch(e){toast('Sin conexión: no se pudo abrir el caso')}}
@@ -1815,7 +1819,7 @@
         return}
       if(!r.caso_id){$('gWeb').value='';toast('No se guardó: vuelve a intentar');return}
       caso.caso_id=r.caso_id;caso.palabra=r.palabra||payload.palabra;caso.correo=correo;caso.nombre_caso=nombre||'Caso sin nombre';caso.notas_caso=notas;caso.version=r.version;
-      pintaCaso();guardarDraft();cerrarOverlays();
+      rememberVersions();pintaCaso();guardarDraft();cerrarOverlays();
       toast(r.emailed?'Caso guardado · correo con la palabra enviado':'Caso guardado · palabra: '+caso.palabra)
     }catch(e){btns.forEach(b=>b.disabled=false);encolar(payload);toast('Sin conexión: se guardará al reconectar')}
   }
