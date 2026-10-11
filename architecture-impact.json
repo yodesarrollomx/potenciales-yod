@@ -10,7 +10,8 @@
   "tests": [
     "Puente: versión defendida fija, campos presentes/ausentes, borrador pendiente, nonce y origen.",
     "Navegador móvil con tres motores: tarjeta nativa Mixto, versiones originales, cero POST de negocio.",
-    "Accesos, interfaz PPP e impacto del atlas aprobados."
+    "Accesos, interfaz PPP e impacto del atlas aprobados.",
+    "Tras push de main, GET público y SHA-256 de los cinco archivos publicados; sin identidad ni escrituras."
   ],
   "rollback": "Revertir observación y pruebas; preservar escenarios, cantidades y recibos."
 }
