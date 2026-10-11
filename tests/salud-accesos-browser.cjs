@@ -22,10 +22,10 @@ async function run(){
   for(const [name,type,viewport]of[['Chromium',chromium,{width:1280,height:800}],['WebKit móvil',webkit,{width:390,height:844}]]){
    const browser=await type.launch({headless:true});
    try{
-    for(const mode of ['admin','sin-admin','respuesta-tardia']){
+    for(const mode of ['admin','sin-admin','respuesta-tardia','rol-revocado']){
      const ctx=await browser.newContext({viewport});
      await ctx.addInitScript(()=>localStorage.setItem('pyod_clave_v1','synthetic-session-never-real'));
-     const page=await ctx.newPage(),errors=[],requests=[];let release,healthRequests=0;
+     const page=await ctx.newPage(),errors=[],requests=[];let release,healthRequests=0,roleRevoked=false;
      page.on('pageerror',e=>errors.push(e.message));
      await page.route('**/*',async route=>{
       const req=route.request(),u=new URL(req.url());requests.push({url:req.url(),method:req.method()});
@@ -42,7 +42,7 @@ async function run(){
        return respond(report);
       }
       if(u.hostname==='synthetic.invalid'){
-       if(u.searchParams.get('recurso')==='canje')return respond({ok:true,rol:mode==='sin-admin'?'vista':'admin',boards:'*'});
+       if(u.searchParams.get('recurso')==='canje')return respond({ok:true,rol:mode==='sin-admin'||roleRevoked?'vista':'admin',boards:'*'});
        if(u.searchParams.get('recurso')==='accesos-lista')return respond({ok:true,usuarios:[]});
        return respond({ok:false});
       }
@@ -52,13 +52,16 @@ async function run(){
      if(mode==='sin-admin'){
       await page.waitForFunction(()=>document.querySelector('#lista').textContent.includes('administrador'));
       assert.equal(await page.locator('#salud-sistemas').isVisible(),false);assert.equal(healthRequests,0);
-     }else if(mode==='admin'){
+     }else if(mode==='admin'||mode==='rol-revocado'){
       await page.waitForSelector('#salud-sistemas .salud-row');
       assert.equal(await page.locator('#salud-sistemas .salud-verde').count()>=1,true);
       assert.equal(await page.locator('#salud-sistemas .salud-rojo').count()>=1,true);
       assert.match(await page.locator('#salud-sistemas').textContent(),/Pruebas por proceso/);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true);
-      await page.evaluate(()=>localStorage.removeItem('pyod_clave_v1'));
+      if(mode==='rol-revocado'){
+       roleRevoked=true;
+       await page.locator('[data-salud-refrescar]').click();
+      }else await page.evaluate(()=>localStorage.removeItem('pyod_clave_v1'));
       await page.waitForFunction(()=>document.querySelector('#salud-sistemas').hidden);
       assert.equal(await page.locator('#salud-sistemas').textContent(),'');
      }else{
@@ -74,7 +77,7 @@ async function run(){
      checks++;await ctx.close();
     }
    }finally{await browser.close();}
-   console.log(name+': admin, rechazo y respuesta tardía correctos');
+   console.log(name+': admin, rechazo, respuesta tardía y rol revocado correctos');
   }
  }finally{await new Promise(resolve=>server.close(resolve));}
  console.log('SALUD_ACCESOS: '+checks+' recorridos; endpoints y usuarios exclusivamente sintéticos');

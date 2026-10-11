@@ -1,14 +1,14 @@
 {
   "model_revision": "2026-10-11.salud-accesos",
   "proposal_id": "CHG-SALUD-ACCESOS-20261011",
-  "summary": "Estado por prueba y proceso en Accesos, ligado a la sesión administradora actual; lector público sin credenciales.",
+  "summary": "Comprobación de sesión cada minuto y estados por proceso en Accesos; revocación/cambio de rol limpian la vista.",
   "components": [
     "SYS-POTENCIALES",
     "SYS-CONTROL"
   ],
   "tests": [
-    "Regresiones existentes de matriz y sesión; navegador Chromium/WebKit móvil con admin, rechazo y respuesta tardía.",
-    "Código cliente aprobado fijado a bd177ce9b1c42bfc235de13226b6ee47f2248be8; publicación de Accesos byte exacta."
+    "Regresiones de matriz y sesión intactas; ocho recorridos Chromium/WebKit móvil: admin, rechazo, respuesta tardía y revocación de rol.",
+    "Cliente aprobado fijado a de33d90af87e9b5b225b0405841145348d42b8b0; publicación de Accesos byte exacta."
   ],
   "rollback": "Revertir panel y cliente por PR, sin modificar matriz, usuarios, roles, permisos o backend."
 }

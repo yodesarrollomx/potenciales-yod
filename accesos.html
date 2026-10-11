@@ -85,7 +85,7 @@
   .matriz th.todo{border-right:1px solid var(--lineaf)}
   @media(max-width:640px){.fila-alta{grid-template-columns:1fr 1fr}.container{padding:12px 11px 60px}}
 </style>
-<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-salud.js?v=salud-20261011"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-salud.js?v=salud-20261011-2"></script>
 </head>
 <body>
 <header>
@@ -367,6 +367,21 @@
       });
     }catch(e){if(!actual())return;limpiarVista('No se pudo cargar la lista.');cont.innerHTML='<p class="u-meta">No se pudo cargar la lista ('+esc(e.message||'sin conexión')+'). Recarga con Ctrl/⌘+Shift+R o vuelve a entrar con tu Google.</p>'}
   }
+  async function probarSesionSalud(){
+    const s=sesion();
+    if(!vigente(s,true))return false;
+    try{
+      const raw=await leer('canje',s);
+      if(!vigente(s,true))return false;
+      const j=JSON.parse(raw);
+      if(j.ok&&j.rol==='admin')return true;
+      limpiarVista('Tu sesión ya no permite administrar Accesos. Vuelve a validar.');
+      return false;
+    }catch(e){
+      if(vigente(s,true))limpiarVista('No se pudo comprobar tu sesión. Pulsa Reintentar validación.');
+      return false;
+    }
+  }
   async function esperarAdminYcargar(s){
     try{
       const raw=await leer('canje',s);
@@ -375,7 +390,7 @@
       if(!j.ok){limpiarVista('Tu sesión no se pudo validar: '+(j.error||'rechazada')+'. Vuelve a entrar.');return}
       if(j.rol!=='admin'){limpiarVista('Necesitas sesión de administrador para ver esto.');return}
       admin=true;
-      window.YodSalud?.activar({elementId:'salud-sistemas'});
+      window.YodSalud?.activar({elementId:'salud-sistemas',probarSesion:probarSesionSalud});
       ['aCorreo','aNombre','aBoards','aRol'].forEach(id=>{$(id).disabled=false});
       actualizarBotonAlta();
       await cargar(s);
