@@ -1,15 +1,16 @@
 {
   "model_revision": "2026-10-11.despacho-lectura-reportes133",
   "proposal_id": "CHG-DESPACHO-LECTURA-REPORTES-20261011",
-  "summary": "Reutilizar PR20: recuperación automática de canje transitorio en primera carga; conservar el candado hasta autorización auténtica, bloquear caducidad/revocación y conservar token sin nuevo login. No altera datos, scopes ni backend.",
+  "summary": "Compartir foco real de tarjeta PPP, versión defendida y versión consultada; admitir campos heterogéneos y comunicar cantidades del borrador pendiente sin promoverlas a valores o resultados guardados. No cambia fórmulas, permisos, metas ni ejecuta escrituras.",
   "components": [
     "SYS-POTENCIALES",
-    "GAS-PORTERO",
-    "SYS-YOD-OS"
+    "SYS-DESPACHO",
+    "SYS-DESPACHO-3D"
   ],
   "tests": [
-    "Acceso: primera carga offline, recuperación sin login y rechazo definitivo sin reapertura.",
-    "Acceso y UI PPP completos; impacto contra commit aprobado del atlas."
+    "Puente: versión defendida fija, campos presentes/ausentes, borrador pendiente, nonce y origen.",
+    "Navegador móvil con tres motores: tarjeta nativa Mixto, versiones originales, cero POST de negocio.",
+    "Accesos, interfaz PPP e impacto del atlas aprobados."
   ],
-  "rollback": "Revertir Portero y sus pruebas del PR20; conservar sesiones y datos."
+  "rollback": "Revertir observación y pruebas; preservar escenarios, cantidades y recibos."
 }

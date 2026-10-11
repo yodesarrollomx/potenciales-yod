@@ -15,3 +15,10 @@ test('refresh/new registration cannot silently change pinned defended version',(
 
 test('same handshake cannot repin the defended version',()=>{const x=setup();const count=x.sent.length;x.send({type:'yod:ppp:hello',scenario_id:'older'});assert.equal(x.sent.length,count);assert.equal(x.bridge.snapshot().scenario_id,'newer');x.send({type:'yod:ppp:hello',scenario_id:'newer'});assert.ok(x.sent.length>count);assert.equal(x.bridge.snapshot().scenario_id,'newer');});
 test('explicit initial pin survives retries and attempts to replace it',()=>{const x=setup({scenario_id:'older'});assert.equal(x.bridge.snapshot().scenario_id,'older');x.send({type:'yod:ppp:hello',scenario_id:'newer'});assert.equal(x.bridge.snapshot().scenario_id,'older');x.send({type:'yod:ppp:hello',scenario_id:'older'});assert.equal(x.bridge.snapshot().scenario_id,'older');});
+
+test('heterogeneous versions share known fields without fabricating defended quantities and draft stays unconfirmed',()=>{
+ const x=setup(),next=[{id:'older',nombre:'Anterior',inputs:{inArea:10,inExtra:3}},{id:'newer',nombre:'Última',inputs:{inArea:20}}];
+ x.view.scenarios=structuredClone(next);x.bridge.remember({caseId:'board-a',revision:'rev2',scenarios:next,active:'older'});
+ let s=x.bridge.snapshot();assert.equal(s.scenario_id,'newer');assert.equal(s.inputs.inArea,20);assert.equal(s.inputs.inExtra,null);assert.equal(s.version_context.viewed_inputs.inExtra,3);assert.ok(s.fields.some(f=>f.id==='inExtra'&&!f.editable));
+ x.view.pending=true;x.view.draftInputs={inArea:12,inExtra:4,inOutside:999};s=x.bridge.snapshot();assert.equal(s.pending,true);assert.equal(s.inputs.inArea,20);assert.equal(s.version_context.viewed_inputs.inArea,12);assert.equal(Object.hasOwn(s.version_context.viewed_inputs,'inOutside'),false);assert.deepEqual(s.results,{});
+});

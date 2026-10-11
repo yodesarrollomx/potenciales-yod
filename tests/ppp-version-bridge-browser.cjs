@@ -11,7 +11,10 @@ const {install,native}=require('./ppp-fixture.js');
  const p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.goto('https://ppp.test/yod-portal/despacho3d/test.html');
  await p.waitForFunction(()=>snapshots.some(s=>s.board?.scenario_id==='new'),{},{timeout:20000});
  const before=await p.evaluate(()=>snapshots.at(-1).board);assert.equal(before.version_context.viewed_scenario_id,'old');assert.equal(before.inputs.inTerreno,1900);assert.equal(before.fields.every(f=>!f.editable),true);
- const frame=p.frames().find(f=>f.url().includes('/potenciales-yod/'));if(page==='mixto.html'){const summary=frame.locator('#pppVersiones>summary');if(await summary.count())await summary.click();}
+ const frame=p.frames().find(f=>f.url().includes('/potenciales-yod/'));if(page==='mixto.html'){await frame.locator('#pppToggledArq').click();
+ await p.waitForFunction(()=>snapshots.at(-1).board?.focus?.card==='dArq');
+ assert.equal((await p.evaluate(()=>snapshots.at(-1).board.focus)).fields.includes('inTerreno'),true);
+ const summary=frame.locator('#pppVersiones>summary');if(await summary.count())await summary.click();}
  assert.equal(await frame.locator('[data-esc]').count(),2);
  // No controls were replaced and opening the bridge did not issue a business write.
  assert.equal(net.posts.length,0);assert.deepEqual(errors,[]);await context.close();console.log(page+': original versions, latest defended, no writes; mobile passed');
