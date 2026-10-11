@@ -1,15 +1,14 @@
 {
-  "model_revision": "2026-10-08.121-puesto-ppp-original",
-  "proposal_id": "CHG-DESPACHO-PPP-119",
-  "summary": "Separar presentación y protocolo; conservar puentes de versiones de main, fórmulas, persistencia y permisos.",
+  "model_revision": "2026-10-11.salud-accesos",
+  "proposal_id": "CHG-SALUD-ACCESOS-20261011",
+  "summary": "Comprobación de sesión cada minuto y estados por proceso en Accesos; revocación/cambio de rol limpian la vista.",
   "components": [
-    "SYS-POTENCIALES"
+    "SYS-POTENCIALES",
+    "SYS-CONTROL"
   ],
   "tests": [
-    "Tablero original con puente habilitado y caso exacto; modo compacto compatible.",
-    "Un solo control de señalamiento por superficie, selección de tarjetas e iframe sin ejecutar acciones.",
-    "Voz e iframe se conservan al cambiar de vista; escritorio y móvil; aislamiento de proyecto.",
-    "Arquitectura, suites y verificadores de ambos repositorios."
+    "Regresiones de matriz y sesión intactas; ocho recorridos Chromium/WebKit móvil: admin, rechazo, respuesta tardía y revocación de rol.",
+    "Cliente aprobado fijado a de33d90af87e9b5b225b0405841145348d42b8b0; publicación de Accesos byte exacta."
   ],
-  "rollback": "Revertir presentación y parámetros del puesto; conservar datos, versiones financieras y permisos."
+  "rollback": "Revertir panel y cliente por PR, sin modificar matriz, usuarios, roles, permisos o backend."
 }

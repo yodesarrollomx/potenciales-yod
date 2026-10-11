@@ -32,6 +32,20 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/yod-browser/node_modules
         run: node tests/access-browser.cjs
+      - name: Cliente de salud aprobado para prueba aislada
+        uses: actions/checkout@v4
+        with:
+          repository: yodesarrollomx/yod-portal
+          ref: de33d90af87e9b5b225b0405841145348d42b8b0
+          path: .salud-portal
+          persist-credentials: false
+          sparse-checkout: |
+            os/yod-salud.js
+      - name: Salud de Accesos · escritorio y móvil · sin red de negocio
+        env:
+          NODE_PATH: ${{ runner.temp }}/yod-browser/node_modules
+          SALUD_CLIENT_SOURCE: .salud-portal/os/yod-salud.js
+        run: node tests/salud-accesos-browser.cjs
       - name: Comprobar JavaScript realmente publicado en Pages
         if: github.event_name == 'push'
         env:
@@ -46,4 +60,19 @@ jobs:
             sleep 10
           done
           echo 'No se confirmó publicación exacta de portero.js; no dar por desplegado.'
+          exit 1
+      - name: Confirmar Accesos publicado byte exacto
+        if: github.event_name == 'push'
+        env:
+          REVISION: ${{ github.sha }}
+        run: |
+          for intento in $(seq 1 18); do
+            if curl --fail --silent --show-error --max-time 20 -H 'Cache-Control: no-cache' "https://yodesarrollomx.github.io/potenciales-yod/accesos.html?verificar=$REVISION" -o "$RUNNER_TEMP/accesos-publicado.html" && cmp -s accesos.html "$RUNNER_TEMP/accesos-publicado.html"; then
+              echo "Pages verificado: accesos.html coincide exactamente con $REVISION"
+              sha256sum accesos.html "$RUNNER_TEMP/accesos-publicado.html"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'No se confirmó publicación exacta de Accesos.'
           exit 1
