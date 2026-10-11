@@ -85,6 +85,7 @@
   .matriz th.todo{border-right:1px solid var(--lineaf)}
   @media(max-width:640px){.fila-alta{grid-template-columns:1fr 1fr}.container{padding:12px 11px 60px}}
 </style>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-salud.js?v=salud-20261011"></script>
 </head>
 <body>
 <header>
@@ -99,6 +100,8 @@
     <p>Dar acceso = agregar el correo aquí (o una fila en la hoja ACCESOS). La persona escribe su correo en cualquier board y recibe su <b>liga mágica</b> de 90 días. Revocar mata sus sesiones al instante.</p>
     <button class="btn ghost" id="aRetry" type="button" disabled style="margin-top:12px">Reintentar validación</button>
   </section>
+
+  <section class="card" id="salud-sistemas" hidden aria-label="Estado de los sistemas"></section>
 
   <section class="card">
     <h2>➕ Dar acceso (pega el correo del WhatsApp)</h2>
@@ -159,6 +162,7 @@
   const entradaLiga=!!new URLSearchParams(location.search).get('liga');
   const sesion=()=>({token:tokenActual,generacion});
   function limpiarVista(mensaje){
+    window.YodSalud?.detener();
     admin=false;listado++;
     $('lista').innerHTML='<p class="u-meta">'+esc(mensaje)+'</p>';
     $('matriz').innerHTML='<tbody><tr><td class="u">'+esc(mensaje)+'</td></tr></tbody>';
@@ -371,6 +375,7 @@
       if(!j.ok){limpiarVista('Tu sesión no se pudo validar: '+(j.error||'rechazada')+'. Vuelve a entrar.');return}
       if(j.rol!=='admin'){limpiarVista('Necesitas sesión de administrador para ver esto.');return}
       admin=true;
+      window.YodSalud?.activar({elementId:'salud-sistemas'});
       ['aCorreo','aNombre','aBoards','aRol'].forEach(id=>{$(id).disabled=false});
       actualizarBotonAlta();
       await cargar(s);
