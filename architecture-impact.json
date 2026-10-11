@@ -1,7 +1,7 @@
 {
   "model_revision": "2026-10-11.despacho-lectura-reportes133",
   "proposal_id": "CHG-DESPACHO-LECTURA-REPORTES-20261011",
-  "summary": "Compartir foco real de tarjeta PPP, versión defendida y versión consultada; admitir campos heterogéneos y comunicar cantidades del borrador pendiente sin promoverlas a valores o resultados guardados. No cambia fórmulas, permisos, metas ni ejecuta escrituras.",
+  "summary": "Ejecutar en CI el recorrido específico de foco compartido de los tres motores y actualizar referencias de caché del puente en Macro/Patrimonial. Conserva protocolos y cantidades. Sólo el transporte de prueba usa fixtures.",
   "components": [
     "SYS-POTENCIALES",
     "SYS-DESPACHO",
