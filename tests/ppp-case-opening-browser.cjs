@@ -3,11 +3,12 @@
 const {chromium,webkit}=require('playwright'),assert=require('node:assert/strict');
 const {install}=require('./ppp-fixture.js'),fixture=require('./fixtures/patrimonial-native.json');
 const session='sy-synthetic-browser-session';
-const parent='<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="margin:0"><iframe title="PPP" src="/potenciales-yod/patrimonial.html?open=synthetic-case&agent=1&embed=1" style="width:100%;height:100vh;border:0"></iframe><script>window.board=null;addEventListener("message",e=>{if(e.origin===location.origin&&e.source===document.querySelector("iframe").contentWindow&&e.data?.type==="yod:ppp:state"&&e.data.nonce==="opening-test-140")window.board=e.data.board;});setInterval(()=>document.querySelector("iframe").contentWindow.postMessage({type:"yod:ppp:hello",version:1,nonce:"opening-test-140",case_id:"synthetic-case"},location.origin),100);</script>';
+const parent='<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="margin:0"><iframe title="PPP" src="/potenciales-yod/patrimonial.html?open=synthetic-case&agent=1&embed=1&view=cards" style="width:100%;height:100vh;border:0"></iframe><script>window.board=null;addEventListener("message",e=>{if(e.origin===location.origin&&e.source===document.querySelector("iframe").contentWindow&&e.data?.type==="yod:ppp:state"&&e.data.nonce==="opening-test-140")window.board=e.data.board;});setInterval(()=>document.querySelector("iframe").contentWindow.postMessage({type:"yod:ppp:hello",version:1,nonce:"opening-test-140",case_id:"synthetic-case"},location.origin),100);</script>';
 (async()=>{for(const [engineName,engine] of Object.entries({chromium,webkit})){
- const browser=await engine.launch();try{for(const width of [1280,390])for(const scenario of ['catalog-independent','transient','wrong-case','revoked']){
+ const browser=await engine.launch();try{for(const width of [1280,390])for(const scenario of ['catalog-independent','transient','wrong-case','revoked','pending-conflict'])for(const presentation of scenario==='catalog-independent'?['cards','board']:scenario==='pending-conflict'?['board']:['cards']){
   const context=await browser.newContext({viewport:{width,height:900},reducedMotion:'reduce'});await install(context,{seed:null});
   const reads=[],businessPosts=[],errors=[];let caseReads=0,corrected=false;
+  if(scenario==='pending-conflict')await context.addInitScript(model=>{const old=JSON.parse(JSON.stringify(model));old.revision+='-older';localStorage.setItem('pyod_patrimonial_native_v1:synthetic-case',JSON.stringify({model:old,metadata:{caso_id:'synthetic-case',nombre_caso:'PPP de prueba',palabra:'ensayo',version:1},pending:{inCus:4},job:null,receipts:[]}));},fixture);
   await context.route('https://script.google.com/**',async route=>{
    const request=route.request(),url=new URL(request.url()),action=url.searchParams.get('recurso');let out={ok:true};
    if(request.method()==='POST'){const payload=request.postDataJSON();if(payload?.tipo!=='bitacora')businessPosts.push(payload);}
@@ -24,7 +25,7 @@ const parent='<!doctype html><meta name="viewport" content="width=device-width,i
    }
    return route.fulfill({contentType:'application/json',body:JSON.stringify(out)});
   });
-  await context.route('https://ppp.test/yod-portal/despacho3d/__opening',route=>route.fulfill({contentType:'text/html',body:parent}));
+  await context.route('https://ppp.test/yod-portal/despacho3d/__opening',route=>route.fulfill({contentType:'text/html',body:presentation==='board'?parent.replace('&agent=1&embed=1&view=cards','&agent=1&embed=1&view=board'):parent}));
   const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
   await page.goto('https://ppp.test/yod-portal/despacho3d/__opening');const frame=page.frameLocator('iframe[title=PPP]');
   if(scenario==='wrong-case'){
@@ -37,10 +38,10 @@ const parent='<!doctype html><meta name="viewport" content="width=device-width,i
    assert.equal(await frame.locator('#patrimonialNative').count(),0);assert.equal(caseReads,1);
   }
   if(scenario!=='revoked'){
-   await frame.locator('#patrimonialNative').waitFor();await page.waitForFunction(()=>window.board?.confirmed===true);
+   await frame.locator('#patrimonialNative').waitFor();if(scenario==='pending-conflict'){await frame.locator('.pn-status').getByText('Otra edición cambió el libro.',{exact:false}).waitFor();await page.waitForFunction(()=>window.board?.pending===true&&window.board.confirmed===false);assert.equal(await frame.locator('[data-native-field=inCus]').inputValue(),'4');assert.equal(await frame.locator('[data-action=discard]').isVisible(),true,'original reconciliation remains available');}else await page.waitForFunction(()=>window.board?.confirmed===true);
    assert.equal(await frame.locator('#pppCaseOpening').isVisible(),false);
-   assert.equal(await frame.locator('.pn-data-card[open]').count(),0,'native cards stay closed');
-   if(scenario==='transient')assert.equal(caseReads,2);else if(scenario==='catalog-independent')assert.equal(caseReads,1);else assert.equal(caseReads,2);
+   if(presentation==='cards'){assert.equal(await frame.locator('.pn-data-card').count(),6);assert.equal(await frame.locator('.pn-data-card[open]').count(),0,'native cards stay closed');}else{assert.equal(await frame.locator('.pn-summary').count(),1,'existing board presentation remains available');}
+   if(scenario==='transient')assert.equal(caseReads,2);else if(['catalog-independent','pending-conflict'].includes(scenario))assert.equal(caseReads,1);else assert.equal(caseReads,2);
   }
   const inner=page.frames().find(f=>f.url().includes('patrimonial.html'));
   assert.equal(await inner.evaluate(()=>localStorage.getItem('pyod_clave_v1')),session,'PPP must not erase OS credential');
@@ -48,6 +49,6 @@ const parent='<!doctype html><meta name="viewport" content="width=device-width,i
   assert.equal(businessPosts.length,0);assert.deepEqual(errors,[]);
   assert.equal(await inner.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'viewport overflow');
   await context.close();
-  console.log(engineName+' '+width+' '+scenario+': real HTML and bridge, isolated transport, zero business writes');
+  console.log(engineName+' '+width+' '+scenario+' '+presentation+': real HTML and bridge, isolated transport, zero business writes');
  }}finally{await browser.close();}
 }})().catch(error=>{console.error(error);process.exitCode=1;});

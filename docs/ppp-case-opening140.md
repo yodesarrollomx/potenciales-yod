@@ -1,12 +1,12 @@
 # Apertura exacta del PPP Patrimonial · 140
 
 Propuesta registrada antes del código: atlas `0a548fcabcd2351a4caeceeeec797db9266c0f37`, revisión `2026-10-12.despacho-perfil140.1`, `CHG-DESPACHO-PERFIL-ORDEN-20261012`.
-Fecha de preparación: 12-oct-2026 12:40 America/Hermosillo (19:40 UTC). Estado: código en rama; revisión, CI y publicación pendientes.
+Fecha de preparación: 12-oct-2026 12:38 America/Hermosillo (19:38 UTC). Estado: código en rama; revisión, CI y publicación pendientes.
 
 ## Problema y resultado
 Antes, abrir un vínculo `?open` esperaba primero el catálogo completo y luego el caso. Una respuesta temporal de catálogo con `ok:false` invocaba la función que borraba el token compartido con YOD OS. La lectura no tenía límite y una respuesta anterior podía reemplazar la selección posterior.
 
-Ahora, el vínculo solicita únicamente su caso. El catálogo sigue disponible mediante Mis casos, con su contrato original. El cargador existente descarta respuestas tardías y acota la lectura a25segundos. Los errores transitorios permiten hasta dos reintentos adicionales, a2y5segundos, únicamente de lectura. Tras agotarlos, el puesto muestra una recuperación local. No se cambia el token del OS.
+Ahora, el vínculo solicita únicamente su caso. El catálogo sigue disponible mediante Mis casos, con su contrato original. El cargador existente descarta respuestas tardías y acota la lectura a 25 segundos. Los errores transitorios permiten hasta dos reintentos adicionales, a 2 y 5 segundos, únicamente de lectura. Tras agotarlos, el puesto muestra una recuperación local. No se cambia el token del OS.
 
 La respuesta debe coincidir con el ID solicitado y pasar la aceptación del modelo original. Una respuesta ajena, un modelo inválido o un rechazo de acceso no muestra otro caso ni confirma el anterior como actual. Una máscara de estado evita presentar el borrador previo mientras se comprueba la selección. Los datos, escenarios, cálculos y recibos permanecen en el Store existente.
 
@@ -27,3 +27,8 @@ La sintaxis y un diagnóstico aislado de las pruebas pasaron en V8. Node/Playwri
 
 ## Reversión
 Revertir esta entrega frontend mediante PR y repetir comprobaciones. No restaurar ni borrar datos de empresa, fórmulas, escenarios, permisos o recibos.
+
+## 12-oct-2026 12:43 America/Hermosillo · revisión de la preparación
+El commit inicial `b0f02dbf15a13c01a5c4795b05adab5c49ed2b16` pasó [Interfaz38299045198](https://github.com/yodesarrollomx/potenciales-yod/actions/runs/38299045198), [Acceso38299045249](https://github.com/yodesarrollomx/potenciales-yod/actions/runs/38299045249) y [Arquitectura38299045201](https://github.com/yodesarrollomx/potenciales-yod/actions/runs/38299045201). Node, Chromium y WebKit se ejecutaron realmente, con transportes aislados. Se conservaron pruebas de cantidades, recibos y borradores; no hubo publicación.
+
+La revisión posterior distingue modelo inválido de un conflicto legítimo con un borrador pendiente del mismo caso. Ese conflicto conserva el mensaje y los controles originales para conciliar; no queda oculto detrás del aviso de apertura ni reemplaza cantidades. Se amplía el recorrido a las dos presentaciones nativas (cards y board) y al conflicto de borrador. La nueva versión requiere su propia CI y revisión antes de publicar.
