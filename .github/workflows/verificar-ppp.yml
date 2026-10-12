@@ -62,6 +62,7 @@ jobs:
           node tests/ppp-version-bridge-browser.cjs
           node tests/ppp-agent-cards-browser.cjs
           node tests/ppp-case-opening-browser.cjs
+          node tests/ppp-case-opening-shell-browser.cjs
           node tests/ppp-agent-receipts-browser.cjs
           node tests/ppp-browser.cjs
           node tests/ppp-identity-browser.cjs

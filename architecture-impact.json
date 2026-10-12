@@ -1,15 +1,17 @@
 {
   "model_revision": "2026-10-12.despacho-perfil140.1",
   "proposal_id": "CHG-DESPACHO-PERFIL-ORDEN-20261012",
-  "summary": "Apertura PPP Patrimonial por caso exacto sin esperar catálogo; lecturas acotadas y recuperación local sin borrar la sesión compartida. Conserva cálculo, cantidades, contratos, escenarios y Store nativo.",
+  "summary": "Conservar visible la recuperación PPP al envolver el tablero en el shell real, ocultando únicamente la superficie de datos no verificada. Complemento de apertura140, sin modificar cálculos, cantidades, permisos o contratos.",
   "components": [
     "SYS-POTENCIALES",
-    "SYS-DESPACHO-3D"
+    "SYS-DESPACHO-3D",
+    "SYS-YOD-OS"
   ],
   "tests": [
     "Controlador de apertura: selección exacta, timeout, reintento limitado, credencial/generación, rechazo de otra identidad y modelo inválido; cero escrituras.",
     "HTML real Patrimonial y puente nativo en Chromium/WebKit 1280 y390: catálogo independiente, lock_busy, respuesta ajena, recuperación y rechazo de acceso sin borrar token del OS.",
-    "Regresiones existentes de cantidades, recibos, borradores, escenarios, accesos y arquitectura; integración y publicación se acreditan por separado."
+    "Regresiones existentes de cantidades, recibos, borradores, escenarios, accesos y arquitectura; integración y publicación se acreditan por separado.",
+    "Standalone sin embed en Chromium/WebKit 1280 y390 con shell real del atlas fijado: carga retenida, error, rechazo de acceso y recuperación visible, cero escrituras de negocio."
   ],
   "rollback": "Revertir frontend de apertura y sus pruebas por PR, conservando libros, cantidades, fórmulas, revisiones, escenarios y recibos."
 }
