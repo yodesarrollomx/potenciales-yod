@@ -17,7 +17,7 @@ const parent='<!doctype html><meta name="viewport" content="width=device-width,i
     if(action==='canje')out={ok:true,token:session,boards:'PT',rol:'admin'};
     else if(action==='lista')out={ok:false,error:'lock_busy'};
     else if(action==='caso'){
-     caseReads++;
+     caseReads++;if(scenario==='catalog-independent'&&caseReads===1)await new Promise(resolve=>setTimeout(resolve,200));
      if(scenario==='transient'&&caseReads===1)out={ok:false,error:'lock_busy'};
      else if(scenario==='revoked'&&!corrected)out={ok:false,error:'revocado'};
      else {const model=structuredClone(fixture),id=scenario==='wrong-case'&&!corrected?'other-case':model.caso_id;model.caso_id=id;out={ok:true,caso:{caso_id:id,nombre_caso:'PPP de prueba',palabra:'ensayo',version:1,calculo_sheet:model}};}
@@ -28,6 +28,7 @@ const parent='<!doctype html><meta name="viewport" content="width=device-width,i
   await context.route('https://ppp.test/yod-portal/despacho3d/__opening',route=>route.fulfill({contentType:'text/html',body:presentation==='board'?parent.replace('&agent=1&embed=1&view=cards','&agent=1&embed=1&view=board'):parent}));
   const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
   await page.goto('https://ppp.test/yod-portal/despacho3d/__opening');const frame=page.frameLocator('iframe[title=PPP]');
+  if(scenario==='catalog-independent'||scenario==='transient'){await frame.locator('#pppCaseOpening').getByText(scenario==='transient'?'Recuperando conexión':'Abriendo tu plan de potencial',{exact:true}).waitFor();assert.equal(await frame.getByRole('button',{name:'Volver a conectar el plan',includeHidden:true}).isVisible(),false);assert.equal(await frame.locator('#pppCaseOpening').getByRole('button',{name:'Entrar con Google',includeHidden:true}).isVisible(),false);}
   if(scenario==='wrong-case'){
    await frame.locator('#pppCaseOpening').getByText('La respuesta no corresponde a este caso. No se aplicó.').waitFor();
    assert.equal(await frame.locator('#patrimonialNative').count(),0,'foreign model was not mounted');

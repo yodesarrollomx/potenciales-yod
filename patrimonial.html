@@ -1098,7 +1098,7 @@
     if(!escDesdeJson(obj.escenarios_json))escInicial('Base');
     rememberLegacyVersions();calculate();pintaCaso();cerrarOverlays();toast('Caso "'+(caso.nombre_caso||caso.palabra)+'" cargado'+(escenarios.length>1?' · '+escenarios.length+' versiones':''));return true
   }
-  const openingStyle=document.createElement('style');openingStyle.textContent='body[data-ppp-opening="true"] > :not(#pppCaseOpening):not(#gate):not(#porteroGate){visibility:hidden}';document.head.append(openingStyle);
+  const openingStyle=document.createElement('style');openingStyle.textContent='#pppCaseOpening [hidden]{display:none!important}body[data-ppp-opening="true"] > :not(#pppCaseOpening):not(#gate):not(#porteroGate){visibility:hidden}';document.head.append(openingStyle);
   const openingNotice=document.createElement('section');openingNotice.id='pppCaseOpening';openingNotice.setAttribute('role','status');openingNotice.hidden=true;
   Object.assign(openingNotice.style,{position:'fixed',inset:'0',zIndex:'490',background:'var(--bg)',padding:'24px',display:'none',placeContent:'center',gap:'12px',textAlign:'center'});
   const openingTitle=document.createElement('h2'),openingMessage=document.createElement('p'),openingRetry=document.createElement('button');openingRetry.type='button';openingRetry.className='small-btn';openingRetry.textContent='Volver a conectar el plan';const openingLogin=document.createElement('button');openingLogin.type='button';openingLogin.className='small-btn';openingLogin.textContent='Entrar con Google';openingLogin.hidden=true;openingNotice.append(openingTitle,openingMessage,openingRetry,openingLogin);document.body.append(openingNotice);openingTitle.style.maxWidth='52ch';openingMessage.style.maxWidth='52ch';openingMessage.style.overflowWrap='anywhere';
