@@ -1101,17 +1101,17 @@
   const openingStyle=document.createElement('style');openingStyle.textContent='body[data-ppp-opening="true"] > :not(#pppCaseOpening):not(#gate):not(#porteroGate){visibility:hidden}';document.head.append(openingStyle);
   const openingNotice=document.createElement('section');openingNotice.id='pppCaseOpening';openingNotice.setAttribute('role','status');openingNotice.hidden=true;
   Object.assign(openingNotice.style,{position:'fixed',inset:'0',zIndex:'490',background:'var(--bg)',padding:'24px',display:'none',placeContent:'center',gap:'12px',textAlign:'center'});
-  const openingTitle=document.createElement('h2'),openingMessage=document.createElement('p'),openingRetry=document.createElement('button');openingRetry.type='button';openingRetry.className='small-btn';openingRetry.textContent='Volver a conectar el plan';openingNotice.append(openingTitle,openingMessage,openingRetry);document.body.append(openingNotice);openingTitle.style.maxWidth='52ch';openingMessage.style.maxWidth='52ch';openingMessage.style.overflowWrap='anywhere';
+  const openingTitle=document.createElement('h2'),openingMessage=document.createElement('p'),openingRetry=document.createElement('button');openingRetry.type='button';openingRetry.className='small-btn';openingRetry.textContent='Volver a conectar el plan';const openingLogin=document.createElement('button');openingLogin.type='button';openingLogin.className='small-btn';openingLogin.textContent='Entrar con Google';openingLogin.hidden=true;openingNotice.append(openingTitle,openingMessage,openingRetry,openingLogin);document.body.append(openingNotice);openingTitle.style.maxWidth='52ch';openingMessage.style.maxWidth='52ch';openingMessage.style.overflowWrap='anywhere';
   function paintOpening(value){
-    const ready=value.phase==='ready';document.body.dataset.pppOpening=String(!ready);openingNotice.hidden=ready;openingNotice.style.display=ready?'none':'grid';openingRetry.hidden=!['error','unauthorized'].includes(value.phase);
+    const ready=value.phase==='ready';document.body.dataset.pppOpening=String(!ready);openingNotice.hidden=ready;openingNotice.style.display=ready?'none':'grid';openingRetry.hidden=!['error','unauthorized'].includes(value.phase);openingLogin.hidden=value.phase!=='unauthorized';
     openingTitle.textContent=value.phase==='loading'?'Abriendo tu plan de potencial':value.phase==='retrying'?'Recuperando conexión':value.phase==='unauthorized'?'Valida el acceso al plan':'No se pudo abrir este plan';
     openingMessage.textContent=value.phase==='loading'?'Recuperando los datos de este proyecto.':value.phase==='retrying'?'La lectura no respondió. Reintentando sin cerrar tu sesión ni modificar cantidades.':value.phase==='unauthorized'?'La sesión del plan necesita validarse. El resto de YOD OS conserva su sesión.':value.error==='no_existe'?'El caso registrado no está disponible. No se cargó otro caso.':value.error==='case_mismatch'?'La respuesta no corresponde a este caso. No se aplicó.':value.error==='invalid_model'?'El modelo no pudo verificarse. Se conservan las cantidades anteriores sin presentar otra lectura como actual.':'La conexión no se confirmó. Puedes volver a intentar; no se enviaron cantidades.';
   }
   const caseOpening=PPPCaseOpening.create({read:apiGet,apply:aplicarCasoRemoto,onState:paintOpening,
     getCredential:()=>{try{return clave&&localStorage.getItem(LS.clave)===clave?clave:null;}catch{return null;}},
     onAuthorized:()=>{modoLocal=false;$('gate').classList.add('off');$('modoLocalBanner').classList.remove('on');drenarCola();},
-    onUnauthorized:()=>reabrirGate()});
-  openingRetry.onclick=()=>caseOpening.retry();
+    onUnauthorized:()=>{$('gate').classList.add('off');}});
+  openingRetry.onclick=()=>caseOpening.retry();openingLogin.onclick=()=>{if(window.YODPortero?.entrar)window.YODPortero.entrar();else reabrirGate();};
   window.addEventListener('pagehide',()=>caseOpening.invalidate());
   function abrirPorId(id){$('gate').classList.add('off');return caseOpening.openId(id);}
   function abrirPorPalabra(palabra){if(!palabra.trim())return;return caseOpening.openWord(palabra);}
@@ -1177,7 +1177,7 @@
     window.open('https://wa.me/'+(num?num:'')+'?text='+encodeURIComponent(linea),'_blank')
   }
   /* ================== GATE / MODALES ================== */
-  function reabrirGate(){clave='';$('gate').classList.remove('off');$('gateErr').textContent='La clave cambió o es incorrecta'}
+  function reabrirGate(){const gate=$('gate');gate.classList.remove('off');gate.style.removeProperty('display');gate.removeAttribute('aria-hidden');$('gateErr').textContent='No se confirmó el acceso a este plan. Valida tu sesión de Google o vuelve a intentar.'}
   async function intentarEntrar(){
     const v=$('gateClave').value.trim();if(!v){$('gateErr').textContent='Escribe la clave';return}
     $('gateBtn').disabled=true;$('gateErr').textContent='';
