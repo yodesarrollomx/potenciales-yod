@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: yodesarrollomx/yod-portal
-          ref: 90cbe0b9bade8d89295a5080922803fdfeb70fd0
+          ref: 0a548fcabcd2351a4caeceeeec797db9266c0f37
           path: .yod-atlas-ui
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -37,6 +37,8 @@ jobs:
           node --check ppp-version-bridge.js
           node --check ppp-patrimonial-native.js
           node --check ppp-case-loader.js
+          node --check ppp-case-opening.js
+          node --test tests/ppp-case-opening.test.cjs
           node --check ppp-catalog.js
           node --test tests/ppp-ui.test.cjs tests/ppp-case-loader.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs tests/patrimonial-native.test.cjs tests/ppp-version-bridge.test.cjs
           git diff --check
@@ -59,6 +61,7 @@ jobs:
         run: |
           node tests/ppp-version-bridge-browser.cjs
           node tests/ppp-agent-cards-browser.cjs
+          node tests/ppp-case-opening-browser.cjs
           node tests/ppp-agent-receipts-browser.cjs
           node tests/ppp-browser.cjs
           node tests/ppp-identity-browser.cjs
@@ -77,7 +80,7 @@ jobs:
           const fs=require('node:fs'),crypto=require('node:crypto');
           const digest=b=>crypto.createHash('sha256').update(b).digest('hex');
           (async()=>{
-            const paths=['ppp-version-bridge.js','mixto.html','macrolotes.html','patrimonial.html','portero.js'];
+            const paths=['ppp-version-bridge.js','mixto.html','macrolotes.html','patrimonial.html','ppp-case-opening.js','portero.js'];
             for(const path of paths){
               const expected=digest(fs.readFileSync(path));let verified=false;
               for(let attempt=0;attempt<6;attempt++){
