@@ -502,6 +502,7 @@
 
 <div id="toast"></div>
 <link rel="stylesheet" href="ppp-patrimonial-native.css?v=3">
+<script src="ppp-case-loader.js?v=1"></script><script src="ppp-case-opening.js?v=140"></script>
 <script src="ppp-version-bridge.js?v=3"></script><script src="ppp-agent-bridge.js?v=3"></script><script src="ppp-agent-cards.js?v=2"></script><script src="ppp-patrimonial-native.js?v=20261008-board119"></script>
 <script>
 (() => {
@@ -1051,7 +1052,9 @@
   /* ================== CAPA DE NUBE ================== */
   let toastTimer=null;
   function toast(msg,ms=3200){const t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('on'),ms)}
-  function apiGet(params){const q=new URLSearchParams(Object.assign({k:clave,tipo:NUBE.TIPO},params));return fetch(NUBE.ENDPOINT+'?'+q.toString()).then(r=>r.json())}
+  async function apiGet(params){const q=new URLSearchParams(Object.assign({k:clave,tipo:NUBE.TIPO},params)),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);
+    try{const response=await fetch(NUBE.ENDPOINT+'?'+q.toString(),{signal:controller.signal,credentials:'omit',cache:'no-store'});if(!response.ok)throw Error('unavailable');return await response.json();}
+    catch(error){if(controller.signal.aborted)throw Error('timeout');throw error;}finally{clearTimeout(timer);}}
   function apiPost(body){body=Object.assign({k:clave,tipo_desarrollo:NUBE.TIPO},body);return fetch(NUBE.ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)}).then(r=>r.json())}
   function nuevoRequestId(){return (crypto.randomUUID?.()||Date.now()+'-'+Math.random())}
   function guardarDraft(){try{localStorage.setItem(LS.draft,JSON.stringify({inputs:inputValues(),caso,escenarios,escActivo}))}catch(e){}}
@@ -1086,17 +1089,33 @@
     nativeAdapter=PPPPatrimonialNative.mount({model:obj.calculo_sheet,metadata:caso,get:apiGet,post:apiPost,labelFor,cache,onNew:()=>{$('btnNuevo').click()},onCases:()=>{abrirOverlay('ovCasos');cargarLista()}});
   }
   function aplicarCasoRemoto(obj){
-    if(obj.calculo_sheet&&obj.calculo_sheet.modelo_tipo==='patrimonial'){try{if(nativeAdapter&&nativeAdapter.store.id===obj.caso_id)nativeAdapter.store.acceptRead(obj.calculo_sheet);else montarNativo(obj);toast('Caso cargado desde su libro canónico')}catch(e){toast('Modelo nativo sin confirmar; se conserva la lectura anterior')}return}
-    if(nativeAdapter&&nativeAdapter.store.id===obj.caso_id){toast('No se confirmó el modelo del caso. Se conserva la copia anterior');return}
+    if(Object.prototype.hasOwnProperty.call(obj,'calculo_sheet')&&obj.calculo_sheet?.modelo_tipo!=='patrimonial'){toast('El modelo recibido no corresponde al plan Patrimonial.');return false;}
+    if(obj.calculo_sheet&&obj.calculo_sheet.modelo_tipo==='patrimonial'){try{if(nativeAdapter&&nativeAdapter.store.id===obj.caso_id){if(!nativeAdapter.store.acceptRead(obj.calculo_sheet)){toast('Otra edición cambió el libro. Tus cantidades pendientes se conservan.');return true;}}else montarNativo(obj);toast('Caso cargado desde su libro canónico');return true}catch(e){toast('Modelo nativo sin confirmar; se conserva la lectura anterior');return false}}
+    if(nativeAdapter&&nativeAdapter.store.id===obj.caso_id){toast('No se confirmó el modelo del caso. Se conserva la copia anterior');return false}
     if(nativeAdapter){nativeAdapter.destroy();nativeAdapter=null;}
     Object.keys(obj).forEach(kk=>{if(/^in[A-Z]/.test(kk)&&obj[kk]!==''&&isFinite(Number(obj[kk])))setControl(kk,Number(obj[kk]))});
     caso={caso_id:obj.caso_id||'',palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
     // Versiones del caso: si la fila trae escenarios_json se restauran; si no (casos viejos), versión única desde las columnas in*.
     if(!escDesdeJson(obj.escenarios_json))escInicial('Base');
-    rememberLegacyVersions();calculate();pintaCaso();cerrarOverlays();toast('Caso "'+(caso.nombre_caso||caso.palabra)+'" cargado'+(escenarios.length>1?' · '+escenarios.length+' versiones':''))
+    rememberLegacyVersions();calculate();pintaCaso();cerrarOverlays();toast('Caso "'+(caso.nombre_caso||caso.palabra)+'" cargado'+(escenarios.length>1?' · '+escenarios.length+' versiones':''));return true
   }
-  async function abrirPorId(id){try{const r=await apiGet({recurso:'caso',id});if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'Ese caso ya no existe':'No se pudo abrir: '+r.error)}catch(e){toast('Sin conexión: no se pudo abrir el caso')}}
-  async function abrirPorPalabra(palabra){if(!palabra.trim())return;try{const r=await apiGet({recurso:'caso',palabra:palabra.trim()});if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'No hay caso con esa palabra':'No se pudo abrir: '+r.error)}catch(e){toast('Sin conexión: no se pudo abrir')}}
+  const openingStyle=document.createElement('style');openingStyle.textContent='#pppCaseOpening [hidden]{display:none!important}body[data-ppp-opening="true"] > :not(#pppCaseOpening):not(#gate):not(#porteroGate){visibility:hidden}';document.head.append(openingStyle);
+  const openingNotice=document.createElement('section');openingNotice.id='pppCaseOpening';openingNotice.setAttribute('role','status');openingNotice.hidden=true;
+  Object.assign(openingNotice.style,{position:'fixed',inset:'0',zIndex:'490',background:'var(--bg)',padding:'24px',display:'none',placeContent:'center',gap:'12px',textAlign:'center'});
+  const openingTitle=document.createElement('h2'),openingMessage=document.createElement('p'),openingRetry=document.createElement('button');openingRetry.type='button';openingRetry.className='small-btn';openingRetry.textContent='Volver a conectar el plan';const openingLogin=document.createElement('button');openingLogin.type='button';openingLogin.className='small-btn';openingLogin.textContent='Entrar con Google';openingLogin.hidden=true;openingNotice.append(openingTitle,openingMessage,openingRetry,openingLogin);document.body.append(openingNotice);openingTitle.style.maxWidth='52ch';openingMessage.style.maxWidth='52ch';openingMessage.style.overflowWrap='anywhere';
+  function paintOpening(value){
+    const ready=value.phase==='ready';document.body.dataset.pppOpening=String(!ready);openingNotice.hidden=ready;openingNotice.style.display=ready?'none':'grid';openingRetry.hidden=!['error','unauthorized'].includes(value.phase);openingLogin.hidden=value.phase!=='unauthorized';
+    openingTitle.textContent=value.phase==='loading'?'Abriendo tu plan de potencial':value.phase==='retrying'?'Recuperando conexión':value.phase==='unauthorized'?'Valida el acceso al plan':'No se pudo abrir este plan';
+    openingMessage.textContent=value.phase==='loading'?'Recuperando los datos de este proyecto.':value.phase==='retrying'?'La lectura no respondió. Reintentando sin cerrar tu sesión ni modificar cantidades.':value.phase==='unauthorized'?'La sesión del plan necesita validarse. El resto de YOD OS conserva su sesión.':value.error==='no_existe'?'El caso registrado no está disponible. No se cargó otro caso.':value.error==='case_mismatch'?'La respuesta no corresponde a este caso. No se aplicó.':value.error==='invalid_model'?'El modelo no pudo verificarse. Se conservan las cantidades anteriores sin presentar otra lectura como actual.':'La conexión no se confirmó. Puedes volver a intentar; no se enviaron cantidades.';
+  }
+  const caseOpening=PPPCaseOpening.create({read:apiGet,apply:aplicarCasoRemoto,onState:paintOpening,
+    getCredential:()=>{try{return clave&&localStorage.getItem(LS.clave)===clave?clave:null;}catch{return null;}},
+    onAuthorized:()=>{modoLocal=false;$('gate').classList.add('off');$('modoLocalBanner').classList.remove('on');drenarCola();},
+    onUnauthorized:()=>{$('gate').classList.add('off');}});
+  openingRetry.onclick=()=>caseOpening.retry();openingLogin.onclick=()=>{if(window.YODPortero?.entrar)window.YODPortero.entrar();else reabrirGate();};
+  window.addEventListener('pagehide',()=>caseOpening.invalidate());
+  function abrirPorId(id){$('gate').classList.add('off');return caseOpening.openId(id);}
+  function abrirPorPalabra(palabra){if(!palabra.trim())return;return caseOpening.openWord(palabra);}
   async function cargarLista(){const cont=$('listaCasos');cont.innerHTML='<p class="note">Cargando…</p>';try{const r=await apiGet({recurso:'lista'});if(!r.ok){cont.innerHTML='<p class="note">Error: '+r.error+'</p>';if(r.error==='clave')reabrirGate();return}casosCache=r.casos||[];cfgBoard=r.config||cfgBoard;if(!casosCache.length){cont.innerHTML='<p class="note">Aún no hay casos Patrimoniales. Guarda el primero.</p>';return}cont.innerHTML=casosCache.map(c=>`<div class="caso-item" data-id="${c.caso_id}"><div><div class="ci-n">${esc(c.nombre_caso||c.palabra)}<span class="badge">${esc(c.estado||'—')}</span></div><div class="ci-m">palabra: ${esc(c.palabra)} · v${c.version||1} · ${fechaCorta(c.ts_actualizado)}${c.source==='test'?' · PRUEBA':''}</div></div><div class="ci-kpi">${c.utilidad!==''&&c.utilidad!==undefined?fmtM(Number(c.utilidad)):'—'}<span>NOI/año · ${c.unidades!==''&&c.unidades!==undefined?fmtN(Number(c.unidades))+' unidades':'—'}</span></div></div>`).join('');cont.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>abrirPorId(el.dataset.id))}catch(e){cont.innerHTML='<p class="note">Sin conexión. Reintenta.</p>'}}
   async function guardarCaso(enviarCorreo){
     if(modoLocal){toast('Estás sin nube: entra con la clave para guardar');return}
@@ -1159,7 +1178,7 @@
     window.open('https://wa.me/'+(num?num:'')+'?text='+encodeURIComponent(linea),'_blank')
   }
   /* ================== GATE / MODALES ================== */
-  function reabrirGate(){localStorage.removeItem(LS.clave);clave='';$('gate').classList.remove('off');$('gateErr').textContent='La clave cambió o es incorrecta'}
+  function reabrirGate(){const gate=$('gate');gate.classList.remove('off');gate.style.removeProperty('display');gate.removeAttribute('aria-hidden');$('gateErr').textContent='No se confirmó el acceso a este plan. Valida tu sesión de Google o vuelve a intentar.'}
   async function intentarEntrar(){
     const v=$('gateClave').value.trim();if(!v){$('gateErr').textContent='Escribe la clave';return}
     $('gateBtn').disabled=true;$('gateErr').textContent='';
@@ -1206,7 +1225,9 @@
   if(nativeCache&&nativeCache.metadata){try{montarNativo(nativeCache.metadata,nativeCache)}catch(e){toast('Copia nativa inválida; abre el caso desde la nube')}}
   if(!nativeAdapter){cargarDraft();if(!escenarios.length)escInicial('Base');calculate();pintaCaso();}
   if(modoLocal){$('gate').classList.add('off');$('modoLocalBanner').classList.add('on')}
-  else if(clave){apiGet({recurso:'lista'}).then(r=>{if(r.ok){casosCache=r.casos||[];cfgBoard=r.config||{};$('gate').classList.add('off');drenarCola();procesarOpen()}else{reabrirGate()}}).catch(()=>{modoSinConexion();toast('Sin conexión: trabajando en modo local')})}
+  else if(clave){const requestedCase=new URLSearchParams(location.search).get('open');
+    if(requestedCase)abrirPorId(requestedCase);
+    else apiGet({recurso:'lista'}).then(r=>{if(r.ok){casosCache=r.casos||[];cfgBoard=r.config||{};$('gate').classList.add('off');drenarCola();}else if(PPPCaseOpening.isAuthenticationError(r.error)){reabrirGate();}else{toast('El catálogo no respondió. Tu sesión se conserva; vuelve a cargar Mis casos.');}}).catch(()=>{toast('Sin conexión con el catálogo. Tu sesión y tu borrador se conservan.');});}
 })();
 </script>
 <script src="modelos.js?v=1"></script>

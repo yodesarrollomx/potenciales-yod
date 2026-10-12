@@ -1,18 +1,15 @@
 {
-  "model_revision": "2026-10-11.despacho-lectura-reportes133",
-  "proposal_id": "CHG-DESPACHO-LECTURA-REPORTES-20261011",
-  "summary": "Ejecutar en CI el recorrido específico de foco compartido de los tres motores y actualizar referencias de caché del puente en Macro/Patrimonial. Conserva protocolos y cantidades. Sólo el transporte de prueba usa fixtures.",
+  "model_revision": "2026-10-12.despacho-perfil140.1",
+  "proposal_id": "CHG-DESPACHO-PERFIL-ORDEN-20261012",
+  "summary": "Apertura PPP Patrimonial por caso exacto sin esperar catálogo; lecturas acotadas y recuperación local sin borrar la sesión compartida. Conserva cálculo, cantidades, contratos, escenarios y Store nativo.",
   "components": [
     "SYS-POTENCIALES",
-    "SYS-DESPACHO",
     "SYS-DESPACHO-3D"
   ],
   "tests": [
-    "Puente: versión defendida fija, campos presentes/ausentes, borrador pendiente, nonce y origen.",
-    "Navegador móvil con tres motores: tarjeta nativa Mixto, versiones originales, cero POST de negocio.",
-    "Accesos, interfaz PPP e impacto del atlas aprobados.",
-    "Tras push de main, GET público y SHA-256 de los cinco archivos publicados; sin identidad ni escrituras.",
-    "Recibos bajo view=board del Portal publicado: mismos ACK, único POST por solicitud, lectura fresca, desconocidos retenidos; no exigir DOM compacto retirado."
+    "Controlador de apertura: selección exacta, timeout, reintento limitado, credencial/generación, rechazo de otra identidad y modelo inválido; cero escrituras.",
+    "HTML real Patrimonial y puente nativo en Chromium/WebKit 1280 y390: catálogo independiente, lock_busy, respuesta ajena, recuperación y rechazo de acceso sin borrar token del OS.",
+    "Regresiones existentes de cantidades, recibos, borradores, escenarios, accesos y arquitectura; integración y publicación se acreditan por separado."
   ],
-  "rollback": "Revertir observación y pruebas; preservar escenarios, cantidades y recibos."
+  "rollback": "Revertir frontend de apertura y sus pruebas por PR, conservando libros, cantidades, fórmulas, revisiones, escenarios y recibos."
 }
