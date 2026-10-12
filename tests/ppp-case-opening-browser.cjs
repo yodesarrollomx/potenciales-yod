@@ -7,7 +7,7 @@ const parent='<!doctype html><meta name="viewport" content="width=device-width,i
 (async()=>{for(const [engineName,engine] of Object.entries({chromium,webkit})){
  const browser=await engine.launch();try{for(const width of [1280,390])for(const scenario of ['catalog-independent','transient','wrong-case','revoked','pending-conflict','job-conflict'])for(const presentation of scenario==='catalog-independent'?['cards','board']:['pending-conflict','job-conflict'].includes(scenario)?['board']:['cards']){
   const context=await browser.newContext({viewport:{width,height:900},reducedMotion:'reduce'});await install(context,{seed:null});
-  const reads=[],businessPosts=[],errors=[];let caseReads=0,corrected=false;
+  const reads=[],businessPosts=[],errors=[];let caseReads=0,corrected=false,releaseOpeningRead=null,signalHeld;const openingHeld=new Promise(resolve=>signalHeld=resolve);
   if(['pending-conflict','job-conflict'].includes(scenario))await context.addInitScript(({model,job})=>{const old=JSON.parse(JSON.stringify(model));old.revision+='-older';localStorage.setItem('pyod_patrimonial_native_v1:synthetic-case',JSON.stringify({model:old,metadata:{caso_id:'synthetic-case',nombre_caso:'PPP de prueba',palabra:'ensayo',version:1},pending:job?{}:{inCus:4},job:job?{tipo:'sheet-cantidades',caso_id:'synthetic-case',escenario_id:old.activo,revision_esperada:old.revision,inputs:{inCus:4},request_id:'board-uncertain-140'}:null,receipts:[]}));},{model:fixture,job:scenario==='job-conflict'});
   await context.route('https://script.google.com/**',async route=>{
    const request=route.request(),url=new URL(request.url()),action=url.searchParams.get('recurso');let out={ok:true};
@@ -17,7 +17,7 @@ const parent='<!doctype html><meta name="viewport" content="width=device-width,i
     if(action==='canje')out={ok:true,token:session,boards:'PT',rol:'admin'};
     else if(action==='lista')out={ok:false,error:'lock_busy'};
     else if(action==='caso'){
-     caseReads++;if(scenario==='catalog-independent'&&caseReads===1)await new Promise(resolve=>setTimeout(resolve,200));
+     caseReads++;if(scenario==='catalog-independent'&&caseReads===1)await new Promise(resolve=>{releaseOpeningRead=resolve;signalHeld();});
      if(scenario==='transient'&&caseReads===1)out={ok:false,error:'lock_busy'};
      else if(scenario==='revoked'&&!corrected)out={ok:false,error:'revocado'};
      else {const model=structuredClone(fixture),id=scenario==='wrong-case'&&!corrected?'other-case':model.caso_id;model.caso_id=id;out={ok:true,caso:{caso_id:id,nombre_caso:'PPP de prueba',palabra:'ensayo',version:1,calculo_sheet:model}};}
@@ -28,7 +28,7 @@ const parent='<!doctype html><meta name="viewport" content="width=device-width,i
   await context.route('https://ppp.test/yod-portal/despacho3d/__opening',route=>route.fulfill({contentType:'text/html',body:presentation==='board'?parent.replace('&agent=1&embed=1&view=cards','&agent=1&embed=1&view=board'):parent}));
   const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
   await page.goto('https://ppp.test/yod-portal/despacho3d/__opening');const frame=page.frameLocator('iframe[title=PPP]');
-  if(scenario==='catalog-independent'||scenario==='transient'){await frame.locator('#pppCaseOpening').getByText(scenario==='transient'?'Recuperando conexión':'Abriendo tu plan de potencial',{exact:true}).waitFor();assert.equal(await frame.getByRole('button',{name:'Volver a conectar el plan',includeHidden:true}).isVisible(),false);assert.equal(await frame.locator('#pppCaseOpening').getByRole('button',{name:'Entrar con Google',includeHidden:true}).isVisible(),false);}
+  if(scenario==='catalog-independent'||scenario==='transient'){if(scenario==='catalog-independent')await openingHeld;await frame.locator('#pppCaseOpening').getByText(scenario==='transient'?'Recuperando conexión':'Abriendo tu plan de potencial',{exact:true}).waitFor();assert.equal(await frame.getByRole('button',{name:'Volver a conectar el plan',includeHidden:true}).isVisible(),false);assert.equal(await frame.locator('#pppCaseOpening').getByRole('button',{name:'Entrar con Google',includeHidden:true}).isVisible(),false);if(scenario==='catalog-independent')releaseOpeningRead();}
   if(scenario==='wrong-case'){
    await frame.locator('#pppCaseOpening').getByText('La respuesta no corresponde a este caso. No se aplicó.').waitFor();
    assert.equal(await frame.locator('#patrimonialNative').count(),0,'foreign model was not mounted');
