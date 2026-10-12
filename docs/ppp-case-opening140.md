@@ -43,3 +43,6 @@ La revisión separada verificó la recuperación de acceso y detectó que el est
 
 ## 12-oct-2026 12:55 America/Hermosillo · ensayo de carga determinista
 [Interfaz38300401826](https://github.com/yodesarrollomx/potenciales-yod/actions/runs/38300401826) en `a6de6246de746b204081c5a1d2b3728eea02255a` ejecutó los14recorridos Chromium, incluidas recuperación de acceso y ambas conciliaciones. WebKit alcanzó el estado listo antes de que el ensayo inspeccionara su carga, agotando la espera del título transitorio. Se sustituye la demora de200ms del transporte sintético por una barrera: retiene su respuesta hasta verificar el estado visible y entonces la libera. No aumenta timeouts ni omite comprobaciones; no modifica código productivo. La CI del nuevo SHA debe completar Chromium y WebKit.
+
+## 12-oct-2026 12:57 America/Hermosillo · identidad del motor
+La revisión aislada del aplicador anterior confirmó que un objeto calculo_sheet presente con otro tipo podía caer al cálculo legacy. Se rechaza explícitamente ese objeto antes del fallback. Los casos legacy que no declaran calculo_sheet conservan su recorrido original. El navegador comprueba rechazo y recuperación explícita con un modelo ajeno del mismo ID, sin caché, sin confirmación ni escrituras. No cambia fórmulas ni motor financiero.
