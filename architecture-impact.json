@@ -1,15 +1,15 @@
 {
   "model_revision": "2026-10-19.ppp-cartera-lectura.1",
   "proposal_id": "CHG-PPP-CARTERA-LECTURA-20261019",
-  "summary": "La portada consulta expedientes e historial desde el contrato brokers.v1 existente con los permisos de la sesión; enriquece casos vinculados y muestra los análisis previos. Sin cambios de cálculos, registros financieros, permisos ni backend.",
+  "summary": "Reversión de la proyección CRM en portada: mapa visible arriba y tarjetas directas al PPP nativo. Se aplica la reversión de presentación prevista; se conservan modelos, documentos, versiones y permisos.",
   "components": [
     "SYS-POTENCIALES",
     "GAS-CRM",
     "SHEET-CRM"
   ],
   "tests": [
-    "127 pruebas unitarias aprobadas; lector de solo consulta, ACL, fechas del hecho y recarga sin respuestas antiguas.",
-    "Recorrido sintético de portada y mapa en Chromium; WebKit y regresiones completas en CI."
+    "Recorrido sintético verifica mapa visible arriba, enlaces nativos, ausencia de expedientes y menú por delante de Leaflet.",
+    "Regresiones de catálogo y acceso existentes."
   ],
   "rollback": "Revertir por PR únicamente lector y presentación. Conservar expedientes, documentos, modelos, versiones y permisos."
 }
