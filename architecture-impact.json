@@ -1,17 +1,13 @@
 {
   "model_revision": "2026-10-12.despacho-perfil140.1",
-  "proposal_id": "CHG-DESPACHO-PERFIL-ORDEN-20261012",
-  "summary": "Conservar visible la recuperación PPP al envolver el tablero en el shell real, ocultando únicamente la superficie de datos no verificada. Complemento de apertura140, sin modificar cálculos, cantidades, permisos o contratos.",
+  "proposal_id": "CHG-PPP-UI-001",
+  "summary": "Macrolotes: sistema de presentación unificado con fichas (misma anatomía en decisión, sección y ajuste), infográficos vivos por decisión, gráficos en pestañas y barra superior de una línea. Sin cambios en cálculos, controles, IDs, guardado, permisos ni contratos.",
   "components": [
-    "SYS-POTENCIALES",
-    "SYS-DESPACHO-3D",
-    "SYS-YOD-OS"
+    "SYS-POTENCIALES"
   ],
   "tests": [
-    "Controlador de apertura: selección exacta, timeout, reintento limitado, credencial/generación, rechazo de otra identidad y modelo inválido; cero escrituras.",
-    "HTML real Patrimonial y puente nativo en Chromium/WebKit 1280 y390: catálogo independiente, lock_busy, respuesta ajena, recuperación y rechazo de acceso sin borrar token del OS.",
-    "Regresiones existentes de cantidades, recibos, borradores, escenarios, accesos y arquitectura; integración y publicación se acreditan por separado.",
-    "Standalone sin embed en Chromium/WebKit 1280 y390 con shell real del atlas fijado: carga retenida, error, rechazo de acceso y recuperación visible, cero escrituras de negocio."
+    "tests/ppp-macro-cards-browser.cjs en Chromium/WebKit: HUD de una línea expandible, decisiones antes de gráficos, una pestaña visible, fichas de decisión y de sección con icono y número, una sección abierta por decisión, fichas de ajuste con icono que abren un control a la vez, interruptor 0/1 con su significado, salto a control escondido, IDs únicos, mismos controles, sin desborde 320/390/430/1280, cero escrituras.",
+    "Regresiones: ppp-cierre-browser (ocho versiones macro) y ppp-version-bridge-browser (macrolotes); pruebas unitarias 37/37."
   ],
-  "rollback": "Revertir frontend de apertura y sus pruebas por PR, conservando libros, cantidades, fórmulas, revisiones, escenarios y recibos."
+  "rollback": "Revertir por PR los archivos ppp-macro-cards.js/.css, su prueba y las tres líneas de enganche en macrolotes.html; no se tocan casos, libros, versiones ni sesiones."
 }

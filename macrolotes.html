@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="ppp-macro-cards.css?v=8">
 <link rel="stylesheet" href="https://yodesarrollomx.github.io/yod-portal/os/shell.css">
 <style>
   /* ===== Fintech Editorial (oscuro) · tokens por ROL, convención de los boards YoD ===== */
@@ -726,6 +727,7 @@
 
 <div id="toast"></div>
 <script src="ppp-version-bridge.js?v=3"></script>
+<script src="ppp-macro-cards.js?v=8"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -1397,6 +1399,7 @@
   function render(){
     renderGiros();
     const r=state;syncPills();
+    queueMicrotask(()=>window.PPPMacroCards&&window.PPPMacroCards.update(r));
     txt('hudIngresos',fmtM(r.ingresos));txt('hudDeuda',fmtM(r.peak));txt('hudUtilidad',fmtM(r.utilidadFinal));txt('hudMargen',pct(r.margenFinal*100,1));txt('hudTir',r.devIrr===null?'—':pct(r.devIrr*100,1));
     const gInfo=[['⚠ en veda','var(--red)'],['en trámite','var(--orange)'],['resuelta','var(--green)']][r.p.gateAgua];const hg=$('hudGate');hg.textContent=gInfo[0];hg.style.color=gInfo[1];
     // barra de suelo (Age of Empires): el terreno repartiéndose en vivo
