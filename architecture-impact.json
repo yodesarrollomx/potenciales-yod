@@ -1,11 +1,9 @@
 {
-  "model_revision": "2026-10-19.perfil-distrito-abasto.1",
-  "proposal_id": "CHG-PPP-PERFIL-DISTRITO-ABASTO-20261019",
-  "summary": "Perfil documental consultable para Distrito Abasto Sonora desde portada PPP. Reutiliza oportunidad existente OPP-CENTRO-AGROALIMENTARIO-20261015, con recursos V1 en Drive bajo sus permisos. No crea un segundo caso en Sheets, ni altera cálculos o Portero.",
+  "model_revision": "2026-10-19.ppp-cartera-lectura.1",
+  "proposal_id": "CHG-PPP-UI-001",
+  "summary": "Implementación documental bajo el cambio de interfaz PPP aprobado: ficha Abastos y acceso directo desde la portada; complementa oportunidad existente sin crear caso financiero nuevo. Revisión visual de presentación separada en Drive bajo permisos del propietario.",
   "components": [
-    "SYS-POTENCIALES",
-    "PPPCatalog",
-    "OPP-CENTRO-AGROALIMENTARIO-20261015 (referencia, sin escritura)"
+    "SYS-POTENCIALES"
   ],
   "tests": [
     "node tests/ppp-distrito-abasto.test.cjs: enlace de portada, perfil, documentos, ausencia de credenciales y cifras internas",
@@ -14,5 +12,6 @@
   ],
   "rollback": "Revertir PR para retirar página documental y tarjeta, sin borrar documentos de Drive ni alterar oportunidad o filas de Sheets.",
   "data_provenance": "Propuesta 19/oct preliminar; reunión Lara-YOD 17/oct; contexto del expediente original. Planos y modelos financieros pendientes de conciliar.",
-  "deployment": "GitHub Pages únicamente para ficha documental sin datos privados; PDF, PPTX, HTML con chinches y anexo permanecen en Drive con ACL de Drive."
+  "deployment": "GitHub Pages únicamente para ficha documental sin datos privados; PDF, PPTX, HTML con chinches y anexo permanecen en Drive con ACL de Drive.",
+  "atlas_note": "Se utiliza propuesta UI-001 existente en atlas fijado por workflow. Este cambio es presentación del caso y no cambia el modelo, CRM ni backend."
 }
