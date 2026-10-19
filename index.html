@@ -14,7 +14,7 @@
   // Compatibilidad: los enlaces viejos ?open=ID (correos ya enviados) eran del board mixto.
   (function(){var q=new URLSearchParams(location.search);var id=q.get('open');if(id){var t=q.get('t')||'mixto';var pag={mixto:'mixto.html',vertical:'mixto.html',macrolotes:'macrolotes.html'}[t]||'mixto.html';location.replace(pag+'?open='+encodeURIComponent(id))}})();
 </script>
-<link rel="stylesheet" href="ppp-home.css?v=20261019-3">
+<link rel="stylesheet" href="ppp-home.css?v=20261019-abasto1">
 <link rel="stylesheet" href="ppp-catalog.css?v=20261019-1">
 </head>
 <body>
@@ -45,6 +45,14 @@
     <div class="todos"><button id="btnTodos" type="button"><i class="ti ti-folder"></i> Proyectos guardados <span class="n" id="cntTodos">…</span><span class="lt-chevron" aria-hidden="true">▾</span></button>
     <div id="listaTodos"></div></div>
   </section>
+
+<section class="featured-ppp" id="abastoProfileShortcut" aria-label="Expediente Distrito Abasto Sonora">
+  <div class="featured-ppp-copy"><span class="kick">Expediente en seguimiento · propuesta en revisión</span>
+    <h2 class="serif">Distrito Abasto Sonora</h2>
+    <p>Perfil del proyecto, presentación y fuentes en un solo lugar. No es una corrida financiera validada.</p>
+  </div>
+  <a class="featured-ppp-open" href="distrito-abasto.html">Abrir perfil PPP <span aria-hidden="true">↗</span></a>
+</section>
 
 <a class="archive-link" href="https://docs.google.com/spreadsheets/d/1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y/edit#gid=2026101901" target="_blank" rel="noopener"><span><b>Archivo de proyectos y análisis previos</b><small>Estudios, propuestas y antecedentes con sus fuentes</small></span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg></a>
 

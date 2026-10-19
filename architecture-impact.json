@@ -1,15 +1,17 @@
 {
   "model_revision": "2026-10-19.ppp-cartera-lectura.1",
-  "proposal_id": "CHG-PPP-CARTERA-LECTURA-20261019",
-  "summary": "Reversión de la proyección CRM en portada: mapa visible arriba y tarjetas directas al PPP nativo. Se aplica la reversión de presentación prevista; se conservan modelos, documentos, versiones y permisos.",
+  "proposal_id": "CHG-PPP-UI-001",
+  "summary": "Implementación documental bajo el cambio de interfaz PPP aprobado: ficha Abastos y acceso directo desde la portada; complementa oportunidad existente sin crear caso financiero nuevo. Revisión visual de presentación separada en Drive bajo permisos del propietario.",
   "components": [
-    "SYS-POTENCIALES",
-    "GAS-CRM",
-    "SHEET-CRM"
+    "SYS-POTENCIALES"
   ],
   "tests": [
-    "Recorrido sintético verifica mapa visible arriba, enlaces nativos, ausencia de expedientes y menú por delante de Leaflet.",
-    "Regresiones de catálogo y acceso existentes."
+    "node tests/ppp-distrito-abasto.test.cjs: enlace de portada, perfil, documentos, ausencia de credenciales y cifras internas",
+    "Pruebas de regresión de portada y catálogo PPP ya existentes",
+    "GitHub Pages: abrir portada y perfil; confirmar navegación y recursos según permisos Drive"
   ],
-  "rollback": "Revertir por PR únicamente lector y presentación. Conservar expedientes, documentos, modelos, versiones y permisos."
+  "rollback": "Revertir PR para retirar página documental y tarjeta, sin borrar documentos de Drive ni alterar oportunidad o filas de Sheets.",
+  "data_provenance": "Propuesta 19/oct preliminar; reunión Lara-YOD 17/oct; contexto del expediente original. Planos y modelos financieros pendientes de conciliar.",
+  "deployment": "GitHub Pages únicamente para ficha documental sin datos privados; PDF, PPTX, HTML con chinches y anexo permanecen en Drive con ACL de Drive.",
+  "atlas_note": "Se utiliza propuesta UI-001 existente en atlas fijado por workflow. Este cambio es presentación del caso y no cambia el modelo, CRM ni backend."
 }
