@@ -14,7 +14,7 @@
   // Compatibilidad: los enlaces viejos ?open=ID (correos ya enviados) eran del board mixto.
   (function(){var q=new URLSearchParams(location.search);var id=q.get('open');if(id){var t=q.get('t')||'mixto';var pag={mixto:'mixto.html',vertical:'mixto.html',macrolotes:'macrolotes.html'}[t]||'mixto.html';location.replace(pag+'?open='+encodeURIComponent(id))}})();
 </script>
-<link rel="stylesheet" href="ppp-home.css?v=20261019-2">
+<link rel="stylesheet" href="ppp-home.css?v=20261019-3">
 <link rel="stylesheet" href="ppp-catalog.css?v=20261019-1">
 </head>
 <body>
@@ -23,16 +23,7 @@
   <a class="full" href="mapa.html">Mapa en pantalla completa →</a>
 </header>
 
-  <section class="panel projects-panel" aria-labelledby="projectsTitle">
-    <div class="projects-heading"><div><span class="kick">YoDesarrollo</span><h1 class="serif" id="projectsTitle">Planes de potencial</h1></div><a class="new-plan" href="#planificadores">Nuevo análisis <span aria-hidden="true">+</span></a></div>
-    <p class="sub2">Proyectos, alternativas y antecedentes.</p><label class="project-search">Buscar proyecto<input id="projectSearch" type="search" placeholder="Nombre del proyecto" autocomplete="off"></label>
-    <section id="projectDossiers" aria-label="Expedientes recientes" data-endpoint="https://script.google.com/macros/s/AKfycby5Nhozhfx6tTLw6f4w14U3fAx4y-bF2cO4aeIApaOQxgXsvonk8ZbTw2VEUnWGTLe8lw/exec"></section>
-    <div class="todos"><button id="btnTodos" type="button"><i class="ti ti-folder"></i> Proyectos guardados <span class="n" id="cntTodos">…</span><span class="lt-chevron" aria-hidden="true">▾</span></button>
-    <div id="listaTodos"></div></div>
-  </section>
-
-<a class="archive-link" href="https://docs.google.com/spreadsheets/d/1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y/edit#gid=2026101901" target="_blank" rel="noopener"><span><b>Archivo de proyectos y análisis previos</b><small>Estudios, propuestas y antecedentes con sus fuentes</small></span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg></a>
-<details class="map-view"><summary>Ver ubicación de los proyectos</summary>
+<section class="map-view" aria-label="Mapa de proyectos">
 <div class="chips" id="chips" aria-label="Tipos en el mapa"></div>
 <div id="mapWrap">
   <div id="map"></div>
@@ -46,7 +37,17 @@
   </div></div>
 </div>
 
-</details>
+</section>
+
+  <section class="panel projects-panel" aria-labelledby="projectsTitle">
+    <div class="projects-heading"><div><span class="kick">YoDesarrollo</span><h1 class="serif" id="projectsTitle">Planes de potencial</h1></div><a class="new-plan" href="#planificadores">Nuevo análisis <span aria-hidden="true">+</span></a></div>
+    <label class="project-search">Buscar proyecto<input id="projectSearch" type="search" placeholder="Nombre del proyecto" autocomplete="off"></label>
+    <div class="todos"><button id="btnTodos" type="button"><i class="ti ti-folder"></i> Proyectos guardados <span class="n" id="cntTodos">…</span><span class="lt-chevron" aria-hidden="true">▾</span></button>
+    <div id="listaTodos"></div></div>
+  </section>
+
+<a class="archive-link" href="https://docs.google.com/spreadsheets/d/1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y/edit#gid=2026101901" target="_blank" rel="noopener"><span><b>Archivo de proyectos y análisis previos</b><small>Estudios, propuestas y antecedentes con sus fuentes</small></span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg></a>
+
 <div class="wrap" id="planificadores">
   <div class="titulo-botones"><h2 class="serif">Nuevo análisis</h2></div>
   <div class="grid">
@@ -107,7 +108,6 @@
       else if(intentos>0)ajusta(intentos-1)},300)}
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')ajusta(5)});
   window.addEventListener('resize',()=>{if(map)map.invalidateSize()});
-  document.querySelector('.map-view').addEventListener('toggle',()=>ajusta(2));
   function renderChips(){
     const counts={};pines.forEach(p=>counts[p.tipo]=(counts[p.tipo]||0)+1);
     $('chips').innerHTML=Object.entries(TIPOS).filter(([t])=>counts[t]).map(([t,T])=>`<button class="chip${filtros.has(t)?'':' off'}" data-t="${t}"><i style="background:${T.hex}"></i><i class="ti ${T.ic}"></i> ${T.n}<span class="n">${counts[t]}</span></button>`).join('');
@@ -133,7 +133,6 @@
 })();
 </script>
 <script src="ppp-catalog.js?v=20261019-2"></script>
-<script src="ppp-projects.js?v=20261019-1"></script>
 <script src="portero.js?v=relevo9"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=audit-20260930"></script>
 </body>
