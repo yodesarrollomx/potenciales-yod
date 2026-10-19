@@ -11,7 +11,8 @@ const parentHTML='<!doctype html><html lang="es"><meta name="viewport" content="
 'const transport={mintFastSession:async()=>({ok:true,case_id:selection.case_id,token:"A".repeat(40)+"."+"a".repeat(64),endpoint:"'+CLOUD+'",expires_at:Date.now()+600000}),read:async()=>({ok:true,case_id:selection.case_id,source_revision:"test-source-1",context:{identity:{name:selection.name,case_id:selection.case_id},documents:[["source-ppp","PPP registrado",selection.ppp.url,"PPP"]]},state:{updated_at:new Date().toISOString()},conversation:[],jobs:[],events:[]})};'+
 'window.workspace=createWorkspace({container:document.getElementById("host"),getSelection:()=>selection,transport});workspace.open(selection,"ppp");</script></html>';
 (async()=>{for(const [name,engine] of Object.entries({chromium,webkit})){
- const browser=await engine.launch();
+ if(process.env.PPP_ENGINE&&process.env.PPP_ENGINE!==name)continue;
+ const browser=await engine.launch({...(name==='chromium'&&process.env.PPP_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PPP_CHROMIUM_EXECUTABLE_PATH}:{})});
  try{
   const context=await browser.newContext({viewport:{width:name==='webkit'?390:1280,height:900}});await install(context,{seed:null});
   const root=path.resolve(__dirname,'..'),atlas=path.resolve(process.env.YOD_ATLAS_DIR||path.join(root,'../yod-atlas'));
@@ -58,7 +59,7 @@ const parentHTML='<!doctype html><html lang="es"><meta name="viewport" content="
     assert.equal(payload.request_id,expectedRequest);assert.equal(payload.status,'applied');assert.equal(payload.revision,model.revision);
     assert.equal(board?.confirmed,true);assert.equal(board.pending,false);assert.equal(board.revision,payload.revision);assert.equal(board.scenario_id,model.activo);
     assert.equal(board.inputs.inTerrenoM2,expectedValue);
-    if(fail){fail=false;return route.fulfill({status:503,headers,contentType:'application/json',body:'{"ok":false}'});}
+    if(fail){return route.fulfill({status:503,headers,contentType:'application/json',body:'{"ok":false}'});}
     const prior=resolved.get(payload.request_id);if(prior)assert.deepEqual(payload,prior);else resolved.set(payload.request_id,payload);
     proposals=[];out={ok:true,request_id:payload.request_id,status:'applied'};
    }else if(pathname==='/board/clear'){board=null;out={ok:true};}
@@ -68,23 +69,23 @@ const parentHTML='<!doctype html><html lang="es"><meta name="viewport" content="
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   try{
    await page.goto(BASE+'__receipt');await page.bringToFront();
-   const frame=page.frameLocator('iframe');await frame.locator('[data-native-field="inTerrenoM2"]').waitFor();
-   assert.equal(new URL(page.frames().find(f=>f.url().includes('/potenciales-yod/')).url()).searchParams.get('view'),'board');
+   const frame=page.frameLocator('iframe');await frame.locator('.pn-data-card').first().waitFor();await frame.locator('[data-card=terreno] summary').click();
+   assert.equal(new URL(page.frames().find(f=>f.url().includes('/potenciales-yod/')).url()).searchParams.get('view'),'cards');
    await page.waitForFunction(()=>document.querySelector('.workspace-ppp-summary')?.textContent.includes('Lectura confirmada'));
-   assert.equal(await frame.locator('[data-native-field="inTerrenoM2"]').inputValue(),'500');
+   assert.equal((await frame.locator('[data-input=inTerrenoM2] strong').textContent()).trim(),'500');
    proposals=[{request_id:'board-reload-104',case_id:model.caso_id,scenario_id:model.activo,revision:model.revision,motivo:'Corrección explícita de prueba',cambios:[{campo:'inTerrenoM2',label:'Terreno',antes:500,valor:644}],apply_requested_at:new Date().toISOString(),apply_expires_at:new Date(Date.now()+120000).toISOString()}];
    await page.getByText('Conexión y variantes',{exact:true}).click();await page.getByRole('button',{name:'Actualizar conexión',exact:true}).click();
    await page.getByRole('button',{name:'Comprobar confirmación',exact:true}).waitFor();
    const cached=await page.evaluate(()=>JSON.parse(localStorage.getItem('pyod_patrimonial_native_v1:synthetic-case')));
    assert.equal(cached.job,null);assert.equal(cached.receipts.length,1);assert.equal(writes.length,1);
-   assert.equal(resolveCalls.length,1);const firstReceipt=structuredClone(resolveCalls[0]),priorReads=reads;
+   assert.ok(resolveCalls.length>=1);for(const receipt of resolveCalls)assert.deepEqual(receipt,resolveCalls[0]);const firstReceipt=structuredClone(resolveCalls[0]),priorReads=reads;
    assert.deepEqual(Object.keys(cached.receipts[0]).sort(),['acknowledged_at','case_id','request_id','revision','scenario_id']);
-   await page.reload();await page.bringToFront();
+   fail=false;await page.reload();await page.bringToFront();
    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('pyod_patrimonial_native_v1:synthetic-case'))?.receipts?.length===0);
    await page.waitForFunction(()=>document.querySelector('.workspace-apply-status')?.textContent.includes('guardado y confirmado'));
    assert.ok(reads>priorReads,'full reload must obtain a new server read before receipt replay');
    assert.equal(writes.length,1);assert.equal(resolved.size,1);assert.deepEqual(resolveCalls.at(-1),firstReceipt);
-   assert.equal(await frame.locator('[data-native-field="inTerrenoM2"]').inputValue(),'644');
+   assert.equal((await frame.locator('[data-input=inTerrenoM2] strong').textContent()).trim(),'644');
    assert.deepEqual(errors,[]);
    if(process.env.PPP_SCREENSHOTS){fs.mkdirSync(process.env.PPP_SCREENSHOTS,{recursive:true});await page.screenshot({path:path.join(process.env.PPP_SCREENSHOTS,name+'-receipt-workspace.png'),fullPage:true});}
    if(name==='chromium')console.log('RECEIPT_WORKSPACE_PREVIEW='+(await page.screenshot({type:'jpeg',quality:60})).toString('base64'));

@@ -14,7 +14,7 @@
   // Compatibilidad: los enlaces viejos ?open=ID (correos ya enviados) eran del board mixto.
   (function(){var q=new URLSearchParams(location.search);var id=q.get('open');if(id){var t=q.get('t')||'mixto';var pag={mixto:'mixto.html',vertical:'mixto.html',macrolotes:'macrolotes.html'}[t]||'mixto.html';location.replace(pag+'?open='+encodeURIComponent(id))}})();
 </script>
-<link rel="stylesheet" href="ppp-home.css?v=20261019-1">
+<link rel="stylesheet" href="ppp-home.css?v=20261019-2">
 <link rel="stylesheet" href="ppp-catalog.css?v=20261019-1">
 </head>
 <body>
@@ -26,6 +26,7 @@
   <section class="panel projects-panel" aria-labelledby="projectsTitle">
     <div class="projects-heading"><div><span class="kick">YoDesarrollo</span><h1 class="serif" id="projectsTitle">Planes de potencial</h1></div><a class="new-plan" href="#planificadores">Nuevo análisis <span aria-hidden="true">+</span></a></div>
     <p class="sub2">Proyectos, alternativas y antecedentes.</p><label class="project-search">Buscar proyecto<input id="projectSearch" type="search" placeholder="Nombre del proyecto" autocomplete="off"></label>
+    <section id="projectDossiers" aria-label="Expedientes recientes" data-endpoint="https://script.google.com/macros/s/AKfycby5Nhozhfx6tTLw6f4w14U3fAx4y-bF2cO4aeIApaOQxgXsvonk8ZbTw2VEUnWGTLe8lw/exec"></section>
     <div class="todos"><button id="btnTodos" type="button"><i class="ti ti-folder"></i> Proyectos guardados <span class="n" id="cntTodos">…</span><span class="lt-chevron" aria-hidden="true">▾</span></button>
     <div id="listaTodos"></div></div>
   </section>
@@ -131,7 +132,8 @@
   if(clave){cargar(clave).then(()=>{$('mapGate').classList.add('off');ajusta()}).catch(e=>{if(e==='clave'){localStorage.removeItem(LSK);$('mgErr').textContent='La clave cambió'}})}
 })();
 </script>
-<script src="ppp-catalog.js?v=20261019-1"></script>
+<script src="ppp-catalog.js?v=20261019-2"></script>
+<script src="ppp-projects.js?v=20261019-1"></script>
 <script src="portero.js?v=relevo9"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=audit-20260930"></script>
 </body>
