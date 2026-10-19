@@ -1,13 +1,15 @@
 {
-  "model_revision": "2026-10-12.despacho-perfil140.1",
-  "proposal_id": "CHG-PPP-UI-001",
-  "summary": "Portada PPP centrada en proyectos: títulos homogéneos, registros alternativos agrupados sin borrar, catálogo fuera del mapa, buscador y accesos compactos a motores. Archivo documental privado enlazado en el libro existente. Sin cambios en contratos, backend, cálculos ni permisos.",
+  "model_revision": "2026-10-19.ppp-cartera-lectura.1",
+  "proposal_id": "CHG-PPP-CARTERA-LECTURA-20261019",
+  "summary": "La portada consulta expedientes e historial desde el contrato brokers.v1 existente con los permisos de la sesión; enriquece casos vinculados y muestra los análisis previos. Sin cambios de cálculos, registros financieros, permisos ni backend.",
   "components": [
-    "SYS-POTENCIALES"
+    "SYS-POTENCIALES",
+    "GAS-CRM",
+    "SHEET-CRM"
   ],
   "tests": [
-    "120 pruebas unitarias aprobadas: node --test tests/*.test.cjs tests/access-gates.cjs tests/sheets-offline.cjs",
-    "Chromium sintético aprobado en 320/390/430/1280 px: portada y mapa, menú sobre Leaflet, accesos sin solapamiento, consultas parciales, reintentos, rechazo, vacío, timeout y cambio de sesión; sin escrituras de negocio. WebKit pendiente de CI."
+    "126 pruebas unitarias aprobadas; lector de solo consulta, ACL, sesión y fechas del hecho.",
+    "Recorrido sintético de portada y mapa en Chromium; WebKit y regresiones completas en CI."
   ],
-  "rollback": "Revertir por PR index.html, ppp-home.css, ppp-catalog.js/css y etiquetas de mapa. Conservar libros, inventario privado, casos, versiones y sesiones."
+  "rollback": "Revertir por PR únicamente lector y presentación. Conservar expedientes, documentos, modelos, versiones y permisos."
 }

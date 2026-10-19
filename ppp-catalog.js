@@ -71,6 +71,7 @@
     list.scrollTop=scroll;list.setAttribute('aria-busy',pending&&credential?'true':'false');
     const retry=list.querySelector('.lt-retry');if(retry)retry.onclick=()=>load(key(),true);
     list.querySelectorAll('[data-retry]').forEach(b=>b.onclick=()=>load(key(),true,b.dataset.retry));
+    dispatchEvent(new Event('ppp:catalog-render'));
   }
   async function read(type, session, generation) {
     const controller = new AbortController(); controllers.add(controller);
@@ -95,7 +96,7 @@
       if (generation === epoch && session === credential && session === key()) render();
     }
   }
-  function load(session, retry = false, onlyType) {
+  function load(session, retry = false, onlyType, refresh = false) {
     if (!session) {
       epoch++; controllers.forEach(c => c.abort()); controllers.clear();
       credential = ''; states = {};mapRows={}; render(); return;
@@ -106,7 +107,7 @@
     }
     credential = session;
     const generation = epoch;
-    const requests = Object.keys(tipos).filter(t => (!onlyType||t===onlyType)&&(!states[t] || states[t].status === 'error'));
+    const requests = Object.keys(tipos).filter(t => (!onlyType||t===onlyType)&&(refresh || !states[t] || states[t].status === 'error'));
     requests.forEach(t => states[t] = {status: 'loading', rows: [],denied:!!states[t]?.denied}); render();
     requests.forEach(t => { void read(t, session, generation); });
   }
@@ -115,7 +116,7 @@
   if(home)button.setAttribute('aria-label','Actualizar proyectos guardados');
   list.hidden = !home;
   button.onclick = () => {
-    if(home){load(key(),true);return;}
+    if(home){load(key(),true,undefined,true);dispatchEvent(new Event('ppp:refresh'));return;}
     list.hidden = !list.hidden;
     button.setAttribute('aria-expanded', String(!list.hidden));
     if (!list.hidden) load(key());

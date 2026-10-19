@@ -17,3 +17,13 @@ El archivo documental se enlaza en una pestaña privada del libro maestro existe
 Las lecturas de fuentes y la escritura del inventario se verifican privadamente en el libro y la bitácora compartida. La prueba sintética no acredita una sesión real ni la publicación. Publicar y verificar bytes del commit es un paso separado.
 
 Reversión: revertir presentación mediante PR; conservar inventario, casos, versiones, permisos y libros.
+
+## Expedientes recientes
+
+`ppp-projects.js` consulta `brokers_snapshot` (contrato `brokers.v1`) del CRM ya existente con la sesión actual. Mantiene el alcance de dirección o de cada broker; rechaza estructuras o alcances incoherentes, descarta respuestas tardías y retira datos al cambiar la sesión. No guarda copias en el navegador ni ofrece escrituras al CRM.
+
+Un `ppp_id` explícito incorpora situación, documentos e historial al caso guardado. Los demás expedientes aparecen como análisis previos, sin fabricar cálculos ni trasladar valores entre terrenos. La fecha del movimiento corresponde al hecho documentado, separada de la revisión. `?project=ID` abre el expediente autorizado. El botón de actualización vuelve a consultar los cinco tipos de plan y la cartera; las recuperaciones parciales sólo reintentan listas fallidas.
+
+La lectura refleja el CRM al abrir o actualizar. La incorporación de nuevos documentos al CRM sigue requiriendo conciliación de fuentes; este cambio no conecta automáticamente servicios de mensajería ni acredita la sincronización de una bóveda local.
+
+Verificación del lector: 126 pruebas unitarias y recorrido de Chromium aprobados; expedientes sin modelo, enriquecimiento sin duplicados, historial, 320/390/1280 px y retirada tras cierre de sesión. Servicios de negocio interceptados con datos sintéticos.
