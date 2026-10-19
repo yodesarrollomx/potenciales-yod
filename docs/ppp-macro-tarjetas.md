@@ -38,6 +38,40 @@ Dirección pidió fichas en vez de renglones: cuadritos bien organizados, siempr
 
 El color va solo en el icono y la barrita, nunca de fondo.
 
+
+## Sistema unificado (cuarta ronda, 19-oct · aprobada para publicar)
+
+Dirección pidió que todo se viera como una misma cosa: un diseño empresarial con jerarquía y lógica en cada elemento ("como lo haría Apple"), y un infográfico propio en cada tarjeta.
+
+- **Un solo componente, la ficha.** La anatomía es la misma en los tres niveles y solo cambia la escala:
+
+  | Nivel | Visual | Valor | Radio |
+  | --- | --- | --- | --- |
+  | Decisión | Infográfico de 56 px | 22 px | 20 |
+  | Sección | Icono de 36 px | 18 px | 16 |
+  | Ajuste | Icono de 28 px | 17 px | 13 |
+
+  Arriba a la izquierda va el visual y arriba a la derecha el estado; debajo, título, valor, detalle y nivel.
+- **Infográficos vivos** que se dibujan con los datos del caso:
+
+  | Decisión | Infográfico |
+  | --- | --- |
+  | Terreno | Polígono a escala, con la parte vendible lotificada y el frente a carretera |
+  | Producto | Dona con la mezcla de ventas |
+  | Urbanización | Traza de calles con su peso en el costo |
+  | Costos | Anillo de costo contra utilidad |
+  | Capital | Curva real de la deuda mes a mes, con el pico |
+  | Servicios | Gota que se llena con la demanda de agua contra la dotación NMX; roja en veda |
+
+- **Mismo encabezado de panel** al abrir cualquier ficha: visual, título y detalle, valor y cerrar.
+- **Una sola gráfica de barra** para las seis decisiones. Las barras viejas, de otro estilo, se ocultan dentro de la tarjeta; el plano y el embudo siguen en "Ver el proyecto".
+- **Lo que cabe:**
+  - Alturas iguales por nivel.
+  - Títulos de máximo 2 líneas, en el mismo tono gris.
+  - El número nunca se corta: la unidad va más chica junto a él.
+  - La "?" de ayuda solo aparece en el ajuste abierto.
+- **Parte superior homologada:** sin mayúsculas forzadas; el caso, las versiones y el veredicto usan los mismos radios, sombras y tipografía.
+
 ## Cómo está hecho
 
 `ppp-macro-cards.js` y `ppp-macro-cards.css`, más tres líneas en `macrolotes.html`: la hoja de estilos, el script y `queueMicrotask(()=>PPPMacroCards.update(r))` al inicio de `render()`.

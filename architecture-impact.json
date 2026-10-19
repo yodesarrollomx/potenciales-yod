@@ -1,7 +1,7 @@
 {
   "model_revision": "2026-10-12.despacho-perfil140.1",
   "proposal_id": "CHG-PPP-UI-001",
-  "summary": "Macrolotes: rediseño de presentación con fichas. Barra superior de una línea, veredicto, decisiones como fichas que se abren en panel (decisión → fichas de sección → fichas de ajuste con icono, valor y nivel → control original) y gráficos en pestañas, a dos columnas en escritorio. Sin cambios en cálculos, controles, IDs, guardado, permisos ni contratos.",
+  "summary": "Macrolotes: sistema de presentación unificado con fichas (misma anatomía en decisión, sección y ajuste), infográficos vivos por decisión, gráficos en pestañas y barra superior de una línea. Sin cambios en cálculos, controles, IDs, guardado, permisos ni contratos.",
   "components": [
     "SYS-POTENCIALES"
   ],

@@ -85,7 +85,59 @@
   const cards = [];
 
   /* ---------- Gráfica por tarjeta (dentro de la tarjeta abierta) ---------- */
-  const CHART_CARDS = ['dUrb', 'dCostos', 'dCapital', 'dAgua'];
+  const CHART_CARDS = ['dTerreno', 'dMezcla', 'dUrb', 'dCostos', 'dCapital', 'dAgua'];
+  /* Colores de producto (los mismos del plano y del embudo). */
+  const PRODUCT = {naves: 'var(--gold)', macro: 'var(--blue)', com: 'var(--teal)', viv: 'var(--green)'};
+
+  /* ---------- Infográfico vivo de cada decisión (56 × 56) ---------- */
+  function infographic(id, r) {
+    const p = r.p || {}, acc = 'var(--acc)', faint = 'color-mix(in srgb,var(--acc) 14%,transparent)', line = 'color-mix(in srgb,var(--acc) 55%,transparent)';
+    const svg = inner => '<svg viewBox="0 0 56 56" width="56" height="56" aria-hidden="true" focusable="false">' + inner + '</svg>';
+    const arc = (cx, cy, rad, a0, a1) => { const P = a => [cx + rad * Math.cos(a), cy + rad * Math.sin(a)]; const [x0, y0] = P(a0), [x1, y1] = P(a1); return 'M' + x0.toFixed(2) + ' ' + y0.toFixed(2) + 'A' + rad + ' ' + rad + ' 0 ' + (a1 - a0 > Math.PI ? 1 : 0) + ' 1 ' + x1.toFixed(2) + ' ' + y1.toFixed(2); };
+    const donut = parts => { const total = parts.reduce((a, x) => a + (valid(x.v) && x.v > 0 ? x.v : 0), 0); if (!total) return '<circle cx="28" cy="28" r="18" fill="none" stroke="' + faint + '" stroke-width="7"/>';
+      let a = -Math.PI / 2, out = '<circle cx="28" cy="28" r="18" fill="none" stroke="' + faint + '" stroke-width="7"/>';
+      parts.forEach(x => { if (!(valid(x.v) && x.v > 0)) return; const b = a + x.v / total * Math.PI * 2 - .04; if (b - a > .02) out += '<path d="' + arc(28, 28, 18, a, Math.min(b, a + Math.PI * 1.999)) + '" fill="none" stroke="' + x.c + '" stroke-width="7" stroke-linecap="butt"/>'; a = b + .04; });
+      return out; };
+    if (id === 'dTerreno') {
+      // Polígono a escala (frente × fondo) con la parte vendible rellena; la carretera es la línea gruesa del frente.
+      const f = valid(p.frente) ? p.frente : 1, d = valid(p.fondo) ? p.fondo : 1, k = 38 / Math.max(f, d), w = Math.max(10, d * k), h = Math.max(10, f * k);
+      const x = 28 - w / 2 + 3, y = 28 - h / 2, v = clamp01(r.vendiblePct);
+      return svg('<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="2" fill="' + faint + '" stroke="' + line + '"/>' +
+        '<rect x="' + (x + w * (1 - v)) + '" y="' + y + '" width="' + (w * v) + '" height="' + h + '" rx="2" fill="' + acc + '" opacity=".45"/>' +
+        (() => { let lots = ''; const x0 = x + w * (1 - v), n = Math.max(2, Math.round(w * v / 6)); for (let i = 1; i < n; i++) lots += 'M' + (x0 + w * v * i / n).toFixed(1) + ' ' + y + 'V' + (y + h); lots += 'M' + x0.toFixed(1) + ' ' + (y + h / 2).toFixed(1) + 'H' + (x + w).toFixed(1); return '<path d="' + lots + '" stroke="var(--card)" stroke-width="1.2"/>'; })() +
+        '<path d="M' + (x - 4) + ' ' + (y - 2) + 'V' + (y + h + 2) + '" stroke="' + acc + '" stroke-width="3" stroke-linecap="round"/>');
+    }
+    if (id === 'dMezcla') return svg(donut([{v: r.ingNaves, c: PRODUCT.naves}, {v: r.ingMacro, c: PRODUCT.macro}, {v: r.ingCom, c: PRODUCT.com}, {v: r.ingViv, c: PRODUCT.viv}]));
+    if (id === 'dUrb') {
+      // Traza de calles; la parte coloreada es lo que pesa la urbanización dentro del costo.
+      const share = valid(r.urbanizacion) && valid(r.costoProyecto) && r.costoProyecto > 0 ? clamp01(r.urbanizacion / r.costoProyecto) : 0;
+      return svg('<rect x="8" y="8" width="40" height="40" rx="6" fill="' + faint + '"/>' +
+        '<path d="M8 22H48M8 36H48M22 8V48M36 8V48" stroke="' + line + '" stroke-width="3"/>' +
+        '<rect x="8" y="' + (48 - 40 * share) + '" width="40" height="' + (40 * share) + '" rx="6" fill="' + acc + '" opacity=".35"/>' +
+        '<circle cx="22" cy="22" r="2.5" fill="' + acc + '"/><circle cx="36" cy="36" r="2.5" fill="' + acc + '"/>');
+    }
+    if (id === 'dCostos') {
+      const util = valid(r.utilidadFinal) ? Math.max(0, r.utilidadFinal) : 0, cost = valid(r.ingresos) ? Math.max(0, r.ingresos - util) : 0;
+      return svg(donut([{v: cost, c: 'var(--red)'}, {v: util, c: 'var(--green)'}]));
+    }
+    if (id === 'dCapital') {
+      // Curva real de la deuda mes a mes, con el pico marcado.
+      const fl = Array.isArray(r.flows) ? r.flows.filter(f => valid(f.debt)) : [], max = Math.max(1, ...fl.map(f => f.debt)), n = Math.max(1, fl.length - 1);
+      const pts = fl.map((f, i) => [8 + i / n * 40, 44 - f.debt / max * 30]);
+      const path = pts.map((q, i) => (i ? 'L' : 'M') + q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join('');
+      const peak = pts.reduce((a, q) => q[1] < a[1] ? q : a, [0, 99]);
+      return svg('<path d="M8 44H48" stroke="' + line + '" stroke-width="1.5"/>' + (path ? '<path d="' + path + 'L48 44L8 44Z" fill="' + faint + '"/><path d="' + path + '" fill="none" stroke="' + acc + '" stroke-width="2.2" stroke-linejoin="round"/>' : '') +
+        (peak[1] < 99 && r.peak > 1 ? '<circle cx="' + peak[0].toFixed(1) + '" cy="' + peak[1].toFixed(1) + '" r="3" fill="' + acc + '"/>' : ''));
+    }
+    if (id === 'dAgua') {
+      // Gota que se llena con la demanda contra la dotación recomendada; roja si el agua está en veda.
+      const ref = valid(r.superficie) && r.superficie > 0 ? r.superficie / 10000 * 86.4 : null, lvl = valid(r.aguaDia) && ref ? clamp01(r.aguaDia / ref) : 0;
+      const tone = p.gateAgua === 0 ? 'var(--red)' : acc, drop = 'M28 8C28 8 14 24 14 33a14 14 0 0 0 28 0C42 24 28 8 28 8Z', top = 47 - 39 * lvl;
+      return svg('<defs><clipPath id="pmDrop"><path d="' + drop + '"/></clipPath></defs><path d="' + drop + '" fill="' + faint + '"/>' +
+        '<rect x="12" y="' + top.toFixed(1) + '" width="32" height="40" fill="' + tone + '" opacity=".55" clip-path="url(#pmDrop)"/><path d="' + drop + '" fill="none" stroke="' + tone + '" stroke-width="2"/>');
+    }
+    return '';
+  }
   function stack(parts, total) {
     if (!valid(total) || total <= 0) return '<div class="pm-stack pm-empty">Datos pendientes</div>';
     const shownParts = parts.filter(p => valid(p.value) && p.value > 0);
@@ -100,6 +152,17 @@
   }
   function chartHtml(id, r) {
     const p = r.p || {};
+    if (id === 'dTerreno') {
+      const sup = r.superficie, ces = valid(r.sumaCesiones) && valid(sup) ? r.sumaCesiones * sup : null;
+      return '<div class="pm-chart-title">Cómo se usa el terreno</div>' +
+        stack([{name: 'Vendible', value: r.vendible, color: 'var(--purple)'}, {name: 'Calles', value: r.m2Vial, color: 'var(--orange)'},
+               {name: 'Otras cesiones', value: valid(ces) && valid(r.m2Vial) ? ces - r.m2Vial : null, color: 'var(--suave)'}], sup);
+    }
+    if (id === 'dMezcla') {
+      return '<div class="pm-chart-title">De dónde salen las ventas</div>' +
+        stack([{name: 'Naves', value: r.ingNaves, color: PRODUCT.naves}, {name: 'Macro-lotes', value: r.ingMacro, color: PRODUCT.macro},
+               {name: 'Comercial', value: r.ingCom, color: PRODUCT.com}, {name: 'Vivienda', value: r.ingViv, color: PRODUCT.viv}], r.ingresos);
+    }
     if (id === 'dUrb') {
       const total = valid(r.urbVariable) && valid(r.obraFija) ? r.urbVariable + r.obraFija : r.urbanizacion;
       const share = valid(r.urbanizacion) && valid(r.costoProyecto) && r.costoProyecto > 0 ? r.urbanizacion / r.costoProyecto : null;
@@ -153,6 +216,7 @@
     const dot = document.createElement('i'); dot.className = 'pm-alert-dot'; dot.hidden = true; dot.setAttribute('aria-hidden', 'true');
     const gauge = document.createElement('span'); gauge.className = 'pm-gauge'; gauge.innerHTML = '<span></span>'; gauge.hidden = true;
     const close = document.createElement('i'); close.className = 'ti ti-x pm-close'; close.setAttribute('aria-hidden', 'true');
+    const visual = document.createElement('span'); visual.className = 'pm-visual'; header.querySelector('.icon-box')?.after(visual);
     const text = document.createElement('span'); text.className = 'pm-cardtext';
     if (titleEl) { titleEl.before(text); text.append(titleEl); }
     const sub = document.createElement('span'); sub.className = 'pm-cardsub'; sub.append(dot, sum);
@@ -167,7 +231,7 @@
     let chart = null;
     if (CHART_CARDS.includes(id)) { chart = document.createElement('div'); chart.className = 'pm-chart'; strip.after(chart); }
     [strip, chart].forEach(el => el && el.addEventListener('click', e => e.stopPropagation())); // solo el encabezado abre/cierra
-    const rec = {id, card, header, sum, fig, gauge, dot, strip, boxes: boxes.slice(0, 3), chart, drawer};
+    const rec = {id, card, header, sum, fig, gauge, dot, visual, strip, boxes: boxes.slice(0, 3), chart, drawer};
     if (drawer) buildSections(rec);
     new MutationObserver(() => header.setAttribute('aria-expanded', String(card.classList.contains('open')))).observe(card, {attributes: true, attributeFilter: ['class']});
     header.setAttribute('aria-expanded', 'false');
@@ -320,6 +384,12 @@
   }
 
   /* ---------- Repintado con el estado del motor ---------- */
+  /* "2,453 m³/día" → número grande y unidad chica, para que el número nunca se corte. */
+  function setFig(el, text) {
+    const t = String(text ?? ''), m = t.match(/^(.*?[\d—%)])\s+([^\d$]{1,14})$/);
+    const html = m ? '<span>' + esc(m[1]) + '</span><small>' + esc(m[2]) + '</small>' : esc(t);
+    if (el.dataset.m !== html) { el.innerHTML = html; el.dataset.m = html; }
+  }
   const rangePos = i => { const mn = Number(i.min), mx = Number(i.max), v = Number(i.value); return mx > mn ? (v - mn) / (mx - mn) : null; };
   function setGauge(el, v) { if (!el) return; el.hidden = !valid(v); if (valid(v)) el.firstChild.style.width = (clamp01(v) * 100).toFixed(1) + '%'; el.classList.toggle('pm-over', valid(v) && v > 1); }
   function paint(r) {
@@ -327,8 +397,9 @@
     const gate = p.gateAgua, blocked = gate === 0;
     cards.forEach(c => {
       const tile = CARD_TILE[c.id] ? CARD_TILE[c.id](r) : {fig: '', sub: ''};
-      c.fig.textContent = tile.fig; c.sum.textContent = tile.sub; c.dot.hidden = !tile.warn; c.card.classList.toggle('pm-alert', !!tile.warn);
+      setFig(c.fig, tile.fig); c.sum.textContent = tile.sub; c.dot.hidden = !tile.warn; c.card.classList.toggle('pm-alert', !!tile.warn);
       setGauge(c.gauge, tile.gauge);
+      const art = infographic(c.id, r); if (c.visual.dataset.m !== art) { c.visual.innerHTML = art; c.visual.dataset.m = art; }
       const strip = c.boxes.map(b => '<div class="pm-fig"><span>' + esc(b.querySelector('.kpi-lbl')?.textContent || '') + '</span><b class="' + esc(b.querySelector('.kpi-val').className.replace('kpi-val', '').trim()) + '">' + esc(b.querySelector('.kpi-val').textContent) + '</b></div>').join('');
       if (c.strip.dataset.m !== strip) { c.strip.innerHTML = strip; c.strip.dataset.m = strip; }
       if (c.chart) { const h = chartHtml(c.id, r); if (c.chart.dataset.m !== h) { c.chart.innerHTML = h; c.chart.dataset.m = h; } }
@@ -340,7 +411,7 @@
         else { const act = s.body.querySelector('.active b,.active'); out = {fig: act ? act.textContent.trim() : 'Elegir', sub: 'opción elegida'}; }
         const changed = s.rows.filter(x => Number(x.input.value) !== Number(x.input.defaultValue)).length;
         s.rows.forEach(x => { x.dot.hidden = Number(x.input.value) === Number(x.input.defaultValue); if (x.sw) { x.sw.setAttribute('aria-checked', String(x.input.value === '1')); const t = x.state._opts[x.input.value === '1' ? 1 : 0]; x.state.textContent = t.charAt(0).toUpperCase() + t.slice(1); } setGauge(x.gauge, x.sw ? null : rangePos(x.input)); });
-        s.figEl.textContent = out.fig; s.sumEl.textContent = out.sub;
+        setFig(s.figEl, out.fig); s.sumEl.textContent = out.sub;
         s.countEl.textContent = s.rows.length ? String(s.rows.length) : ''; s.countEl.title = s.rows.length + ' ajustes en esta sección';
         s.dotEl.hidden = !changed; s.dotEl.title = changed + (changed === 1 ? ' valor ajustado' : ' valores ajustados');
         s.sec.classList.toggle('pm-alert', !!out.warn); setGauge(s.gaugeEl, out.gauge);
