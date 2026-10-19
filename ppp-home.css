@@ -16,6 +16,6 @@ html[data-tema="oscuro"]{--bg:#17140f;--card:#252118;--text:#f6f3ed;--muted:#bdb
 /* One visible documentary profile, independent of native Sheets calculations. */
 .featured-ppp{width:min(1120px,calc(100% - 48px));margin:6px auto 22px;display:flex;gap:20px;align-items:center;justify-content:space-between;padding:22px 24px;border:1px solid var(--lineaf);border-left:4px solid var(--goldc);border-radius:14px;background:var(--card)}
 .featured-ppp-copy{min-width:0}.featured-ppp h2{margin:6px 0 7px;font-size:clamp(25px,3.8vw,35px);line-height:1.15}.featured-ppp p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
-.featured-ppp-open{display:inline-flex;gap:10px;align-items:center;justify-content:center;flex:none;background:var(--ink);color:var(--bg);text-decoration:none;padding:13px 16px;border-radius:9px;font-size:13px;font-weight:600;min-height:44px}
+.featured-ppp-open{display:inline-flex;gap:10px;align-items:center;justify-content:center;flex:none;background:var(--text);color:var(--card);text-decoration:none;padding:13px 16px;border-radius:9px;font-size:13px;font-weight:600;min-height:44px}
 .featured-ppp-open:hover{filter:brightness(1.12)}
 @media(max-width:700px){.featured-ppp{width:calc(100% - 32px);padding:19px 18px;flex-direction:column;align-items:stretch;gap:15px}.featured-ppp-open{width:100%}}
