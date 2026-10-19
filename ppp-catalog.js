@@ -2,19 +2,30 @@
 (() => {
   'use strict';
   const tipos = {
-    macrolotes: {nombre: 'Macro Lotes', pagina: 'macrolotes.html'},
-    vertical: {nombre: 'Mixto / Depas', pagina: 'mixto.html'},
+    macrolotes: {nombre: 'Macrolotes', pagina: 'macrolotes.html'},
+    vertical: {nombre: 'Uso mixto', pagina: 'mixto.html'},
     unifamiliar: {nombre: 'Unifamiliar', pagina: 'unifamiliar.html'},
-    residencial: {nombre: 'Lotes Residenciales', pagina: 'residencial.html'},
-    patrimonial: {nombre: 'Patrimonial / Rentas', pagina: 'patrimonial.html'}
+    residencial: {nombre: 'Lotes residenciales', pagina: 'residencial.html'},
+    patrimonial: {nombre: 'Patrimonial', pagina: 'patrimonial.html'}
   };
   const button = document.getElementById('btnTodos'), list = document.getElementById('listaTodos');
   if (!button || !list) return;
   const count = document.getElementById('cntTodos');
+  const home = !!document.querySelector('.projects-panel'), search = document.getElementById('projectSearch');
   const key = () => localStorage.getItem('pyod_clave_v1') || '';
   let credential = '', epoch = 0, states = {}, mapRows = {}, controllers = new Set();
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const finite = v => v !== '' && v !== null && v !== undefined && Number.isFinite(Number(v));
+  const projectName = c => String(c.nombre_caso || c.palabra || 'Caso guardado').split(/\s+·\s+/)[0].trim();
+  const normalized = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es');
+  function groups(rows) {
+    const result = new Map(), seen = new Set();
+    for (const row of rows) {
+      const id = String(row.caso_id); if(seen.has(id))continue; seen.add(id);
+      const name = projectName(row), k = normalized(name);
+      if(!result.has(k))result.set(k,{name,rows:[]}); result.get(k).rows.push(row);
+    }
+    return [...result.values()].sort((a,b)=>a.name.localeCompare(b.name,'es'));
+  }
   function projectLink(pin){
     const info=tipos[pin?.tipo];if(!info||!pin.link)return null;
     try{
@@ -32,24 +43,28 @@
       const state=states[type],loading=!state||state.status==='loading',error=state?.status==='error';
       if(loading)pending++;if(error)failed++;
       const rows=state?.status==='ok'?state.rows:state?.denied?[]:(mapRows[type]||[]);
-      total+=rows.length;
-      html+=`<section class="lt-group" data-type="${type}"><h2 class="lt-tipo">${esc(info.nombre)} <span>${rows.length|| (loading?'…':'—')}</span></h2>`;
-      if(loading||error){html+=`<p class="lt-category-status">${loading?'Consultando los casos guardados…':state.denied?'Consulta no disponible con esta sesión.':'No se confirmó la lista. Los accesos del mapa siguen disponibles.'}</p>`;}
-      if(!loading&&!error&&!rows.length)html+='<p class="lt-category-status">Sin casos guardados.</p>';
-      html+=rows.map(c=>{
-        const profit=finite(c.utilidad)?(Number(c.utilidad)<0?'−$':'$')+Math.abs(Number(c.utilidad)/1e6).toFixed(1)+' M':'';
-        const detail=c._map?'Acceso del mapa · confirmar datos al abrir':[c.palabra,profit,c.estado].filter(Boolean).map(esc).join(' · ');
-        return `<a class="lt-item" href="${info.pagina}?open=${esc(encodeURIComponent(String(c.caso_id)))}"><span class="lt-dot lt-${type}" aria-hidden="true"></span><span class="nm">${esc(c.nombre_caso||c.palabra||'Caso guardado')}<span class="dt">${detail}</span></span><span class="ir" aria-hidden="true">→</span></a>`;
-      }).join('');
+      const projects=groups(rows); total+=projects.length;
+      const query=normalized(search?.value.trim()||'');
+      const visible=projects.filter(g=>normalized(g.rows.map(c=>[c.nombre_caso,c.palabra,c.estado].join(' ')).join(' ')).includes(query));
+      html+=`<section class="lt-group" data-type="${type}"><h2 class="lt-tipo">${esc(info.nombre)} <span>${projects.length|| (loading?'…':'—')}</span></h2>`;
+      if(loading||error){html+=`<p class="lt-category-status">${loading?'Consultando los proyectos guardados…':state.denied?'Consulta no disponible con esta sesión.':'No se confirmó la lista. Los accesos del mapa siguen disponibles.'}</p>`;}
+      if(!loading&&!error&&!rows.length)html+='<p class="lt-category-status">Sin proyectos guardados.</p>';
+      const link = (c, title) => {
+        const detail = c._map ? 'Acceso del mapa · confirmar datos al abrir' : [String(c.nombre_caso||'').split(/\s+·\s+/).slice(1).join(' · '),c.estado, c.ts_actualizado ? 'Actualizado ' + String(c.ts_actualizado).split(/[T ]/)[0] : ''].filter(Boolean).join(' · ');
+        return `<a class="lt-item" href="${info.pagina}?open=${esc(encodeURIComponent(String(c.caso_id)))}"><span class="lt-dot lt-${type}" aria-hidden="true"></span><span class="nm">${esc(title)}<span class="dt">${esc(detail)}</span></span><span class="ir" aria-hidden="true">→</span></a>`;
+      };
+      html+=visible.map(g=>g.rows.length===1 ? link(g.rows[0],g.name) :
+        `<details class="lt-variants"><summary><span class="lt-dot lt-${type}" aria-hidden="true"></span><span class="nm">${esc(g.name)}<span class="dt">${g.rows.length} registros · ver alternativas</span></span></summary>${g.rows.map(c=>link(c,String(c.nombre_caso).split(/\s+·\s+/).slice(1).join(' · ')||c.palabra||'Alternativa guardada')).join('')}</details>`).join('');
+      if(query&&!visible.length&&projects.length)html+='<p class="lt-category-status">Sin coincidencias.</p>';
       if(error&&!state.denied)html+=`<button class="lt-retry-type" type="button" data-retry="${type}">Reintentar ${esc(info.nombre)}</button>`;
       html+='</section>';
     }
     const incomplete=pending||failed;
     count.textContent=incomplete?(total?total+'+':'…'):String(total);
-    count.setAttribute('aria-label',incomplete?'Listado incompleto':total+' casos guardados');
+    count.setAttribute('aria-label',incomplete?'Listado incompleto':total+' proyectos guardados');
     let status='';if(pending)status=`Cargando ${pending} de 5 listas…`;if(failed)status+=`${status?' ':''}No se pudieron consultar ${failed} de 5 listas.`;
-    if(!credential)status='Entra con tu sesión para consultar los casos guardados.';
-    if(!incomplete&&credential&&!total)status='Aún no hay casos guardados.';
+    if(!credential)status='Entra con tu sesión para consultar los proyectos guardados.';
+    if(!incomplete&&credential&&!total)status='Aún no hay proyectos guardados.';
     const scroll=list.scrollTop;
     // Feedback stays above the scrollable project groups rather than disappearing below them.
     list.innerHTML=(status?`<div class="lt-feedback"><p class="lt-status" role="status">${status}</p>${failed?'<button class="lt-retry" type="button">Reintentar listas pendientes</button>':''}</div>`:'')+html;
@@ -95,9 +110,12 @@
     requests.forEach(t => states[t] = {status: 'loading', rows: [],denied:!!states[t]?.denied}); render();
     requests.forEach(t => { void read(t, session, generation); });
   }
-  button.setAttribute('aria-expanded', 'false'); button.setAttribute('aria-controls', list.id);
-  list.hidden = true;
+  if(search)search.addEventListener('input',render);
+  button.setAttribute('aria-expanded', String(home)); button.setAttribute('aria-controls', list.id);
+  if(home)button.setAttribute('aria-label','Actualizar proyectos guardados');
+  list.hidden = !home;
   button.onclick = () => {
+    if(home){load(key(),true);return;}
     list.hidden = !list.hidden;
     button.setAttribute('aria-expanded', String(!list.hidden));
     if (!list.hidden) load(key());

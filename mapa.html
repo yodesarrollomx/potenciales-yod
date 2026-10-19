@@ -64,8 +64,7 @@
   }
 </style>
 <style>.leaflet-tile{filter:invert(1) hue-rotate(180deg) saturate(.55) brightness(.9) contrast(.9)}.leaflet-container{background:#17140F}</style>
-<link rel="stylesheet" href="ppp-home.css?v=20261001-2">
-<link rel="stylesheet" href="ppp-catalog.css?v=20261001-4">
+<link rel="stylesheet" href="ppp-catalog.css?v=20261019-1">
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -99,7 +98,7 @@
   const ENDPOINT=(window.YOD_PORTERO||{}).original;   // única copia: yod-portal/os/yod-acceso.js
   const LSK='pyod_clave_v1';
   const $=id=>document.getElementById(id);
-  const TIPOS={macrolotes:{n:'Macro Lotes',e:'🏭',c:'var(--c-macrolotes)',hex:'#B98B3C'},vertical:{n:'Mixto / Depas',e:'🏢',c:'var(--c-vertical)',hex:'#8ab8ff'},unifamiliar:{n:'Unifamiliar',e:'🏡',c:'var(--c-unifamiliar)',hex:'#8FBF8B'},residencial:{n:'Lotes Residenciales',e:'🏘️',c:'var(--c-residencial)',hex:'#7fd4e8'},patrimonial:{n:'Patrimonial / Rentas',e:'💼',c:'var(--c-patrimonial)',hex:'#a9a4f5'}};
+  const TIPOS={macrolotes:{n:'Macrolotes',e:'🏭',c:'var(--c-macrolotes)',hex:'#B98B3C'},vertical:{n:'Uso mixto',e:'🏢',c:'var(--c-vertical)',hex:'#8ab8ff'},unifamiliar:{n:'Unifamiliar',e:'🏡',c:'var(--c-unifamiliar)',hex:'#8FBF8B'},residencial:{n:'Lotes residenciales',e:'🏘️',c:'var(--c-residencial)',hex:'#7fd4e8'},patrimonial:{n:'Patrimonial',e:'💼',c:'var(--c-patrimonial)',hex:'#a9a4f5'}};
   let clave=localStorage.getItem(LSK)||'', map=null, capa=null, pines=[], bounds=null, filtros=new Set(Object.keys(TIPOS));
   window.addEventListener('resize',()=>{if(map)map.invalidateSize()});
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -153,7 +152,7 @@
   if(clave){cargar(clave).then(()=>{$('gate').classList.add('off');ajusta()}).catch(e=>{if(e==='clave'){localStorage.removeItem(LSK);$('gateErr').textContent='La clave cambió'}else $('gateErr').textContent='Sin conexión con el Sheet'})}
 })();
 </script>
-<script src="ppp-catalog.js?v=20261001-4"></script>
+<script src="ppp-catalog.js?v=20261019-1"></script>
 <script src="portero.js?v=relevo9"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=audit-20260930"></script>
 </body>

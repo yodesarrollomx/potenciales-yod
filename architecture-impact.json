@@ -1,13 +1,13 @@
 {
   "model_revision": "2026-10-12.despacho-perfil140.1",
   "proposal_id": "CHG-PPP-UI-001",
-  "summary": "Macrolotes: sistema de presentación unificado con fichas (misma anatomía en decisión, sección y ajuste), infográficos vivos por decisión, gráficos en pestañas y barra superior de una línea. Sin cambios en cálculos, controles, IDs, guardado, permisos ni contratos.",
+  "summary": "Portada PPP centrada en proyectos: títulos homogéneos, registros alternativos agrupados sin borrar, catálogo fuera del mapa, buscador y accesos compactos a motores. Archivo documental privado enlazado en el libro existente. Sin cambios en contratos, backend, cálculos ni permisos.",
   "components": [
     "SYS-POTENCIALES"
   ],
   "tests": [
-    "tests/ppp-macro-cards-browser.cjs en Chromium/WebKit: HUD de una línea expandible, decisiones antes de gráficos, una pestaña visible, fichas de decisión y de sección con icono y número, una sección abierta por decisión, fichas de ajuste con icono que abren un control a la vez, interruptor 0/1 con su significado, salto a control escondido, IDs únicos, mismos controles, sin desborde 320/390/430/1280, cero escrituras.",
-    "Regresiones: ppp-cierre-browser (ocho versiones macro) y ppp-version-bridge-browser (macrolotes); pruebas unitarias 37/37."
+    "120 pruebas unitarias aprobadas: node --test tests/*.test.cjs tests/access-gates.cjs tests/sheets-offline.cjs",
+    "Chromium sintético aprobado en 320/390/430/1280 px: portada y mapa, menú sobre Leaflet, accesos sin solapamiento, consultas parciales, reintentos, rechazo, vacío, timeout y cambio de sesión; sin escrituras de negocio. WebKit pendiente de CI."
   ],
-  "rollback": "Revertir por PR los archivos ppp-macro-cards.js/.css, su prueba y las tres líneas de enganche en macrolotes.html; no se tocan casos, libros, versiones ni sesiones."
+  "rollback": "Revertir por PR index.html, ppp-home.css, ppp-catalog.js/css y etiquetas de mapa. Conservar libros, inventario privado, casos, versiones y sesiones."
 }
