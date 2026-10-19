@@ -7,14 +7,14 @@ const types=['macrolotes','vertical','unifamiliar','residencial','patrimonial'];
 const pages=['macrolotes','mixto','unifamiliar','residencial','patrimonial'];
 const rows=t=>Array.from({length:3},(_,i)=>({caso_id:`prueba ${t}/${i}`,nombre_caso:`Proyecto de prueba ${t} ${i+1}`,palabra:`ensayo-${i+1}`,estado:'ANÁLISIS',utilidad:i?1200000:''}));
 async function fixture(context,options={}){
- const base=await install(context,{seed:null}),calls=[],writes=[];
+ const base=await install(context,{seed:null}),calls=[],writes=[],dossierReads=[];
  await context.route('https://unpkg.com/**',route=>{
   const u=route.request().url(),gesture=u.includes('gesture-handling'),css=u.includes('.css');
   return route.fulfill({contentType:css?'text/css':'text/javascript',body:fs.readFileSync(path.join(assets,(gesture?'gesture':'leaflet')+(css?'.css':'.js')))});
  });
  await context.route('https://script.google.com/**',async route=>{
   const req=route.request(),u=new URL(req.url()),action=u.searchParams.get('recurso'),t=u.searchParams.get('tipo');
-  if(req.method()==='POST'){const b=req.postDataJSON();if(b?.action==='brokers_snapshot'){const data={contract:'brokers.v1',revision:1,actor:{id:'synthetic-director',role:'direccion'},brokers:[],contacts:[],opportunities:options.dossiers||[],activities:options.activities||[],participations:[]};return route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,data})});}if(b&&b.tipo!=='bitacora')writes.push(b);return route.fallback();}
+  if(req.method()==='POST'){const b=req.postDataJSON();if(b?.action==='brokers_snapshot'){dossierReads.push(b.k);const data={contract:'brokers.v1',revision:1,actor:{id:'synthetic-director',role:'direccion'},brokers:[],contacts:[],opportunities:options.dossiers||[],activities:options.activities||[],participations:[]};return route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,data})});}if(b&&b.tipo!=='bitacora')writes.push(b);return route.fallback();}
   if(action==='lista'){
    calls.push(t);
    const status=options.status?.[t];
@@ -30,7 +30,7 @@ async function fixture(context,options={}){
   }
   return route.fallback();
  });
- return {base,calls,writes};
+ return {base,calls,writes,dossierReads};
 }
 async function waitForMapIdle(p){
  // Loading the catalogue does not finish ajusta(): it schedules fitBounds after 300 ms.
@@ -86,7 +86,7 @@ async function menuAboveMap(p){
    }
    assert.deepEqual(errors,[]);assert.equal(net.writes.length,0);await c.close();
    const dc=await browser.newContext({viewport:{width:390,height:844}}),df=await fixture(dc,{dossiers:[{id:'doc-clinic',title:'Predio de prueba · Clínica',stage:'Recibido',notes:'Área declarada por confirmar.',next_action:'[YOD] Validar polígono',documents_url:'https://drive.google.com/file/d/synthetic/view'},{id:'doc-industrial',title:'Industrial de prueba',stage:'En revisión',notes:'Dos superficies por conciliar.'},{id:'doc-market',title:'Mercado de prueba',stage:'En revisión',notes:'Propuesta preliminar, no contratada.'},{id:'linked',title:'Caso vinculado',ppp_id:'prueba macrolotes/0',stage:'En revisión',notes:'Historia en el mismo caso.'}],activities:[{id:'act-1',opportunity_id:'doc-market',note:'Documento recibido para revisar.\n[YOD-CRM v1]\n{"occurred_at":"2026-10-19","source_url":"https://example.test/document"}'}]}),dp=await dc.newPage();
-   await dp.goto('https://ppp.test/potenciales-yod/index.html');await dp.waitForFunction(()=>document.querySelectorAll('.project-dossier').length===3);assert.equal(await dp.locator('#listaTodos [data-project-context]').count(),1,'Explicit PPP reference enriches existing case rather than duplicating it');await dp.locator('.project-dossier').filter({hasText:'Mercado de prueba'}).locator('summary').first().click();assert.match(await dp.locator('.project-dossier[open]').innerText(),/Documento recibido para revisar/);for(const width of [320,390,1280]){await dp.setViewportSize({width,height:844});assert.ok(await dp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Dossiers do not overflow '+width);}assert.equal(df.writes.length,0);if(process.env.PPP_SCREENSHOTS){await dp.setViewportSize({width:390,height:844});await dp.screenshot({path:path.join(process.env.PPP_SCREENSHOTS,name+'-dossiers.png'),fullPage:true});}await dc.addInitScript(()=>localStorage.removeItem('pyod_clave_v1'));await dp.evaluate(()=>{localStorage.removeItem('pyod_clave_v1');dispatchEvent(new StorageEvent('storage',{key:'pyod_clave_v1'}));});await dp.waitForFunction(()=>!document.getElementById('projectDossiers').textContent);assert.equal(await dp.locator('[data-project-context]').count(),0);await dc.close();
+   await dp.goto('https://ppp.test/potenciales-yod/index.html');await dp.waitForFunction(()=>document.querySelectorAll('.project-dossier').length===3);assert.equal(await dp.locator('#listaTodos [data-project-context]').count(),1,'Explicit PPP reference enriches existing case rather than duplicating it');await dp.locator('.project-dossier').filter({hasText:'Mercado de prueba'}).locator('summary').first().click();assert.match(await dp.locator('.project-dossier[open]').innerText(),/Documento recibido para revisar/);for(const width of [320,390,1280]){await dp.setViewportSize({width,height:844});assert.ok(await dp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Dossiers do not overflow '+width);}await dp.evaluate(()=>{localStorage.setItem('pyod_clave_v1','synthetic-fresh-session');dispatchEvent(new Event('ppp:catalog-render'));});await dp.waitForFunction(()=>document.querySelectorAll('.project-dossier').length===3);assert.equal(df.dossierReads.at(-1),'synthetic-fresh-session','Same-tab session changes query the current portfolio');assert.equal(df.writes.length,0);if(process.env.PPP_SCREENSHOTS){await dp.setViewportSize({width:390,height:844});await dp.evaluate(()=>document.body.classList.remove('yod-nav-open'));await dp.screenshot({path:path.join(process.env.PPP_SCREENSHOTS,name+'-dossiers.png'),fullPage:true});}await dc.addInitScript(()=>localStorage.removeItem('pyod_clave_v1'));await dp.evaluate(()=>{localStorage.removeItem('pyod_clave_v1');dispatchEvent(new StorageEvent('storage',{key:'pyod_clave_v1'}));});await dp.waitForFunction(()=>!document.getElementById('projectDossiers').textContent);assert.equal(await dp.locator('[data-project-context]').count(),0);await dc.close();
 
    console.log('PASS '+name+': 15 cases, 5 types, correct URLs, catalogue scroll, sidebar above Leaflet, 5 SVG links, private archive link, no calculator descriptions, 320/390/430/1280 px, no writes.');
    const options={status:{vertical:'network',patrimonial:'malformed',residencial:'delay'},mapFail:true};

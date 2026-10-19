@@ -26,4 +26,4 @@ Un `ppp_id` explícito incorpora situación, documentos e historial al caso guar
 
 La lectura refleja el CRM al abrir o actualizar. La incorporación de nuevos documentos al CRM sigue requiriendo conciliación de fuentes; este cambio no conecta automáticamente servicios de mensajería ni acredita la sincronización de una bóveda local.
 
-Verificación del lector: 126 pruebas unitarias y recorrido de Chromium aprobados; expedientes sin modelo, enriquecimiento sin duplicados, historial, 320/390/1280 px y retirada tras cierre de sesión. Servicios de negocio interceptados con datos sintéticos.
+Verificación del lector: 127 pruebas unitarias y recorrido de Chromium aprobados; expedientes sin modelo, enriquecimiento sin duplicados, historial, 320/390/1280 px y retirada tras cierre de sesión. Servicios de negocio interceptados con datos sintéticos.

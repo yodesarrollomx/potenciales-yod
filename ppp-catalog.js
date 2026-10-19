@@ -102,8 +102,9 @@
       credential = ''; states = {};mapRows={}; render(); return;
     }
     if (session === credential && !retry) return;
-    if (session !== credential) {
-      epoch++; controllers.forEach(c => c.abort()); controllers.clear(); states = {};mapRows={};
+    if (session !== credential || refresh) {
+      epoch++; controllers.forEach(c => c.abort()); controllers.clear();
+      if(session !== credential){states = {};mapRows={};}
     }
     credential = session;
     const generation = epoch;

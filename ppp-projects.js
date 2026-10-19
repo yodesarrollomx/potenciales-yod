@@ -58,7 +58,7 @@
     const reader=createReader({url:box.dataset.endpoint,fetch:root.fetch.bind(root),getCredential,onState(state){status=state.status;snapshot=state.snapshot;session=getCredential();render();}});
     function reload(){lastLoad=Date.now();return reader.load();}
     root.addEventListener('storage',e=>{if(e.key==='pyod_clave_v1'||e.key===null)void reload();});
-    root.addEventListener('ppp:catalog-render',render);root.addEventListener('ppp:refresh',()=>void reload());search?.addEventListener('input',render);
+    root.addEventListener('ppp:catalog-render',()=>{if(session!==getCredential())void reload();else render();});root.addEventListener('ppp:refresh',()=>void reload());search?.addEventListener('input',render);
     root.document.addEventListener('visibilitychange',()=>{if(root.document.visibilityState==='visible'&&Date.now()-lastLoad>60000)void reload();});
     void reload();return {reload};
   }
