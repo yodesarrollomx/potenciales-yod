@@ -1,26 +1,31 @@
-# Macrolotes · tarjetas resumen y mini-tarjetas
+# Macrolotes · recorrido por clics
 
-Pedido de Dirección (19-oct-2026, sobre los PPP de Master Brokers con Eduardo Lara, que usan este motor): que cada tarjeta, antes de abrirse, dé el resumen con pocos datos y gráficas, y que al abrirla no se despliegue todo hacia abajo sino por subgrupos.
+Pedido de Dirección (19-oct-2026) sobre los PPP de Master Brokers con Eduardo Lara, que usan este motor. La página estaba "muy suelta": muchas barras, cifras repetidas y las decisiones al fondo. Lo que se pidió es llegar a cada decisión por clics y en forma visual, con los mismos switches y los mismos cálculos. La especificación la hizo un editor de diseño a partir de capturas reales y se implementó como capa de presentación.
 
-## Qué cambia (solo presentación)
+## Página
 
-- **Tarjeta cerrada:** se ven 4 datos, cada uno con su icono. Si una tarjeta tiene más, los demás aparecen al abrirla. Urbanización, Costos, Capital y Servicios suman una gráfica chica; Terreno y Mezcla conservan las barras que ya tenían.
-- **Tarjeta abierta:** arriba aparecen "puntos", uno por subgrupo (los mismos `.subheading` de siempre). Cada punto abre o cierra su mini-tarjeta con sus switches. Puede haber varias abiertas a la vez, en rejilla del mismo ancho (una columna en teléfono). "Abrir todo / Cerrar todo" opera sobre los mismos temas.
+1. **Barra superior de una línea:** utilidad y margen, deuda pico y estado del agua. Al tocarla se despliegan todas las métricas originales.
+2. **Caso:** Guardar queda a la vista. Mis casos, Nuevo, Seguimiento, Reuniones y WhatsApp pasan a "Más". Las versiones siguen igual.
+3. **Veredicto (hero):** la cifra principal, y debajo las otras dos lado a lado en el teléfono. La lectura y la nota de referencia van dentro de "Leer el resumen del caso". La alerta del agua lleva directo a su candado.
+4. **Espacio de trabajo:**
+   - *Decisiones:* lista agrupada de las 6 tarjetas.
+   - *Ver el proyecto:* pestañas Plano, Embudo, Dinero y Corrida, con un gráfico a la vez.
+   - En escritorio van en dos columnas, con el gráfico fijo a la derecha mientras se ajusta a la izquierda.
 
-## Fuente de las gráficas
+## Niveles de cada decisión
 
-| Tarjeta | Gráfica | Escala |
+| Nivel | Qué se ve | Al tocar |
 | --- | --- | --- |
-| Urbanización | Por cantidad (`urbVariable`) vs obra fija (`obraFija`); urbanización / costo del proyecto | 0–100% |
-| Costos | De cada peso vendido: urbanización, construcción, blandos, financieros, terreno y otros (residuo), utilidad | 0–100% de ventas |
-| Capital | Calendario: urbanización (`etapas × mesesUrbEtapa`), inicio de ventas y mes del pico; deuda pico / límite modelado | meses del caso |
-| Servicios | Agua contra la dotación NMX-R-046 de 1 l/s/ha del propio terreno; demanda eléctrica | 0–10 MVA |
-
-Todo sale del mismo `state` que pinta `render()`. Nada se recalcula aparte. Un dato ausente se muestra como `—`, y lo que rebasa la escala lo avisa.
+| N1 · Tarjeta | Icono, nombre y resumen (ej. "50 ha · 61% vendible"). Punto rojo si el agua está en veda. | Abre la tarjeta (una a la vez). |
+| N2 · Secciones | Franja de 3 cifras y su gráfica. Cada `.subheading` original es una fila con su resumen (ej. "500 × 1,000 m · vialidad 20 m"; "suma 103%" en rojo si el reparto no da 100). | Abre la sección (pueden ser varias). |
+| N3 · Filas | Cada control como fila: etiqueta, unidad y valor actual. Un punto dorado si cambió contra la referencia. | Abre su control (uno a la vez). El valor se sigue pudiendo escribir a mano. |
+| N4 · Control | El slider original, con mínimo y máximo. Los controles de 0/1 se ven como switch. | — |
 
 ## Cómo está hecho
 
-`ppp-macro-cards.js` y `ppp-macro-cards.css`, más tres líneas en `macrolotes.html`: la hoja de estilos, el script y `queueMicrotask(()=>PPPMacroCards.update(r))` al inicio de `render()`. Los controles se **mueven**, no se clonan: IDs, listeners, guardado, versiones, chinches y el salto desde fórmulas (`revelar()`) siguen igual, porque cada encabezado de tema queda inmediatamente antes de su cuerpo.
+`ppp-macro-cards.js` y `ppp-macro-cards.css`, más tres líneas en `macrolotes.html`: la hoja de estilos, el script y `queueMicrotask(()=>PPPMacroCards.update(r))` al inicio de `render()`.
+
+Los nodos originales se **mueven**, no se clonan. Se conservan los IDs, listeners, guardado, versiones, comparador, chinches y el salto desde fórmulas: cada encabezado de tema queda inmediatamente antes de su cuerpo, y un clic en `[data-jump]` abre primero su fila. Lo cerrado queda con `visibility:hidden`, así que no se puede enfocar con el teclado.
 
 ## Verificación
 
