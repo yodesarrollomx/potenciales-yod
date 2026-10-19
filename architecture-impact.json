@@ -1,12 +1,12 @@
 {
   "model_revision": "2026-10-12.despacho-perfil140.1",
   "proposal_id": "CHG-PPP-UI-001",
-  "summary": "Macrolotes: rediseño de presentación por clics. Barra superior de una línea, veredicto, lista de decisiones (tarjeta → secciones con resumen → filas con valor → control original) y gráficos en pestañas, a dos columnas en escritorio. Sin cambios en cálculos, controles, IDs, guardado, permisos ni contratos.",
+  "summary": "Macrolotes: rediseño de presentación con fichas. Barra superior de una línea, veredicto, decisiones como fichas que se abren en panel (decisión → fichas de sección → fichas de ajuste con icono, valor y nivel → control original) y gráficos en pestañas, a dos columnas en escritorio. Sin cambios en cálculos, controles, IDs, guardado, permisos ni contratos.",
   "components": [
     "SYS-POTENCIALES"
   ],
   "tests": [
-    "tests/ppp-macro-cards-browser.cjs en Chromium/WebKit: HUD de una línea expandible, decisiones antes de gráficos, una pestaña visible, lista cerrada, secciones con resumen, filas que abren un control a la vez, switch 0/1, salto a control escondido, IDs únicos, mismos controles, sin desborde 320/390/430/1280, cero escrituras.",
+    "tests/ppp-macro-cards-browser.cjs en Chromium/WebKit: HUD de una línea expandible, decisiones antes de gráficos, una pestaña visible, fichas de decisión y de sección con icono y número, una sección abierta por decisión, fichas de ajuste con icono que abren un control a la vez, interruptor 0/1 con su significado, salto a control escondido, IDs únicos, mismos controles, sin desborde 320/390/430/1280, cero escrituras.",
     "Regresiones: ppp-cierre-browser (ocho versiones macro) y ppp-version-bridge-browser (macrolotes); pruebas unitarias 37/37."
   ],
   "rollback": "Revertir por PR los archivos ppp-macro-cards.js/.css, su prueba y las tres líneas de enganche en macrolotes.html; no se tocan casos, libros, versiones ni sesiones."

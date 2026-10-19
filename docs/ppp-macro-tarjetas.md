@@ -12,14 +12,31 @@ Pedido de Dirección (19-oct-2026) sobre los PPP de Master Brokers con Eduardo L
    - *Ver el proyecto:* pestañas Plano, Embudo, Dinero y Corrida, con un gráfico a la vez.
    - En escritorio van en dos columnas, con el gráfico fijo a la derecha mientras se ajusta a la izquierda.
 
-## Niveles de cada decisión
+## Fichas (tercera ronda, 19-oct)
 
-| Nivel | Qué se ve | Al tocar |
+Dirección pidió fichas en vez de renglones: cuadritos bien organizados, siempre con icono, con color por significado, número y, si aplica, nivel. Algo muy visual, como el panel de un juego de estrategia, pero profesional y con el estilo de Aurum.
+
+**Regla única:** una ficha se abre y se vuelve panel en su mismo lugar. Lo demás se acomoda alrededor sin dejar huecos.
+
+| Nivel | Ficha | Al tocar |
 | --- | --- | --- |
-| N1 · Tarjeta | Icono, nombre y resumen (ej. "50 ha · 61% vendible"). Punto rojo si el agua está en veda. | Abre la tarjeta (una a la vez). |
-| N2 · Secciones | Franja de 3 cifras y su gráfica. Cada `.subheading` original es una fila con su resumen (ej. "500 × 1,000 m · vialidad 20 m"; "suma 103%" en rojo si el reparto no da 100). | Abre la sección (pueden ser varias). |
-| N3 · Filas | Cada control como fila: etiqueta, unidad y valor actual. Un punto dorado si cambió contra la referencia. | Abre su control (uno a la vez). El valor se sigue pudiendo escribir a mano. |
-| N4 · Control | El slider original, con mínimo y máximo. Los controles de 0/1 se ven como switch. | — |
+| 1 · Decisión | Icono de color, nombre, número grande (ej. "50 ha"), detalle ("61% vendible") y barrita de nivel. Borde rojo si hay alerta (agua en veda, pérdida). | Se vuelve panel: franja de 3 cifras, gráfica y fichas de sección. Una decisión abierta a la vez. |
+| 2 · Sección | Icono por significado, título, número clave (ej. "500 × 1,000 m"; "100%" del reparto, en rojo si no suma), detalle, cuántos ajustes trae y punto dorado si alguno cambió. | Se vuelve panel con sus fichas de ajuste. Una sección abierta a la vez por decisión. |
+| 3 · Ajuste | Icono propio (frente, fondo, precio, %, meses, agua, energía…), nombre, unidad, valor grande y barrita que muestra dónde está dentro de su rango. Los 0/1 son interruptores que dicen qué significa el lado activo (ej. "Vender en breña a Infonavit"). | Se vuelve panel con su control original. Uno abierto a la vez. |
+
+**Color = significado:**
+
+| Color | Significado |
+| --- | --- |
+| Morado | Terreno |
+| Verde | Ingresos |
+| Rojo | Costos |
+| Azul | Crédito |
+| Naranja | Tiempo |
+| Turquesa | Agua |
+| Dorado | Energía, gente y valores ajustados |
+
+El color va solo en el icono y la barrita, nunca de fondo.
 
 ## Cómo está hecho
 

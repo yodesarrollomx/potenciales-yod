@@ -14,16 +14,34 @@
   const reduced = () => root.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* Icono por sección, según palabras del título. */
+  /* Icono y tono por sección, según palabras del título. Tono = significado:
+     terr (terreno), ing (ingresos), cost (costos), fin (crédito), time (tiempo), agua, ener (energía), gente. */
   const TOPIC_ICONS = [
-    [/geometr/i, 'ti-dimensions'], [/cuadro de áreas|reparto/i, 'ti-chart-pie'], [/^producto/i, 'ti-box'],
-    [/precio/i, 'ti-tag'], [/vivienda/i, 'ti-home'], [/estrategia/i, 'ti-route'], [/partidas/i, 'ti-backhoe'],
-    [/redes/i, 'ti-topology-star'], [/obra fija/i, 'ti-tool'], [/norma/i, 'ti-certificate'], [/construcci/i, 'ti-crane'],
-    [/blandos/i, 'ti-file-invoice'], [/terreno/i, 'ti-map-pin'], [/calendario|absorci/i, 'ti-calendar-time'],
-    [/cobro/i, 'ti-cash'], [/financ/i, 'ti-building-bank'], [/candado/i, 'ti-lock'], [/dotaci/i, 'ti-droplets'],
-    [/giro/i, 'ti-building-warehouse'], [/cuadro de agua/i, 'ti-droplet'], [/pluvial/i, 'ti-cloud-rain'], [/vial/i, 'ti-car'],
-    [/estacionamiento/i, 'ti-parking'], [/sanitario|ptar|residuos/i, 'ti-recycle'], [/eléctric|cargas/i, 'ti-bolt'], [/demograf/i, 'ti-users']
+    [/geometr/i, 'ti-dimensions', 'terr'], [/cuadro de áreas/i, 'ti-chart-pie', 'terr'], [/reparto/i, 'ti-chart-donut', 'ing'], [/^producto/i, 'ti-box', 'ing'],
+    [/precio/i, 'ti-tag', 'ing'], [/vivienda/i, 'ti-home', 'gente'], [/estrategia/i, 'ti-route', 'ing'], [/partidas/i, 'ti-backhoe', 'cost'],
+    [/redes/i, 'ti-topology-star', 'cost'], [/obra fija/i, 'ti-tool', 'cost'], [/norma/i, 'ti-certificate', 'cost'], [/construcci/i, 'ti-crane', 'cost'],
+    [/blandos/i, 'ti-file-invoice', 'cost'], [/terreno/i, 'ti-map-pin', 'terr'], [/calendario|absorci/i, 'ti-calendar-time', 'time'],
+    [/cobro/i, 'ti-cash', 'ing'], [/financ/i, 'ti-building-bank', 'fin'], [/candado/i, 'ti-lock', 'agua'], [/dotaci/i, 'ti-droplets', 'agua'],
+    [/giro/i, 'ti-building-warehouse', 'gente'], [/cuadro de agua/i, 'ti-droplet', 'agua'], [/pluvial/i, 'ti-cloud-rain', 'agua'], [/vial/i, 'ti-car', 'gente'],
+    [/estacionamiento/i, 'ti-parking', 'gente'], [/sanitario|ptar|residuos/i, 'ti-recycle', 'agua'], [/eléctric|cargas/i, 'ti-bolt', 'ener'], [/demograf/i, 'ti-users', 'gente']
   ];
-  const topicIcon = t => (TOPIC_ICONS.find(([re]) => re.test(t)) || [0, 'ti-point'])[1];
+  const topicOf = t => TOPIC_ICONS.find(([re]) => re.test(t)) || [0, 'ti-point', 'terr'];
+  const topicIcon = t => topicOf(t)[1];
+  /* Icono por ajuste: dice qué es cada número (frente, precio, %, meses…). Si no hay, el de su sección. */
+  const CONTROL_ICONS = [
+    [/^frente/i, 'ti-arrow-autofit-width'], [/^fondo/i, 'ti-arrow-autofit-height'], [/ancho|separaci/i, 'ti-arrows-horizontal'],
+    [/luminar|alumbrado/i, 'ti-bulb'], [/barda/i, 'ti-wall'], [/vialidad|pavimen|banqueta|guarnic/i, 'ti-road'],
+    [/renta/i, 'ti-receipt'], [/vacancia/i, 'ti-door'], [/precio|valor|\$|costo|pu |ptar|cisterna|subestaci|caseta|señal/i, 'ti-currency-dollar'],
+    [/deuda|capital|ltc|equity/i, 'ti-building-bank'], [/tasa|pik|tir|comisi|fee|cap /i, 'ti-percentage'],
+    [/mes|calendario|inicio/i, 'ti-calendar'], [/etapa/i, 'ti-stairs'], [/naves?\b|nave /i, 'ti-building-warehouse'],
+    [/comercial|local/i, 'ti-building-store'], [/vivienda|habitante/i, 'ti-home'], [/lote|macro/i, 'ti-map-2'],
+    [/agua|dotaci|riego|l\/|reuso/i, 'ti-droplet'], [/lluvia|pluvial|escurr|tormenta|retenci/i, 'ti-cloud-rain'],
+    [/eléctric|carga|kva|w\/m|demanda|factor/i, 'ti-bolt'], [/cajón|cajon|estacion|camión|camion/i, 'ti-parking'],
+    [/viaje|carril|pesado|tránsito|transito/i, 'ti-truck'], [/emple|trabaj/i, 'ti-briefcase'], [/residuo|basura|acopio/i, 'ti-trash'],
+    [/verde|jardin/i, 'ti-leaf'], [/%|porcentaje|eficiencia|cos\b|mezcla/i, 'ti-percentage'], [/m²|m2|superficie/i, 'ti-ruler-2']
+  ];
+  const controlIcon = (label, fallback) => (CONTROL_ICONS.find(([re]) => re.test(label)) || [0, fallback || 'ti-adjustments'])[1];
+  const topicTone = t => topicOf(t)[2];
   /* "1. Tratamiento del terreno" → título; lo que va tras "·", "(" o "—" pasa a nota. */
   function splitTitle(text) {
     const t = String(text || '').replace(/^\s*\d+\.\s*/, '').replace(/\s+/g, ' ').trim();
@@ -39,26 +57,28 @@
     return {label: (m ? m[1] : t).trim(), help: m ? m[2].replace(/\)$/, '').trim() : ''};
   }
 
-  /* Resumen de cada tarjeta en la lista de decisiones. */
-  const CARD_SUMMARY = {
-    dTerreno: r => num(valid(r.superficie) ? r.superficie / 10000 : null, 1) + ' ha · ' + pct(r.vendiblePct) + ' vendible',
-    dMezcla: r => money(r.ingresos) + ' en ventas',
-    dUrb: r => money(r.urbanizacion),
-    dCostos: r => money(r.costoProyecto) + ' costo total',
-    dCapital: r => num(r.totalMonths) + ' meses' + (r.peak > 1 ? ' · deuda ' + money(r.peak) : ''),
-    dAgua: r => num(r.aguaDia, 0) + ' m³/día · ' + (valid(r.demandaKva) ? num(r.demandaKva / 1000, 1) + ' MVA' : '—')
+  /* Ficha de cada decisión: número principal, detalle y barrita de nivel (0–1) cuando tiene sentido. */
+  const CARD_TILE = {
+    dTerreno: r => ({fig: num(valid(r.superficie) ? r.superficie / 10000 : null, 1) + ' ha', sub: pct(r.vendiblePct) + ' vendible', gauge: r.vendiblePct}),
+    dMezcla: r => ({fig: money(r.ingresos), sub: 'ventas · ' + num(r.nNaves) + ' naves · ' + num(r.nViv) + ' lotes viv.'}),
+    dUrb: r => ({fig: money(r.urbanizacion), sub: valid(r.urbanizacion) && valid(r.costoProyecto) && r.costoProyecto > 0 ? pct(r.urbanizacion / r.costoProyecto) + ' del costo' : '—', gauge: valid(r.costoProyecto) && r.costoProyecto > 0 ? r.urbanizacion / r.costoProyecto : null}),
+    dCostos: r => ({fig: money(r.costoProyecto), sub: 'utilidad ' + pct(r.margenFinal), gauge: r.margenFinal, warn: valid(r.utilidadFinal) && r.utilidadFinal < 0}),
+    dCapital: r => ({fig: num(r.totalMonths) + ' meses', sub: r.peak > 1 ? 'deuda pico ' + money(r.peak) : 'sin deuda dispuesta', gauge: valid(r.peak) && valid(r.debtCap) && r.debtCap > 0 ? r.peak / r.debtCap : null}),
+    dAgua: r => ({fig: num(r.aguaDia, 0) + ' m³/día', sub: ['Agua en veda', 'Agua en trámite', 'Agua asignada'][(r.p || {}).gateAgua] || '—', warn: (r.p || {}).gateAgua === 0})
   };
+  const CARD_TONE = {dTerreno: 'terr', dMezcla: 'ing', dUrb: 'cost', dCostos: 'cost', dCapital: 'fin', dAgua: 'agua'};
   const CARD_TITLES = {dTerreno: 'Terreno y áreas', dMezcla: 'Producto e ingresos', dUrb: 'Urbanización',
     dCostos: 'Naves y gastos blandos', dCapital: 'Capital y calendario', dAgua: 'Servicios'};
 
   const $ = id => document.getElementById(id);
   const valueOf = id => $(id) ? Number($(id).value) : null;
   const shown = id => (document.querySelector('.val-display[data-input="' + id + '"]')?.textContent || '').trim();
-  /* Resumen de sección: plantillas para las clave; si no, las dos primeras filas. */
+  /* Número de cada ficha de sección: plantillas para las clave; si no, el primer valor. */
+  const sumOf = ids => ids.map(valueOf).reduce((a, b) => a + (b || 0), 0);
   const SECTION_SUMMARY = [
-    [/geometr/i, () => shown('inFrente') + ' × ' + shown('inFondo') + ' m · vialidad ' + shown('inAnchoVialidad') + ' m'],
-    [/cuadro de áreas/i, () => { const s = ['inPctVialidades','inPctBanquetas','inPctVerdes','inPctEquipamiento','inPctRetencion','inPctDDV'].map(valueOf).reduce((a, b) => a + (b || 0), 0); return 'cesiones ' + num(s) + '% · vendible ' + num(100 - s) + '%'; }],
-    [/reparto del área vendible/i, () => { const s = ['inMixNaves','inMixMacro','inMixCom','inMixViv'].map(valueOf).reduce((a, b) => a + (b || 0), 0); return {text: 'naves ' + shown('inMixNaves') + ' · macro ' + shown('inMixMacro') + ' · suma ' + num(s) + '%', warn: Math.abs(s - 100) > .5}; }]
+    [/geometr/i, () => ({fig: shown('inFrente') + ' × ' + shown('inFondo') + ' m', sub: 'frente × fondo'})],
+    [/cuadro de áreas/i, () => { const c = sumOf(['inPctVialidades','inPctBanquetas','inPctVerdes','inPctEquipamiento','inPctRetencion','inPctDDV']); return {fig: num(100 - c) + '%', sub: 'vendible · cesiones ' + num(c) + '%', gauge: (100 - c) / 100}; }],
+    [/reparto del área vendible/i, () => { const t = sumOf(['inMixNaves','inMixMacro','inMixCom','inMixViv']); return {fig: num(t) + '%', sub: Math.abs(t - 100) > .5 ? 'el reparto debe sumar 100%' : 'reparto completo', warn: Math.abs(t - 100) > .5, gauge: t / 100}; }]
   ];
 
   let mounted = false, last = null;
@@ -127,13 +147,17 @@
     card.classList.add('pm-card');
     const titleEl = header.querySelector('.card-title');
     if (titleEl && CARD_TITLES[id]) { titleEl.dataset.original = titleEl.textContent; titleEl.textContent = CARD_TITLES[id]; }
+    card.dataset.tone = CARD_TONE[id] || 'terr';
+    const fig = document.createElement('b'); fig.className = 'pm-fig-main';
     const sum = document.createElement('span'); sum.className = 'pm-sum';
     const dot = document.createElement('i'); dot.className = 'pm-alert-dot'; dot.hidden = true; dot.setAttribute('aria-hidden', 'true');
-    const chev = document.createElement('i'); chev.className = 'ti ti-chevron-right pm-chev'; chev.setAttribute('aria-hidden', 'true');
+    const gauge = document.createElement('span'); gauge.className = 'pm-gauge'; gauge.innerHTML = '<span></span>'; gauge.hidden = true;
+    const close = document.createElement('i'); close.className = 'ti ti-x pm-close'; close.setAttribute('aria-hidden', 'true');
     const text = document.createElement('span'); text.className = 'pm-cardtext';
     if (titleEl) { titleEl.before(text); text.append(titleEl); }
-    const sub = document.createElement('span'); sub.className = 'pm-cardsub'; sub.append(dot, sum); text.append(sub);
-    header.append(chev);
+    const sub = document.createElement('span'); sub.className = 'pm-cardsub'; sub.append(dot, sum);
+    text.append(fig, sub, gauge);
+    header.append(close);
     header.setAttribute('role', 'button'); header.tabIndex = 0;
     header.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); } });
     // Franja de resultado: hasta 3 cifras tomadas de los mismos datos de la tarjeta.
@@ -143,7 +167,7 @@
     let chart = null;
     if (CHART_CARDS.includes(id)) { chart = document.createElement('div'); chart.className = 'pm-chart'; strip.after(chart); }
     [strip, chart].forEach(el => el && el.addEventListener('click', e => e.stopPropagation())); // solo el encabezado abre/cierra
-    const rec = {id, card, header, sum, dot, strip, boxes: boxes.slice(0, 3), chart, drawer};
+    const rec = {id, card, header, sum, fig, gauge, dot, strip, boxes: boxes.slice(0, 3), chart, drawer};
     if (drawer) buildSections(rec);
     new MutationObserver(() => header.setAttribute('aria-expanded', String(card.classList.contains('open')))).observe(card, {attributes: true, attributeFilter: ['class']});
     header.setAttribute('aria-expanded', 'false');
@@ -164,14 +188,21 @@
       const sec = document.createElement('section'); sec.className = 'pm-sec'; sec.id = drawer.id + '-sec' + i;
       list.append(sec); sec.append(head, body); // head antes de su body: revelar() depende de eso.
       head.classList.add('pm-sechead'); head.title = raw;
-      head.innerHTML = '<i class="ti ' + topicIcon(raw) + ' pm-secicon" aria-hidden="true"></i><span class="pm-sectext"><span class="tema-txt">' + esc(title) + '</span><span class="pm-secsum"></span></span><span class="tema-n" hidden></span><i class="ti ti-chevron-right pm-chev" aria-hidden="true"></i>';
-      if (note) { const n = document.createElement('p'); n.className = 'pm-secnote'; n.textContent = note.charAt(0).toUpperCase() + note.slice(1); body.querySelector('.tema-inner').prepend(n); }
+      sec.dataset.tone = topicTone(raw);
+      head.innerHTML = '<span class="pm-tile-top"><i class="ti ' + topicIcon(raw) + ' pm-secicon" aria-hidden="true"></i><i class="pm-changed" hidden title="Tiene valores ajustados"></i><span class="pm-count"></span><i class="ti ti-x pm-close" aria-hidden="true"></i></span>' +
+        '<span class="tema-txt">' + esc(title) + '</span><b class="pm-secfig"></b><span class="pm-secsum"></span><span class="pm-gauge" hidden><span></span></span><span class="tema-n" hidden></span>';
+      if (note) { const n = document.createElement('p'); n.className = 'pm-secnote'; const fixed = (note.split('(').length > note.split(')').length) ? note + ')' : note; n.textContent = fixed.charAt(0).toUpperCase() + fixed.slice(1); body.querySelector('.tema-inner').prepend(n); }
       if (body.classList.contains('abierto')) head.click(); // la lista arranca cerrada
-      const rows = [...body.querySelectorAll('.input-group')].map(g => buildRow(g, drawer)).filter(Boolean);
-      return {head, body, raw, rows, sumEl: head.querySelector('.pm-secsum')};
+      const rows = [...body.querySelectorAll('.input-group')].map(g => buildRow(g, drawer, topicIcon(raw))).filter(Boolean);
+      // Una sección abierta a la vez por tarjeta: la ficha se vuelve panel en su lugar.
+      new MutationObserver(() => {
+        const open = body.classList.contains('abierto'); sec.classList.toggle('pm-sec-open', open);
+        if (open) rec.sections.forEach(o => { if (o.body !== body && o.body.classList.contains('abierto')) o.head.click(); });
+      }).observe(body, {attributes: true, attributeFilter: ['class']});
+      return {head, body, raw, rows, sec, sumEl: head.querySelector('.pm-secsum'), figEl: head.querySelector('.pm-secfig'), countEl: head.querySelector('.pm-count'), dotEl: head.querySelector('.pm-changed'), gaugeEl: head.querySelector('.pm-gauge')};
     });
   }
-  function buildRow(group, drawer) {
+  function buildRow(group, drawer, icon) {
     const input = group.querySelector('input[type=range]'), header = group.querySelector('.input-header');
     if (!input || !header || group.dataset.pmRow) return null;
     group.dataset.pmRow = '1'; group.classList.add('pm-row');
@@ -180,6 +211,8 @@
     if (label) { label.dataset.full = label.textContent; label.textContent = short; label.title = label.dataset.full; }
     const dot = document.createElement('i'); dot.className = 'pm-changed'; dot.title = 'Distinto al valor de referencia'; dot.hidden = true;
     (label?.parentElement === header ? label : label?.parentElement || header.firstChild).after(dot);
+    const ico = document.createElement('i'); ico.className = 'ti ' + controlIcon(short + ' ' + (label?.dataset.full || ''), icon) + ' pm-rowicon'; ico.setAttribute('aria-hidden', 'true'); header.prepend(ico);
+    const gauge = document.createElement('span'); gauge.className = 'pm-gauge pm-rowgauge'; gauge.innerHTML = '<span></span>'; header.append(gauge);
     const binary = input.min === '0' && input.max === '1' && Number(input.step || 1) === 1;
     const ctl = document.createElement('div'); ctl.className = 'pm-ctl';
     const inner = document.createElement('div'); inner.className = 'pm-ctl-inner';
@@ -191,13 +224,17 @@
     const scale = document.createElement('div'); scale.className = 'pm-scale';
     scale.innerHTML = '<span>' + esc(num(Number(input.min), 2)) + '</span><span>' + esc(num(Number(input.max), 2)) + '</span>';
     inner.append(scale);
-    let sw = null;
+    let sw = null, state = null;
     if (binary) {
       group.classList.add('pm-binary');
       sw = document.createElement('button'); sw.type = 'button'; sw.className = 'pm-switch'; sw.setAttribute('role', 'switch');
       sw.setAttribute('aria-label', short);
       header.append(sw);
       sw.addEventListener('click', e => { e.stopPropagation(); input.value = input.value === '1' ? '0' : '1'; input.dispatchEvent(new Event('input', {bubbles: true})); });
+      // Qué significa cada lado del interruptor: "0 = urbanizar… · 1 = vender…" → se muestra el lado activo.
+      const m = String(label?.dataset.full || '').match(/0\s*=\s*([^·)]+?)\s*[·,]\s*1\s*=\s*([^)]+)/);
+      state = document.createElement('span'); state.className = 'pm-binstate'; header.append(state);
+      state._opts = m ? [m[1].trim(), m[2].trim()] : ['No', 'Sí'];
     }
     header.setAttribute('role', 'button'); header.tabIndex = 0; header.setAttribute('aria-expanded', 'false');
     const toggle = force => {
@@ -211,7 +248,7 @@
       e.stopPropagation(); if (!binary) toggle();
     });
     header.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === header) { e.preventDefault(); binary ? sw.click() : toggle(); } });
-    return {group, input, dot, sw, label: short};
+    return {group, input, dot, sw, state, gauge, label: short};
   }
   /* Un salto a un control escondido (fórmulas, foco) abre su sección y su fila. */
   function reveal(input) {
@@ -283,25 +320,30 @@
   }
 
   /* ---------- Repintado con el estado del motor ---------- */
+  const rangePos = i => { const mn = Number(i.min), mx = Number(i.max), v = Number(i.value); return mx > mn ? (v - mn) / (mx - mn) : null; };
+  function setGauge(el, v) { if (!el) return; el.hidden = !valid(v); if (valid(v)) el.firstChild.style.width = (clamp01(v) * 100).toFixed(1) + '%'; el.classList.toggle('pm-over', valid(v) && v > 1); }
   function paint(r) {
     const p = r.p || {};
     const gate = p.gateAgua, blocked = gate === 0;
     cards.forEach(c => {
-      c.sum.textContent = CARD_SUMMARY[c.id] ? CARD_SUMMARY[c.id](r) : '';
-      c.dot.hidden = !(c.id === 'dAgua' && blocked);
+      const tile = CARD_TILE[c.id] ? CARD_TILE[c.id](r) : {fig: '', sub: ''};
+      c.fig.textContent = tile.fig; c.sum.textContent = tile.sub; c.dot.hidden = !tile.warn; c.card.classList.toggle('pm-alert', !!tile.warn);
+      setGauge(c.gauge, tile.gauge);
       const strip = c.boxes.map(b => '<div class="pm-fig"><span>' + esc(b.querySelector('.kpi-lbl')?.textContent || '') + '</span><b class="' + esc(b.querySelector('.kpi-val').className.replace('kpi-val', '').trim()) + '">' + esc(b.querySelector('.kpi-val').textContent) + '</b></div>').join('');
       if (c.strip.dataset.m !== strip) { c.strip.innerHTML = strip; c.strip.dataset.m = strip; }
       if (c.chart) { const h = chartHtml(c.id, r); if (c.chart.dataset.m !== h) { c.chart.innerHTML = h; c.chart.dataset.m = h; } }
       (c.sections || []).forEach(s => {
         const tpl = SECTION_SUMMARY.find(([re]) => re.test(s.raw));
-        let text = '', warn = false;
-        if (tpl) { const out = tpl[1](); if (typeof out === 'object') { text = out.text; warn = out.warn; } else text = out; }
-        else if (s.rows.length) text = s.rows.slice(0, 2).map(x => x.label + ' ' + shown(x.input.id)).join(' · ');
-        else { const act = s.body.querySelector('.active b,.active'); text = act ? act.textContent.trim() : 'Elegir opción'; }
+        let out;
+        if (tpl) out = tpl[1]();
+        else if (s.rows.length) out = {fig: shown(s.rows[0].input.id) || (s.rows[0].state ? s.rows[0].state.textContent : '—'), sub: s.rows[0].label + (s.rows.length > 1 ? ' y ' + (s.rows.length - 1) + ' más' : ''), gauge: rangePos(s.rows[0].input)};
+        else { const act = s.body.querySelector('.active b,.active'); out = {fig: act ? act.textContent.trim() : 'Elegir', sub: 'opción elegida'}; }
         const changed = s.rows.filter(x => Number(x.input.value) !== Number(x.input.defaultValue)).length;
-        s.rows.forEach(x => { x.dot.hidden = Number(x.input.value) === Number(x.input.defaultValue); if (x.sw) x.sw.setAttribute('aria-checked', String(x.input.value === '1')); });
-        if (changed) text += ' · ' + changed + (changed === 1 ? ' ajustado' : ' ajustados');
-        s.sumEl.textContent = text; s.sumEl.classList.toggle('pm-warn-text', !!warn);
+        s.rows.forEach(x => { x.dot.hidden = Number(x.input.value) === Number(x.input.defaultValue); if (x.sw) { x.sw.setAttribute('aria-checked', String(x.input.value === '1')); const t = x.state._opts[x.input.value === '1' ? 1 : 0]; x.state.textContent = t.charAt(0).toUpperCase() + t.slice(1); } setGauge(x.gauge, x.sw ? null : rangePos(x.input)); });
+        s.figEl.textContent = out.fig; s.sumEl.textContent = out.sub;
+        s.countEl.textContent = s.rows.length ? String(s.rows.length) : ''; s.countEl.title = s.rows.length + ' ajustes en esta sección';
+        s.dotEl.hidden = !changed; s.dotEl.title = changed + (changed === 1 ? ' valor ajustado' : ' valores ajustados');
+        s.sec.classList.toggle('pm-alert', !!out.warn); setGauge(s.gaugeEl, out.gauge);
       });
     });
     // Barra superior compacta.

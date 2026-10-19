@@ -26,21 +26,26 @@ const {install}=require('./ppp-fixture.js');
   const secs=p.locator('#dMezcla .pm-sec');assert.ok(await secs.count()>=3);
   for(const s of await secs.all())assert.ok((await s.locator('.pm-secsum').innerText()).trim().length>0,'Every section shows a summary');
   assert.equal(await p.locator('#dMezcla .pm-row:visible').count(),0,'Sections start closed');
-  // N3: abrir dos secciones a la vez; filas con su valor y sin control visible.
-  await p.locator('#dMezcla-sec2 > .tema-head').click();await p.locator('#dMezcla-sec3 > .tema-head').click();
-  assert.ok(await p.locator('#dMezcla-sec2 .pm-row:visible').count()>0&&await p.locator('#dMezcla-sec3 .pm-row:visible').count()>0);
+  // Fichas: cada ficha de decisión y de sección lleva icono y número.
+  for(const card of await p.locator('.pm-card').all())assert.ok((await card.locator('.pm-fig-main').innerText()).trim().length>0,'Decision tile shows its number');
+  for(const s of await secs.all()){assert.equal(await s.locator('.pm-secicon').count(),1);assert.ok((await s.locator('.pm-secfig').innerText()).trim().length>0,'Section tile shows its number');}
+  // N3: una sección abierta a la vez; la ficha se vuelve panel con fichas de ajuste.
+  await p.locator('#dMezcla-sec3 > .tema-head').click();assert.ok(await p.locator('#dMezcla-sec3 .pm-row:visible').count()>0);
+  await p.locator('#dMezcla-sec2 > .tema-head').click();await p.waitForFunction(()=>!document.querySelector('#dMezcla-sec3 .tema-body').classList.contains('abierto'));
+  assert.equal(await p.locator('#dMezcla .pm-sec.pm-sec-open').count(),1,'One section open per decision');
+  for(const r of await p.locator('#dMezcla-sec2 .pm-row').all())assert.equal(await r.locator('.pm-rowicon').count(),1,'Every setting tile has an icon');
   const row=p.locator('#dMezcla-sec2 .pm-row').first(),slider=row.locator('input[type=range]');
   assert.ok((await row.locator('.val-display').innerText()).trim().length>0);assert.equal(await slider.isVisible(),false);
   // N4: tocar la fila abre su control; mover el control repinta el resumen de la tarjeta.
   await row.locator('.input-header label').click();await slider.waitFor({state:'visible'});
-  const before=await p.locator('.card[data-card=dMezcla] .pm-sum').innerText();
+  const before=await p.locator('.card[data-card=dMezcla] .pm-fig-main').innerText();
   await slider.evaluate(i=>{i.value=String(Number(i.max));i.dispatchEvent(new Event('input',{bubbles:true}));});
-  await p.waitForFunction(o=>document.querySelector('.card[data-card=dMezcla] .pm-sum').textContent!==o,before);
+  await p.waitForFunction(o=>document.querySelector('.card[data-card=dMezcla] .pm-fig-main').textContent!==o,before);
   assert.equal(await row.locator('.pm-changed').isVisible(),true,'Changed value is marked');
   await p.locator('#dMezcla-sec2 .pm-row').nth(1).locator('.input-header label').click();
   assert.equal(await p.locator('#dMezcla .pm-row.pm-edit').count(),1,'One control open at a time');
   // Interruptores 0/1 como switch.
-  const sw=p.locator('#dMezcla .pm-switch').first();if(await sw.count()){const id=await sw.evaluate(b=>b.closest('.pm-row').querySelector('input').id),v=await p.evaluate(id=>document.getElementById(id).value,id);await sw.click();assert.notEqual(await p.evaluate(id=>document.getElementById(id).value,id),v);}
+  const sw=p.locator('#dMezcla .pm-switch').first();if(await sw.count()){await sw.evaluate(b=>{const sec=b.closest('.pm-sec');if(!sec.classList.contains('pm-sec-open'))sec.querySelector('.tema-head').click();});await sw.waitFor({state:'visible'});assert.ok((await sw.evaluate(b=>b.closest('.pm-row').querySelector('.pm-binstate').textContent)).length>0,'Switch shows what it means');const id=await sw.evaluate(b=>b.closest('.pm-row').querySelector('input').id),v=await p.evaluate(id=>document.getElementById(id).value,id);await sw.click();assert.notEqual(await p.evaluate(id=>document.getElementById(id).value,id),v);}
   // Un salto a un control escondido abre tarjeta, sección y fila.
   const hidden=await p.evaluate(()=>document.querySelector('#dCapital .pm-row input[type=range]').id);
   await p.evaluate(id=>PPPMacroCards.reveal(document.getElementById(id)),hidden);assert.equal(await p.locator('#'+hidden).isVisible(),true);
