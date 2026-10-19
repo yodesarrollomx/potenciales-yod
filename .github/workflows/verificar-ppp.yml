@@ -40,6 +40,7 @@ jobs:
           node --check ppp-case-opening.js
           node --test tests/ppp-case-opening.test.cjs
           node --check ppp-catalog.js
+          node --check ppp-macro-cards.js
           node --test tests/ppp-ui.test.cjs tests/ppp-case-loader.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs tests/patrimonial-native.test.cjs tests/ppp-version-bridge.test.cjs
           git diff --check
       - name: Instalar navegadores
@@ -69,6 +70,7 @@ jobs:
           node tests/ppp-terrain-browser.cjs
           node tests/ppp-versions-browser.cjs
           node tests/ppp-cierre-browser.cjs
+          node tests/ppp-macro-cards-browser.cjs
           node tests/ppp-home-browser.cjs
           node tests/patrimonial-native-browser.cjs
           node tests/patrimonial-drafts-browser.cjs

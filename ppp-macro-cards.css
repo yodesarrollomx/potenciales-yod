@@ -1,0 +1,64 @@
+/* PPP Macrolotes · tarjetas resumen y mini-tarjetas por subgrupo (solo presentación). */
+
+/* ---- Tarjeta cerrada: 4 datos con icono ---- */
+.pm-ui .pm-card .kpi-box{position:relative;padding:10px 12px 10px 44px;min-height:58px}
+.pm-ui .pm-card .pm-kpi-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:8px;
+  display:grid;place-items:center;font-size:16px;color:var(--gold);background:color-mix(in srgb,var(--gold) 12%,transparent)}
+.pm-ui .pm-card .kpi-val{overflow-wrap:anywhere}
+.pm-ui .pm-card:not(.open) .kpi-box.pm-extra{display:none}
+
+/* ---- Gráfica chica ---- */
+.pm-chart{margin-top:10px;display:grid;gap:8px}
+.pm-chart-title{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.pm-stack{display:flex;height:16px;border-radius:7px;overflow:hidden;background:var(--box);border:1px solid var(--linea)}
+.pm-stack.pm-empty{display:grid;place-items:center;font-size:10px;color:var(--muted);height:22px}
+.pm-seg{display:block;height:100%;transition:width .45s ease}
+.pm-seg+.pm-seg{box-shadow:inset 1px 0 0 rgba(255,255,255,.55)}
+.pm-legend{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:10.5px;color:var(--muted)}
+.pm-legend span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.pm-legend i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.pm-legend b{color:var(--text);font-weight:800}
+.pm-meter{display:grid;gap:3px}
+.pm-meter-head{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--muted)}
+.pm-meter-head b{color:var(--text);font-weight:800}
+.pm-track{height:7px;border-radius:5px;background:var(--box);border:1px solid var(--linea);overflow:hidden}
+.pm-track span{display:block;height:100%;border-radius:5px;transition:width .45s ease}
+.pm-meter small{font-size:9.5px;color:var(--suave)}
+.pm-meter.pm-missing .pm-track{background:repeating-linear-gradient(90deg,var(--linea) 0 6px,transparent 6px 10px)}
+.pm-warn{font-size:11px;font-weight:700;color:var(--red);display:flex;align-items:center;gap:5px}
+.pm-timeline{position:relative;height:20px;border-radius:7px;background:var(--box);border:1px solid var(--linea);overflow:hidden}
+.pm-tl-urb{position:absolute;left:0;top:0;height:50%;background:color-mix(in srgb,var(--orange) 55%,transparent)}
+.pm-tl-sell{position:absolute;top:50%;bottom:0;right:0;background:color-mix(in srgb,var(--green) 30%,transparent);border-left:2px solid var(--green)}
+.pm-tl-peak{position:absolute;top:-1px;bottom:-1px;width:3px;margin-left:-1px;background:var(--purple);border-radius:2px}
+
+/* ---- Tarjeta abierta: puntos ---- */
+.pm-puntos-hint{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.pm-all{font:inherit;font-size:10px;text-transform:none;letter-spacing:0;color:var(--gold);background:none;border:0;padding:8px 4px;cursor:pointer;min-height:32px}
+.pm-puntos{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.pm-chip{display:inline-flex;align-items:center;gap:6px;min-height:36px;max-width:100%;padding:6px 11px;border-radius:20px;cursor:pointer;
+  font:inherit;font-size:12px;font-weight:700;color:var(--text);background:var(--card);border:1px solid var(--lineaf);transition:background .18s,border-color .18s,transform .12s}
+.pm-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pm-chip i{font-size:15px;color:var(--gold)}
+.pm-chip small{font-size:9.5px;font-weight:800;color:var(--muted);background:var(--box);border-radius:10px;padding:1px 6px}
+.pm-chip:hover{border-color:var(--gold)}
+.pm-chip:active{transform:scale(.97)}
+.pm-chip:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.pm-chip[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:#17140F}
+.pm-chip[aria-pressed="true"] i,.pm-chip[aria-pressed="true"] small{color:#17140F}
+.pm-chip[aria-pressed="true"] small{background:rgba(255,255,255,.35)}
+
+/* ---- Mini-tarjetas: solo se ven las abiertas, mismo ancho, en rejilla ---- */
+.pm-minigrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:10px;align-items:start}
+.pm-mini{display:none;background:var(--card);border:1px solid var(--linea);border-radius:14px;padding:4px 12px 8px;box-shadow:0 2px 10px rgba(35,29,20,.06);min-width:0}
+.pm-mini.pm-on{display:block;animation:pm-in .24s ease}
+@keyframes pm-in{from{opacity:0;transform:translateY(-4px) scale(.985)}to{opacity:1;transform:none}}
+.pm-drawer .pm-mini>.subheading.tema-head{margin:0 -6px;padding:10px 6px}
+.pm-drawer .pm-mini>.tema-head .tema-chev{display:none}
+.pm-drawer .pm-mini>.tema-head .pm-head-icon{font-size:16px;color:var(--gold)}
+.pm-drawer .pm-mini>.tema-head .tema-txt{font-size:11px;line-height:1.3}
+.pm-drawer .pm-mini>.tema-head .tema-n::after{content:"  ✕";font-weight:900}
+.pm-drawer .pm-mini>.tema-body{margin:0 -6px}
+.pm-drawer .pm-mini>.tema-body.abierto>.tema-inner{padding:4px 6px 2px}
+.pm-drawer .pm-mini .input-group{margin-bottom:10px}
+@media (max-width:700px){.pm-minigrid{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.pm-mini.pm-on{animation:none}.pm-seg,.pm-track span{transition:none}}
