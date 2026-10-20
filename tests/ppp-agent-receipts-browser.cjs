@@ -2,8 +2,10 @@
 // Actual Portal createWorkspace and PPP HTML/Store/bridge. Only auth/book/cloud are synthetic.
 // No 3D-office renderer, real microphone, private credentials or business endpoint.
 const {chromium,webkit}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const {install}=require('./ppp-fixture.js'),fixture=require('./fixtures/patrimonial-native.json');
-const ORIGIN='https://yodesarrollomx.github.io',BASE=ORIGIN+'/yod-portal/despacho3d/',CLOUD='https://synthetic-cloud.onrender.com';
+const fixture=require('./fixtures/patrimonial-native.json');
+const ORIGIN='https://yodesarrollomx.github.io',BASE=ORIGIN+'/yod-portal/despacho3d/',CLOUD='https://synthetic-cloud.onrender.com',BOOK='https://book.receipts.test/exec';
+const CLOSED_PROXY={server:'http://127.0.0.1:9',bypass:''};
+const CSP="default-src 'none'; script-src 'unsafe-inline' "+ORIGIN+"; style-src 'unsafe-inline' "+ORIGIN+"; img-src "+ORIGIN+" data:; frame-src "+ORIGIN+"; connect-src "+new URL(BOOK).origin+' '+CLOUD+"; font-src 'none'; media-src 'none'; worker-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'";
 const parentHTML='<!doctype html><html lang="es"><meta name="viewport" content="width=device-width,initial-scale=1">'+
 '<link rel="stylesheet" href="'+BASE+'agent-workspace.css"><body style="margin:0;background:#f4f3ee"><main id="host"></main><script type="module">'+
 'import {createWorkspace} from "./agent-workspace.mjs";'+
@@ -12,24 +14,34 @@ const parentHTML='<!doctype html><html lang="es"><meta name="viewport" content="
 'window.workspace=createWorkspace({container:document.getElementById("host"),getSelection:()=>selection,transport});workspace.open(selection,"ppp");</script></html>';
 (async()=>{for(const [name,engine] of Object.entries({chromium,webkit})){
  if(process.env.PPP_ENGINE&&process.env.PPP_ENGINE!==name)continue;
- const browser=await engine.launch({...(name==='chromium'&&process.env.PPP_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PPP_CHROMIUM_EXECUTABLE_PATH}:{})});
+ const browser=await engine.launch({proxy:CLOSED_PROXY,...(name==='chromium'?{args:['--proxy-bypass-list=<-loopback>'],...(process.env.PPP_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PPP_CHROMIUM_EXECUTABLE_PATH}:{})}:{})});
  try{
-  const context=await browser.newContext({viewport:{width:name==='webkit'?390:1280,height:900}});await install(context,{seed:null});
+  const context=await browser.newContext({viewport:{width:name==='webkit'?390:1280,height:900},serviceWorkers:'block'});
+  const blockedRequests=[];let realAppsScriptRequests=0;
+  context.on('request',request=>{if(/(^|\.)script\.google(?:usercontent)?\.com$/.test(new URL(request.url()).hostname))realAppsScriptRequests++;});
+  // All app and module bytes come from disk. Every other request is fulfilled by
+  // one of the two explicit mocks below or aborted; no route calls continue().
+  await context.route('**/*',route=>{blockedRequests.push({method:route.request().method(),url:route.request().url()});return route.abort('blockedbyclient');});
+  await context.addInitScript(({book})=>{window.YOD_PORTERO={original:book,respaldo:book};localStorage.setItem('pyod_clave_v1','sy-synthetic-browser-session');sessionStorage.setItem('yod_drawer_seen','1');localStorage.setItem('yod_tema','claro');},{book:BOOK});
   const root=path.resolve(__dirname,'..'),atlas=path.resolve(process.env.YOD_ATLAS_DIR||path.join(root,'../yod-atlas'));
   await context.route(ORIGIN+'/**',async route=>{
    const u=new URL(route.request().url());
-   if(u.pathname==='/yod-portal/despacho3d/__receipt')return route.fulfill({contentType:'text/html',body:parentHTML});
+   const headers={'Content-Security-Policy':CSP};
+   if(route.request().method()!=='GET'){blockedRequests.push({method:route.request().method(),url:u.href});return route.abort('blockedbyclient');}
+   if(u.pathname==='/yod-portal/despacho3d/__receipt')return route.fulfill({headers,contentType:'text/html',body:parentHTML});
    const prefix=u.pathname.startsWith('/yod-portal/')?'/yod-portal/':u.pathname.startsWith('/potenciales-yod/')?'/potenciales-yod/':null;
    if(!prefix)return route.abort();
    const base=prefix==='/yod-portal/'?atlas:root,file=path.resolve(base,u.pathname.slice(prefix.length));
    if(!file.startsWith(base+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile())return route.fulfill({status:404,body:''});
    const type=/\.m?js$/.test(file)?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.svg')?'image/svg+xml':file.endsWith('.png')?'image/png':'text/html; charset=utf-8';
-   return route.fulfill({contentType:type,body:fs.readFileSync(file)});
+   return route.fulfill({headers,contentType:type,body:fs.readFileSync(file)});
   });
   let model=structuredClone(fixture),writes=[],reads=0,resolveCalls=[],fail=true,board=null,proposals=[],historicalMode=false,expectedRequest='board-reload-104',expectedValue=644;const resolved=new Map();
   model.escenarios.find(e=>e.id===model.activo).inputs.inTerrenoM2=500;
-  await context.route('https://script.google.com/**',async route=>{
+  await context.route(url=>url.origin===new URL(BOOK).origin&&url.pathname==='/exec',async route=>{
    const req=route.request(),u=new URL(req.url());let out={ok:true};
+   const headers={'Access-Control-Allow-Origin':ORIGIN,'Access-Control-Allow-Headers':'Content-Type','Access-Control-Allow-Methods':'GET, POST, OPTIONS'};
+   if(req.method()==='OPTIONS')return route.fulfill({status:204,headers});
    if(req.method()==='POST'){
     const p=req.postDataJSON();if(!p){console.log('Rejected empty synthetic Apps Script POST in '+name);return route.fulfill({status:400,contentType:'application/json',body:'{"ok":false,"error":"empty_request"}'});}if(p.tipo==='sheet-cantidades'){
      assert.equal(writes.filter(w=>w.request_id===p.request_id).length,0,'receipt delivery must never replay a quantity write');assert.equal(p.request_id,expectedRequest);writes.push(p);assert.equal(p.revision_esperada,model.revision);
@@ -39,7 +51,7 @@ const parentHTML='<!doctype html><html lang="es"><meta name="viewport" content="
    else if(u.searchParams.get('recurso')==='sheet-model'){reads++;out=model;}
    else if(u.searchParams.get('recurso')==='canje')out={ok:true,token:'sy-synthetic-browser-session',boards:'PT',rol:'admin'};
    else if(u.searchParams.get('recurso')==='lista')out={ok:true,casos:[],config:{}};
-   await route.fulfill({contentType:'application/json',body:JSON.stringify(out)});
+   await route.fulfill({headers,contentType:'application/json',body:JSON.stringify(out)});
   });
   await context.route(CLOUD+'/**',async route=>{
    const req=route.request(),pathname=new URL(req.url()).pathname;
@@ -120,5 +132,8 @@ const parentHTML='<!doctype html><html lang="es"><meta name="viewport" content="
 
   }catch(e){console.error('receipt workspace diagnostic',JSON.stringify({browser:name,reads,writes:writes.length,resolveCalls:resolveCalls.length,errors,text:await page.locator('body').innerText().catch(()=>''),frames:page.frames().map(f=>f.url())}));throw e;}
   await context.close();
+  assert.equal(realAppsScriptRequests,0,'no real Apps Script URL may even be requested');
+  assert.deepEqual(blockedRequests,[],'all requests must belong to local static bytes or an explicit synthetic API');
+  console.log('PASS '+name+': closed proxy, blocked service workers and CSP; zero real Apps Script requests or unmocked requests/POSTs.');
  }finally{await browser.close();}
 }})().catch(e=>{console.error(e);process.exitCode=1;});
