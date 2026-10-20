@@ -1,17 +1,18 @@
 {
   "model_revision": "2026-10-19.ppp-cartera-lectura.1",
   "proposal_id": "CHG-PPP-UI-001",
-  "summary": "Implementación documental bajo el cambio de interfaz PPP aprobado: ficha Abastos y acceso directo desde la portada; complementa oportunidad existente sin crear caso financiero nuevo. Revisión visual de presentación separada en Drive bajo permisos del propietario.",
+  "summary": "Corrección de interfaz PPP bajo el cambio UI aprobado: el puente de versiones aplicaba el tope histórico de 8 versiones (JSON guardado) también a los libros nativos de Sheets, y Torre Ruiseñor no abría al registrar su novena versión (V10, 19-oct). Los libros nativos aceptan ahora el límite operativo del servidor (100, pppGestionVersion_); las versiones guardadas como JSON conservan su tope de 8.",
   "components": [
     "SYS-POTENCIALES"
   ],
   "tests": [
-    "node tests/ppp-distrito-abasto.test.cjs: enlace de portada, perfil, documentos, ausencia de credenciales y cifras internas",
-    "Pruebas de regresión de portada y catálogo PPP ya existentes",
-    "GitHub Pages: abrir portada y perfil; confirmar navegación y recursos según permisos Drive"
+    "node --test tests/ppp-version-bridge.test.cjs: libro nativo con 9 versiones aceptado; JSON guardado con 9 rechazado",
+    "node tests/ppp-versions-browser.cjs: mixto.html abre un libro nativo de 9 versiones completo, sin errores ni escrituras",
+    "Suites unitarias y de navegador PPP existentes (Chromium local; Chromium y WebKit en CI)",
+    "Reproducción local con la respuesta reconstruida del libro real de Torre Ruiseñor: falla con el código anterior y abre con el nuevo"
   ],
-  "rollback": "Revertir PR para retirar página documental y tarjeta, sin borrar documentos de Drive ni alterar oportunidad o filas de Sheets.",
-  "data_provenance": "Propuesta 19/oct preliminar; reunión Lara-YOD 17/oct; contexto del expediente original. Planos y modelos financieros pendientes de conciliar.",
-  "deployment": "GitHub Pages únicamente para ficha documental sin datos privados; PDF, PPTX, HTML con chinches y anexo permanecen en Drive con ACL de Drive.",
-  "atlas_note": "Se utiliza propuesta UI-001 existente en atlas fijado por workflow. Este cambio es presentación del caso y no cambia el modelo, CRM ni backend."
+  "rollback": "Revertir PR; los libros nativos con más de 8 versiones vuelven a no abrir. No se tocan Sheets, versiones ni el backend.",
+  "data_provenance": "Diagnóstico 20-oct sobre el libro canónico de Torre Ruiseñor en modo lectura; sin datos privados en el repositorio.",
+  "deployment": "GitHub Pages: ppp-version-bridge.js y su clave de caché v=4 en mixto, macrolotes y patrimonial.",
+  "atlas_note": "Cambio de interfaz dentro de CHG-PPP-UI-001; no cambia modelo, contratos del backend ni datos."
 }

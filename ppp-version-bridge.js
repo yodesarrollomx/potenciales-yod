@@ -3,8 +3,11 @@
  'use strict';
  const id=v=>typeof v==='string'&&/^[A-Za-z0-9_.:-]{1,200}$/.test(v);
  const copy=v=>JSON.parse(JSON.stringify(v));
- function versions(value){
-  if(!Array.isArray(value)||!value.length||value.length>8)throw Error('invalid_versions');
+ // Versions saved as JSON keep the historical cap of 8; a native Sheets book follows the
+ // server's operating limit (pppGestionVersion_ refuses to duplicate past 100 live versions).
+ const LIMIT={saved:8,native:100};
+ function versions(value,max=LIMIT.saved){
+  if(!Array.isArray(value)||!value.length||value.length>max)throw Error('invalid_versions');
   const seen=new Set();return value.map(v=>{
    if(!v||!id(v.id)||seen.has(v.id)||typeof v.nombre!=='string'||!v.inputs||Array.isArray(v.inputs))throw Error('invalid_versions');
    seen.add(v.id);const inputs={};for(const [k,n]of Object.entries(v.inputs))if(/^in[A-Z]\w*$/.test(k)&&(n===null||typeof n==='number'&&Number.isFinite(n)))inputs[k]=n;
@@ -13,7 +16,7 @@
  }
  // Historical boards append new versions and do not record per-version timestamps.
  // Preserve that registration order; never manufacture a date from a label.
- function latestRegistered(value){return versions(value).at(-1).id;}
+ function latestRegistered(value,max){return versions(value,max).at(-1).id;}
  function create({modelType,read,win=globalThis.window}={}){
   if(!['macrolotes','vertical','patrimonial'].includes(modelType)||typeof read!=='function')throw Error('invalid_adapter');
   let saved=null,defended=null,binding=null,nonce=null,disposed=false,verified=false,focus=null;
@@ -27,17 +30,17 @@
   if(embedded)try{const u=new URL(win.document.referrer);permitted=u.origin===win.location.origin&&/^\/yod-portal\/despacho3d\//.test(u.pathname);}catch{}
   function remember({caseId,revision,scenarios,active,states=null,native=false}){
    if(!id(caseId)||typeof revision!=='string'||!revision)throw Error('invalid_case');
-   const list=versions(scenarios);if(!list.some(v=>v.id===active))throw Error('invalid_active');
+   const list=versions(scenarios,native===true?LIMIT.native:LIMIT.saved);if(!list.some(v=>v.id===active))throw Error('invalid_active');
    if(saved?.caseId!==caseId){defended=null;binding=null;nonce=null;focus=null;}
    saved={caseId,revision,list,active,states:copy(states||{}),native:native===true};verified=true;
-   if(!defended)defended=binding?.scenario_id||latestRegistered(list);
+   if(!defended)defended=binding?.scenario_id||list.at(-1).id;
    publish();
   }
   function snapshot(){
    if(!saved||!binding)return null;
    const current=read(),version=saved.list.find(v=>v.id===defended);
    if(!version||current.caseId!==saved.caseId)return null;
-   const live=versions(current.scenarios),viewed=live.find(v=>v.id===current.active);
+   const live=versions(current.scenarios,saved.native?LIMIT.native:LIMIT.saved),viewed=live.find(v=>v.id===current.active);
    const same=JSON.stringify(live)===JSON.stringify(saved.list);
    const keys=[...new Set([...saved.list,...live].flatMap(v=>Object.keys(v.inputs)))];
    const canonical=Object.fromEntries(keys.map(k=>[k,Object.hasOwn(version.inputs,k)?version.inputs[k]:null]));

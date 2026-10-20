@@ -22,3 +22,10 @@ test('heterogeneous versions share known fields without fabricating defended qua
  let s=x.bridge.snapshot();assert.equal(s.scenario_id,'newer');assert.equal(s.inputs.inArea,20);assert.equal(s.inputs.inExtra,null);assert.equal(s.version_context.viewed_inputs.inExtra,3);assert.ok(s.fields.some(f=>f.id==='inExtra'&&!f.editable));
  x.view.pending=true;x.view.draftInputs={inArea:12,inExtra:4,inOutside:999};s=x.bridge.snapshot();assert.equal(s.pending,true);assert.equal(s.inputs.inArea,20);assert.equal(s.version_context.viewed_inputs.inArea,12);assert.equal(Object.hasOwn(s.version_context.viewed_inputs,'inOutside'),false);assert.deepEqual(s.results,{});
 });
+test('a native Sheets book may register more than 8 versions; versions saved as JSON keep the cap of 8',()=>{
+ const x=setup(),nine=Array.from({length:9},(_,i)=>({id:i===8?'newer':'v'+i,nombre:'Versión '+i,inputs:{inArea:i}}));
+ x.view.scenarios=structuredClone(nine);x.bridge.remember({caseId:'board-a',revision:'rev9',scenarios:nine,active:'newer',states:{newer:{units:120}},native:true});
+ const s=x.bridge.snapshot();assert.equal(s.version_context.versions.length,9);assert.equal(s.scenario_id,'newer');assert.equal(s.results.units,120);
+ assert.throws(()=>x.bridge.remember({caseId:'board-a',revision:'rev9',scenarios:nine,active:'newer'}),/invalid_versions/);
+ assert.throws(()=>latestRegistered(nine),/invalid_versions/);assert.equal(latestRegistered(nine,100),'newer');
+});
