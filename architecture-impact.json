@@ -1,15 +1,15 @@
 {
   "model_revision": "2026-10-19.ppp-cartera-lectura.1",
   "proposal_id": "CHG-PPP-UI-001",
-  "summary": "El puente de observación admite hasta cien versiones como el backend nativo. La novena versión deja de interrumpir la carga del PPP y su lectura compartida. No cambia la selección defendida ni los permisos de edición.",
+  "summary": "La restauración de una copia nativa válida vuelve a conectar el puente de observación como lectura sin confirmar. Conserva las cantidades pendientes del dispositivo y los resultados canónicos cacheados, sin enviar cambios ni reemplazar el borrador. Una relectura explícita de Sheets conserva su confirmación existente para descartar pendientes.",
   "components": [
     "SYS-POTENCIALES"
   ],
   "tests": [
-    "node --test tests/ppp-version-bridge.test.cjs: nueve y cien versiones, rechazo de ciento una, aislamiento, borradores y versión defendida",
-    "Regresión de contratos PPP y lectura en navegador",
-    "Cotejo del recurso publicado y apertura del libro con más de ocho versiones"
+    "node --test tests/ppp-version-bridge.test.cjs tests/sheets-offline.cjs tests/ppp-case-loader.test.cjs: copias nativas, aislamiento y estados sin confirmar",
+    "node tests/ppp-restored-bridge-browser.cjs: nueve versiones restauradas, lectura compartida pendiente, cantidades intactas, cero POST, cancelar y aceptar relectura explícita",
+    "Regresión de contratos PPP y lectura en navegador; publicación y sesión real se acreditan por separado"
   ],
-  "rollback": "Revertir el cambio del puente conservando libros, versiones, historial y permisos.",
-  "atlas_note": "Se alinea el verificador de impacto al atlas ya aprobado que usa verificar-ppp.yml (ffdf31ae); la propuesta CHG-PPP-UI-001 conserva el contrato de versiones nativas. Sin componente, conexión o cálculo nuevos."
+  "rollback": "Revertir este cambio de restauración conservando libros, versiones, historial, borradores y permisos.",
+  "atlas_note": "Corrección del contrato existente CHG-PPP-UI-001 y CTR-PPP-SHEETS: una copia o cantidad pendiente mantiene su estado explícito y nunca acredita sincronización. Sin componente, conexión, autoridad o cálculo nuevos; se conserva la referencia del atlas ya aprobada (ffdf31ae). Propuesta e invariantes en docs/ppp-restored-observation.md."
 }
