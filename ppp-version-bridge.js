@@ -4,7 +4,7 @@
  const id=v=>typeof v==='string'&&/^[A-Za-z0-9_.:-]{1,200}$/.test(v);
  const copy=v=>JSON.parse(JSON.stringify(v));
  function versions(value){
-  if(!Array.isArray(value)||!value.length||value.length>8)throw Error('invalid_versions');
+  if(!Array.isArray(value)||!value.length||value.length>100)throw Error('invalid_versions');
   const seen=new Set();return value.map(v=>{
    if(!v||!id(v.id)||seen.has(v.id)||typeof v.nombre!=='string'||!v.inputs||Array.isArray(v.inputs))throw Error('invalid_versions');
    seen.add(v.id);const inputs={};for(const [k,n]of Object.entries(v.inputs))if(/^in[A-Z]\w*$/.test(k)&&(n===null||typeof n==='number'&&Number.isFinite(n)))inputs[k]=n;

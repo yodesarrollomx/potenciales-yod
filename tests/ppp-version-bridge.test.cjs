@@ -1,6 +1,11 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const {create,latestRegistered}=require('../ppp-version-bridge.js');
 const list=[{id:'older',nombre:'Anterior',inputs:{inArea:10}},{id:'newer',nombre:'Última inscrita',inputs:{inArea:20}}];
+test('native ninth through hundredth versions preserve history and remain observable',()=>{
+ const {versions}=require('../ppp-version-bridge.js');
+ for(const count of [9,100]){const v=Array.from({length:count},(_,i)=>({id:'v'+i,nombre:'Version '+i,inputs:{inArea:i}}));assert.equal(versions(v).length,count);assert.equal(latestRegistered(v),'v'+(count-1));}
+ assert.throws(()=>versions(Array.from({length:101},(_,i)=>({id:'v'+i,nombre:'Version '+i,inputs:{inArea:i}}))));
+});
 function setup(initial={}){let listener;const sent=[],parent={postMessage:m=>sent.push(m)},win={parent,location:{href:'https://example.test/potenciales-yod/macrolotes.html?agent=1',origin:'https://example.test'},document:{referrer:'https://example.test/yod-portal/despacho3d/index.html'},addEventListener:(n,f)=>listener=f,removeEventListener(){}};
  const view={caseId:'board-a',scenarios:structuredClone(list),active:'older'},bridge=create({modelType:'macrolotes',read:()=>view,win});
  bridge.remember({caseId:'board-a',revision:'rev1',scenarios:list,active:'older'});
