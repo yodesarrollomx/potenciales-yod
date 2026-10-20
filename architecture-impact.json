@@ -1,17 +1,15 @@
 {
   "model_revision": "2026-10-19.ppp-cartera-lectura.1",
   "proposal_id": "CHG-PPP-UI-001",
-  "summary": "Implementación documental bajo el cambio de interfaz PPP aprobado: ficha Abastos y acceso directo desde la portada; complementa oportunidad existente sin crear caso financiero nuevo. Revisión visual de presentación separada en Drive bajo permisos del propietario.",
+  "summary": "El puente de observación admite hasta cien versiones como el backend nativo. La novena versión deja de interrumpir la carga del PPP y su lectura compartida. No cambia la selección defendida ni los permisos de edición.",
   "components": [
     "SYS-POTENCIALES"
   ],
   "tests": [
-    "node tests/ppp-distrito-abasto.test.cjs: enlace de portada, perfil, documentos, ausencia de credenciales y cifras internas",
-    "Pruebas de regresión de portada y catálogo PPP ya existentes",
-    "GitHub Pages: abrir portada y perfil; confirmar navegación y recursos según permisos Drive"
+    "node --test tests/ppp-version-bridge.test.cjs: nueve y cien versiones, rechazo de ciento una, aislamiento, borradores y versión defendida",
+    "Regresión de contratos PPP y lectura en navegador",
+    "Cotejo del recurso publicado y apertura del libro con más de ocho versiones"
   ],
-  "rollback": "Revertir PR para retirar página documental y tarjeta, sin borrar documentos de Drive ni alterar oportunidad o filas de Sheets.",
-  "data_provenance": "Propuesta 19/oct preliminar; reunión Lara-YOD 17/oct; contexto del expediente original. Planos y modelos financieros pendientes de conciliar.",
-  "deployment": "GitHub Pages únicamente para ficha documental sin datos privados; PDF, PPTX, HTML con chinches y anexo permanecen en Drive con ACL de Drive.",
-  "atlas_note": "Se utiliza propuesta UI-001 existente en atlas fijado por workflow. Este cambio es presentación del caso y no cambia el modelo, CRM ni backend."
+  "rollback": "Revertir el cambio del puente conservando libros, versiones, historial y permisos.",
+  "atlas_note": "Se alinea el verificador de impacto al atlas ya aprobado que usa verificar-ppp.yml (ffdf31ae); la propuesta CHG-PPP-UI-001 conserva el contrato de versiones nativas. Sin componente, conexión o cálculo nuevos."
 }
