@@ -539,7 +539,7 @@
 <div id="toast"></div>
 <script src="ppp-ui.js?v=20261001-5"></script>
 <script src="ppp-case-loader.js?v=20261001-5"></script>
-<script src="ppp-version-bridge.js?v=3"></script>
+<script src="ppp-version-bridge.js?v=4"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -823,7 +823,7 @@
   let escenarios=[],escActivo='';
   const MAX_ESC=8;
   const escId=()=>'e'+Math.random().toString(36).slice(2,8);
-  const versionBridge=window.PPPVersionBridge.create({modelType:'vertical',read:()=>({caseId:caso.caso_id,scenarios:escenarios,active:escActivo,busy:sheetBusy||!!caseSelection,pending:!!sheetPending||modoLocal,draftInputs:sheetPending?.scenario===escActivo?{...(escGet(escActivo)?.inputs||{}),...sheetPending.inputs}:null,error:sheetFailure||sheetNeedsRefresh,labels:Object.fromEntries(Object.entries(factorHelp).map(([k,v])=>[k,v.t]))})});
+  const versionBridge=window.PPPVersionBridge.create({modelType:'vertical',read:()=>({caseId:caso.caso_id,scenarios:escenarios,active:escActivo,busy:sheetBusy||!!caseSelection,pending:!!sheetPending||sheetNeedsRefresh||modoLocal,draftInputs:sheetPending?.scenario===escActivo?{...(escGet(escActivo)?.inputs||{}),...sheetPending.inputs}:null,error:sheetFailure||sheetNeedsRefresh,labels:Object.fromEntries(Object.entries(factorHelp).map(([k,v])=>[k,v.t]))})});
   function escGet(id){return escenarios.find(e=>e.id===id)}
   function escBaseObj(){return escenarios.find(e=>e.esBase)||escenarios[0]}
   function escInicial(nombre){escenarios=[{id:escId(),nombre:nombre||'Base',esBase:true,inputs:inputValues()}];escActivo=escenarios[0].id}
@@ -1102,7 +1102,14 @@
   function nuevoRequestId(){return (crypto.randomUUID?.()||Date.now()+'-'+Math.random())}
   function guardarDraft(){try{localStorage.setItem(LS.draft,JSON.stringify({inputs:inputValues(),caso,escenarios,escActivo,sheetModel,sheetPending,savedInputs:legacySavedInputs}))}catch(e){}}
   function cargarDraft(){try{const d=JSON.parse(localStorage.getItem(LS.draft)||'null');if(!d)return;restoredDraft=true;legacySavedInputs=d.savedInputs||null;if(d.sheetModel&&d.caso?.caso_id===d.sheetModel.caso_id&&d.sheetModel.revision&&Array.isArray(d.sheetModel.escenarios)&&d.sheetModel.estados){sheetModel=d.sheetModel;sheetNeedsRefresh=true;sheetFailure=true;sheetPending=d.sheetPending||null;}if(d.inputs)Object.entries(d.inputs).forEach(([id,v])=>setControl(id,v));if(d.caso)caso=Object.assign(caso,d.caso);
-    if(Array.isArray(d.escenarios)&&d.escenarios.length){escenarios=d.escenarios;escActivo=d.escActivo&&escGet(d.escActivo)?d.escActivo:escenarios[0].id;const e=escGet(escActivo);if(e)escAplicar(e)}if(sheetModel&&d.inputs)Object.entries(d.inputs).forEach(([id,v])=>setControl(id,v));}catch(e){}}
+    if(Array.isArray(d.escenarios)&&d.escenarios.length){escenarios=d.escenarios;escActivo=d.escActivo&&escGet(d.escActivo)?d.escActivo:escenarios[0].id;const e=escGet(escActivo);if(e)escAplicar(e)}if(sheetModel&&d.inputs)Object.entries(d.inputs).forEach(([id,v])=>setControl(id,v));
+    // Share the cached canonical model without promoting this device's pending quantities.
+    // The refresh/error flags above are set before remember() can publish anything.
+    if(sheetModel&&window.PPPCaseLoader.validModel(sheetModel,caso.caso_id)){
+      versionBridge.remember({caseId:caso.caso_id,revision:sheetModel.revision,scenarios:sheetModel.escenarios,active:sheetModel.activo,states:sheetModel.estados,native:true});
+      versionBridge.invalidate();
+    }
+  }catch(e){}}
   function legacyStatus(){
     if(modoLocal)return 'Sin conexión · copia local';
     if(!caso.caso_id)return 'Supuestos de referencia · sin guardar';

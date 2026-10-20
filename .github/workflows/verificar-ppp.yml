@@ -64,6 +64,7 @@ jobs:
           PPP_MAP_ASSETS: ${{ runner.temp }}/ppp-map-assets
         run: |
           node tests/ppp-version-bridge-browser.cjs
+          node tests/ppp-restored-bridge-browser.cjs
           node tests/ppp-agent-cards-browser.cjs
           node tests/ppp-case-opening-browser.cjs
           node tests/ppp-case-opening-shell-browser.cjs
