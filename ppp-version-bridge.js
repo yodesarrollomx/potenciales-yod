@@ -17,6 +17,8 @@
  function create({modelType,read,win=globalThis.window}={}){
   if(!['macrolotes','vertical','patrimonial'].includes(modelType)||typeof read!=='function')throw Error('invalid_adapter');
   let saved=null,defended=null,binding=null,nonce=null,disposed=false,verified=false,focus=null;
+  const navigationRequests=new Map();
+  const navigationTargets=new Set(['plan','terreno','ventas','costos','calendario','volumenes','dArq','dVentas','dCostos','dMacro','dDota','dVolumenes']);
   function observeFocus(event){
    const card=event?.target?.closest?.('.ppp-card[data-card],.card[data-card]');
    if(card){const title=card.querySelector('.ppp-title,h3,h2')?.textContent?.trim()||card.dataset.card;focus={card:card.dataset.card,title:String(title).slice(0,160),fields:[...card.querySelectorAll('input[id]')].map(n=>n.id).filter(k=>/^in[A-Z]\w*$/.test(k))};}
@@ -28,7 +30,7 @@
   function remember({caseId,revision,scenarios,active,states=null,native=false}){
    if(!id(caseId)||typeof revision!=='string'||!revision)throw Error('invalid_case');
    const list=versions(scenarios);if(!list.some(v=>v.id===active))throw Error('invalid_active');
-   if(saved?.caseId!==caseId){defended=null;binding=null;nonce=null;focus=null;}
+   if(saved?.caseId!==caseId){defended=null;binding=null;nonce=null;focus=null;navigationRequests.clear();}
    saved={caseId,revision,list,active,states:copy(states||{}),native:native===true};verified=true;
    if(!defended)defended=binding?.scenario_id||latestRegistered(list);
    publish();
@@ -53,7 +55,39 @@
      viewed_scenario_name:viewed?.nombre||'',registration_basis:'saved_array_order',read_only:true,
      versions:saved.list.map(v=>({id:v.id,name:v.nombre})),...(viewed?{viewed_inputs:copy(observed)}:{})}};
   }
-  function publish(){if(disposed||!permitted||!nonce)return;try{const board=snapshot();if(board)win.parent.postMessage({type:'yod:ppp:state',version:1,nonce,board},win.location.origin);}catch{/* A local draft cannot be promoted to an authorized snapshot. */}}
+  function getVerifiedContext(){
+   try{
+    if(!saved||!binding||!verified||!saved.native)return null;
+    const current=read();if(current.caseId!==saved.caseId||current.busy||current.error||current.pending||!saved.list.some(v=>v.id===current.active)||JSON.stringify(versions(current.scenarios))!==JSON.stringify(saved.list))return null;
+    return {case_id:binding.agent_case_id||binding.case_id,board_case_id:saved.caseId,scenario_id:current.active,defended_scenario_id:defended,revision:saved.revision,confirmed:true,pending:false,volume_draft:binding.volume_draft===true};
+   }catch{return null;}
+  }
+  function publish(){if(disposed||!permitted||!nonce)return;try{const board=snapshot();if(board)win.parent.postMessage({type:'yod:ppp:state',version:1,nonce,board,capabilities:{navigate:true},navigation_context:getVerifiedContext()},win.location.origin);}catch{/* A local draft cannot be promoted to an authorized snapshot. */}}
+  function navigate(m){
+   if(!id(m.request_id)||typeof m.target!=='string')return;
+   const fingerprint=JSON.stringify([m.target,m.scenario_id,m.revision,m.board_case_id||binding.case_id]);
+   let previous=navigationRequests.get(m.request_id);
+   if(!previous){if(navigationRequests.size>=40)navigationRequests.delete(navigationRequests.keys().next().value);previous={fingerprint,attempted:false};navigationRequests.set(m.request_id,previous);}
+   let status='unavailable',code='view_unavailable',section=null,context=getVerifiedContext();
+   if(previous.fingerprint!==fingerprint)code='request_id_reused';
+   else if(!navigationTargets.has(m.target)){status='unsupported';code='target_unsupported';}
+   else if(!context)code='reading_unconfirmed';
+   else if(m.board_case_id!==undefined&&m.board_case_id!==saved.caseId)code='case_changed';
+   else if(typeof m.revision!=='string'||m.revision!==context.revision)code='revision_changed';
+   else if(!id(m.scenario_id)||m.scenario_id!==context.scenario_id)code='scenario_changed';
+   else if(win.document.activeElement?.isContentEditable||win.document.activeElement?.matches?.('input,textarea,select,[contenteditable="true"],[contenteditable=""]')||win.document.activeElement?.closest?.('[contenteditable="true"],[contenteditable=""]'))code='editing_in_progress';
+   else if(typeof win.PPPView?.navigate!=='function'||typeof win.PPPView?.navigationState!=='function'){status='unsupported';code='navigation_not_installed';}
+   else{
+    try{
+     if(!previous.attempted){previous.attempted=true;win.PPPView.navigate(m.target);}
+     const observed=win.PPPView.navigationState(m.target),fresh=getVerifiedContext();
+     if(fresh&&fresh.board_case_id===context.board_case_id&&fresh.scenario_id===context.scenario_id&&fresh.revision===context.revision&&observed?.status==='confirmed'&&typeof observed.section_id==='string'){
+      status='confirmed';code=null;section=observed.section_id;context=fresh;
+     }else{status=observed?.status==='unsupported'?'unsupported':'unavailable';code=observed?.code||'view_not_confirmed';}
+    }catch{code='view_unavailable';}
+   }
+   win.parent.postMessage({type:'yod:ppp:navigation',version:1,nonce,case_id:binding.case_id,request_id:m.request_id,target:m.target,status,...(code?{code}:{}),...(context?{observed:{case_id:context.case_id,board_case_id:context.board_case_id,scenario_id:context.scenario_id,revision:context.revision,tab:'ppp',target:m.target,...(section?{section_id:section}:{})}}:{})},win.location.origin);
+  }
   function receive(e){
    if(disposed||!permitted||e.source!==win.parent||e.origin!==win.location.origin)return;
    const m=e.data;if(!m||m.version!==1||!id(m.case_id)||!saved)return;
@@ -62,15 +96,16 @@
     if(m.scenario_id!==undefined&&!saved.list.some(v=>v.id===m.scenario_id))return;
     // Binding and pinned version cannot be replaced within one handshake.
     if(nonce&&(nonce!==m.nonce||binding.case_id!==m.case_id||(m.scenario_id!==undefined&&m.scenario_id!==defended)))return;
-    binding={case_id:m.case_id,scenario_id:m.scenario_id};nonce=m.nonce;
+    binding=binding||{case_id:m.case_id,scenario_id:m.scenario_id,...(id(m.agent_case_id)?{agent_case_id:m.agent_case_id}:{}),volume_draft:m.presentation?.volume_draft===true};nonce=m.nonce;
     if(m.scenario_id)defended=m.scenario_id;publish();return;
    }
    if(m.nonce!==nonce||m.case_id!==binding?.case_id)return;
+   if(m.type==='yod:ppp:navigate'){navigate(m);return;}
    if(m.type==='yod:ppp:read')publish();
    if(m.type==='yod:ppp:apply')win.parent.postMessage({type:'yod:ppp:state',version:1,nonce,receipt:{ok:false,request_id:m.proposal?.request_id,error:'read_only_model'}},win.location.origin);
   }
   if(permitted){win.addEventListener('message',receive);for(const name of ['click','input','focusin'])win.document.addEventListener?.(name,observeFocus);}
-  return {remember,publish,snapshot,invalidate(){verified=false;publish();},dispose(){disposed=true;saved=null;binding=null;nonce=null;if(permitted){win.removeEventListener('message',receive);for(const name of ['click','input','focusin'])win.document.removeEventListener?.(name,observeFocus);}}};
+  return {remember,publish,snapshot,getVerifiedContext,invalidate(){verified=false;publish();},dispose(){disposed=true;saved=null;binding=null;nonce=null;navigationRequests.clear();if(permitted){win.removeEventListener('message',receive);for(const name of ['click','input','focusin'])win.document.removeEventListener?.(name,observeFocus);}}};
  }
  return {create,latestRegistered,versions};
 });

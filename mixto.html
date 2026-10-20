@@ -304,6 +304,7 @@
 #mercadoDocumento[hidden]{display:none}#mercadoDocumento table{width:100%;border-collapse:collapse;font-size:11px}#mercadoDocumento td,#mercadoDocumento th{padding:8px;border-bottom:1px solid var(--linea);text-align:left}#mercadoDocumento h3{font-size:14px}#mercadoDocumento{overflow-wrap:anywhere}#mercadoDocumento button{margin-top:10px}
 </style>
 <link rel="stylesheet" href="ppp-ui.css?v=20261001-5">
+<link rel="stylesheet" href="ppp-volumes.css?v=1">
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -368,6 +369,7 @@
   </section>
 
 <section class="seguimiento on"><details><summary>Datos exactos del documento · opcionales por escenario</summary><p class="note">Conserva el modo paramétrico dejando los valores en 0. El presupuesto consolidado reemplaza las partidas porcentuales; no se suma dos veces. Las condiciones de deuda y reparto siguen siendo supuestos del escenario.</p><div class="input-group"><div class="input-header"><label for="inInventarioExplicito">Inventario explícito · 0 paramétrico / 1 documento</label><div class="val-display" data-input="inInventarioExplicito">0</div></div><input type="range" id="inInventarioExplicito" min="0" max="1" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inUnidadesA">Unidades tipología A</label><div class="val-display" data-input="inUnidadesA">0</div></div><input type="range" id="inUnidadesA" min="0" max="1000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inUnidadesB">Unidades tipología B</label><div class="val-display" data-input="inUnidadesB">0</div></div><input type="range" id="inUnidadesB" min="0" max="1000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inUnidadesC">Unidades tipología C</label><div class="val-display" data-input="inUnidadesC">0</div></div><input type="range" id="inUnidadesC" min="0" max="1000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inComRentableExacto">Comercial rentable del documento (m²) · 0 paramétrico</label><div class="val-display" data-input="inComRentableExacto">0</div></div><input type="range" id="inComRentableExacto" min="0" max="10000" step="0.01" value="0"></div><div class="input-group"><div class="input-header"><label for="inCajonesResidExactos">Cajones residenciales del documento · 0 paramétrico</label><div class="val-display" data-input="inCajonesResidExactos">0</div></div><input type="range" id="inCajonesResidExactos" min="0" max="2000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inSotanoAreaExacta">Área construida de sótano (m²) · 0 paramétrico</label><div class="val-display" data-input="inSotanoAreaExacta">0</div></div><input type="range" id="inSotanoAreaExacta" min="0" max="100000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inObraDirectaTotal">Obra directa consolidada ($) · 0 paramétrico</label><div class="val-display" data-input="inObraDirectaTotal">0</div></div><input type="range" id="inObraDirectaTotal" min="0" max="2000000000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inIndirectosTotal">Indirectos consolidados ($) · 0 paramétrico</label><div class="val-display" data-input="inIndirectosTotal">0</div></div><input type="range" id="inIndirectosTotal" min="0" max="500000000" step="1" value="0"></div></details></section><section class="seguimiento on" id="mercadoDocumento" hidden></section>
+<section id="pppVolumes" hidden></section>
   <section class="hero">
     <span class="kick">¿Qué da este terreno?</span>
     <h1 class="serif" id="heroNombre">Caso nuevo<span class="estado-pill" id="heroEstado">EXPLORACIÓN</span></h1>
@@ -537,9 +539,10 @@
 </div></div>
 
 <div id="toast"></div>
-<script src="ppp-ui.js?v=20261001-5"></script>
+<script src="ppp-ui.js?v=20261020-nav1"></script>
 <script src="ppp-case-loader.js?v=20261001-5"></script>
-<script src="ppp-version-bridge.js?v=4"></script>
+<script src="ppp-volumes.js?v=1"></script>
+<script src="ppp-version-bridge.js?v=5"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -634,9 +637,17 @@
   };
   // Registered cases read their model from Sheets; no financial calculation here.
   let sheetModel=null,sheetTimer=null,sheetBusy=false,sheetPending=null,sheetFailure=false,sheetNeedsRefresh=false;
+  // Only a fresh, authenticated case response can name the pilot. A restored
+  // browser copy or the open= URL alone never activates the quantities proposal.
+  let volumeIdentity=null;
+  function volumeContext(){
+    if(!volumeIdentity||!clave||modoLocal||caseSelection||sheetBusy||sheetPending||sheetFailure||sheetNeedsRefresh||volumeIdentity.case_id!==caso.caso_id||!window.PPPCaseLoader.validModel(sheetModel,caso.caso_id)||!escGet(escActivo))return null;
+    return {verified:true,ready:true,case_id:caso.caso_id,project_name:volumeIdentity.project_name,scenario_id:escActivo,scenario_name:escGet(escActivo).nombre,revision:sheetModel.revision};
+  }
+  function syncVolumes(){const context=volumeContext();if(context)volumeEditor.setContext(context);else if(volumeIdentity&&clave&&!modoLocal&&(caseSelection?.status==='loading'||sheetBusy||sheetPending))volumeEditor.suspend();else volumeEditor.revoke();}
   function sheetStatus(message){const d=$('syncDot');if(d)d.textContent=message;const s=$('sheetEstado');if(s)s.textContent=message;}
   function acceptSheetModel(m,selected=escActivo,keepInputs=false){
-    if(!window.PPPCaseLoader.validModel(m,caso.caso_id)){sheetFailure=true;sheetStatus('Respuesta de Sheets incompleta · se conserva el modelo anterior');return false;}
+    if(!window.PPPCaseLoader.validModel(m,caso.caso_id)){sheetFailure=true;volumeEditor.setContext(null);sheetStatus('Respuesta de Sheets incompleta · se conserva el modelo anterior');return false;}
     sheetModel=m;sheetFailure=false;sheetNeedsRefresh=false;
     escenarios=m.escenarios.map(e=>({...e,inputs:{...e.inputs}}));
     escActivo=window.PPPCaseLoader.selectScenario(m,selected);
@@ -661,13 +672,13 @@
       if(!m.ok){sheetFailure=true;sheetPending=job;sheetStatus(m.error==='conflicto_revision'?'Conflicto: hay cambios en Sheets. Recarga antes de guardar.':'No se guardó: '+m.error);toast('No se confirmó el cambio: '+m.error);return;}
       if(!acceptSheetModel(m,escActivo,!!sheetPending)){sheetPending=sheetPending?{scenario:job.scenario,inputs:{...job.inputs,...sheetPending.inputs}}:job;guardarDraft();}
     }catch(e){sheetPending=sheetPending?{scenario:job.scenario,inputs:{...job.inputs,...sheetPending.inputs}}:job;sheetFailure=true;sheetStatus('Sin conexión · cambios pendientes; resultados anteriores');}
-    finally{sheetBusy=false;if(sheetPending&&!sheetFailure)flushSheetSync();}
+    finally{sheetBusy=false;syncVolumes();if(sheetPending&&!sheetFailure)flushSheetSync();}
   }
   async function reloadSheetModel(){if(!sheetModel||sheetBusy||caseSelection)return;const sourceModel=sheetModel,sourceCase=caso.caso_id;try{const m=await apiGet({recurso:'sheet-model',id:sourceCase});if(sheetModel!==sourceModel||caso.caso_id!==sourceCase||caseSelection)return;if(!window.PPPCaseLoader.validModel(m,sourceCase))throw Error(m.error);if(sheetPending&&!confirm("Recargar descartará las cantidades pendientes de este tablero. ¿Leer las actuales de Sheets?"))return;sheetPending=null;sheetFailure=false;acceptSheetModel(m,escActivo);}catch(e){if(sheetModel!==sourceModel||caso.caso_id!==sourceCase||caseSelection)return;sheetFailure=true;sheetStatus('No se pudo leer Sheets · datos anteriores');}}
   async function sheetVersion(action,id,name){
     if(sheetPending||sheetBusy||sheetFailure||sheetNeedsRefresh){toast('Verifica conexión y cantidades guardadas antes de modificar versiones');return;}
     sheetBusy=true;
-    try{const m=await apiPost({tipo:'sheet-version',accion:action,caso_id:caso.caso_id,escenario_id:id,nombre:name,revision_esperada:sheetModel.revision,request_id:nuevoRequestId()});if(!m.ok){toast('No se cambió la versión: '+m.error);return;}if(acceptSheetModel(m,action==='activar'?id:escActivo))toast('Versión actualizada en Sheets');else toast('No se confirmó la versión; se conserva la anterior');}catch(e){toast('Sin conexión: versión conservada');}finally{sheetBusy=false;}
+    try{const m=await apiPost({tipo:'sheet-version',accion:action,caso_id:caso.caso_id,escenario_id:id,nombre:name,revision_esperada:sheetModel.revision,request_id:nuevoRequestId()});if(!m.ok){toast('No se cambió la versión: '+m.error);return;}if(acceptSheetModel(m,action==='activar'?id:escActivo))toast('Versión actualizada en Sheets');else toast('No se confirmó la versión; se conserva la anterior');}catch(e){toast('Sin conexión: versión conservada');}finally{sheetBusy=false;syncVolumes();}
   }
   function renderSheetPanel(){
     let panel=$('sheetPanel');if(!panel){panel=document.createElement('section');panel.id='sheetPanel';panel.className='card';panel.style.cssText='display:block;padding:24px;margin:20px 0;';$('mercadoDocumento').before(panel);}
@@ -824,6 +835,10 @@
   const MAX_ESC=8;
   const escId=()=>'e'+Math.random().toString(36).slice(2,8);
   const versionBridge=window.PPPVersionBridge.create({modelType:'vertical',read:()=>({caseId:caso.caso_id,scenarios:escenarios,active:escActivo,busy:sheetBusy||!!caseSelection,pending:!!sheetPending||sheetNeedsRefresh||modoLocal,draftInputs:sheetPending?.scenario===escActivo?{...(escGet(escActivo)?.inputs||{}),...sheetPending.inputs}:null,error:sheetFailure||sheetNeedsRefresh,labels:Object.fromEntries(Object.entries(factorHelp).map(([k,v])=>[k,v.t]))})});
+  const volumeEditor=window.PPPVolumes.mount({container:$('pppVolumes'),getContext:volumeContext});
+  const retireVolumeIdentity=()=>{volumeIdentity=null;volumeEditor.revoke();};
+  window.addEventListener('pagehide',retireVolumeIdentity);
+  window.addEventListener('storage',event=>{if(event.key===null||event.key===LS.clave)retireVolumeIdentity();});
   function escGet(id){return escenarios.find(e=>e.id===id)}
   function escBaseObj(){return escenarios.find(e=>e.esBase)||escenarios[0]}
   function escInicial(nombre){escenarios=[{id:escId(),nombre:nombre||'Base',esBase:true,inputs:inputValues()}];escActivo=escenarios[0].id}
@@ -983,6 +998,7 @@
     filasF.push(`<tr class="tot-row"><td>Σ ${r.totalMonths} meses</td><td>${fmtM(r.revTotal)}</td><td>${fmtM(r.costTotal)}</td><td>${fmtM(r.equityUsed)}</td><td>${fmtM(r.interest+r.feeDebt)}</td><td>${fmtM(r.debt)}</td><td>${fmtM(r.cash)}</td></tr>`);
     $('flowRows').innerHTML=filasF.join('');renderProforma(r);renderLandDeal(r);renderFormulas();refreshJson();
     window.PPPView?.update(r,{native:!!sheetModel,revision:sheetModel?.revision,caseId:caso.caso_id,scenario:escActivo,scenarioName:escGet(escActivo)?.nombre,versionCount:escenarios.length,projectName:caso.nombre_caso,updated:sheetModel?.actualizado,bookUrl:sheetModel?.libro_url,site:sheetModel?.reticula,stages:sheetModel?.etapas});
+    syncVolumes();
   }
   function renderProforma(r){
     const row=(label,value,klass='')=>`<tr class="${klass}"><td>${label}</td><td>${value}</td></tr>`,section=label=>`<tr class="section-row"><td colspan="2">${label}</td></tr>`,economicTotal=r.projectCost+r.interest+r.feeDebt,cashOk=Math.abs(r.cashReconciliation)<1;
@@ -1121,6 +1137,7 @@
   let caseSelection=null;
   function casePresentation(status,message,id,hasCopy=false,retry){
     caseSelection=status==='ready'?null:{status,message,id,hasCopy};
+    if(caseSelection){if(status==='loading')volumeEditor.suspend();else volumeEditor.revoke();}
     window.PPPView?.setCaseState(caseSelection,retry||(()=>abrirPorId(id)));
     if(caseSelection&&!hasCopy){txt('casoNombreBar',status==='loading'?'Cargando proyecto…':'Proyecto sin confirmar');txt('syncDot',message);}
   }
@@ -1149,6 +1166,7 @@
     }
     if(sheetModel&&obj.caso_id===caso.caso_id&&!obj.calculo_sheet){sheetNeedsRefresh=true;sheetFailure=true;sheetStatus('No se confirmó el modelo de Sheets · conserva copia anterior');toast('El servidor no confirmó el modelo nativo. Recarga cuando esté disponible.');return;}
     casePresentation('ready','',obj.caso_id);
+    volumeIdentity={case_id:obj.caso_id,project_name:obj.nombre_caso||''};
     sheetModel=obj.calculo_sheet||null;sheetPending=null;sheetFailure=false;sheetNeedsRefresh=false;
     Object.keys(obj).forEach(kk=>{if(/^in[A-Z]/.test(kk)&&$(kk)&&obj[kk]!==''&&isFinite(Number(obj[kk])))setControl(kk,Number(obj[kk]))});
     caso={caso_id:obj.caso_id||'',palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
@@ -1232,7 +1250,7 @@
     window.open('https://wa.me/'+(num?num:'')+'?text='+encodeURIComponent(linea),'_blank')
   }
   /* ================== GATE / MODALES / LENTES ================== */
-  function reabrirGate(){localStorage.removeItem(LS.clave);clave='';$('gate').classList.remove('off');$('gateErr').textContent='La clave cambió o es incorrecta'}
+  function reabrirGate(){volumeIdentity=null;volumeEditor.revoke();localStorage.removeItem(LS.clave);clave='';$('gate').classList.remove('off');$('gateErr').textContent='La clave cambió o es incorrecta'}
   async function intentarEntrar(){
     const v=$('gateClave').value.trim();if(!v){$('gateErr').textContent='Escribe la clave';return}
     $('gateBtn').disabled=true;$('gateErr').textContent='';
@@ -1243,7 +1261,7 @@
     }catch(e){clave=previa;$('gateErr').textContent='Sin conexión con el Sheet. Verifica internet o entra sin conexión.'}
     $('gateBtn').disabled=false
   }
-  function modoSinConexion(){modoLocal=true;$('gate').classList.add('off');$('modoLocalBanner').classList.add('on');pintaCaso();const id=new URLSearchParams(location.search).get('open');if(id&&(id!==caso.caso_id||!sheetModel))casePresentation('error','Conéctate para leer el proyecto solicitado. Los supuestos de referencia no son sus resultados.',id);}
+  function modoSinConexion(){volumeIdentity=null;volumeEditor.revoke();modoLocal=true;$('gate').classList.add('off');$('modoLocalBanner').classList.add('on');pintaCaso();const id=new URLSearchParams(location.search).get('open');if(id&&(id!==caso.caso_id||!sheetModel))casePresentation('error','Conéctate para leer el proyecto solicitado. Los supuestos de referencia no son sus resultados.',id);}
   function procesarOpen(){
     if(modoLocal)return;
     const id=new URLSearchParams(location.search).get('open');
@@ -1266,7 +1284,7 @@
   $('casosCerrar').onclick=cerrarOverlays;
   $('btnAbrirPalabra').onclick=()=>abrirPorPalabra($('abrirPalabra').value);
   $('abrirPalabra').addEventListener('keydown',e=>{if(e.key==='Enter')abrirPorPalabra($('abrirPalabra').value)});
-  $('btnNuevo').onclick=()=>{caseReader.invalidate();casePresentation('ready','');const url=new URL(location.href);url.searchParams.delete('open');history.replaceState(null,'',url);legacySavedInputs=null;sheetModel=null;sheetPending=null;sheetNeedsRefresh=false;sheetFailure=false;Object.entries(DEFAULTS).forEach(([id,v])=>setControl(id,v));caso={caso_id:'',palabra:'',correo:caso.correo,nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};escInicial('Base');calculate();pintaCaso();toast('Caso nuevo: supuestos de referencia')};
+  $('btnNuevo').onclick=()=>{volumeIdentity=null;volumeEditor.revoke();caseReader.invalidate();casePresentation('ready','');const url=new URL(location.href);url.searchParams.delete('open');history.replaceState(null,'',url);legacySavedInputs=null;sheetModel=null;sheetPending=null;sheetNeedsRefresh=false;sheetFailure=false;Object.entries(DEFAULTS).forEach(([id,v])=>setControl(id,v));caso={caso_id:'',palabra:'',correo:caso.correo,nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};escInicial('Base');calculate();pintaCaso();toast('Caso nuevo: supuestos de referencia')};
   /* ================== TRACK DE REUNIONES DEL PPP ==================
      Persiste SIN tocar el backend: cada reunión es un renglón de notas_seguimiento
      con el sello 📅. OJO: el Apps Script ANTEPONE su fecha a la nota, así que el

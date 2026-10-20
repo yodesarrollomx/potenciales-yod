@@ -1,15 +1,18 @@
 {
-  "model_revision": "2026-10-19.ppp-cartera-lectura.1",
-  "proposal_id": "CHG-PPP-UI-001",
-  "summary": "La restauración de una copia nativa válida vuelve a conectar el puente de observación como lectura sin confirmar. Conserva las cantidades pendientes del dispositivo y los resultados canónicos cacheados, sin enviar cambios ni reemplazar el borrador. Una relectura explícita de Sheets conserva su confirmación existente para descartar pendientes.",
+  "model_revision": "2026-10-20.ruisenor-interaccion-volumenes.2",
+  "proposal_id": "CHG-RUISENOR-INTERACCION-VOLUMENES-20261020",
+  "summary": "Navegación visual cerrada sobre el puente PPP existente: destino, caso, escenario y revisión exactos, sin cambiar controles, foco, versión o cantidades. Recibo confirmado sólo después de comprobar la sección visible. Editor de propuesta de uno a tres volúmenes, con filas independientes y memoria por caso/escenario/revisión, aislado de inputs, motor y guardado del PPP. Habilitación sólo tras lectura nativa autenticada del piloto. No habilita aplicación ni cálculo financiero por cuerpos.",
   "components": [
     "SYS-POTENCIALES"
   ],
   "tests": [
-    "node --test tests/ppp-version-bridge.test.cjs tests/sheets-offline.cjs tests/ppp-case-loader.test.cjs: copias nativas, aislamiento y estados sin confirmar",
-    "node tests/ppp-restored-bridge-browser.cjs: nueve versiones restauradas, lectura compartida pendiente, cantidades intactas, cero POST, cancelar y aceptar relectura explícita",
-    "Regresión de contratos PPP y lectura en navegador; publicación y sesión real se acreditan por separado"
+    "node --test tests/ppp-version-bridge.test.cjs: contrato navigate cerrado, aislamiento, estado pendiente, foco editable, revisión, respuestas tardías e identidad de solicitud",
+    "node --test tests/ppp-volumes.test.cjs: selector1/2/3, filas independientes, valores ausentes, sumas sólo de cantidades, aislamiento de revisión y retiro del caso o sesión",
+    "node tests/ppp-volumes-browser.cjs: escritorio1280/móvil390, capturas asimétricas, borrador por revisión y continuidad explícita, valores nativos intactos y cero POST",
+    "node tests/ppp-navigation-browser.cjs: terreno, ventas, costos, calendario y plan con UI real y transporte sintético; cero escrituras de negocio, valores y versión intactos",
+    "Recorrido Browser HTTP de tests/fixtures/ruisenor-volumenes.html: módulos reales con DOM/modelo sintéticos, CSP sin conexiones ni medios, selector1/2/3 y counters nativos en cero; no acredita mixto autenticado",
+    "Regresiones de contratos PPP, sintaxis e impacto; publicación y sesión real se acreditan por separado"
   ],
-  "rollback": "Revertir este cambio de restauración conservando libros, versiones, historial, borradores y permisos.",
-  "atlas_note": "Corrección del contrato existente CHG-PPP-UI-001 y CTR-PPP-SHEETS: una copia o cantidad pendiente mantiene su estado explícito y nunca acredita sincronización. Sin componente, conexión, autoridad o cálculo nuevos; se conserva la referencia del atlas ya aprobada (ffdf31ae). Propuesta e invariantes en docs/ppp-restored-observation.md."
+  "rollback": "Revertir el handler de navegación y su API visual conservando libros, versiones, historial, borradores, solicitudes y permisos.",
+  "atlas_note": "Atlas fijado en yod-portal b42173ffda031575d991498095ebacfc36ee06f4 (PR302 integrado), propuesta CHG-RUISENOR-INTERACCION-VOLUMENES-20261020. Contrato en docs/ppp-navigation.md; frontend de consulta y borradores, sin GAS/Render/Sheets/credenciales/permisos/fórmulas nuevos."
 }
