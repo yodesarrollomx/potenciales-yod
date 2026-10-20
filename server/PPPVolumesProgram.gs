@@ -260,8 +260,8 @@ var PPPVolumesProgram = (function () {
       var validation = '=AND(ABS(SUM(' + q(scenarioName) + 'L8:L127)-' + ref('sales') + ')<1;ABS(SUM(' + q(scenarioName) + 'M8:M127)-' + ref('cashCost') + ')<1;ABS(' + ref('cashReconciliation') + ')<1;' + ref('horizonPass') + ')';
       program.getRange('Y2').setFormula(validation);
       program.getRange('Y6').setFormula(relocation ? '=MAX(0;' + relocation.end_ref + '-1)' : '=0');
-      function delta(source, target) { return 'SUMPRODUCT(IF(' + source + '=' + target + ';0;IF(ISNUMBER(' + source + ')*ISNUMBER(' + target + ');ABS(' + source + '-' + target + ');1000000000)))'; }
-      program.getRange('Y5').setFormula('=AND(' + delta(q(manifest.source_scenario) + 'G8:G235', q(scenarioName) + 'G8:G235') + '<1;' + delta(q(manifest.source_scenario) + 'J8:AI127', q(scenarioName) + 'J8:AI127') + '<1)');
+      function parityDifferenceFormula(source, target) { return 'SUMPRODUCT(IF(' + source + '=' + target + ';0;IF(ISNUMBER(' + source + ')*ISNUMBER(' + target + ');ABS(' + source + '-' + target + ');1000000000)))'; }
+      program.getRange('Y5').setFormula('=AND(' + parityDifferenceFormula(q(manifest.source_scenario) + 'G8:G235', q(scenarioName) + 'G8:G235') + '<1;' + parityDifferenceFormula(q(manifest.source_scenario) + 'J8:AI127', q(scenarioName) + 'J8:AI127') + '<1)');
       protect(program, 16); protect(scenario, false); protect(allocation, false); protect(indexSheet, false); flush();
       var entry = { row: entryRow, values: [ctx.scenario_id, programName, scenarioName, manifest.count, storedRows, 16, manifest.model_revision, 'ready', manifest.source_program, '', allocationMode] };
       entry.values[9] = hooks.hash(PPPVolumes.stable(formulaMaterial(entry)));

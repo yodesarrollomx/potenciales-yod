@@ -38,7 +38,7 @@ jobs:
           node --check ppp-volumes.js
           node --check ppp-volumes-native.js
           node -e "const fs=require('node:fs'),vm=require('node:vm');for(const file of ['server/PPPVolumes.gs','server/PPPVolumesFormulas.gs','server/PPPVolumesProgram.gs'])new vm.Script(fs.readFileSync(file,'utf8'),{filename:file});"
-          node --test tests/ppp-volumes.test.cjs tests/ppp-volumes-native.test.cjs tests/ppp-volumes-server.test.cjs tests/ppp-volumes-program.test.cjs
+          node --test tests/ppp-volumes.test.cjs tests/ppp-volumes-native.test.cjs tests/ppp-volumes-server.test.cjs tests/ppp-volumes-program.test.cjs tests/ppp-volumes-migration.test.cjs
           node --check ppp-patrimonial-native.js
           node --check ppp-case-loader.js
           node --check ppp-case-opening.js

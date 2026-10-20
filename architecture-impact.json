@@ -28,6 +28,7 @@
     "tests/ppp-agent-receipts-browser.cjs",
     "tests/ppp-version-bridge.test.cjs",
     "tests/ppp-volumes-browser.cjs",
+    "tests/ppp-volumes-migration.test.cjs",
     "tests/ppp-volumes-native.test.cjs",
     "tests/ppp-volumes-program.test.cjs",
     "tests/ppp-volumes-server.test.cjs",
@@ -37,7 +38,7 @@
   "tests": [
     "node --test tests/ppp-volumes.test.cjs: colecciones existentes, nuevo de un cuerpo, máximo de 16, independencia de drivers, derivados inmutables, ausentes, aislamiento/revocación, continuidad explícita sólo de drivers, ACK canónico, cálculo pendiente, recibo original con revisión posterior y solicitud estable ante incertidumbre. Promedio por planta de seis decimales, seed autenticado de un cuerpo, confirmación explícita de política para todos los recursos y retiro del consentimiento.",
     "node --test tests/ppp-volumes-native.test.cjs tests/ppp-version-bridge.test.cjs tests/sheets-offline.cjs: proyección de sólo 14 drivers, capabilities y contexto nativo, protección de fórmulas, revisión/base/recibo exactos, respuesta tardía, navegación y cantidades; ningún fallback financiero local.",
-    "node --test tests/ppp-volumes-server.test.cjs tests/ppp-volumes-program.test.cjs: autorización del servidor, CAS, registro durable e idempotencia, readback canónico, revisión concurrente, conservación de IDs/inactivos, preflight del programa, lote atómico de drivers y marcador aplicado, rechazo previo a escritura con prueba exacta, instalación de fórmulas protegidas y recursos comunes explícitos. Dobles y fuentes genéricas; no acredita recálculo financiero real.",
+    "node --test tests/ppp-volumes-server.test.cjs tests/ppp-volumes-program.test.cjs tests/ppp-volumes-migration.test.cjs: autorización del servidor, CAS, registro durable e idempotencia, readback canónico, revisión concurrente, conservación de IDs/inactivos, preflight del programa, lote atómico de drivers y marcador aplicado, rechazo previo a escritura con prueba exacta, instalación de fórmulas protegidas y recursos comunes explícitos. Dobles y fuentes genéricas, incluida ejecución de la migración real sobre un libro doble; no acredita recálculo financiero real.",
     "node tests/ppp-volumes-browser.cjs: mixto real a 1280 px y móvil a 390 px con transporte totalmente interceptado; colección existente de tres cuerpos, captura independiente, derivados de sólo lectura, un POST explícito de14 drivers, ACK/readback y recarga canónica, retry GET sin segundo POST y ausencia de controles si falta capacidad nativa. Alta nativa desde plantilla de un cuerpo con revisión explícita, captura original conservada, E3.4/D5/F17 de readback, sin resumen/flujo JS; preserve no cambia por count y built_area requiere confirmar todos los recursos.",
     "node tests/ppp-volumes-browser.cjs: fixture directa tests/fixtures/departamentos-volumenes.html en 1280/390 px, CSP connect-src none, solicitudes/recibos exclusivamente sintéticos 1/1, inputs nativos 0/cambios 0 y ninguna red de negocio. La fixture no es una sesión autenticada real.",
     "Sintaxis JavaScript/HTML y parseo VM sin ejecutar de server/PPPVolumes.gs, server/PPPVolumesFormulas.gs y server/PPPVolumesProgram.gs; git diff --check; verificación de impacto contra el atlas local vigente.",
