@@ -75,7 +75,7 @@ const parentHTML='<!doctype html><html lang="es"><meta name="viewport" content="
    assert.equal((await frame.locator('[data-input=inTerrenoM2] strong').textContent()).trim(),'500');
    proposals=[{request_id:'board-reload-104',case_id:model.caso_id,scenario_id:model.activo,revision:model.revision,motivo:'Corrección explícita de prueba',cambios:[{campo:'inTerrenoM2',label:'Terreno',antes:500,valor:644}],apply_requested_at:new Date().toISOString(),apply_expires_at:new Date(Date.now()+120000).toISOString()}];
    await page.getByText('Conexión y variantes',{exact:true}).click();await page.getByRole('button',{name:'Actualizar conexión',exact:true}).click();
-   await page.getByRole('button',{name:'Comprobar confirmación',exact:true}).waitFor();
+   await page.getByRole('button',{name:'Comprobar la misma solicitud',exact:true}).waitFor();
    const cached=await page.evaluate(()=>JSON.parse(localStorage.getItem('pyod_patrimonial_native_v1:synthetic-case')));
    assert.equal(cached.job,null);assert.equal(cached.receipts.length,1);assert.equal(writes.length,1);
    assert.ok(resolveCalls.length>=1);for(const receipt of resolveCalls)assert.deepEqual(receipt,resolveCalls[0]);const firstReceipt=structuredClone(resolveCalls[0]),priorReads=reads;

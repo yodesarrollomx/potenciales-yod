@@ -304,7 +304,7 @@
 #mercadoDocumento[hidden]{display:none}#mercadoDocumento table{width:100%;border-collapse:collapse;font-size:11px}#mercadoDocumento td,#mercadoDocumento th{padding:8px;border-bottom:1px solid var(--linea);text-align:left}#mercadoDocumento h3{font-size:14px}#mercadoDocumento{overflow-wrap:anywhere}#mercadoDocumento button{margin-top:10px}
 </style>
 <link rel="stylesheet" href="ppp-ui.css?v=20261001-5">
-<link rel="stylesheet" href="ppp-volumes.css?v=1">
+<link rel="stylesheet" href="ppp-volumes.css?v=20261020-native4">
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -370,6 +370,7 @@
 
 <section class="seguimiento on"><details><summary>Datos exactos del documento · opcionales por escenario</summary><p class="note">Conserva el modo paramétrico dejando los valores en 0. El presupuesto consolidado reemplaza las partidas porcentuales; no se suma dos veces. Las condiciones de deuda y reparto siguen siendo supuestos del escenario.</p><div class="input-group"><div class="input-header"><label for="inInventarioExplicito">Inventario explícito · 0 paramétrico / 1 documento</label><div class="val-display" data-input="inInventarioExplicito">0</div></div><input type="range" id="inInventarioExplicito" min="0" max="1" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inUnidadesA">Unidades tipología A</label><div class="val-display" data-input="inUnidadesA">0</div></div><input type="range" id="inUnidadesA" min="0" max="1000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inUnidadesB">Unidades tipología B</label><div class="val-display" data-input="inUnidadesB">0</div></div><input type="range" id="inUnidadesB" min="0" max="1000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inUnidadesC">Unidades tipología C</label><div class="val-display" data-input="inUnidadesC">0</div></div><input type="range" id="inUnidadesC" min="0" max="1000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inComRentableExacto">Comercial rentable del documento (m²) · 0 paramétrico</label><div class="val-display" data-input="inComRentableExacto">0</div></div><input type="range" id="inComRentableExacto" min="0" max="10000" step="0.01" value="0"></div><div class="input-group"><div class="input-header"><label for="inCajonesResidExactos">Cajones residenciales del documento · 0 paramétrico</label><div class="val-display" data-input="inCajonesResidExactos">0</div></div><input type="range" id="inCajonesResidExactos" min="0" max="2000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inSotanoAreaExacta">Área construida de sótano (m²) · 0 paramétrico</label><div class="val-display" data-input="inSotanoAreaExacta">0</div></div><input type="range" id="inSotanoAreaExacta" min="0" max="100000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inObraDirectaTotal">Obra directa consolidada ($) · 0 paramétrico</label><div class="val-display" data-input="inObraDirectaTotal">0</div></div><input type="range" id="inObraDirectaTotal" min="0" max="2000000000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inIndirectosTotal">Indirectos consolidados ($) · 0 paramétrico</label><div class="val-display" data-input="inIndirectosTotal">0</div></div><input type="range" id="inIndirectosTotal" min="0" max="500000000" step="1" value="0"></div></details></section><section class="seguimiento on" id="mercadoDocumento" hidden></section>
 <section id="pppVolumes" hidden></section>
+<section id="pppSeedPanel" hidden><p id="pppSeedCaptured" class="note" role="status"></p><section id="pppSeedEditor" hidden></section></section>
   <section class="hero">
     <span class="kick">¿Qué da este terreno?</span>
     <h1 class="serif" id="heroNombre">Caso nuevo<span class="estado-pill" id="heroEstado">EXPLORACIÓN</span></h1>
@@ -527,6 +528,7 @@
   <div class="fld"><label>Correo (opcional)</label><input id="gCorreo" type="email" placeholder="tucorreo@…"><div class="hint">Recibirás la palabra y el botón "Abrir mi caso".</div></div>
   <div class="fld"><label>Notas del caso</label><textarea id="gNotas" placeholder="Fuente, fecha de avalúo, condición por verificar…"></textarea></div>
   <input class="hp" id="gWeb" tabindex="-1" autocomplete="off" aria-hidden="true">
+  <p id="gSeedStatus" class="note" role="status"></p><button class="small-btn secondary" id="gSeedCheck" type="button" hidden>Comprobar proyecto por palabra</button>
   <div class="sheet-actions"><button class="small-btn secondary" id="gCancelar"><i class="ti ti-x"></i>Cancelar</button><button class="small-btn secondary" id="gGuardarEnviar"><i class="ti ti-mail"></i>Guardar y enviar correo</button><button class="small-btn" id="gGuardarSolo"><i class="ti ti-device-floppy"></i>Guardar</button></div>
 </div></div>
 
@@ -541,8 +543,9 @@
 <div id="toast"></div>
 <script src="ppp-ui.js?v=20261020-nav1"></script>
 <script src="ppp-case-loader.js?v=20261001-5"></script>
-<script src="ppp-volumes.js?v=1"></script>
-<script src="ppp-version-bridge.js?v=5"></script>
+<script src="ppp-volumes.js?v=20261020-native4"></script>
+<script src="ppp-volumes-native.js?v=20261020-native4"></script>
+<script src="ppp-version-bridge.js?v=20261020-native2"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -637,14 +640,58 @@
   };
   // Registered cases read their model from Sheets; no financial calculation here.
   let sheetModel=null,sheetTimer=null,sheetBusy=false,sheetPending=null,sheetFailure=false,sheetNeedsRefresh=false;
-  // Only a fresh, authenticated case response can name the pilot. A restored
-  // browser copy or the open= URL alone never activates the quantities proposal.
-  let volumeIdentity=null;
+  // Only a fresh authenticated native model enables canonical volume quantities.
+  // URL flags and restored browser copies never grant write capability.
+  let volumeIdentity=null,volumeOperation=null,volumeEditorState={dirty:false,pending:false};
+  let seedTemplate=null,seedReview=null,seedEditor=null,seedEpoch=0,seedLoading=false,newCasePending=null;
   function volumeContext(){
-    if(!volumeIdentity||!clave||modoLocal||caseSelection||sheetBusy||sheetPending||sheetFailure||sheetNeedsRefresh||volumeIdentity.case_id!==caso.caso_id||!window.PPPCaseLoader.validModel(sheetModel,caso.caso_id)||!escGet(escActivo))return null;
-    return {verified:true,ready:true,case_id:caso.caso_id,project_name:volumeIdentity.project_name,scenario_id:escActivo,scenario_name:escGet(escActivo).nombre,revision:sheetModel.revision};
+    if(!volumeIdentity||!clave||volumeIdentity.credential!==clave||modoLocal||caseSelection||sheetBusy||sheetPending||sheetFailure||sheetNeedsRefresh||volumeIdentity.case_id!==caso.caso_id||!window.PPPCaseLoader.validModel(sheetModel,caso.caso_id)||!escGet(escActivo))return null;
+    let cap=window.PPPVolumesNative.capability(sheetModel.capabilities?.volumes);
+    let nativeCollection=null;
+    try{if(sheetModel.volumes_by_scenario?.[escActivo]!==undefined)nativeCollection=window.PPPVolumesNative.collection(sheetModel.volumes_by_scenario[escActivo],cap?.max_volumes||16);}catch{return null;}
+    if(!nativeCollection)cap=null;
+    return {verified:true,ready:true,model_type:'vertical',case_id:caso.caso_id,project_name:volumeIdentity.project_name,scenario_id:escActivo,scenario_name:escGet(escActivo).nombre,revision:sheetModel.revision,native_collection:nativeCollection,native_capability:cap};
   }
   function syncVolumes(){const context=volumeContext();if(context)volumeEditor.setContext(context);else if(volumeIdentity&&clave&&!modoLocal&&(caseSelection?.status==='loading'||sheetBusy||sheetPending))volumeEditor.suspend();else volumeEditor.revoke();}
+  async function saveNativeVolumes({context,volumes,request_id,reconcile=false}){
+    const adapter=window.PPPVolumesNative,source=volumeContext();
+    if(!source||source.case_id!==context?.case_id||source.scenario_id!==context?.scenario_id||!reconcile&&source.revision!==context?.revision||reconcile&&!source.native_capability?.read)return {ok:false,error:'volumes_unavailable',request_id};
+    let payload;
+    try{payload=volumeOperation?.payload.request_id===request_id?volumeOperation.payload:reconcile?adapter.request({...source,revision:context.revision},volumes,request_id,{readOnly:true}):adapter.request(source,volumes,request_id);}
+    catch{return {ok:false,error:'invalid_volumes',request_id};}
+    if(payload.caso_id!==context.case_id||payload.escenario_id!==context.scenario_id||payload.revision_esperada!==context.revision||!adapter.equalDrivers(payload.volumes,volumes))throw Error('volume_operation_changed');
+    if(volumeOperation&&JSON.stringify(volumeOperation.payload)!==JSON.stringify(payload))throw Error('volume_operation_pending');
+    const detached=reconcile===true&&!volumeOperation;
+    const operation=volumeOperation||{payload,sourceModel:sheetModel,credential:clave,identity:volumeIdentity,attempted:reconcile===true};
+    if(!detached)volumeOperation=operation;
+    const stillCurrent=()=>(detached?volumeOperation===null:volumeOperation===operation)&&volumeIdentity===operation.identity&&clave===operation.credential&&!modoLocal&&!caseSelection&&caso.caso_id===payload.caso_id&&escActivo===payload.escenario_id&&sheetModel===operation.sourceModel&&!sheetNeedsRefresh;
+    if(!stillCurrent())throw Error('volume_context_changed');
+    sheetBusy=true;sheetStatus('Guardado de volúmenes pendiente de confirmar');
+    const transport=async read=>{let timer;try{return await Promise.race([read(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('volume_response_timeout')),60000);})]);}finally{clearTimeout(timer);}};
+    try{
+      // An uncertain request is reconciled by reading its durable receipt. It is
+      // never sent again under another identity or replayed as a new mutation.
+      let model;
+      if(operation.attempted)model=await transport(()=>apiGet({recurso:'sheet-volumes-receipt',caso_id:payload.caso_id,escenario_id:payload.escenario_id,request_id:payload.request_id}));
+      else{operation.attempted=true;model=await transport(()=>apiPost(payload));}
+      if(!stillCurrent())throw Error('volume_context_changed');
+      if(model?.ok===false&&model.error==='operation_rejected'){
+        const rejected=await adapter.rejection(model,payload,async text=>{const digest=await window.crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return [...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');});
+        if(!stillCurrent())throw Error('volume_context_changed');volumeOperation=null;sheetStatus('El servidor rechazó el cambio antes de escribir · revisa las cantidades');return rejected;
+      }
+      if(model?.ok===false&&['revision_conflict','conflicto_revision','access_denied','volumes_not_installed','invalid_payload','invalid_collection','invalid_quantity','unsupported_volume_edit'].includes(model.error)){
+        volumeOperation=null;return {ok:false,error:['revision_conflict','conflicto_revision'].includes(model.error)?'conflicto_revision':'volumes_unavailable',request_id:payload.request_id};
+      }
+      const ack=adapter.receipt(model,payload,window.PPPCaseLoader.validModel);
+      if(!acceptSheetModel(model,payload.escenario_id,!!sheetPending))throw Error('invalid_native_model');
+      volumeOperation=null;sheetBusy=false;syncVolumes();versionBridge.publish();
+      sheetStatus(ack.status==='confirmed_superseded'?'Guardado original confirmado · el PPP tiene una revisión posterior':ack.calculated?'Volúmenes guardados · resultados de Sheets confirmados':'Volúmenes guardados · cálculo de Sheets pendiente');
+      return ack;
+    }catch(error){
+      if(stillCurrent())sheetStatus('Guardado de volúmenes sin confirmar · comprueba el recibo antes de continuar');
+      throw error;
+    }finally{if(volumeIdentity===operation.identity&&caso.caso_id===payload.caso_id){sheetBusy=false;syncVolumes();versionBridge.publish();}}
+  }
   function sheetStatus(message){const d=$('syncDot');if(d)d.textContent=message;const s=$('sheetEstado');if(s)s.textContent=message;}
   function acceptSheetModel(m,selected=escActivo,keepInputs=false){
     if(!window.PPPCaseLoader.validModel(m,caso.caso_id)){sheetFailure=true;volumeEditor.setContext(null);sheetStatus('Respuesta de Sheets incompleta · se conserva el modelo anterior');return false;}
@@ -653,19 +700,20 @@
     escActivo=window.PPPCaseLoader.selectScenario(m,selected);
     if(!keepInputs)escAplicar(escGet(escActivo));
     state=m.estados[escActivo];render();renderEscenarios();renderComparador();guardarDraft();
-    versionBridge.remember({caseId:caso.caso_id,revision:m.revision,scenarios:m.escenarios,active:m.activo,states:m.estados,native:true});
+    versionBridge.remember({caseId:caso.caso_id,revision:m.revision,scenarios:m.escenarios,active:m.activo,states:m.estados,native:true,volumesByScenario:m.volumes_by_scenario,volumeCapability:m.capabilities?.volumes});
     sheetStatus(keepInputs?'Cambios pendientes · calculando en Sheets':'Sheets · revisión '+m.revision.slice(0,8)+' · '+new Date(m.actualizado).toLocaleTimeString('es-MX'));return true;
   }
   function queueSheetSync(){
     state=sheetModel.estados[escActivo];
     const canonical=sheetModel.escenarios.find(e=>e.id===escActivo)?.inputs||{};
+    if(volumeOperation){Object.entries(canonical).forEach(([id,value])=>setControl(id,value));sheetStatus('Comprueba primero el guardado de volúmenes');render();return state;}
     const changed=Object.fromEntries(Object.entries(inputValues()).filter(([k,v])=>canonical[k]!==v));
     if(!Object.keys(changed).length){sheetPending=null;sheetFailure=sheetNeedsRefresh;render();renderComparador();if(sheetNeedsRefresh)sheetStatus('Copia de Sheets · verifica conexión antes de editar');return state;}
     sheetPending={scenario:escActivo,inputs:changed};sheetStatus('Cambios pendientes · calculando en Sheets');
-    guardarDraft();clearTimeout(sheetTimer);if(sheetNeedsRefresh){sheetStatus('Copia de Sheets · cantidades pendientes; recarga para verificar');render();return state;}sheetTimer=setTimeout(flushSheetSync,450);return state;
+    guardarDraft();clearTimeout(sheetTimer);if(sheetNeedsRefresh||volumeOperation){sheetStatus(volumeOperation?'Comprueba primero el guardado de volúmenes':'Copia de Sheets · cantidades pendientes; recarga para verificar');render();return state;}sheetTimer=setTimeout(flushSheetSync,450);return state;
   }
   async function flushSheetSync(){
-    if(sheetBusy||!sheetPending||!sheetModel||sheetNeedsRefresh)return;
+    if(sheetBusy||!sheetPending||!sheetModel||sheetNeedsRefresh||volumeOperation)return;
     if(modoLocal){sheetFailure=true;sheetStatus('Sin conexión · cantidades pendientes; resultados anteriores');return;}
     const job=sheetPending;sheetPending=null;sheetBusy=true;
     try{const m=await apiPost({tipo:'sheet-cantidades',caso_id:caso.caso_id,escenario_id:job.scenario,inputs:job.inputs,revision_esperada:sheetModel.revision,request_id:nuevoRequestId()});
@@ -674,9 +722,9 @@
     }catch(e){sheetPending=sheetPending?{scenario:job.scenario,inputs:{...job.inputs,...sheetPending.inputs}}:job;sheetFailure=true;sheetStatus('Sin conexión · cambios pendientes; resultados anteriores');}
     finally{sheetBusy=false;syncVolumes();if(sheetPending&&!sheetFailure)flushSheetSync();}
   }
-  async function reloadSheetModel(){if(!sheetModel||sheetBusy||caseSelection)return;const sourceModel=sheetModel,sourceCase=caso.caso_id;try{const m=await apiGet({recurso:'sheet-model',id:sourceCase});if(sheetModel!==sourceModel||caso.caso_id!==sourceCase||caseSelection)return;if(!window.PPPCaseLoader.validModel(m,sourceCase))throw Error(m.error);if(sheetPending&&!confirm("Recargar descartará las cantidades pendientes de este tablero. ¿Leer las actuales de Sheets?"))return;sheetPending=null;sheetFailure=false;acceptSheetModel(m,escActivo);}catch(e){if(sheetModel!==sourceModel||caso.caso_id!==sourceCase||caseSelection)return;sheetFailure=true;sheetStatus('No se pudo leer Sheets · datos anteriores');}}
+  async function reloadSheetModel(){if(!sheetModel||sheetBusy||caseSelection||volumeOperation)return;const sourceModel=sheetModel,sourceCase=caso.caso_id;try{const m=await apiGet({recurso:'sheet-model',id:sourceCase});if(sheetModel!==sourceModel||caso.caso_id!==sourceCase||caseSelection)return;if(!window.PPPCaseLoader.validModel(m,sourceCase))throw Error(m.error);if(sheetPending&&!confirm("Recargar descartará las cantidades pendientes de este tablero. ¿Leer las actuales de Sheets?"))return;sheetPending=null;sheetFailure=false;acceptSheetModel(m,escActivo);}catch(e){if(sheetModel!==sourceModel||caso.caso_id!==sourceCase||caseSelection)return;sheetFailure=true;sheetStatus('No se pudo leer Sheets · datos anteriores');}}
   async function sheetVersion(action,id,name){
-    if(sheetPending||sheetBusy||sheetFailure||sheetNeedsRefresh){toast('Verifica conexión y cantidades guardadas antes de modificar versiones');return;}
+    if(sheetPending||sheetBusy||sheetFailure||sheetNeedsRefresh||volumeOperation){toast('Verifica conexión y cantidades guardadas antes de modificar versiones');return;}
     sheetBusy=true;
     try{const m=await apiPost({tipo:'sheet-version',accion:action,caso_id:caso.caso_id,escenario_id:id,nombre:name,revision_esperada:sheetModel.revision,request_id:nuevoRequestId()});if(!m.ok){toast('No se cambió la versión: '+m.error);return;}if(acceptSheetModel(m,action==='activar'?id:escActivo))toast('Versión actualizada en Sheets');else toast('No se confirmó la versión; se conserva la anterior');}catch(e){toast('Sin conexión: versión conservada');}finally{sheetBusy=false;syncVolumes();}
   }
@@ -834,9 +882,27 @@
   let escenarios=[],escActivo='';
   const MAX_ESC=8;
   const escId=()=>'e'+Math.random().toString(36).slice(2,8);
-  const versionBridge=window.PPPVersionBridge.create({modelType:'vertical',read:()=>({caseId:caso.caso_id,scenarios:escenarios,active:escActivo,busy:sheetBusy||!!caseSelection,pending:!!sheetPending||sheetNeedsRefresh||modoLocal,draftInputs:sheetPending?.scenario===escActivo?{...(escGet(escActivo)?.inputs||{}),...sheetPending.inputs}:null,error:sheetFailure||sheetNeedsRefresh,labels:Object.fromEntries(Object.entries(factorHelp).map(([k,v])=>[k,v.t]))})});
-  const volumeEditor=window.PPPVolumes.mount({container:$('pppVolumes'),getContext:volumeContext});
-  const retireVolumeIdentity=()=>{volumeIdentity=null;volumeEditor.revoke();};
+  const versionBridge=window.PPPVersionBridge.create({modelType:'vertical',volumeContract:window.PPPVolumesNative,applyVolumes:saveNativeVolumes,read:()=>({caseId:caso.caso_id,scenarios:escenarios,active:escActivo,busy:sheetBusy||!!caseSelection,pending:!!sheetPending||!!volumeOperation||volumeEditorState.dirty||volumeEditorState.pending||sheetNeedsRefresh||modoLocal,draftInputs:sheetPending?.scenario===escActivo?{...(escGet(escActivo)?.inputs||{}),...sheetPending.inputs}:null,error:sheetFailure||sheetNeedsRefresh,labels:Object.fromEntries(Object.entries(factorHelp).map(([k,v])=>[k,v.t]))})});
+  const volumeEditor=window.PPPVolumes.mount({container:$('pppVolumes'),getContext:volumeContext,onSave:saveNativeVolumes,onState:value=>{volumeEditorState={dirty:value.dirty,pending:value.pending};versionBridge.publish();}});
+  function seedContext(){if(!seedTemplate||seedTemplate.credential!==clave||!clave||modoLocal||caso.caso_id||caseSelection)return null;return{verified:true,ready:true,model_type:'vertical',case_id:'native-template',scenario_id:'new-project',scenario_name:'Proyecto nuevo · programa por revisar',revision:seedTemplate.template_revision,native_collection:seedTemplate.volumes,native_capability:seedTemplate.capability};}
+  function retireSeed(){seedEpoch++;seedTemplate=null;seedReview=null;seedLoading=false;newCasePending=null;seedEditor?.revoke();$('pppSeedPanel').hidden=true;$('gSeedStatus').textContent='';$('gSeedCheck').hidden=true;}
+  seedEditor=window.PPPVolumes.mount({container:$('pppSeedEditor'),mode:'seed',getContext:seedContext,onReview:async request=>{
+    const context=seedContext();if(!context||context.revision!==request.context.revision)throw Error('seed_context_changed');
+    const wire=window.PPPVolumesNative.request(context,request.volumes,request.request_id);seedReview={volumes:wire.volumes,template_revision:context.revision,inputs:inputValues(),credential:clave};
+    return{ok:true,status:'reviewed',request_id:request.request_id,template_revision:context.revision,volumes:request.volumes};
+  },onState:value=>{if(!value.reviewed){seedReview=null;return;}if(seedReview){$('gSeedStatus').textContent='Programa revisado: '+seedReview.volumes.count+' cuerpo(s). El proyecto todavía no se creó.';abrirOverlay('ovGuardar');}}});
+  async function reviewNewProgram(){
+    if(seedLoading||!clave||modoLocal||caso.caso_id)return false;cerrarOverlays();const own=++seedEpoch,credential=clave;seedLoading=true;seedReview=null;seedTemplate=null;seedEditor.suspend();$('pppSeedPanel').hidden=false;$('pppSeedCaptured').textContent='Leyendo una plantilla nativa de un cuerpo. Tus supuestos capturados se conservan.';
+    try{const response=await apiGet({recurso:'sheet-volume-template'});if(own!==seedEpoch||credential!==clave||modoLocal||caso.caso_id)return false;
+      if(response?.error==='clave'){reabrirGate();return false;}
+      const capability=window.PPPVolumesNative.capability(response.capabilities?.volumes),collection=window.PPPVolumesNative.collection(response.volumes,capability?.max_volumes||16);
+      if(response.ok!==true||response.kind!=='native_factory_preview'||response.persisted!==false||typeof response.template_revision!=='string'||!response.template_revision||response.template_revision.length>256||!capability?.read||!capability.write||collection.count!==1||collection.volumes.length!==1||!response.inputs||typeof response.inputs!=='object'||Array.isArray(response.inputs))throw Error('native_template_unavailable');
+      seedTemplate={template_revision:response.template_revision,volumes:collection,capability,credential};const captured=inputValues(),differences=Object.keys(captured).filter(id=>Object.hasOwn(response.inputs,id)&&response.inputs[id]!==captured[id]);
+      $('pppSeedCaptured').textContent='Revisa este programa antes de crear el proyecto. Tus supuestos originales siguen capturados y se enviarán sin sustituirlos por la plantilla.'+(differences.length?' Datos que difieren de la plantilla: '+differences.map(id=>labelFor(id)+': '+captured[id]).join(' · ')+'. Revisa también los drivers de cada cuerpo.':'');
+      seedEditor.setContext(seedContext());$('pppSeedPanel').scrollIntoView({behavior:'smooth',block:'start'});return true;
+    }catch{if(own!==seedEpoch)return false;seedTemplate=null;seedReview=null;seedEditor.suspend();$('pppSeedCaptured').textContent='No se pudo confirmar la plantilla nativa. Conservamos tus datos y no creamos el proyecto. Vuelve a Guardar para reintentar la lectura.';return false;}finally{if(own===seedEpoch)seedLoading=false;}
+  }
+  const retireVolumeIdentity=()=>{retireSeed();if(volumeOperation)sheetBusy=false;volumeIdentity=null;volumeOperation=null;volumeEditor.revoke();versionBridge.invalidate();};
   window.addEventListener('pagehide',retireVolumeIdentity);
   window.addEventListener('storage',event=>{if(event.key===null||event.key===LS.clave)retireVolumeIdentity();});
   function escGet(id){return escenarios.find(e=>e.id===id)}
@@ -1166,7 +1232,7 @@
     }
     if(sheetModel&&obj.caso_id===caso.caso_id&&!obj.calculo_sheet){sheetNeedsRefresh=true;sheetFailure=true;sheetStatus('No se confirmó el modelo de Sheets · conserva copia anterior');toast('El servidor no confirmó el modelo nativo. Recarga cuando esté disponible.');return;}
     casePresentation('ready','',obj.caso_id);
-    volumeIdentity={case_id:obj.caso_id,project_name:obj.nombre_caso||''};
+    if(volumeOperation)sheetBusy=false;volumeOperation=null;volumeIdentity={case_id:obj.caso_id,project_name:obj.nombre_caso||'',credential:clave};
     sheetModel=obj.calculo_sheet||null;sheetPending=null;sheetFailure=false;sheetNeedsRefresh=false;
     Object.keys(obj).forEach(kk=>{if(/^in[A-Z]/.test(kk)&&$(kk)&&obj[kk]!==''&&isFinite(Number(obj[kk])))setControl(kk,Number(obj[kk]))});
     caso={caso_id:obj.caso_id||'',palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
@@ -1192,28 +1258,38 @@
   function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
   function fechaCorta(ts){const d=new Date(ts);return isNaN(d)?'':d.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'})}
   async function guardarCaso(enviarCorreo){
-    if(sheetModel&&(sheetPending||sheetBusy||sheetFailure)){toast('Guarda y verifica las cantidades pendientes antes de continuar');return;}
+    if(!caso.caso_id&&newCasePending){$('gSeedStatus').textContent='La creación está por confirmar. Comprueba el proyecto por su palabra; no se enviará otra creación.';$('gSeedCheck').hidden=false;return;}
+    if(sheetModel&&(sheetPending||sheetBusy||sheetFailure||volumeOperation)){toast('Guarda y verifica las cantidades pendientes antes de continuar');return;}
     if(modoLocal){toast('Estás sin nube: entra con la clave para guardar');return}
     const nombre=$('gNombre').value.trim(),palabra=$('gPalabra').value.trim(),correo=$('gCorreo').value.trim(),notas=$('gNotas').value;
     if(!palabra){toast('Elige una palabra para volver a tu caso');return}
     if(enviarCorreo&&!correo){toast('Pon un correo para enviarte la palabra');return}
+    if(!caso.caso_id&&escenarios.length!==1){$('gSeedStatus').textContent='Conservamos tus variantes locales. Cada una necesita su propio programa nativo antes de crear el proyecto; todavía no se creó ningún caso.';toast('Revisa el programa de cada variante antes de crear; tus variantes se conservan');return;}
+    if(!caso.caso_id&&(!seedReview||seedReview.credential!==clave||seedReview.template_revision!==seedTemplate?.template_revision||JSON.stringify(seedReview.inputs)!==JSON.stringify(inputValues()))){await reviewNewProgram();return;}
+    const creating=!caso.caso_id,creationSeed=creating?seedReview:null,saveCredential=clave,creationEpoch=seedEpoch;
     const btns=[$('gGuardarSolo'),$('gGuardarEnviar')];btns.forEach(b=>b.disabled=true);
-    const rSt=state||calculate();
-    const payload={tipo:'guardar',caso_id:caso.caso_id,palabra,correo,nombre_caso:nombre,notas_caso:notas,estado:caso.estado,inputs:inputValues(),resumen:resumenActual(),escenarios:escParaGuardar(),flujo:rSt.flows.map(f=>[f.m,Math.round(f.rev),Math.round(f.cost),Math.round(f.equity),Math.round(f.pik+f.fee),Math.round(f.debt),Math.round(f.caja)]),sendEmail:!!enviarCorreo,request_id:nuevoRequestId(),website:$('gWeb').value};
+    const payload={tipo:'guardar',caso_id:caso.caso_id,palabra,correo,nombre_caso:nombre,notas_caso:notas,estado:caso.estado,inputs:inputValues(),escenarios:escParaGuardar(),sendEmail:!!enviarCorreo,request_id:nuevoRequestId(),website:$('gWeb').value};
+    if(creating){payload.volumes=creationSeed.volumes;payload.template_revision=creationSeed.template_revision;payload.native_body_reviewed=true;newCasePending={palabra,request_id:payload.request_id};}
+    else{const rSt=state||calculate();payload.resumen=resumenActual();payload.flujo=rSt.flows.map(f=>[f.m,Math.round(f.rev),Math.round(f.cost),Math.round(f.equity),Math.round(f.pik+f.fee),Math.round(f.debt),Math.round(f.caja)]);}
     if(sheetModel){payload.revision_esperada=sheetModel.revision;payload.version_esperada=caso.version;payload.sendEmail=false;}
     try{
       const r=await apiPost(payload);
+      if(creating&&(saveCredential!==clave||modoLocal||caso.caso_id||creationEpoch!==seedEpoch||newCasePending?.request_id!==payload.request_id))return;
       btns.forEach(b=>b.disabled=false);
       if(!r.ok){
+        if(creating&&['native_driver_review_required','native_variants_review_required','template_revision_conflict','native_template_unavailable','palabra_ocupada','clave','active_driver_missing','native_geometry_conflict','native_horizon_conflict','shared_allocation_requires_reconciliation'].includes(r.error))newCasePending=null;
+        if(creating&&['native_driver_review_required','native_variants_review_required','template_revision_conflict','native_template_unavailable','active_driver_missing','native_geometry_conflict','native_horizon_conflict','shared_allocation_requires_reconciliation'].includes(r.error)){seedReview=null;const reason={native_driver_review_required:'Revisa el programa de la plantilla vigente antes de crear.',native_variants_review_required:'Cada variante necesita su propio programa; tus variantes se conservan.',template_revision_conflict:'La plantilla cambió: revisa la versión vigente antes de crear.',native_template_unavailable:'La plantilla no está disponible. Conservamos tus datos para reintentar.',active_driver_missing:'Completa los datos de cada cuerpo antes de crear.',native_geometry_conflict:'Las áreas o viviendas no concilian. Revisa el programa de cada cuerpo.',native_horizon_conflict:'Revisa las fechas y duraciones de cada cuerpo.',shared_allocation_requires_reconciliation:'Los recursos compartidos necesitan una asignación revisada.'}[r.error];$('gSeedStatus').textContent=reason+' Tus datos se conservan y el proyecto no se creó.';toast(reason);return;}
+        if(creating&&newCasePending){$('gSeedStatus').textContent='La creación está por confirmar. Comprueba el proyecto por su palabra; no se enviará otra creación.';$('gSeedCheck').hidden=false;toast('Creación por confirmar: comprueba el proyecto por palabra');return;}
         if(r.error==='palabra_ocupada')toast('Esa palabra ya es de otro caso: elige otra');
         else if(r.error==='clave'){toast('La clave del board cambió');reabrirGate()}
         else toast('No se guardó: '+r.error);
         return}
-      if(!r.caso_id){$('gWeb').value='';toast('No se guardó: vuelve a intentar');return}
+      if(!r.caso_id){$('gWeb').value='';if(creating){$('gSeedStatus').textContent='La creación está por confirmar. Comprueba el proyecto por su palabra.';$('gSeedCheck').hidden=false;}toast('No se confirmó el guardado: comprueba el proyecto por su palabra');return}
+      if(creating){const native=r.calculo_sheet,collection=native?.volumes_by_scenario?.[native.activo];if(r.request_id!==payload.request_id||!window.PPPCaseLoader.validModel(native,r.caso_id)||!window.PPPVolumesNative.equalDrivers(collection,creationSeed.volumes))throw Error('creation_readback_unconfirmed');retireSeed();volumeIdentity={case_id:r.caso_id,project_name:nombre||'',credential:clave};}
       caso.caso_id=r.caso_id;caso.palabra=r.palabra||payload.palabra;caso.correo=correo;caso.nombre_caso=nombre||'Caso sin nombre';caso.notas_caso=notas;caso.version=r.version;if(!sheetModel)legacySavedInputs={...payload.inputs};
-      if(r.calculo_sheet)acceptSheetModel(r.calculo_sheet,escActivo);pintaCaso();guardarDraft();cerrarOverlays();if(sheetModel)sheetStatus('Sheets · revisión '+sheetModel.revision.slice(0,8));
+      if(r.calculo_sheet)acceptSheetModel(r.calculo_sheet,r.calculo_sheet.activo);pintaCaso();guardarDraft();cerrarOverlays();if(sheetModel)sheetStatus('Sheets · revisión '+sheetModel.revision.slice(0,8));
       toast(r.emailed?'Caso guardado · correo con la palabra enviado':'Caso guardado · palabra: '+caso.palabra)
-    }catch(e){btns.forEach(b=>b.disabled=false);if(sheetModel){sheetStatus('No se confirmó el guardado');toast('No se guardó: revisa conexión');return;}encolar(payload);toast('Sin conexión: se guardará al reconectar')}
+    }catch(e){btns.forEach(b=>b.disabled=false);if(creating&&(saveCredential!==clave||modoLocal||caso.caso_id||creationEpoch!==seedEpoch))return;if(creating){$('gSeedStatus').textContent='La creación no está confirmada. Comprueba el proyecto por su palabra; no se reenviará automáticamente.';$('gSeedCheck').hidden=false;toast('Creación por confirmar: comprueba el proyecto por palabra');return;}if(sheetModel){sheetStatus('No se confirmó el guardado');toast('No se guardó: revisa conexión');return;}encolar(payload);toast('Sin conexión: se guardará al reconectar')}
   }
   async function cambiarEstado(nuevo){
     caso.estado=nuevo;pintaCaso();guardarDraft();
@@ -1250,7 +1326,7 @@
     window.open('https://wa.me/'+(num?num:'')+'?text='+encodeURIComponent(linea),'_blank')
   }
   /* ================== GATE / MODALES / LENTES ================== */
-  function reabrirGate(){volumeIdentity=null;volumeEditor.revoke();localStorage.removeItem(LS.clave);clave='';$('gate').classList.remove('off');$('gateErr').textContent='La clave cambió o es incorrecta'}
+  function reabrirGate(){retireVolumeIdentity();localStorage.removeItem(LS.clave);clave='';$('gate').classList.remove('off');$('gateErr').textContent='La clave cambió o es incorrecta'}
   async function intentarEntrar(){
     const v=$('gateClave').value.trim();if(!v){$('gateErr').textContent='Escribe la clave';return}
     $('gateBtn').disabled=true;$('gateErr').textContent='';
@@ -1261,7 +1337,7 @@
     }catch(e){clave=previa;$('gateErr').textContent='Sin conexión con el Sheet. Verifica internet o entra sin conexión.'}
     $('gateBtn').disabled=false
   }
-  function modoSinConexion(){volumeIdentity=null;volumeEditor.revoke();modoLocal=true;$('gate').classList.add('off');$('modoLocalBanner').classList.add('on');pintaCaso();const id=new URLSearchParams(location.search).get('open');if(id&&(id!==caso.caso_id||!sheetModel))casePresentation('error','Conéctate para leer el proyecto solicitado. Los supuestos de referencia no son sus resultados.',id);}
+  function modoSinConexion(){retireVolumeIdentity();modoLocal=true;$('gate').classList.add('off');$('modoLocalBanner').classList.add('on');pintaCaso();const id=new URLSearchParams(location.search).get('open');if(id&&(id!==caso.caso_id||!sheetModel))casePresentation('error','Conéctate para leer el proyecto solicitado. Los supuestos de referencia no son sus resultados.',id);}
   function procesarOpen(){
     if(modoLocal)return;
     const id=new URLSearchParams(location.search).get('open');
@@ -1279,12 +1355,13 @@
   document.querySelectorAll('.card[data-card]').forEach(c=>c.onclick=e=>{if(e.target.closest('.drawer'))return;toggleDrawer(c)});
   controls.forEach(c=>{updateColor(c);c.addEventListener('input',calculate)});readPills();installFactorHelp();installMetricHelp();
   $('btnGuardar').onclick=()=>{if(modoLocal){toast('Estás sin nube: entra con la clave para guardar');return}$('gNombre').value=caso.nombre_caso||'';$('gPalabra').value=caso.palabra||'';$('gCorreo').value=caso.correo||'';$('gNotas').value=caso.notas_caso||'';abrirOverlay('ovGuardar')};
+  $('gSeedCheck').onclick=()=>{if(newCasePending)abrirPorPalabra(newCasePending.palabra);};
   $('gGuardarSolo').onclick=()=>guardarCaso(false);$('gGuardarEnviar').onclick=()=>guardarCaso(true);$('gCancelar').onclick=cerrarOverlays;
   $('btnMisCasos').onclick=()=>{if(modoLocal){toast('Estás sin nube: entra con la clave para ver los casos');return}abrirOverlay('ovCasos');cargarLista()};
   $('casosCerrar').onclick=cerrarOverlays;
   $('btnAbrirPalabra').onclick=()=>abrirPorPalabra($('abrirPalabra').value);
   $('abrirPalabra').addEventListener('keydown',e=>{if(e.key==='Enter')abrirPorPalabra($('abrirPalabra').value)});
-  $('btnNuevo').onclick=()=>{volumeIdentity=null;volumeEditor.revoke();caseReader.invalidate();casePresentation('ready','');const url=new URL(location.href);url.searchParams.delete('open');history.replaceState(null,'',url);legacySavedInputs=null;sheetModel=null;sheetPending=null;sheetNeedsRefresh=false;sheetFailure=false;Object.entries(DEFAULTS).forEach(([id,v])=>setControl(id,v));caso={caso_id:'',palabra:'',correo:caso.correo,nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};escInicial('Base');calculate();pintaCaso();toast('Caso nuevo: supuestos de referencia')};
+  $('btnNuevo').onclick=()=>{retireVolumeIdentity();caseReader.invalidate();casePresentation('ready','');const url=new URL(location.href);url.searchParams.delete('open');history.replaceState(null,'',url);legacySavedInputs=null;sheetModel=null;sheetPending=null;sheetNeedsRefresh=false;sheetFailure=false;Object.entries(DEFAULTS).forEach(([id,v])=>setControl(id,v));caso={caso_id:'',palabra:'',correo:caso.correo,nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};escInicial('Base');calculate();pintaCaso();toast('Caso nuevo: supuestos de referencia')};
   /* ================== TRACK DE REUNIONES DEL PPP ==================
      Persiste SIN tocar el backend: cada reunión es un renglón de notas_seguimiento
      con el sello 📅. OJO: el Apps Script ANTEPONE su fecha a la nota, así que el

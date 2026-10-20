@@ -1,4 +1,5 @@
-/* Read the existing PPP and its saved variants. No financial engine or business writes. */
+/* Read the existing PPP and its saved variants. Native volume proposals delegate
+   to the authenticated transport; this bridge never calculates finances. */
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.PPPVersionBridge=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
  'use strict';
  const id=v=>typeof v==='string'&&/^[A-Za-z0-9_.:-]{1,200}$/.test(v);
@@ -14,10 +15,10 @@
  // Historical boards append new versions and do not record per-version timestamps.
  // Preserve that registration order; never manufacture a date from a label.
  function latestRegistered(value){return versions(value).at(-1).id;}
- function create({modelType,read,win=globalThis.window}={}){
+ function create({modelType,read,win=globalThis.window,volumeContract=null,applyVolumes=null}={}){
   if(!['macrolotes','vertical','patrimonial'].includes(modelType)||typeof read!=='function')throw Error('invalid_adapter');
   let saved=null,defended=null,binding=null,nonce=null,disposed=false,verified=false,focus=null;
-  const navigationRequests=new Map();
+  const navigationRequests=new Map(),volumeRequests=new Map();let volumeBusy=false;
   const navigationTargets=new Set(['plan','terreno','ventas','costos','calendario','volumenes','dArq','dVentas','dCostos','dMacro','dDota','dVolumenes']);
   function observeFocus(event){
    const card=event?.target?.closest?.('.ppp-card[data-card],.card[data-card]');
@@ -27,11 +28,13 @@
   const embedded=win&&win.parent!==win&&new URL(win.location.href).searchParams.get('agent')==='1';
   let permitted=false;
   if(embedded)try{const u=new URL(win.document.referrer);permitted=u.origin===win.location.origin&&/^\/yod-portal\/despacho3d\//.test(u.pathname);}catch{}
-  function remember({caseId,revision,scenarios,active,states=null,native=false}){
+  function remember({caseId,revision,scenarios,active,states=null,native=false,volumesByScenario=null,volumeCapability=null}){
    if(!id(caseId)||typeof revision!=='string'||!revision)throw Error('invalid_case');
    const list=versions(scenarios);if(!list.some(v=>v.id===active))throw Error('invalid_active');
-   if(saved?.caseId!==caseId){defended=null;binding=null;nonce=null;focus=null;navigationRequests.clear();}
-   saved={caseId,revision,list,active,states:copy(states||{}),native:native===true};verified=true;
+   if(saved?.caseId!==caseId){defended=null;binding=null;nonce=null;focus=null;navigationRequests.clear();volumeRequests.clear();}
+   const capability=modelType==='vertical'&&native===true?volumeContract?.capability?.(volumeCapability):null,collections={};
+   if(capability)for(const v of list)if(volumesByScenario?.[v.id]!==undefined)collections[v.id]=volumeContract.collection(volumesByScenario[v.id],capability.max_volumes);
+   saved={caseId,revision,list,active,states:copy(states||{}),native:native===true,volumeCapability:capability,volumes:collections};verified=true;
    if(!defended)defended=binding?.scenario_id||latestRegistered(list);
    publish();
   }
@@ -50,10 +53,46 @@
    return {case_id:binding.case_id,revision:saved.revision,scenario_id:defended,scenario_name:version.nombre,
     confirmed:verified&&!current.busy&&!current.error,pending:!same||!!current.pending,observed_at:new Date().toISOString(),
     fields:keys.map(k=>({id:k,label:String(current.labels?.[k]||k).slice(0,160),min:-Number.MAX_VALUE,max:Number.MAX_VALUE,editable:false,nullable:true,kind:'number'})),
-    inputs:copy(canonical),results,...(sharedFocus?{focus:sharedFocus}:{}),metadata:{model_type:modelType,model_revision:saved.native?'sheet-observation-v1':'saved-inputs-v1'},
+    inputs:copy(canonical),results,...(saved.volumes[defended]?{volumes:copy(saved.volumes[defended]),capabilities:{volumes:{...saved.volumeCapability,write:saved.volumeCapability.write&&typeof applyVolumes==='function'&&verified&&!current.busy&&!current.error&&!current.pending&&current.active===defended}}}:{}),...(sharedFocus?{focus:sharedFocus}:{}),metadata:{model_type:modelType,model_revision:saved.native?'sheet-observation-v1':'saved-inputs-v1'},
     version_context:{board_case_id:saved.caseId,defended_scenario_id:defended,viewed_scenario_id:current.active,
      viewed_scenario_name:viewed?.nombre||'',registration_basis:'saved_array_order',read_only:true,
      versions:saved.list.map(v=>({id:v.id,name:v.nombre})),...(viewed?{viewed_inputs:copy(observed)}:{})}};
+  }
+  async function applyNativeVolumes(proposal,reconcileOnly=false){
+   reconcileOnly=reconcileOnly||proposal?.reconcile_only===true;
+   const originalNonce=nonce,originalBinding=binding,originalCase=saved?.caseId;
+   const send=receipt=>{if(!disposed&&nonce===originalNonce&&binding===originalBinding&&saved?.caseId===originalCase)win.parent.postMessage({type:'yod:ppp:state',version:1,nonce,receipt},win.location.origin);};
+   if(volumeBusy)return;
+   try{
+    if(modelType!=='vertical'||!saved?.native||!saved.volumeCapability?.read||!reconcileOnly&&!saved.volumeCapability.write||typeof applyVolumes!=='function'||proposal?.kind!=='native_volumes'||!id(proposal.request_id)||proposal.case_id!==(binding.agent_case_id||binding.case_id)||proposal.board_case_id!==saved.caseId||proposal.scenario_id!==defended)throw Error('propuesta_invalida');
+    const volumes=volumeContract.collection(proposal.volumes,saved.volumeCapability.max_volumes,true),fingerprint=JSON.stringify([proposal.case_id,proposal.scenario_id,proposal.revision,volumes]),previous=volumeRequests.get(proposal.request_id);
+    if(previous&&previous.fingerprint!==fingerprint)throw Error('request_id_reused');
+    if(previous?.receipt){
+     const receipt=copy(previous.receipt),current=getVerifiedContext();
+     if(receipt.status==='rejected'){send(receipt);return;}
+     if(saved.revision!==receipt.revision){if(!current||!saved.volumes[proposal.scenario_id])throw Error('sin_confirmacion');receipt.status='confirmed_superseded';receipt.current_revision=saved.revision;receipt.current_collection=copy(saved.volumes[proposal.scenario_id]);}
+     send(receipt);return;
+    }
+    if(reconcileOnly){const current=read();if(!verified||current.caseId!==saved.caseId||current.active!==proposal.scenario_id||current.busy||current.error)throw Error('sin_confirmacion');}
+    if(!previous&&!reconcileOnly){
+     const context=getVerifiedContext(),requested=Date.parse(proposal.apply_requested_at),expires=Date.parse(proposal.apply_expires_at),now=Date.now();
+     if(!context||context.scenario_id!==defended||proposal.revision!==saved.revision||!volumeContract.equal(proposal.before_volumes,saved.volumes[defended],saved.volumeCapability.max_volumes))throw Error('conflicto_revision');
+     if(proposal.user_confirmed!==true||!Number.isFinite(requested)||!Number.isFinite(expires)||requested>now+5000||expires<=now||expires<=requested||expires-requested>300000)throw Error('confirmation_required');
+     if(volumeRequests.size>=40)throw Error('recibos_pendientes');volumeRequests.set(proposal.request_id,{fingerprint});
+    }
+    if(!previous&&reconcileOnly){if(volumeRequests.size>=40)throw Error('recibos_pendientes');volumeRequests.set(proposal.request_id,{fingerprint,readOnly:true});}
+    volumeBusy=true;
+    const ack=await applyVolumes({context:{verified:true,ready:true,model_type:'vertical',case_id:originalCase,scenario_id:proposal.scenario_id,revision:proposal.revision,native_collection:copy(saved.volumes[defended]),native_capability:copy(saved.volumeCapability)},volumes,request_id:proposal.request_id,reconcile:reconcileOnly||!!previous});
+    if(disposed||saved?.caseId!==originalCase||nonce!==originalNonce||binding!==originalBinding)return;
+    if(ack?.ok===false&&ack.status==='rejected'){
+     if(ack.request_id!==proposal.request_id||ack.case_id!==originalCase||ack.board_case_id!==originalCase||ack.scenario_id!==proposal.scenario_id||ack.base_revision!==proposal.revision||!ack.prewrite_rejection)throw Error('sin_confirmacion');
+     const receipt={...ack,case_id:binding.agent_case_id||binding.case_id};volumeRequests.get(proposal.request_id).receipt=copy(receipt);publish();send(receipt);return;
+    }
+    const superseded=ack?.status==='confirmed_superseded',currentRevision=superseded?ack.current_revision:ack?.revision,currentCollection=superseded?ack.current_collection:ack?.native_collection;
+    if(ack?.ok!==true||ack.status!==undefined&&!superseded||ack.request_id!==proposal.request_id||ack.case_id!==originalCase||ack.scenario_id!==proposal.scenario_id||typeof ack.revision!=='string'||saved.revision!==currentRevision||superseded&&ack.revision===currentRevision||!verified||read().caseId!==originalCase||!volumeContract.equalDrivers(ack.native_collection,volumes,saved.volumeCapability.max_volumes)||!volumeContract.equal(saved.volumes[proposal.scenario_id],currentCollection,saved.volumeCapability.max_volumes)||typeof ack.calculated!=='boolean')throw Error('sin_confirmacion');
+    const receipt={...ack,case_id:binding.agent_case_id||binding.case_id,base_revision:proposal.revision};volumeRequests.get(proposal.request_id).receipt=copy(receipt);publish();send(receipt);
+   }catch(error){send({ok:false,request_id:proposal?.request_id,error:error.message||'propuesta_invalida'});}
+   finally{volumeBusy=false;}
   }
   function getVerifiedContext(){
    try{
@@ -101,11 +140,15 @@
    }
    if(m.nonce!==nonce||m.case_id!==binding?.case_id)return;
    if(m.type==='yod:ppp:navigate'){navigate(m);return;}
+   if(m.type==='yod:ppp:volumes-receipt'){void applyNativeVolumes(m.proposal,true);return;}
    if(m.type==='yod:ppp:read')publish();
-   if(m.type==='yod:ppp:apply')win.parent.postMessage({type:'yod:ppp:state',version:1,nonce,receipt:{ok:false,request_id:m.proposal?.request_id,error:'read_only_model'}},win.location.origin);
+   if(m.type==='yod:ppp:apply'){
+    if(m.proposal?.kind==='native_volumes'){void applyNativeVolumes(m.proposal);return;}
+    win.parent.postMessage({type:'yod:ppp:state',version:1,nonce,receipt:{ok:false,request_id:m.proposal?.request_id,error:'read_only_model'}},win.location.origin);
+   }
   }
   if(permitted){win.addEventListener('message',receive);for(const name of ['click','input','focusin'])win.document.addEventListener?.(name,observeFocus);}
-  return {remember,publish,snapshot,getVerifiedContext,invalidate(){verified=false;publish();},dispose(){disposed=true;saved=null;binding=null;nonce=null;navigationRequests.clear();if(permitted){win.removeEventListener('message',receive);for(const name of ['click','input','focusin'])win.document.removeEventListener?.(name,observeFocus);}}};
+  return {remember,publish,snapshot,getVerifiedContext,invalidate(){verified=false;publish();},dispose(){disposed=true;saved=null;binding=null;nonce=null;navigationRequests.clear();volumeRequests.clear();if(permitted){win.removeEventListener('message',receive);for(const name of ['click','input','focusin'])win.document.removeEventListener?.(name,observeFocus);}}};
  }
  return {create,latestRegistered,versions};
 });

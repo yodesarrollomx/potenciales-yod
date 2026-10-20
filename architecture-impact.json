@@ -1,18 +1,52 @@
 {
-  "model_revision": "2026-10-20.ruisenor-interaccion-volumenes.2",
-  "proposal_id": "CHG-RUISENOR-INTERACCION-VOLUMENES-20261020",
-  "summary": "Navegación visual cerrada sobre el puente PPP existente: destino, caso, escenario y revisión exactos, sin cambiar controles, foco, versión o cantidades. Recibo confirmado sólo después de comprobar la sección visible. Editor de propuesta de uno a tres volúmenes, con filas independientes y memoria por caso/escenario/revisión, aislado de inputs, motor y guardado del PPP. Habilitación sólo tras lectura nativa autenticada del piloto. No habilita aplicación ni cálculo financiero por cuerpos.",
+  "model_revision": "2026-10-20.ppp-volumenes-nativos.7",
+  "proposal_id": "CHG-PPP-VOLUMENES-NATIVOS-20261020",
+  "summary": "Programa nativo multivolumen para todos los casos VERTICAL/mixto verificados, independiente del agente. Schema2 presenta 21 campos por cuerpo: 14 drivers editables y 7 derivados de Sheets sólo lectura. Preserva cuerpos existentes, filas inactivas y variantes; sólo escenarios nuevos con plantilla válida inician con un cuerpo. Escala hasta el máximo nativo de 16 sin clonar supuestos ni promediar finanzas. Guardado canónico con revisión esperada, request_id estable, recibo releído y conciliación GET de solicitudes inciertas, incluso ante una revisión posterior. JavaScript y Apps Script validan y transportan; las fórmulas financieras permanecen en Sheets. La política tipada de recursos compartidos preserve/built_area se elige y confirma explícitamente para todos los recursos; su cálculo permanece en Sheets y su modo integra el seed, CAS y readback.",
   "components": [
-    "SYS-POTENCIALES"
+    "SYS-POTENCIALES",
+    "GAS-PORTERO",
+    "SHEET-PORTERO",
+    "SHEET-PPP-MODELOS",
+    "SYS-DESPACHO-3D",
+    "SYS-YOD-OS",
+    "SVC-AUTON-CLOUD",
+    "SYS-DESPACHO"
+  ],
+  "behavioral_files": [
+    ".github/workflows/arquitectura.yml",
+    ".github/workflows/verificar-ppp.yml",
+    "mixto.html",
+    "ppp-version-bridge.js",
+    "ppp-volumes-native.js",
+    "ppp-volumes.css",
+    "ppp-volumes.js",
+    "server/PPPVolumes.gs",
+    "server/PPPVolumesFormulas.gs",
+    "server/PPPVolumesProgram.gs",
+    "tests/fixtures/departamentos-volumenes.html",
+    "tests/fixtures/ruisenor-volumenes.html",
+    "tests/ppp-agent-receipts-browser.cjs",
+    "tests/ppp-version-bridge.test.cjs",
+    "tests/ppp-volumes-browser.cjs",
+    "tests/ppp-volumes-native.test.cjs",
+    "tests/ppp-volumes-program.test.cjs",
+    "tests/ppp-volumes-server.test.cjs",
+    "tests/ppp-volumes.test.cjs",
+    "tests/sheets-offline.cjs"
   ],
   "tests": [
-    "node --test tests/ppp-version-bridge.test.cjs: contrato navigate cerrado, aislamiento, estado pendiente, foco editable, revisión, respuestas tardías e identidad de solicitud",
-    "node --test tests/ppp-volumes.test.cjs: selector1/2/3, filas independientes, valores ausentes, sumas sólo de cantidades, aislamiento de revisión y retiro del caso o sesión",
-    "node tests/ppp-volumes-browser.cjs: escritorio1280/móvil390, capturas asimétricas, borrador por revisión y continuidad explícita, valores nativos intactos y cero POST",
-    "node tests/ppp-navigation-browser.cjs: terreno, ventas, costos, calendario y plan con UI real y transporte sintético; cero escrituras de negocio, valores y versión intactos",
-    "Recorrido Browser HTTP de tests/fixtures/ruisenor-volumenes.html: módulos reales con DOM/modelo sintéticos, CSP sin conexiones ni medios, selector1/2/3 y counters nativos en cero; no acredita mixto autenticado",
-    "Regresiones de contratos PPP, sintaxis e impacto; publicación y sesión real se acreditan por separado"
+    "node --test tests/ppp-volumes.test.cjs: colecciones existentes, nuevo de un cuerpo, máximo de 16, independencia de drivers, derivados inmutables, ausentes, aislamiento/revocación, continuidad explícita sólo de drivers, ACK canónico, cálculo pendiente, recibo original con revisión posterior y solicitud estable ante incertidumbre. Promedio por planta de seis decimales, seed autenticado de un cuerpo, confirmación explícita de política para todos los recursos y retiro del consentimiento.",
+    "node --test tests/ppp-volumes-native.test.cjs tests/ppp-version-bridge.test.cjs tests/sheets-offline.cjs: proyección de sólo 14 drivers, capabilities y contexto nativo, protección de fórmulas, revisión/base/recibo exactos, respuesta tardía, navegación y cantidades; ningún fallback financiero local.",
+    "node --test tests/ppp-volumes-server.test.cjs tests/ppp-volumes-program.test.cjs: autorización del servidor, CAS, registro durable e idempotencia, readback canónico, revisión concurrente, conservación de IDs/inactivos, preflight del programa, lote atómico de drivers y marcador aplicado, rechazo previo a escritura con prueba exacta, instalación de fórmulas protegidas y recursos comunes explícitos. Dobles y fuentes genéricas; no acredita recálculo financiero real.",
+    "node tests/ppp-volumes-browser.cjs: mixto real a 1280 px y móvil a 390 px con transporte totalmente interceptado; colección existente de tres cuerpos, captura independiente, derivados de sólo lectura, un POST explícito de14 drivers, ACK/readback y recarga canónica, retry GET sin segundo POST y ausencia de controles si falta capacidad nativa. Alta nativa desde plantilla de un cuerpo con revisión explícita, captura original conservada, E3.4/D5/F17 de readback, sin resumen/flujo JS; preserve no cambia por count y built_area requiere confirmar todos los recursos.",
+    "node tests/ppp-volumes-browser.cjs: fixture directa tests/fixtures/departamentos-volumenes.html en 1280/390 px, CSP connect-src none, solicitudes/recibos exclusivamente sintéticos 1/1, inputs nativos 0/cambios 0 y ninguna red de negocio. La fixture no es una sesión autenticada real.",
+    "Sintaxis JavaScript/HTML y parseo VM sin ejecutar de server/PPPVolumes.gs, server/PPPVolumesFormulas.gs y server/PPPVolumesProgram.gs; git diff --check; verificación de impacto contra el atlas local vigente.",
+    "Regresiones y Browser de acceso/navegación existentes continúan en verificar-ppp.yml. Paridad financiera en copia privada de Sheets, instalación real, PR/Pages, pin del atlas y despliegue existente se acreditan por recibos separados del coordinador."
   ],
-  "rollback": "Revertir el handler de navegación y su API visual conservando libros, versiones, historial, borradores, solicitudes y permisos.",
-  "atlas_note": "Atlas fijado en yod-portal b42173ffda031575d991498095ebacfc36ee06f4 (PR302 integrado), propuesta CHG-RUISENOR-INTERACCION-VOLUMENES-20261020. Contrato en docs/ppp-navigation.md; frontend de consulta y borradores, sin GAS/Render/Sheets/credenciales/permisos/fórmulas nuevos."
+  "rollback": "Deshabilitar las capabilities nuevas y revertir consumidores/handlers mediante revisión en las implementaciones existentes. Conservar IDs, escenarios, cuerpos, filas inactivas, libros, permisos, auditoría y recibos durables. No borrar datos ni restaurar históricos o fórmulas a ciegas.",
+  "atlas_note": "Contrato schema2 registrado antes del producto en CHG-PPP-VOLUMENES-NATIVOS-20261020, revisión 2026-10-20.ppp-volumenes-nativos.7. Los workflows fijan el commit público e inmutable del atlas 63d83e68cd0f92b112575be6f5bbf93b62481e35 (Portal PR305). Sólo fuentes genéricas y fixtures sintéticas en Git; backend vivo, manifiestos de casos, IDs privados, credenciales y evidencia de libros quedan fuera del repositorio público.",
+  "documentation_files": [
+    "docs/ppp-navigation.md",
+    "docs/ppp-volumes-native-server.md"
+  ]
 }
