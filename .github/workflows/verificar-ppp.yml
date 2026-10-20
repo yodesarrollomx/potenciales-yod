@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: yodesarrollomx/yod-portal
-          ref: 63d83e68cd0f92b112575be6f5bbf93b62481e35
+          ref: e9f8c1c56114c207a57a8ce3639705c249a2a764
           path: .yod-atlas-ui
           persist-credentials: false
       - uses: actions/setup-node@v4

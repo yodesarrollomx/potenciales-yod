@@ -45,7 +45,7 @@
     "Regresiones y Browser de acceso/navegación existentes continúan en verificar-ppp.yml. Paridad financiera en copia privada de Sheets, instalación real, PR/Pages, pin del atlas y despliegue existente se acreditan por recibos separados del coordinador."
   ],
   "rollback": "Deshabilitar las capabilities nuevas y revertir consumidores/handlers mediante revisión en las implementaciones existentes. Conservar IDs, escenarios, cuerpos, filas inactivas, libros, permisos, auditoría y recibos durables. No borrar datos ni restaurar históricos o fórmulas a ciegas.",
-  "atlas_note": "Contrato schema2 registrado antes del producto en CHG-PPP-VOLUMENES-NATIVOS-20261020, revisión 2026-10-20.ppp-volumenes-nativos.7. Los workflows fijan el commit público e inmutable del atlas 63d83e68cd0f92b112575be6f5bbf93b62481e35 (Portal PR305). Sólo fuentes genéricas y fixtures sintéticas en Git; backend vivo, manifiestos de casos, IDs privados, credenciales y evidencia de libros quedan fuera del repositorio público.",
+  "atlas_note": "Contrato schema2 registrado antes del producto en CHG-PPP-VOLUMENES-NATIVOS-20261020, revisión 2026-10-20.ppp-volumenes-nativos.7. Los workflows fijan el commit público e inmutable del atlas e9f8c1c56114c207a57a8ce3639705c249a2a764 (Portal PR305). Sólo fuentes genéricas y fixtures sintéticas en Git; backend vivo, manifiestos de casos, IDs privados, credenciales y evidencia de libros quedan fuera del repositorio público.",
   "documentation_files": [
     "docs/ppp-navigation.md",
     "docs/ppp-volumes-native-server.md"
