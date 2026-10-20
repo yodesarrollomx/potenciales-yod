@@ -1,9 +1,15 @@
 {
-  "model_revision": "2026-10-19.ppp-versiones-nativas.1",
+  "model_revision": "2026-10-19.ppp-cartera-lectura.1",
   "proposal_id": "CHG-PPP-UI-001",
   "summary": "El puente de observación admite hasta cien versiones como el backend nativo. La novena versión deja de interrumpir la carga del PPP y su lectura compartida. No cambia la selección defendida ni los permisos de edición.",
-  "components": ["SYS-POTENCIALES"],
-  "tests": ["node --test tests/ppp-version-bridge.test.cjs: nueve y cien versiones, rechazo de ciento una, aislamiento, borradores y versión defendida", "Regresión de contratos PPP y lectura en navegador", "Cotejo del recurso publicado y apertura del libro con más de ocho versiones"],
+  "components": [
+    "SYS-POTENCIALES"
+  ],
+  "tests": [
+    "node --test tests/ppp-version-bridge.test.cjs: nueve y cien versiones, rechazo de ciento una, aislamiento, borradores y versión defendida",
+    "Regresión de contratos PPP y lectura en navegador",
+    "Cotejo del recurso publicado y apertura del libro con más de ocho versiones"
+  ],
   "rollback": "Revertir el cambio del puente conservando libros, versiones, historial y permisos.",
-  "atlas_note": "Corrección del contrato de lectura existente bajo CHG-PPP-UI-001; sin componente ni conexión nuevos, sin modificar cálculos ni datos privados."
+  "atlas_note": "Se alinea el verificador de impacto al atlas ya aprobado que usa verificar-ppp.yml (ffdf31ae); la propuesta CHG-PPP-UI-001 conserva el contrato de versiones nativas. Sin componente, conexión o cálculo nuevos."
 }
