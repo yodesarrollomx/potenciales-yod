@@ -7,8 +7,8 @@ const ORIGIN='https://yodesarrollomx.github.io',BASE=ORIGIN+'/yod-portal/despach
 const parentHTML='<!doctype html><html lang="es"><meta name="viewport" content="width=device-width,initial-scale=1">'+
 '<link rel="stylesheet" href="'+BASE+'agent-workspace.css"><body style="margin:0;background:#f4f3ee"><main id="host"></main><script type="module">'+
 'import {createWorkspace} from "./agent-workspace.mjs";'+
-'const selection={case_id:"synthetic-case",name:"Proyecto de prueba",can_enqueue:true,goals:{ready:false},ppp:{case_id:"synthetic-case",url:"'+ORIGIN+'/potenciales-yod/patrimonial.html?open=synthetic-case"}};'+
-'const transport={mintFastSession:async()=>({ok:true,case_id:selection.case_id,token:"A".repeat(40)+"."+"a".repeat(64),endpoint:"'+CLOUD+'",expires_at:Date.now()+600000}),read:async()=>({ok:true,case_id:selection.case_id,source_revision:"test-source-1",context:{identity:{name:selection.name,case_id:selection.case_id},documents:[["source-ppp","PPP registrado",selection.ppp.url,"PPP"]]},state:{updated_at:new Date().toISOString()},conversation:[],jobs:[],events:[]})};'+
+'const selection={case_id:"synthetic-case",name:"Proyecto de prueba",can_enqueue:true,goals:{ready:true,schema:1},ppp:{case_id:"synthetic-case",url:"'+ORIGIN+'/potenciales-yod/patrimonial.html?open=synthetic-case"}};'+
+'const transport={mintFastSession:async()=>({ok:true,case_id:selection.case_id,token:"A".repeat(40)+"."+"a".repeat(64),endpoint:"'+CLOUD+'",expires_at:Date.now()+600000}),read:async()=>({ok:true,case_id:selection.case_id,source_revision:"test-source-1",context:{identity:{name:selection.name,case_id:selection.case_id},documents:[["source-ppp","PPP registrado",selection.ppp.url,"PPP"]]},state:{updated_at:new Date().toISOString()},conversation:[],jobs:[],events:[]}),readGoals:async()=>({ok:true,schema:1,source_revision:"test-source-1",goals:[]})};'+
 'window.workspace=createWorkspace({container:document.getElementById("host"),getSelection:()=>selection,transport});workspace.open(selection,"ppp");</script></html>';
 (async()=>{for(const [name,engine] of Object.entries({chromium,webkit})){
  if(process.env.PPP_ENGINE&&process.env.PPP_ENGINE!==name)continue;
@@ -72,6 +72,7 @@ const parentHTML='<!doctype html><html lang="es"><meta name="viewport" content="
    const frame=page.frameLocator('iframe');await frame.locator('.pn-data-card').first().waitFor();await frame.locator('[data-card=terreno] summary').click();
    assert.equal(new URL(page.frames().find(f=>f.url().includes('/potenciales-yod/')).url()).searchParams.get('view'),'cards');
    await page.waitForFunction(()=>document.querySelector('.workspace-ppp-summary')?.textContent.includes('Lectura confirmada'));
+   await page.waitForFunction(()=>document.querySelector('.workspace-brief')?.textContent.includes('Sin encargo registrado'));
    assert.equal((await frame.locator('[data-input=inTerrenoM2] strong').textContent()).trim(),'500');
    proposals=[{request_id:'board-reload-104',case_id:model.caso_id,scenario_id:model.activo,revision:model.revision,motivo:'Corrección explícita de prueba',cambios:[{campo:'inTerrenoM2',label:'Terreno',antes:500,valor:644}],apply_requested_at:new Date().toISOString(),apply_expires_at:new Date(Date.now()+120000).toISOString()}];
    await page.getByText('Conexión y variantes',{exact:true}).click();await page.getByRole('button',{name:'Actualizar conexión',exact:true}).click();
@@ -80,7 +81,12 @@ const parentHTML='<!doctype html><html lang="es"><meta name="viewport" content="
    assert.equal(cached.job,null);assert.equal(cached.receipts.length,1);assert.equal(writes.length,1);
    assert.ok(resolveCalls.length>=1);for(const receipt of resolveCalls)assert.deepEqual(receipt,resolveCalls[0]);const firstReceipt=structuredClone(resolveCalls[0]),priorReads=reads;
    assert.deepEqual(Object.keys(cached.receipts[0]).sort(),['acknowledged_at','case_id','request_id','revision','scenario_id']);
-   fail=false;await page.reload();await page.bringToFront();
+   // The old document may still publish a duplicate receipt while navigation starts.
+   // Keep its resolve attempts unavailable until the new document has committed;
+   // otherwise it can acknowledge before reload and leave nothing for recovery to show.
+   await page.reload({waitUntil:'commit'});
+   assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('pyod_patrimonial_native_v1:synthetic-case'))?.receipts),cached.receipts,'the committed document must inherit the unacknowledged receipt');
+   fail=false;await page.bringToFront();
    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('pyod_patrimonial_native_v1:synthetic-case'))?.receipts?.length===0);
    await page.waitForFunction(()=>document.querySelector('.workspace-apply-status')?.textContent.includes('guardado y confirmado'));
    assert.ok(reads>priorReads,'full reload must obtain a new server read before receipt replay');
