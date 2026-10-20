@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: yodesarrollomx/yod-portal
-          ref: ffdf31ae3b95855145e2ed7118c53edddfa1ded7
+          ref: b42173ffda031575d991498095ebacfc36ee06f4
           path: .yod-atlas-ui
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -35,6 +35,8 @@ jobs:
           node --test tests/ppp-agent-bridge.test.cjs tests/ppp-agent-receipts.test.cjs
           node --check ppp-ui.js
           node --check ppp-version-bridge.js
+          node --check ppp-volumes.js
+          node --test tests/ppp-volumes.test.cjs
           node --check ppp-patrimonial-native.js
           node --check ppp-case-loader.js
           node --check ppp-case-opening.js
@@ -64,6 +66,8 @@ jobs:
           PPP_MAP_ASSETS: ${{ runner.temp }}/ppp-map-assets
         run: |
           node tests/ppp-version-bridge-browser.cjs
+          node tests/ppp-navigation-browser.cjs
+          node tests/ppp-volumes-browser.cjs
           node tests/ppp-restored-bridge-browser.cjs
           node tests/ppp-agent-cards-browser.cjs
           node tests/ppp-case-opening-browser.cjs

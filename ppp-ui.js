@@ -298,5 +298,42 @@
     const sheet=$('sheetPanel'),stages=$('pppEtapas');if(sheet&&sheet.parentElement!==stages.lastChild)stages.lastChild.prepend(sheet);
     $('pppVersiones').firstChild.textContent='Versiones · '+(context.versionCount||1)+' · '+(context.scenarioName||'Base');
   }
-  root.PPPView={mount,update,toggle,adjust,setCaseState};
+  const navigationSections={terreno:'dArq',ventas:'dVentas',costos:'dCostos',calendario:'dCostos',volumenes:'dVolumenes',dArq:'dArq',dVentas:'dVentas',dCostos:'dCostos',dMacro:'dMacro',dDota:'dDota',dVolumenes:'dVolumenes',plan:'plan'};
+  function editing(){const focused=document.activeElement;return focused?.isContentEditable===true||focused?.matches?.('input,textarea,select,[contenteditable="true"],[contenteditable=""]')===true||!!focused?.closest?.('[contenteditable="true"],[contenteditable=""]');}
+  function navigationVisible(node){if(!node||node.hidden||node.inert)return false;const r=node.getBoundingClientRect();return r.width>0&&r.height>0&&r.bottom>0&&r.top<root.innerHeight;}
+  function navigationState(target){
+    const section=navigationSections[target];if(!section)return {status:'unsupported',code:'target_unsupported'};
+    if(!mounted||document.body.classList.contains('ppp-unconfirmed')||document.body.classList.contains('ppp-reading')||editing())return {status:'unavailable',code:'reading_or_editing'};
+    if(section==='plan')return active===null&&navigationVisible($('pppDeck'))?{status:'confirmed',section_id:'plan'}:{status:'unavailable',code:'view_not_confirmed'};
+    if(section==='dVolumenes'){
+      const volumes=$('pppVolumes');if(!volumes||volumes.hidden||volumes.inert||volumes.dataset.verified!=='true')return {status:'unsupported',code:'volumes_not_installed'};
+      return navigationVisible(volumes)?{status:'confirmed',section_id:section}:{status:'unavailable',code:'view_not_confirmed'};
+    }
+    const item=records.find(x=>x.id===section);
+    return item&&active===section&&navigationVisible(target==='calendario'?$('inInicioObra')?.closest('.input-group'):item.card)&&item.trigger.getAttribute('aria-expanded')==='true'&&item.reveal.inert===false&&item.reveal.getAttribute('aria-hidden')==='false'?{status:'confirmed',section_id:section}:{status:'unavailable',code:'view_not_confirmed'};
+  }
+  // Navigation changes presentation only. In particular it never focuses or
+  // blurs an editable field: native inputs may save automatically on blur/input.
+  function navigate(target){
+    const section=navigationSections[target];if(!section)return {status:'unsupported',code:'target_unsupported'};
+    if(!mounted||document.body.classList.contains('ppp-unconfirmed')||document.body.classList.contains('ppp-reading')||editing())return {status:'unavailable',code:'reading_or_editing'};
+    if(section==='dVolumenes'){
+      const volumes=$('pppVolumes');if(!volumes||volumes.hidden||volumes.inert||volumes.dataset.verified!=='true')return {status:'unsupported',code:'volumes_not_installed'};
+      $('pppVolumes').scrollIntoView({block:'start',behavior:'instant'});return navigationState(target);
+    }
+    if(section==='plan'){
+      records.forEach(x=>{x.card.classList.remove('ppp-open','ppp-muted','ppp-adjusting');x.drawer.classList.remove('active');x.trigger.setAttribute('aria-expanded','false');x.reveal.inert=true;x.reveal.setAttribute('aria-hidden','true');x.adjust.setAttribute('aria-expanded','false');x.adjust.textContent='Ajustar';});
+      active=null;focusRequest++;document.body.classList.remove('ppp-focused');$('pppBack').hidden=true;$('pppDeck').scrollIntoView({block:'start',behavior:'instant'});return navigationState(target);
+    }
+    const item=records.find(x=>x.id===section);if(!item||item.trigger.disabled)return {status:'unavailable',code:'view_unavailable'};
+    toggle(section,true);
+    if(target==='calendario'){
+      focusRequest++;item.card.classList.add('ppp-adjusting');item.drawer.classList.add('active');item.adjust.setAttribute('aria-expanded','true');item.adjust.textContent='Ver detalle';
+      const input=$('inInicioObra');let parent=input?.parentElement;
+      while(parent&&parent!==item.drawer){if(parent.tagName==='DETAILS')parent.open=true;parent=parent.parentElement;}
+      input?.closest('.input-group')?.scrollIntoView({block:'center',behavior:'instant'});
+    }else item.card.scrollIntoView({block:'start',behavior:'instant'});
+    return navigationState(target);
+  }
+  root.PPPView={mount,update,toggle,adjust,setCaseState,navigate,navigationState};
 })(typeof window==='undefined'?globalThis:window);
