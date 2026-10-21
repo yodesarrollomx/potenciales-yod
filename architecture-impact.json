@@ -1,7 +1,7 @@
 {
   "model_revision": "2026-10-21.ppp-recuperacion-precisa.1",
   "proposal_id": "CHG-PPP-RECUPERACION-PRECISA-20261021",
-  "summary": "Conservar el valor canónico de cada cantidad mientras su control no cambie: la serialización decimal de input range no es una edición. Restaurar cantidades canónicas cuando no existe borrador pendiente. Una recarga autenticada válida restablece el contexto de volúmenes para el mismo caso y credencial; nunca desde la copia local. Coalescer lecturas simultáneas y mostrar que Sheets sigue respondiendo. Conservar borradores reales, confirmación de descarte, revisiones, permisos y recibos; sin cambiar fórmulas ni contratos de escritura.",
+  "summary": "Conservar el valor canónico de cada cantidad mientras su control no cambie: la serialización decimal de input range no es una edición. Restaurar cantidades canónicas cuando no existe borrador pendiente. Una recarga autenticada válida restablece el contexto de volúmenes para el mismo caso y credencial; nunca desde la copia local. Coalescer lecturas simultáneas y mostrar que Sheets sigue respondiendo. Conservar borradores reales, confirmación de descarte, revisiones, permisos y recibos; sin cambiar fórmulas ni contratos de escritura. La apertura del libro nativo conserva una espera máxima de seis minutos: se observó una respuesta válida posterior al límite anterior de 90 segundos. Se mantienen generación/identidad y rechazo de respuestas tardías de otra selección.",
   "components": [
     "SYS-POTENCIALES",
     "GAS-PORTERO",
@@ -12,7 +12,8 @@
   "tests": [
     "Chromium aislado: decimales largos sin falsa edición ni POST, recarga y edición real diferenciadas.",
     "Borrador real: cancelar conserva; aceptar lectura vigente restaura cuerpos; cuenta cambiada y respuesta tardía no promueven datos.",
-    "Lecturas concurrentes: una solicitud activa; error recuperable y regresiones completas PPP. Recorrido productivo de lectura separado de escrituras sintéticas."
+    "Lecturas concurrentes: una solicitud activa; error recuperable y regresiones completas PPP. Recorrido productivo de lectura separado de escrituras sintéticas.",
+    "Regresiones del lector y apertura aislada; el límite ampliado no cambia validación, generación ni resultado de guardado."
   ],
   "rollback": "Revertir el PR de frontend conservando copias de borradores, libros, fórmulas, escenarios y recibos; sin restaurar datos de negocio."
 }
