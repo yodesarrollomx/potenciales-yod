@@ -73,9 +73,50 @@ test('navigation requires a real UI readback and does not reinterpret an applica
 });
 test('native visible-version navigation never repins the financial defended version',()=>{
  const x=navigationSetup();x.view.active='newer';const financial=x.bridge.snapshot();x.navigate({scenario_id:'newer'});
- assert.equal(x.sent.at(-1).status,'confirmed');assert.equal(x.sent.at(-1).observed.scenario_id,'newer');assert.deepEqual(x.bridge.snapshot(),financial);
+ assert.equal(x.sent.at(-1).status,'confirmed');assert.equal(x.sent.at(-1).observed.scenario_id,'newer');assert.deepEqual({...x.bridge.snapshot(),observed_at:financial.observed_at},financial);
  assert.equal(financial.scenario_id,'older');assert.equal(financial.version_context.viewed_scenario_id,'newer');assert.equal(financial.inputs.inArea,10);assert.equal(financial.version_context.read_only,true);
  x.bridge.publish();assert.equal(x.sent.at(-1).navigation_context.scenario_id,'newer');assert.equal(x.sent.at(-1).board.scenario_id,'older');
  const unverified=setup({scenario_id:'older'});assert.equal(unverified.bridge.getVerifiedContext(),null,'a saved-inputs-only model is not a native navigation context');
  for(const patch of [{pending:true},{error:true},{busy:true}]){const blocked=navigationSetup();Object.assign(blocked.view,patch);blocked.bridge.publish();assert.equal(blocked.sent.at(-1).navigation_context,null);}
 });
+
+const nativeVolumes=require('../ppp-volumes-native.js');
+function nativeVolumeSetup(apply){
+ let listener;const sent=[],writes=[],parent={postMessage:m=>sent.push(m)},win={parent,location:{href:'https://example.test/potenciales-yod/mixto.html?agent=1',origin:'https://example.test'},document:{referrer:'https://example.test/yod-portal/despacho3d/index.html'},addEventListener:(n,f)=>listener=f,removeEventListener(){}};
+ const cap={schema:2,read:true,write:true,max_volumes:16,fields:nativeVolumes.fields,allocation_modes:['preserve','built_area'],shared_resources:[]},original={schema:2,count:1,shared_allocation_mode:'preserve',volumes:[{id:'body-a',values:Object.fromEntries(nativeVolumes.fields.map(f=>[f.id,f.id==='name'?'A':null]))}]},view={caseId:'board-a',scenarios:structuredClone(list),active:'older'},canonical={older:original,newer:structuredClone(original)};
+ let bridge;const remember=(revision='rev1')=>bridge.remember({caseId:'board-a',revision,scenarios:list,active:'older',native:true,volumesByScenario:canonical,volumeCapability:cap});
+ bridge=create({modelType:'vertical',read:()=>view,win,volumeContract:nativeVolumes,applyVolumes:async request=>{writes.push(structuredClone(request));if(apply)return apply({request,remember,canonical,view,bridge});const full={...request.volumes,volumes:request.volumes.volumes.map(row=>({id:row.id,values:{...original.volumes[0].values,...row.values,units:77}}))};canonical.older=full;remember('rev2');return{ok:true,request_id:request.request_id,case_id:'board-a',scenario_id:'older',base_revision:'rev1',revision:'rev2',native_collection:full,calculated:true};}});
+ remember();const send=data=>listener({source:parent,origin:win.location.origin,data:{version:1,case_id:'board-a',board_case_id:'board-a',nonce:'native-session',...data}});send({type:'yod:ppp:hello',agent_case_id:'agent-a',scenario_id:'older'});
+ const proposal={kind:'native_volumes',request_id:'native-request',case_id:'agent-a',board_case_id:'board-a',scenario_id:'older',revision:'rev1',before_volumes:structuredClone(original),volumes:nativeVolumes.project(original),user_confirmed:true,apply_requested_at:new Date().toISOString(),apply_expires_at:new Date(Date.now()+120000).toISOString()};proposal.volumes.volumes[0].values.residential_levels=17;
+ return{bridge,view,sent,writes,canonical,proposal,send,apply:async patch=>{send({type:'yod:ppp:apply',proposal:{...structuredClone(proposal),...patch}});await new Promise(resolve=>setImmediate(resolve));}};
+}
+test('native volumes expose canonical readback without unlocking financial fields and require explicit confirmed intent',async()=>{
+ const x=nativeVolumeSetup(),before=structuredClone(x.bridge.snapshot());assert.equal(before.volumes.schema,2);assert.equal(before.capabilities.volumes.write,true);assert.equal(before.version_context.read_only,true);assert.ok(before.fields.every(f=>!f.editable));
+ await x.apply();assert.equal(x.writes.length,1);assert.equal(x.writes[0].context.case_id,'board-a');assert.equal(Object.keys(x.writes[0].volumes.volumes[0].values).length,14);assert.equal(x.writes[0].volumes.volumes[0].values.units,undefined);
+ const receipt=x.sent.findLast(m=>m.receipt)?.receipt;assert.equal(receipt.ok,true);assert.equal(receipt.case_id,'agent-a');assert.equal(receipt.base_revision,'rev1');assert.equal(receipt.revision,'rev2');assert.equal(receipt.native_collection.volumes[0].values.units,77);assert.deepEqual(x.bridge.snapshot().inputs,before.inputs);
+ await x.apply();assert.equal(x.writes.length,1,'a lost parent receipt is replayed without another transport mutation');assert.equal(x.sent.at(-1).receipt.ok,true);
+});
+test('unconfirmed, expired, wrong-case and derived-cell volume proposals never reach transport',async()=>{
+ const patches=[{user_confirmed:false},{apply_requested_at:undefined},{apply_expires_at:new Date(Date.now()-1).toISOString()},{case_id:'other-agent'},{board_case_id:'other-board'},{scenario_id:'newer'},{revision:'stale'},{before_volumes:null}];
+ for(const patch of patches){const x=nativeVolumeSetup();await x.apply(patch);assert.equal(x.writes.length,0);assert.equal(x.sent.at(-1).receipt.ok,false);}
+ const x=nativeVolumeSetup();await x.apply({volumes:x.proposal.before_volumes});assert.equal(x.writes.length,0,'all21 including derived outputs cannot be used as a14driver wire proposal');
+});
+test('native volume bridge requires the host canonical model to contain the acknowledged revision and collection',async()=>{
+ const x=nativeVolumeSetup(({request})=>({ok:true,request_id:request.request_id,case_id:'board-a',scenario_id:'older',revision:'invented-revision',native_collection:{...request.volumes,volumes:request.volumes.volumes.map(row=>({id:row.id,values:{...x.proposal.before_volumes.volumes[0].values,...row.values}}))},calculated:true}));
+ await x.apply();assert.equal(x.sent.at(-1).receipt.ok,false);assert.equal(x.bridge.snapshot().revision,'rev1');
+});
+test('native volume proposals respect pending local drafts and keep scenario observation read only',async()=>{
+ for(const patch of [{pending:true},{busy:true},{error:true},{active:'newer'}]){const x=nativeVolumeSetup();Object.assign(x.view,patch);assert.equal(x.bridge.snapshot().capabilities.volumes.write,false);await x.apply();assert.equal(x.writes.length,0);}
+});
+
+test('a replayed confirmed receipt names a newer canonical revision separately and never restores old quantities',async()=>{
+ const x=nativeVolumeSetup();await x.apply();const newer=structuredClone(x.canonical.older);newer.volumes[0].values.residential_levels=25;x.canonical.older=newer;
+ x.bridge.remember({caseId:'board-a',revision:'rev3',scenarios:list,active:'older',native:true,volumesByScenario:x.canonical,volumeCapability:{schema:2,read:true,write:true,max_volumes:16,fields:nativeVolumes.fields,allocation_modes:['preserve','built_area'],shared_resources:[]}});
+ await x.apply();assert.equal(x.writes.length,1);const receipt=x.sent.at(-1).receipt;assert.equal(receipt.status,'confirmed_superseded');assert.equal(receipt.revision,'rev2');assert.equal(receipt.native_collection.volumes[0].values.residential_levels,17);assert.equal(receipt.current_revision,'rev3');assert.equal(receipt.current_collection.volumes[0].values.residential_levels,25);assert.equal(x.bridge.snapshot().volumes.volumes[0].values.residential_levels,25);
+});
+test('explicit receipt lookup after reload ignores expired approval and current write capability but stays read only',async()=>{
+ const x=nativeVolumeSetup(({request,remember,canonical})=>{assert.equal(request.reconcile,true);const full={...request.volumes,volumes:request.volumes.volumes.map(row=>({id:row.id,values:{...x.proposal.before_volumes.volumes[0].values,...row.values}}))};canonical.older=full;remember('rev2');return{ok:true,request_id:request.request_id,case_id:'board-a',scenario_id:'older',revision:'rev2',native_collection:full,calculated:false};});
+ x.bridge.remember({caseId:'board-a',revision:'rev1',scenarios:list,active:'older',native:true,volumesByScenario:x.canonical,volumeCapability:{schema:2,read:true,write:false,max_volumes:16,fields:nativeVolumes.fields,allocation_modes:['preserve','built_area'],shared_resources:[]}});x.view.pending=true;
+ x.send({type:'yod:ppp:volumes-receipt',proposal:{...x.proposal,user_confirmed:false,apply_expires_at:new Date(Date.now()-120000).toISOString(),reconcile_only:true}});await new Promise(resolve=>setImmediate(resolve));assert.equal(x.writes.length,1);assert.equal(x.writes[0].reconcile,true);assert.equal(x.sent.at(-1).receipt.ok,true);
+});
+test('the bridge relays and replays a normalized prewrite rejection without claiming application or changing the model',async()=>{const x=nativeVolumeSetup(({request})=>({ok:false,status:'rejected',error:'operation_rejected',request_id:request.request_id,case_id:'board-a',board_case_id:'board-a',scenario_id:'older',base_revision:'rev1',prewrite_rejection:{request_id:request.request_id,caso_id:'board-a',escenario_id:'older',base_revision:'rev1',stage:'prewrite',write_attempted:false}}));await x.apply();const receipt=x.sent.at(-1).receipt;assert.equal(receipt.case_id,'agent-a');assert.equal(receipt.board_case_id,'board-a');assert.equal(receipt.status,'rejected');assert.equal(receipt.ok,false);assert.equal(receipt.revision,undefined);assert.equal(x.bridge.snapshot().revision,'rev1');await x.apply();assert.equal(x.writes.length,1);assert.equal(x.sent.at(-1).receipt.status,'rejected');});
