@@ -1224,7 +1224,8 @@
     const values=inputValues(),dirty=Object.keys(values).some(id=>Number(values[id])!==Number(legacySavedInputs[id]));
     return dirty?'Cambios locales · sin guardar':'Guardado · v'+(caso.version||1);
   }
-  const caseReader=window.PPPCaseLoader.create(apiGet);
+  // Large native workbooks may complete after the normal catalog timeout.
+  const caseReader=window.PPPCaseLoader.create(apiGet,360000);
   let caseSelection=null;
   function casePresentation(status,message,id,hasCopy=false,retry){
     caseSelection=status==='ready'?null:{status,message,id,hasCopy};
