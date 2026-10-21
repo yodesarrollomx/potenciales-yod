@@ -639,7 +639,8 @@
     inCuotaM2:{t:'Cuota de mantenimiento',k:'Operación / mercado',q:'Pesos por m² vendible al mes para operar el condominio.',m:'Estima la cuota por tipología: dato clave para el comprador.',d:'Amenidades, plantilla de operación, seguros y comparables de la zona.'}
   };
   // Registered cases read their model from Sheets; no financial calculation here.
-  let sheetModel=null,sheetTimer=null,sheetBusy=false,sheetPending=null,sheetFailure=false,sheetNeedsRefresh=false;
+  let sheetModel=null,sheetTimer=null,sheetBusy=false,sheetPending=null,sheetFailure=false,sheetNeedsRefresh=false,sheetReading=null;
+  const controlReadbacks=new WeakMap();
   // Only a fresh authenticated native model enables canonical volume quantities.
   // URL flags and restored browser copies never grant write capability.
   let volumeIdentity=null,volumeOperation=null,volumeEditorState={dirty:false,pending:false};
@@ -722,7 +723,31 @@
     }catch(e){sheetPending=sheetPending?{scenario:job.scenario,inputs:{...job.inputs,...sheetPending.inputs}}:job;sheetFailure=true;sheetStatus('Sin conexión · cambios pendientes; resultados anteriores');}
     finally{sheetBusy=false;syncVolumes();if(sheetPending&&!sheetFailure)flushSheetSync();}
   }
-  async function reloadSheetModel(){if(!sheetModel||sheetBusy||caseSelection||volumeOperation)return;const sourceModel=sheetModel,sourceCase=caso.caso_id;try{const m=await apiGet({recurso:'sheet-model',id:sourceCase});if(sheetModel!==sourceModel||caso.caso_id!==sourceCase||caseSelection)return;if(!window.PPPCaseLoader.validModel(m,sourceCase))throw Error(m.error);if(sheetPending&&!confirm("Recargar descartará las cantidades pendientes de este tablero. ¿Leer las actuales de Sheets?"))return;sheetPending=null;sheetFailure=false;acceptSheetModel(m,escActivo);}catch(e){if(sheetModel!==sourceModel||caso.caso_id!==sourceCase||caseSelection)return;sheetFailure=true;sheetStatus('No se pudo leer Sheets · datos anteriores');}}
+  async function reloadSheetModel(){
+    if(sheetReading)return sheetReading;
+    if(!sheetModel||sheetBusy||caseSelection||volumeOperation)return Promise.resolve(false);
+    const sourceModel=sheetModel,sourceCase=caso.caso_id,sourceCredential=clave;
+    const current=()=>sheetModel===sourceModel&&caso.caso_id===sourceCase&&clave===sourceCredential&&!modoLocal&&!caseSelection&&!sheetBusy&&!volumeOperation;
+    sheetStatus('Leyendo Sheets · conservamos los datos visibles');
+    const request=(async()=>{
+      try{
+        const m=await apiGet({recurso:'sheet-model',id:sourceCase});
+        if(!current())return false;
+        if(!window.PPPCaseLoader.validModel(m,sourceCase))throw Error(m.error);
+        if(sheetPending&&!confirm("Recargar descartará las cantidades pendientes de este tablero. ¿Leer las actuales de Sheets?")){
+          sheetStatus('Cantidades pendientes · copia conservada');return false;
+        }
+        sheetPending=null;sheetFailure=false;
+        // This identity comes from the authenticated response, never the restored copy.
+        volumeIdentity={case_id:m.caso_id,project_name:caso.nombre_caso||'',credential:sourceCredential};
+        return acceptSheetModel(m,escActivo);
+      }catch(e){
+        if(current()){sheetFailure=true;syncVolumes();sheetStatus('No se pudo leer Sheets · datos anteriores');}
+        return false;
+      }finally{if(sheetReading===request)sheetReading=null;}
+    })();
+    sheetReading=request;return request;
+  }
   async function sheetVersion(action,id,name){
     if(sheetPending||sheetBusy||sheetFailure||sheetNeedsRefresh||volumeOperation){toast('Verifica conexión y cantidades guardadas antes de modificar versiones');return;}
     sheetBusy=true;
@@ -743,10 +768,10 @@
   function renderSheetMarket(){const panel=$('mercadoDocumento');panel.hidden=false;let h='<h2 class="serif">Mercado · datos del mismo libro</h2><p class="note">Rentas y capitalización documental; cantidades sin respaldo permanecen pendientes. Una capitalización no es cobro si se retiene el comercio.</p><table><tr><th>Dato</th><th>Valor calculado / captura</th><th>Unidad y fuente</th></tr>';h+=sheetModel.mercado.map(r=>{let v=r[1];if(v==='')v='Pendiente';else if(typeof v==='number')v=/rendimiento|cap de salida|renta corta|vacancia/i.test(r[0])?pct(v*100,2):v.toLocaleString('es-MX',{maximumFractionDigits:2});return '<tr><td>'+esc(r[0])+'</td><td>'+esc(v)+'</td><td>'+esc(r[2])+'</td></tr>';}).join('');h+='</table><h3>Comparables documentales</h3><p class="note">Rangos de área y precio sin pares de unidades: no permiten calcular un comparable de $/m² dividiendo extremos.</p><table><tr><th>Comparable</th><th>Área mínima / máxima</th><th>Precio mínimo / máximo</th></tr>'+sheetModel.comparables.map(r=>'<tr><td>'+esc(r[0])+'</td><td>'+esc(r[1])+' / '+esc(r[2])+'</td><td>'+esc(r[3]||'Pendiente')+' / '+esc(r[4]||'Pendiente')+'</td></tr>').join('')+'</table>';panel.innerHTML=h;}
 
   function get(id){return Number($(id).value)||0} function txt(id,value){const e=$(id);if(e)e.textContent=value}
-  function inputValues(){return Object.fromEntries(controls.map(c=>[c.id,Number(c.value)]))}
+  function inputValues(){return Object.fromEntries(controls.map(c=>{const read=controlReadbacks.get(c);return [c.id,sheetModel&&read?.serialized===c.value?read.value:Number(c.value)];}))}
   function updateColor(c){const min=Number(c.min),max=Number(c.max),v=Number(c.value),x=Math.max(0,Math.min(100,(v-min)/(max-min)*100));c.style.background=`linear-gradient(to right, ${c.dataset.color||'var(--gold)'} ${x}%, rgba(35,29,20,.10) ${x}%)`}
   function displayValue(c){const v=Number(c.value),f=c.dataset.format||'';if(f==='pct')return pct(v,0);if(f==='pct1')return pct(v,1);if(f==='money')return fmtMoney(v);if(f==='meters')return v.toFixed(1)+' m';if(f==='decimal')return v.toFixed(1);if(f==='decimal2')return v.toFixed(2);return fmtN(v)}
-  function setControl(id,value){const c=$(id);if(!c||!Number.isFinite(Number(value)))return;const min=Number(c.min),max=Number(c.max);const v=sheetModel?Number(value):Math.max(min,Math.min(max,Number(value)));if(sheetModel){c.step='any';if(v<min)c.min=v;if(v>max)c.max=v;}c.value=v;updateColor(c)}
+  function setControl(id,value){const c=$(id);if(!c||!Number.isFinite(Number(value)))return;const min=Number(c.min),max=Number(c.max);const v=sheetModel?Number(value):Math.max(min,Math.min(max,Number(value)));if(sheetModel){c.step='any';if(v<min)c.min=v;if(v>max)c.max=v;}c.value=v;controlReadbacks.set(c,{serialized:c.value,value:v});updateColor(c)}
   function readPills(){document.querySelectorAll('.val-display[data-input]').forEach(p=>{p.contentEditable='true';p.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();p.blur()}});p.addEventListener('blur',()=>{const raw=p.textContent.replace(/[^0-9.\-]/g,''),n=Number(raw);if(Number.isFinite(n))setControl(p.dataset.input,n);calculate()})})}
   function syncPills(){controls.forEach(c=>{const p=document.querySelector(`.val-display[data-input="${c.id}"]`);if(p&&document.activeElement!==p)p.textContent=displayValue(c);updateColor(c)})}
     const tipNarrow=()=>window.matchMedia('(max-width:700px)').matches;
@@ -1184,7 +1209,7 @@
   function nuevoRequestId(){return (crypto.randomUUID?.()||Date.now()+'-'+Math.random())}
   function guardarDraft(){try{localStorage.setItem(LS.draft,JSON.stringify({inputs:inputValues(),caso,escenarios,escActivo,sheetModel,sheetPending,savedInputs:legacySavedInputs}))}catch(e){}}
   function cargarDraft(){try{const d=JSON.parse(localStorage.getItem(LS.draft)||'null');if(!d)return;restoredDraft=true;legacySavedInputs=d.savedInputs||null;if(d.sheetModel&&d.caso?.caso_id===d.sheetModel.caso_id&&d.sheetModel.revision&&Array.isArray(d.sheetModel.escenarios)&&d.sheetModel.estados){sheetModel=d.sheetModel;sheetNeedsRefresh=true;sheetFailure=true;sheetPending=d.sheetPending||null;}if(d.inputs)Object.entries(d.inputs).forEach(([id,v])=>setControl(id,v));if(d.caso)caso=Object.assign(caso,d.caso);
-    if(Array.isArray(d.escenarios)&&d.escenarios.length){escenarios=d.escenarios;escActivo=d.escActivo&&escGet(d.escActivo)?d.escActivo:escenarios[0].id;const e=escGet(escActivo);if(e)escAplicar(e)}if(sheetModel&&d.inputs)Object.entries(d.inputs).forEach(([id,v])=>setControl(id,v));
+    if(Array.isArray(d.escenarios)&&d.escenarios.length){escenarios=d.escenarios;escActivo=d.escActivo&&escGet(d.escActivo)?d.escActivo:escenarios[0].id;const e=escGet(escActivo);if(e)escAplicar(e)}if(sheetModel&&d.inputs)Object.entries(d.inputs).forEach(([id,v])=>{if(Number($(id)?.value)!==Number(v))setControl(id,v)});
     // Share the cached canonical model without promoting this device's pending quantities.
     // The refresh/error flags above are set before remember() can publish anything.
     if(sheetModel&&window.PPPCaseLoader.validModel(sheetModel,caso.caso_id)){

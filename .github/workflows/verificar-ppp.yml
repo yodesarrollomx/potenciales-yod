@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: yodesarrollomx/yod-portal
-          ref: e9f8c1c56114c207a57a8ce3639705c249a2a764
+          ref: 7ea86b861e2a71b594d51f6e4bca977d2f6dfaaf
           path: .yod-atlas-ui
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -48,6 +48,7 @@ jobs:
           node --check ppp-catalog.js
           node --test tests/ppp-catalog.test.cjs
           node --check ppp-macro-cards.js
+          node --test tests/ppp-refresh-identity.test.cjs
           node --test tests/ppp-ui.test.cjs tests/ppp-case-loader.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs tests/patrimonial-native.test.cjs tests/ppp-version-bridge.test.cjs
           git diff --check
       - name: Instalar navegadores
@@ -71,6 +72,7 @@ jobs:
           node tests/ppp-navigation-browser.cjs
           node tests/ppp-volumes-browser.cjs
           node tests/ppp-restored-bridge-browser.cjs
+          node tests/ppp-precision-recovery-browser.cjs
           node tests/ppp-agent-cards-browser.cjs
           node tests/ppp-case-opening-browser.cjs
           node tests/ppp-case-opening-shell-browser.cjs
