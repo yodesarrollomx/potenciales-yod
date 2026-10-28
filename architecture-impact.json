@@ -1,6 +1,6 @@
 {
 "model_revision": "2026-10-27.ppp-capacidad-tipologias.1",
-"proposal_id": "CHG-PPP-ERRORES-CREACION-20261027",
+"proposal_id": "CHG-PPP-VOLUMENES-NATIVOS-20261020",
 "summary": "Mostrar el motivo real cuando la creación de un caso falla por supuestos fuera del rango de la plantilla o por un programa que no concilia con la mezcla, y liberar el reintento. Solo cambia mensajes y el manejo de dos códigos de error en la interfaz; no cambia cálculos, libros, escenarios ni permisos.",
 "components": [
 "SYS-POTENCIALES",
