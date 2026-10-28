@@ -1,6 +1,6 @@
 'use strict';
 const {chromium,webkit}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const {native,draft,install}=require('./ppp-fixture.js');
+const {native,draft,install,inputs,compute}=require('./ppp-fixture.js');
 (async()=>{for(const [name,engine] of Object.entries({chromium,webkit})){const b=await engine.launch({headless:true});try{
  const m=native();m.reticula={uso:[[4,4,0],[2,0,3],[1,1,0]],resumen:[['Libre',400],['Cuerpo sur',500],['Cuerpo L',300],['Torre',100],['Rentas vigentes',600],['Total terreno',1900],['Diferencia vs geometría',0]]};m.etapas=[['Traslado completo confirmado',0,''],['Continuidad de rentas','PENDIENTE',''],['Autorización lógica para demoler','PENDIENTE','']];
  const c=await b.newContext({viewport:{width:430,height:932},isMobile:true,hasTouch:true,reducedMotion:'reduce'}),t=await install(c,{seed:null,native:true,model:m}),p=await c.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.goto('https://ppp.test/potenciales-yod/mixto.html?open=synthetic-case');await p.locator('#pppCaseStatus').waitFor({state:'hidden'});await p.waitForFunction(()=>document.querySelector('.ppp-main').textContent.includes('terreno'));
@@ -10,4 +10,11 @@ const {native,draft,install}=require('./ppp-fixture.js');
  await p.setViewportSize({width:430,height:932});if(process.env.PPP_SCREENSHOTS){fs.mkdirSync(process.env.PPP_SCREENSHOTS,{recursive:true});await p.screenshot({path:path.join(process.env.PPP_SCREENSHOTS,name+'-terrain-detail.png')});await p.locator('#pppBack').click();await p.evaluate(()=>scrollTo(0,0));await p.screenshot({path:path.join(process.env.PPP_SCREENSHOTS,name+'-terrain-summary.png')});}
  const mini=p.locator('[data-card=dArq] .ppp-mini svg');assert.notEqual(await mini.getAttribute('viewBox'),'0 0 300 190');await p.evaluate(r=>PPPView.update(r,{native:false,caseId:'synthetic-other',scenario:'test-base'}),m.estados[m.activo]);assert.equal(await mini.getAttribute('viewBox'),'0 0 300 190');assert.equal(await p.locator('#pppSitedArq').isVisible(),false);assert.equal(await mini.locator('path').count()>0,true);
  assert.deepEqual(errors,[]);assert.equal(t.posts.length,0);await c.close();console.log('PASS '+name+': terrain visible when closed, actual conceptual grid and area reconciliation, pending protection of rents, 81 controls/40 KPI, responsive; no business writes.');
+ for(const area of [20000,35000,40000]){
+  const model=native(),values={...inputs,inTerreno:area};model.escenarios[0].inputs=values;model.estados[model.activo]=compute(values);
+  const isolated=await b.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,reducedMotion:'reduce'}),net=await install(isolated,{seed:null,native:true,model}),page=await isolated.newPage(),faults=[];page.on('pageerror',e=>faults.push(e.message));
+  await page.goto('https://ppp.test/potenciales-yod/mixto.html?open=synthetic-case');await page.locator('#pppCaseStatus').waitFor({state:'hidden'});await page.waitForFunction(v=>document.querySelector('[data-card=dArq] .ppp-main')?.textContent.includes(v),area.toLocaleString('es-MX'));
+  assert.equal(await page.locator('#inTerreno').getAttribute('max'),'40000');await page.locator('#pppToggledArq').click();assert.match(await page.locator('#pppDetaildArq').innerText(),/superficies 0–40,000 m²/);assert.deepEqual(faults,[]);assert.equal(net.posts.length,0);await isolated.close();
+ }
+ console.log('PASS '+name+': 20,000 / 35,000 / 40,000 m² retained and displayed with the expanded reference, synthetic read only.');
 }finally{await b.close();}}})().catch(e=>{console.error(e);process.exitCode=1;});

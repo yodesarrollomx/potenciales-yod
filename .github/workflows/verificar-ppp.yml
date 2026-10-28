@@ -95,7 +95,7 @@ jobs:
           const fs=require('node:fs'),crypto=require('node:crypto');
           const digest=b=>crypto.createHash('sha256').update(b).digest('hex');
           (async()=>{
-            const paths=['index.html','ppp-projects.js','ppp-home.css','ppp-catalog.js','ppp-catalog.css','mapa.html','ppp-version-bridge.js','ppp-volumes.js','ppp-volumes.css','ppp-volumes-native.js','tests/fixtures/departamentos-volumenes.html','mixto.html','macrolotes.html','patrimonial.html','ppp-case-opening.js','portero.js'];
+            const paths=['index.html','ppp-projects.js','ppp-home.css','ppp-catalog.js','ppp-catalog.css','mapa.html','ppp-ui.js','ppp-version-bridge.js','ppp-volumes.js','ppp-volumes.css','ppp-volumes-native.js','tests/fixtures/departamentos-volumenes.html','mixto.html','macrolotes.html','patrimonial.html','ppp-case-opening.js','portero.js'];
             for(const path of paths){
               const expected=digest(fs.readFileSync(path));let verified=false;
               for(let attempt=0;attempt<6;attempt++){
