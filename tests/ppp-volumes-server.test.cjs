@@ -74,6 +74,15 @@ test('native schema has 14 writable drivers and seven protected derived fields',
   assert.equal(api.normalize(value, true).volumes[0].values.footprint_m2, null);
 });
 
+test('server accepts thirty bodies only for a scenario with a verified larger capacity', () => {
+  const many=json(api.project(collection(30,30))), old=fixture(), rejected=old.service.write(old.request({volumes:many}));
+  assert.equal(rejected.error,'invalid_collection');assert.equal(old.writes,0);assert.equal(old.sheets.has('Volumenes_Operaciones'),false);
+  const extended=fixture();extended.host.capacity=(context,id)=>id==='a'?32:16;
+  const result=extended.service.write(extended.request({volumes:many}));
+  assert.equal(result.ok,true);assert.equal(result.capabilities.volumes.max_volumes,32);assert.equal(result.volume_receipt.volumes.count,30);
+  assert.equal(extended.native.b.count,2);assert.equal(extended.writes,1);
+});
+
 test('allocation mode is explicit, durable and bound to the same operation payload', () => {
   const f = fixture(), missing = f.request(); delete missing.volumes.shared_allocation_mode;
   assert.equal(f.service.write(missing).error, 'invalid_payload');
@@ -282,6 +291,14 @@ function formulaConfig(limit = 16) {
   const keys = ['hard', 'price_residential', 'presale_effective', 'downpayment', 'construction_payment', 'land_cash', 'land_closing', 'indirect', 'legal', 'contingency', 'commission', 'units', 'residential_sellable', 'build_finish', 'total_months', 'presale_discount', 'commercial_revenue', 'parking_revenue', 'delivery_months_global', 'commission_total', 'sales_total', 'contingency_total'];
   return { program_name: 'Program_A', scenario_name: 'Scenario_A', first_row: 7, max_volumes: limit, count_ref: "'Program_A'!$B$2", allocation_mode_ref: "'Index_A'!$K$2", rate_above_ref: "'Scenario_A'!$B$59", rate_basement_ref: "'Scenario_A'!$B$60", metric_cells: Object.fromEntries(keys.map((key, i) => [key, "'Scenario_A'!$G$" + (100 + i)])), months: 2, program_valid_ref: 'B30', inventory_units_ref: "'Scenario_A'!$B$81", resources: [{ cost_ref: "'Shared_A'!$B$2", allocation_refs: Array.from({ length: limit }, (_, i) => "'Shared_A'!$C$" + (i + 2)) }], relocation: { total_ref: "'Shared_A'!$B$22", start_ref: "'Shared_A'!$B$23", end_ref: "'Shared_A'!$B$24" } };
 }
+test('formula plan covers thirty-two bodies without truncating monthly flows',()=>{
+ const plan=json(formulas.build(formulaConfig(32)));
+ const derived=new Set(['F','H','I','L','M','O','R']);const body=plan.patches.filter(p=>p.sheet==='Program_A'&&derived.has(p.range.replace(/\d/g,''))&&Number(p.range.replace(/\D/g,''))>=7&&Number(p.range.replace(/\D/g,''))<=38);
+ assert.equal(body.length,32*7);assert.ok(body.some(p=>p.range==='R38'));
+ const revenue=plan.patches.find(p=>p.sheet==='Scenario_A'&&p.range==='L8').formula;
+ assert.match(revenue,/\$H\$38/);assert.ok(plan.patches.every(p=>p.formula.length<50000));
+ assert.throws(()=>formulas.build(formulaConfig(33)),/program_dimensions/);
+});
 
 test('formula planner spans every native body and does not overwrite the fourteen input drivers', () => {
   const plan = json(formulas.build(formulaConfig()));

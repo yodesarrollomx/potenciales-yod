@@ -16,7 +16,7 @@ var PPPVolumesFormulas = (function () {
   }
   function build(config) {
     var program = q(config.program_name), scenario = q(config.scenario_name), first = config.first_row || 7, count = cell(config.count_ref), limit = config.max_volumes || 16, sep = config.separator === ';' ? ';' : ',';
-    if (!Number.isInteger(first) || first < 1 || !Number.isInteger(limit) || limit < 1 || limit > 16) fail('program_dimensions');
+    if (!Number.isInteger(first) || first < 1 || !Number.isInteger(limit) || limit < 1 || limit > 32) fail('program_dimensions');
     var metrics = config.metric_cells || {}, patches = [], resources = config.resources || [];
     var mode = config.allocation_mode_ref ? cell(config.allocation_mode_ref) : '"preserve"';
     if (resources.length && !config.allocation_mode_ref) fail('allocation_mode_reference_required');

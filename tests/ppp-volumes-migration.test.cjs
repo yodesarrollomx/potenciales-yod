@@ -56,6 +56,7 @@ function fixture({count = 3, capacity = count, failParity = false} = {}) {
   sourceProgram.getRange(7+capacity,2).setFormula('=SUM(F7:F' + (6+capacity) + ')');
   sourceProgram.getRange(9+capacity,2).setValues([[100]]);
   sourceScenario.getRange(2,2).setFormula("='Source_Program'!$B$" + (7+capacity));
+  sourceScenario.getRange(21,2).setFormula("='Source_Program'!E7");
   const metrics = ['hard','p.preViv','preventaEfectiva','p.eng','p.obra','landCash','closing','indirect','legal','p.imp','p.comision','units','resSell','buildFinish','totalMonths','p.desc','comRev','parkingRev','p.delivery','commission','sales','cont','cashCost','cashReconciliation','horizonPass'];
   metrics.forEach((key,i) => { sourceScenario.getRange(i+8,6).setValues([[key]]); sourceScenario.getRange(i+8,7).setFormula('=1'); });
   sourceScenario.getRange(127,35).setFormula('=0');
@@ -94,6 +95,34 @@ test('one-body native factory with capacity already sixteen executes the same pa
   assert.equal(f.book.getSheetByName('Target_Scenario').getRange('B2').getFormula(),"='Target_Program'!$B$23");
   assert.equal(f.book.getSheetByName('PA_synthetic_scenario').getRange(2,2).getValue(),"'Target_Program'!$B$25");
   assert.ok(f.book.getSheetByName('Target_Program').getRange('Y5').getFormula().includes('SUMPRODUCT'));
+});
+
+test('a separately authorized 32-body migration extends ranges and retains old source intact', () => {
+  const f=fixture({count:1,capacity:16});
+  f.sourceScenario.getRange(3,2).setFormula("=SUM('Source_Program'!$J$7:$J$22)");
+  f.sourceProgram.getRange(1,27).setFormula("=SUM('External'!$F$7:$F$22)+COUNTIF(A7:A22;\"A7:A22\")");
+  f.sourceProgram.getRange(2,27).setFormula("=OtherSource_Program!$F$7+\"'Source_Program'!$B$23\"");
+  f.manifest.max_volumes=32;
+  f.manifest.expected_source_hash=hash(PPPVolumes.stable([f.sourceProgram.getDataRange().getFormulas(),f.sourceScenario.getDataRange().getFormulas()]));
+  const before=clone([f.sourceProgram.getDataRange().getFormulas(),f.sourceScenario.getDataRange().getFormulas()]);
+  const result=f.store.migrate(f.ctx,f.manifest),program=f.book.getSheetByName('Target_Program'),scenario=f.book.getSheetByName('Target_Scenario'),allocation=f.book.getSheetByName('PA_synthetic_scenario');
+  assert.equal(result.ok,true);assert.equal(f.store.info(f.ctx.scenario_id).values[5],32);
+  assert.equal(program.getRange('B39').getFormula(),'=SUMIF($W$7:$W$38;TRUE;F7:F38)');
+  assert.equal(scenario.getRange('B2').getFormula(),"='Target_Program'!$B$39");
+  assert.equal(scenario.getRange('B3').getFormula(),"=SUM('Target_Program'!$J$7:$J$38)");
+  assert.equal(scenario.getRange('B21').getFormula(),"=IF('Volumenes_Indice'!$D$2<=1;'Target_Program'!$E$7;IFERROR(SUM('Target_Program'!$F$7:$F$38)/MAX(FILTER('Target_Program'!$D$7:$D$38;'Target_Program'!$W$7:$W$38));0))");
+  assert.equal(program.getRange('AA1').getFormula(),"=SUM('External'!$F$7:$F$22)+COUNTIF(A7:A38;\"A7:A22\")");
+  assert.equal(program.getRange('AA2').getFormula(),"=OtherSource_Program!$F$7+\"'Source_Program'!$B$23\"");
+  assert.ok(program.getRange('F38').getFormula().startsWith('='));
+  assert.equal(allocation.getRange(2,35).getValue(),'Shared foundation');
+  assert.equal(program.protections[0].ranges.length,32*14);
+  assert.deepEqual([f.sourceProgram.getDataRange().getFormulas(),f.sourceScenario.getDataRange().getFormulas()],before);
+});
+
+test('a multi-body source needs a separate review before a 32-body migration', () => {
+  const f=fixture({count:3,capacity:3});f.manifest.max_volumes=32;
+  assert.throws(()=>f.store.migrate(f.ctx,f.manifest),/multi_body_expansion_requires_review/);
+  assert.equal(f.book.copies,0);assert.equal(f.book.getSheetByName('Volumenes_Indice'),null);
 });
 
 test('native parity refusal leaves the owner migration non-writable and cannot be replayed as a second copy', () => {

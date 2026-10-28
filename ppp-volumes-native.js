@@ -11,7 +11,7 @@
  const rejectionErrors=['revision_conflict','active_driver_missing','protected_native_driver','native_formula_missing','native_formula_manifest_changed','native_geometry_conflict','native_horizon_conflict','shared_allocation_requires_reconciliation','volume_identity_conflict'];
  function stable(value){if(Array.isArray(value))return '['+value.map(stable).join(',')+']';if(object(value))return '{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+stable(value[key])).join(',')+'}';return JSON.stringify(value);}
  function capability(value){
-  if(!object(value)||value.schema!==2||value.read!==true||typeof value.write!=='boolean'||!Number.isInteger(value.max_volumes)||value.max_volumes<1||value.max_volumes>16||!Array.isArray(value.fields)||value.fields.length!==21)return null;
+  if(!object(value)||value.schema!==2||value.read!==true||typeof value.write!=='boolean'||!Number.isInteger(value.max_volumes)||value.max_volumes<1||value.max_volumes>32||!Array.isArray(value.fields)||value.fields.length!==21)return null;
   if(!Array.isArray(value.allocation_modes)||value.allocation_modes.length!==2||value.allocation_modes[0]!=='preserve'||value.allocation_modes[1]!=='built_area'||!Array.isArray(value.shared_resources)||value.shared_resources.length>128)return null;
   const resources=[],resourceIds=new Set();for(const resource of value.shared_resources){if(!object(resource)||Object.keys(resource).length!==2||!identifier(resource.id)||resourceIds.has(resource.id)||typeof resource.label!=='string'||!resource.label||resource.label!==resource.label.trim()||resource.label.length>160||/[\x00-\x1f]/.test(resource.label))return null;resourceIds.add(resource.id);resources.push({id:resource.id,label:resource.label});}
   const seen=new Set(),clean=[];
@@ -23,7 +23,7 @@
   return {schema:2,read:true,write:value.write,max_volumes:value.max_volumes,fields:clean,allocation_modes:['preserve','built_area'],shared_resources:resources};
  }
  function collection(value,maxVolumes=16,write=false){
-  if(!Number.isInteger(maxVolumes)||maxVolumes<1||maxVolumes>16||!object(value)||Object.keys(value).some(k=>!['schema','count','shared_allocation_mode','volumes'].includes(k))||value.schema!==2||!['preserve','built_area'].includes(value.shared_allocation_mode)||!Number.isInteger(value.count)||value.count<1||value.count>maxVolumes||!Array.isArray(value.volumes)||value.volumes.length<value.count||value.volumes.length>maxVolumes)throw Error('invalid_volume_collection');
+  if(!Number.isInteger(maxVolumes)||maxVolumes<1||maxVolumes>32||!object(value)||Object.keys(value).some(k=>!['schema','count','shared_allocation_mode','volumes'].includes(k))||value.schema!==2||!['preserve','built_area'].includes(value.shared_allocation_mode)||!Number.isInteger(value.count)||value.count<1||value.count>maxVolumes||!Array.isArray(value.volumes)||value.volumes.length<value.count||value.volumes.length>maxVolumes)throw Error('invalid_volume_collection');
   const seen=new Set(),schema=write?drivers:fields,keys=schema.map(f=>f.id),volumes=value.volumes.map(row=>{
    if(!object(row)||Object.keys(row).length!==2||!identifier(row.id)||seen.has(row.id)||!object(row.values)||Object.keys(row.values).length!==keys.length||Object.keys(row.values).some(k=>!keys.includes(k)))throw Error('invalid_volume_row');
    seen.add(row.id);const values={};
@@ -63,7 +63,8 @@
  async function rejection(response,payload,hash){
   const proof=response?.volume_rejection,keys=['request_id','caso_id','escenario_id','base_revision','actor','payload_hash','stage','write_attempted','error','rejected_at'];
   if(response?.ok!==false||response.error!=='operation_rejected'||!object(proof)||Object.keys(proof).length!==keys.length||Object.keys(proof).some(k=>!keys.includes(k))||proof.request_id!==payload.request_id||proof.caso_id!==payload.caso_id||proof.escenario_id!==payload.escenario_id||proof.base_revision!==payload.revision_esperada||typeof proof.actor!=='string'||!proof.actor||proof.actor.length>256||proof.stage!=='prewrite'||proof.write_attempted!==false||!rejectionErrors.includes(proof.error)||typeof proof.rejected_at!=='string'||!Number.isFinite(Date.parse(proof.rejected_at))||Date.parse(proof.rejected_at)>Date.now()+5000||typeof proof.payload_hash!=='string'||!/^[a-f0-9]{64}$/.test(proof.payload_hash)||typeof hash!=='function')throw Error('unconfirmed_volume_rejection');
-  const expected=await hash(stable({actor:proof.actor,caso_id:payload.caso_id,escenario_id:payload.escenario_id,base_revision:payload.revision_esperada,volumes:collection(payload.volumes,16,true)}));
+  // Rejection checks an already-sent request; it cannot authorize a write.
+  const expected=await hash(stable({actor:proof.actor,caso_id:payload.caso_id,escenario_id:payload.escenario_id,base_revision:payload.revision_esperada,volumes:collection(payload.volumes,32,true)}));
   if(expected!==proof.payload_hash)throw Error('unconfirmed_volume_rejection');
   return {ok:false,status:'rejected',error:'operation_rejected',request_id:payload.request_id,case_id:payload.caso_id,board_case_id:payload.caso_id,scenario_id:payload.escenario_id,base_revision:payload.revision_esperada,prewrite_rejection:JSON.parse(JSON.stringify(proof))};
  }

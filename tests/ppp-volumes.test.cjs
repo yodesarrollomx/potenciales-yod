@@ -3,6 +3,7 @@ const test=require('node:test'),assert=require('node:assert/strict');
 const api=require('../ppp-volumes.js'),fields=require('../ppp-volumes-native.js').fields;
 const copy=value=>JSON.parse(JSON.stringify(value));
 const context=(patch={})=>({verified:true,ready:true,model_type:'vertical',native_capability:{schema:2,read:true,write:true,max_volumes:16,fields:copy(fields),allocation_modes:['preserve','built_area'],shared_resources:[]},native_collection:{schema:2,count:1,shared_allocation_mode:'preserve',volumes:[{id:'volume-1',values:Object.fromEntries(fields.map(f=>[f.id,f.id==='name'?'Synthetic new body':null]))}]},case_id:'synthetic-case',scenario_id:'scenario-a',revision:'r1',scenario_name:'Synthetic A',...patch});
+test('capacity is bound to the native case rather than inferred from the project',()=>{const d=api.createDraft(context());assert.throws(()=>api.resizeDraft(d,30,16));const extended=api.resizeDraft(d,30,32);assert.equal(extended.count,30);assert.equal(extended.volumes.length,30);assert.throws(()=>api.resizeDraft(d,33,32));});
 function canonical(count=3){return{schema:2,count,shared_allocation_mode:'preserve',volumes:Array.from({length:count},(_,i)=>({id:'volume-'+(i+1),values:{...Object.fromEntries(fields.map(f=>[f.id,f.id==='name'?'Synthetic '+(i+1):null])),residential_levels:i+3,units_per_level:i+4,units:[12,20,30][i]??null,gross_area_m2:[1200,1900,2800][i]??null,construction_start_month:i*6,construction_duration_months:12}}))};}
 class Element{
  constructor(tag){this.tag=tag;this.children=[];this.parentNode=null;this.dataset={};this.attrs={};this.listeners={};this.hidden=false;this.value='';this._text='';this.classList={add(){}};}
@@ -46,7 +47,7 @@ test('only declared native derived values are summarized and missing quantities 
 });
 
 test('invalid quantities, counts, formula text and foreign identities cannot contaminate a proposal',()=>{
- const draft=api.createDraft(context());for(const count of [0,17,-1,1.5,'2',null])assert.throws(()=>api.resizeDraft(draft,count));
+ const draft=api.createDraft(context());for(const count of [0,33,-1,1.5,'2',null])assert.throws(()=>api.resizeDraft(draft,count));
  for(const[field,value]of [['residential_levels',0],['residential_levels',1.5],['units_per_level',-1],['footprint_m2',NaN],['footprint_m2',Infinity],['construction_start_month',-1],['construction_duration_months',0],['units_per_level','17'],['price',58000],['name','=IMPORTXML("https://synthetic.invalid")']])assert.throws(()=>api.updateVolume(draft,'volume-1',{[field]:value}));
  assert.throws(()=>api.updateVolume(draft,'missing',{units_per_level:1}));assert.deepEqual(draft,api.createDraft(context()));
 });

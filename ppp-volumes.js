@@ -2,7 +2,7 @@
    fourteen declared drivers can be edited. There is no financial engine here. */
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.PPPVolumes=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
  'use strict';
- const MAX_VOLUMES=16,clone=value=>JSON.parse(JSON.stringify(value));
+ const MAX_VOLUMES=32,clone=value=>JSON.parse(JSON.stringify(value));
  const FIELD_IDS=Object.freeze(['name','footprint_m2','open_courtyard_m2','residential_levels','units_per_level','units','private_area_per_unit_m2','private_residential_area_m2','built_residential_area_m2','commercial_ground_m2','ground_services_m2','covered_ground_m2','gross_area_m2','basement_area_m2','direct_cost','construction_start_month','construction_duration_months','construction_end_month','sales_start_month','presale_months','delivery_months']);
  const DERIVED_IDS=Object.freeze(['units','private_residential_area_m2','built_residential_area_m2','covered_ground_m2','gross_area_m2','direct_cost','construction_end_month']);
  const REJECTION_ERRORS=Object.freeze(['revision_conflict','active_driver_missing','protected_native_driver','native_formula_missing','native_formula_manifest_changed','native_geometry_conflict','native_horizon_conflict','shared_allocation_requires_reconciliation','volume_identity_conflict']);

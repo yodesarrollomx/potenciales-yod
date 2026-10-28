@@ -4,7 +4,7 @@
  */
 var PPPVolumes = (function () {
   'use strict';
-  var MAX = 16, OPS = 'Volumenes_Operaciones';
+  var MAX = 32, LEGACY_MAX = 16, OPS = 'Volumenes_Operaciones';
   var OP_HEADERS = ['request_id', 'caso_id', 'escenario_id', 'actor', 'base_revision', 'payload_hash', 'estado', 'result_revision', 'receipt_json', 'before_json', 'after_json', 'creado', 'actualizado'];
   // A:U of the native program. Limits below are transport limits, not planning law.
   var DEFINITIONS = [
@@ -83,6 +83,11 @@ var PPPVolumes = (function () {
   function createService(host) {
     ['authorize', 'revision', 'readModel', 'readCollection', 'sharedResources', 'writeDrivers', 'validateWrite', 'withLock', 'hash', 'audit', 'protectLedger', 'flush'].forEach(function (key) { if (typeof host[key] !== 'function') fault('missing_host_' + key); });
     function now() { return host.now ? host.now() : new Date().toISOString(); }
+    function capacity(ctx, scenario) {
+      var value = typeof host.capacity === 'function' ? host.capacity(ctx, scenario || ctx.scenario_id) : LEGACY_MAX;
+      if (!Number.isInteger(value) || value < 1 || value > MAX) fault('invalid_volume_capacity');
+      return value;
+    }
     function context(d, intent) {
       var ctx = host.authorize(d, intent);
       if (!ctx || !ctx.ss || !ctx.actor || ctx.caso_id !== d.caso_id || ctx.type !== 'VERTICAL' || !Array.isArray(ctx.scenarios) || ctx.scenarios.indexOf(d.escenario_id) < 0) fault('access_denied');
@@ -120,7 +125,7 @@ var PPPVolumes = (function () {
     function enrich(ctx, model) {
       if (!model || model.ok !== true || String(model.caso_id) !== ctx.caso_id) fault('invalid_model_readback');
       model.volumes_by_scenario = {};
-      ctx.scenarios.forEach(function (scenario) { var collection = host.readCollection(ctx, scenario); if (collection) model.volumes_by_scenario[scenario] = normalize(collection, true); });
+      ctx.scenarios.forEach(function (scenario) { var collection = host.readCollection(ctx, scenario); if (collection) { var normalized = normalize(collection, true), limit = capacity(ctx, scenario); if (normalized.count > limit || normalized.volumes.length > limit) fault('invalid_collection'); model.volumes_by_scenario[scenario] = normalized; } });
       var installed = !!model.volumes_by_scenario[ctx.scenario_id];
       model.capabilities = model.capabilities || {};
       var resources = host.sharedResources(ctx);
@@ -131,7 +136,7 @@ var PPPVolumes = (function () {
         if (ids[id] || typeof label !== 'string' || !label || label !== label.trim() || label.length > 160 || /[\x00-\x1f]/.test(label)) fault('invalid_shared_resources');
         ids[id] = true; return { id: id, label: label };
       });
-      model.capabilities.volumes = { schema: 2, read: installed, write: installed && ctx.can_write === true, max_volumes: MAX, fields: fields(), allocation_modes: ['preserve', 'built_area'], shared_resources: resources };
+      model.capabilities.volumes = { schema: 2, read: installed, write: installed && ctx.can_write === true, max_volumes: capacity(ctx), fields: fields(), allocation_modes: ['preserve', 'built_area'], shared_resources: resources };
       return model;
     }
     function response(ctx, receipt) {
@@ -163,7 +168,9 @@ var PPPVolumes = (function () {
     function write(d) { return guarded(function () {
       var id = requestIdentity(d), ctx = context(d, 'write');
       if (d.tipo_desarrollo !== 'VERTICAL' || typeof d.revision_esperada !== 'string' || !d.revision_esperada) fault('invalid_request');
-      var desired = normalize(d.volumes, false), payload = host.hash(stable({ actor: ctx.actor, caso_id: id.caso_id, escenario_id: id.escenario_id, base_revision: d.revision_esperada, volumes: desired })), old = opFind(ctx.ss, id, ctx.actor);
+      var desired = normalize(d.volumes, false);
+      var limit = capacity(ctx); if (desired.count > limit || desired.volumes.length > limit) fault('invalid_collection');
+      var payload = host.hash(stable({ actor: ctx.actor, caso_id: id.caso_id, escenario_id: id.escenario_id, base_revision: d.revision_esperada, volumes: desired })), old = opFind(ctx.ss, id, ctx.actor);
       if (old) {
         if (old.value[5] !== payload) fault('request_payload_mismatch');
         if (old.value[6] === 'confirmed') return response(ctx, JSON.parse(old.value[8]));

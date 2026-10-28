@@ -13,15 +13,15 @@ class Sheet{
   const take=source=>Array.from({length:height},(_,i)=>Array.from({length:width},(_,j)=>source[row+i-1]?.[column+j-1]??''));
   return{getValues:()=>take(this.data),getFormulas:()=>take(this.formulas),getValue:()=>this.data[row-1]?.[column-1]??'',setValues:()=>{this.writes++;throw Error('Unexpected non-atomic write');}};
  }
- getDataRange(){return this.getRange(1,1,Math.max(this.data.length,this.formulas.length,1),25);}
+ getDataRange(){return this.getRange(1,1,Math.max(this.data.length,this.formulas.length,1),Math.max(25,...this.data.map(r=>r.length),...this.formulas.map(r=>r.length)));}
 }
-function fixture(){
- const definitions=clone(PPPVolumes.fields()),programData=Array.from({length:22},()=>Array(25).fill('')),formulas=Array.from({length:22},()=>Array(25).fill(''));
- for(let i=0;i<16;i++)for(let col=0;col<21;col++)if(definitions[col].derived)formulas[i+6][col]='=1';
+function fixture(capacity=16){
+ const definitions=clone(PPPVolumes.fields()),programData=Array.from({length:6+capacity},()=>Array(25).fill('')),formulas=Array.from({length:6+capacity},()=>Array(25).fill(''));
+ for(let i=0;i<capacity;i++)for(let col=0;col<21;col++)if(definitions[col].derived)formulas[i+6][col]='=1';
  programData[5][24]=0;
  const native={schema:2,count:3,shared_allocation_mode:'preserve',volumes:Array.from({length:3},(_,i)=>({id:'body-'+(i+1),values:bodyValues('Body '+(i+1))}))};
  native.volumes.forEach((row,i)=>{definitions.forEach((field,col)=>{programData[i+6][col]=row.values[field.id];});programData[i+6][21]=row.id;});
- const program=new Sheet('Program_A',101,programData,formulas),scenario=new Sheet('Scenario_A',102,[['native']], [['=SUM(1)']]),allocation=new Sheet('PA_scenario_a',103,[Array(19).fill('heading'),['resource-a','native',0.5,0.3,0.2,...Array(13).fill(0),'Shared foundation']]),index=new Sheet('Volumenes_Indice',104,[headers.slice(),['scenario-a','Program_A','Scenario_A',3,3,16,'native-schema2','ready','Original','','preserve']]);
+ const program=new Sheet('Program_A',101,programData,formulas),scenario=new Sheet('Scenario_A',102,[['native']], [['=SUM(1)']]),allocation=new Sheet('PA_scenario_a',103,[Array(capacity+3).fill('heading'),['resource-a','native',0.5,0.3,0.2,...Array(capacity-3).fill(0),'Shared foundation']]),index=new Sheet('Volumenes_Indice',104,[headers.slice(),['scenario-a','Program_A','Scenario_A',3,3,capacity,'native-schema2','ready','Original','','preserve']]);
  const sheets=new Map([program,scenario,allocation,index].map(sheet=>[sheet.name,sheet])),atomic=[];
  const ss={getSheetByName:name=>sheets.get(name)||null,getId:()=> 'synthetic-book'};
  const hooks={ss,flush:()=>{},hash,atomicWrite:(id,requests)=>atomic.push({id,requests:clone(requests)})};
@@ -29,6 +29,13 @@ function fixture(){
  const store=PPPVolumesProgram.createStore(hooks),ctx={caso_id:'synthetic-case',scenario_id:'scenario-a',actor:'synthetic-actor'};
  return{store,ctx,native,desired:clone(PPPVolumes.project(native)),program,scenario,allocation,index,sheets,atomic,hooks,fingerprint};
 }
+
+test('preflight permits thirty independent bodies only with a 32-body native program',()=>{
+ const make=f=>{const rows=Array.from({length:30},(_,i)=>({id:'body-'+(i+1),values:bodyValues('Body '+(i+1))}));return clone(PPPVolumes.project({schema:2,count:30,shared_allocation_mode:'preserve',volumes:rows}));};
+ const old=fixture(),wide=fixture(32);assert.throws(()=>old.store.writePlan(old.ctx,make(old)),/invalid_volume_capacity/);assert.equal(old.atomic.length,0);
+ const plan=clone(wide.store.writePlan(wide.ctx,make(wide))),first=plan.find(r=>r.updateCells.range.sheetId===101&&r.updateCells.range.startColumnIndex===0).updateCells;
+ assert.equal(first.rows.length,30);assert.equal(first.range.endRowIndex,36);assert.equal(wide.store.sharedResources(wide.ctx)[0].label,'Shared foundation');assert.equal(wide.atomic.length,0);
+});
 
 test('native store preflight returns one atomic batch excluding all seven derived columns',()=>{
  const f=fixture(),before=clone(f.store.readCollection(f.ctx,'scenario-a')),plan=clone(f.store.writePlan(f.ctx,f.desired));

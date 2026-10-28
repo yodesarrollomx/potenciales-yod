@@ -14,11 +14,30 @@
   const metric = (label,value,unit='',help='') => ({label,value,unit,help});
   const section = (title, items, note='') => ({title,items,note});
   const areaReference = g => (valid(g.terrain) && g.terrain > 10000) || (valid(g.plate) && g.plate > 10000) ? 40000 : 10000;
+  // Read the inventory the native model actually provides. A partially
+  // populated expanded inventory must never masquerade as three types.
+  function mixDetails(r) {
+    const p=r.p||{}, expanded=r.mixExpanded===true||r.mixExpanded===1;
+    const items=expanded
+      ? [{label:'Estudio',units:r.mixEstudioUnits,size:p.m2Estudio,color:'#84cbb0'},
+         {label:'Loft / 1 rec.',units:r.mixLoftUnits,size:p.m2Loft,color:'#a9a4f5'},
+         {label:'Tipo adicional',units:r.mix1Units,size:p.m21Rec,color:'#e6a487'},
+         {label:'2 rec.',units:r.mix2Units,size:p.m22Rec,color:'#8ab8ff'},
+         {label:'3 rec.',units:r.mix3Units,size:p.m23Rec,color:'#D8AE5E'}]
+      : [{label:'Tipología A',units:r.mixLoftUnits,size:p.m2Loft,color:'#a9a4f5'},
+         {label:'Tipología B',units:r.mix2Units,size:p.m22Rec,color:'#8ab8ff'},
+         {label:'Tipología C',units:r.mix3Units,size:p.m23Rec,color:'#D8AE5E'}];
+    const populated=items.every(x=>valid(x.units)&&x.units>=0&&valid(x.size)&&x.size>=0);
+    const units=populated?items.reduce((s,x)=>s+x.units,0):null;
+    const computedArea=populated?items.reduce((s,x)=>s+x.units*x.size,0):null;
+    const complete=populated&&(!expanded||(valid(r.mixUnitsEntered)&&valid(r.mixAreaEntered)&&Math.abs(units-r.mixUnitsEntered)<1e-6&&Math.abs(computedArea-r.mixAreaEntered)<1e-6));
+    const area=complete?(expanded?r.mixAreaEntered:computedArea):null;
+    return {expanded,items,complete,area};
+  }
   // Sums/ratios below describe composition or reconciliation, never recalculate returns.
   function describe(r) {
     const p=r.p||{}, finance=sum(r.interest,r.feeDebt), total=sum(r.projectCost,finance);
-    const mixedArea = [r.mixLoftUnits,p.m2Loft,r.mix2Units,p.m22Rec,r.mix3Units,p.m23Rec].every(valid)
-      ? r.mixLoftUnits*p.m2Loft+r.mix2Units*p.m22Rec+r.mix3Units*p.m23Rec : null;
+    const mix=mixDetails(r),mixedArea=mix.area;
     const delta=valid(mixedArea)&&valid(r.resSell)?r.resSell-mixedArea:null;
     const area = n => num(n,1)+' m²', volume=n=>num(n,2)+' m³';
     return [
@@ -27,7 +46,7 @@
         graphic:{kind:'architecture',values:[ratio(r.floorPlate,p.terrain),ratio(r.height,p.altMax),ratio(r.vendTotal,sum(r.resGross,r.com))],labels:['Terreno','Volumen edificado'],floors:r.totalFloors,plate:r.floorPlate,terrain:p.terrain,height:r.height,efficiency:ratio(r.vendTotal,sum(r.resGross,r.com)),caption:'Volumen conceptual · superficies 0–'+num(areaReference({terrain:p.terrain,plate:r.floorPlate}))+' m² · altura 0–120 m. Huella / terreno '+percent(ratio(r.floorPlate,p.terrain))+' · altura / tope supuesto '+percent(ratio(r.height,p.altMax))+'. No representa la implantación por cuerpos.'},
         sections:[section('Terreno y capacidad',[metric('Terreno',area(p.terrain),'','lblTerreno'),metric('Huella máxima · COS '+percent(p.cos),area(r.footprint),'','lblHuella'),metric('Sobre rasante · CUS '+num(p.cus,2),area(r.gross),'','lblConstruible'),metric('Altura máxima supuesta',num(p.altMax,1)+' m')],'La envolvente indica capacidad; no acredita un permiso.'),
           section('Superficies',[metric('Vivienda vendible',area(r.resSell),'','lblVendViv'),metric('Locales vendibles',area(r.comSell),'','lblVendLoc'),metric('Vivienda bruta',area(r.resGross)),metric('Comercio bruto',area(r.com)),metric('Total vendible',area(r.vendTotal),'','lblVendTotal')]),
-          section('Mezcla de departamentos',[metric('Tipología A',num(r.mixLoftUnits)+' × '+area(p.m2Loft)),metric('Tipología B',num(r.mix2Units)+' × '+area(p.m22Rec)),metric('Tipología C',num(r.mix3Units)+' × '+area(p.m23Rec))],valid(delta)?'Área de la mezcla '+area(mixedArea)+' · diferencia '+area(delta):'Inventario pendiente de conciliar.'),
+          section('Mezcla de departamentos',mix.items.map(x=>metric(x.label,num(x.units)+' × '+area(x.size))),valid(delta)?'Área de la mezcla '+area(mixedArea)+' · diferencia '+area(delta):'Inventario pendiente de conciliar.'),
           section('Programa y estacionamiento',[metric('Depas por piso',num(p.deptosPiso)),metric('Cajones totales',num(r.spaces),'','lblCajonesTot'),metric('Amenidades',area(r.amenidades),'','lblAmenidades'),metric('Sótanos construidos',area(r.basementArea)),metric('Locales',num(p.localesPB)),metric('Sótanos',num(r.basements))])]},
       {main:money(r.sales)+' proyectados',sub:'Vivienda '+money(sum(r.presaleRev,r.postRev))+' · locales '+money(r.comRev),note:'',
         graphic:{kind:'sales',values:[ratio(sum(r.presaleRev,r.postRev),r.sales),ratio(r.comRev,r.sales),ratio(r.parkingRev,r.sales)],labels:['Vivienda','Locales','Cajones'],sales:r.sales,flows:r.flows,months:r.totalMonths,caption:'Participación en las ventas · escala 0–100%'},
@@ -69,7 +88,7 @@
       plate:valid(g.plate)?Math.sqrt(Math.max(0,Math.min(1,g.plate/reference)))*90:null,
       height:valid(g.height)?Math.max(0,Math.min(1,g.height/120))*125:null};
   }
-  if(typeof module==='object'&&module.exports)module.exports={describe,siteSummary,num,money,valid,architectureScale};
+  if(typeof module==='object'&&module.exports)module.exports={describe,siteSummary,num,money,valid,architectureScale,mixDetails};
   if(!root.document)return;
   const $=id=>document.getElementById(id), reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
   let mounted=false, active=null, originalY=0, records=[], lastContext='', renderToken=0, focusRequest=0;
@@ -338,5 +357,5 @@
     }else item.card.scrollIntoView({block:'start',behavior:'instant'});
     return navigationState(target);
   }
-  root.PPPView={mount,update,toggle,adjust,setCaseState,navigate,navigationState};
+  root.PPPView={mount,update,toggle,adjust,setCaseState,navigate,navigationState,mixDetails};
 })(typeof window==='undefined'?globalThis:window);
