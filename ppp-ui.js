@@ -13,6 +13,7 @@
   const E = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const metric = (label,value,unit='',help='') => ({label,value,unit,help});
   const section = (title, items, note='') => ({title,items,note});
+  const areaReference = g => (valid(g.terrain) && g.terrain > 10000) || (valid(g.plate) && g.plate > 10000) ? 40000 : 10000;
   // Sums/ratios below describe composition or reconciliation, never recalculate returns.
   function describe(r) {
     const p=r.p||{}, finance=sum(r.interest,r.feeDebt), total=sum(r.projectCost,finance);
@@ -23,7 +24,7 @@
     return [
       {main:area(p.terrain)+' de terreno', sub:num(r.units)+' depas · '+num(r.totalFloors)+' pisos · '+area(r.vendTotal)+' vendibles',
         note: valid(delta)&&Math.abs(delta)>.5 ? area(Math.abs(delta))+' por conciliar con la mezcla' : '',
-        graphic:{kind:'architecture',values:[ratio(r.floorPlate,p.terrain),ratio(r.height,p.altMax),ratio(r.vendTotal,sum(r.resGross,r.com))],labels:['Terreno','Volumen edificado'],floors:r.totalFloors,plate:r.floorPlate,terrain:p.terrain,height:r.height,efficiency:ratio(r.vendTotal,sum(r.resGross,r.com)),caption:'Volumen conceptual · superficies 0–10,000 m² · altura 0–120 m. Huella / terreno '+percent(ratio(r.floorPlate,p.terrain))+' · altura / tope supuesto '+percent(ratio(r.height,p.altMax))+'. No representa la implantación por cuerpos.'},
+        graphic:{kind:'architecture',values:[ratio(r.floorPlate,p.terrain),ratio(r.height,p.altMax),ratio(r.vendTotal,sum(r.resGross,r.com))],labels:['Terreno','Volumen edificado'],floors:r.totalFloors,plate:r.floorPlate,terrain:p.terrain,height:r.height,efficiency:ratio(r.vendTotal,sum(r.resGross,r.com)),caption:'Volumen conceptual · superficies 0–'+num(areaReference({terrain:p.terrain,plate:r.floorPlate}))+' m² · altura 0–120 m. Huella / terreno '+percent(ratio(r.floorPlate,p.terrain))+' · altura / tope supuesto '+percent(ratio(r.height,p.altMax))+'. No representa la implantación por cuerpos.'},
         sections:[section('Terreno y capacidad',[metric('Terreno',area(p.terrain),'','lblTerreno'),metric('Huella máxima · COS '+percent(p.cos),area(r.footprint),'','lblHuella'),metric('Sobre rasante · CUS '+num(p.cus,2),area(r.gross),'','lblConstruible'),metric('Altura máxima supuesta',num(p.altMax,1)+' m')],'La envolvente indica capacidad; no acredita un permiso.'),
           section('Superficies',[metric('Vivienda vendible',area(r.resSell),'','lblVendViv'),metric('Locales vendibles',area(r.comSell),'','lblVendLoc'),metric('Vivienda bruta',area(r.resGross)),metric('Comercio bruto',area(r.com)),metric('Total vendible',area(r.vendTotal),'','lblVendTotal')]),
           section('Mezcla de departamentos',[metric('Tipología A',num(r.mixLoftUnits)+' × '+area(p.m2Loft)),metric('Tipología B',num(r.mix2Units)+' × '+area(p.m22Rec)),metric('Tipología C',num(r.mix3Units)+' × '+area(p.m23Rec))],valid(delta)?'Área de la mezcla '+area(mixedArea)+' · diferencia '+area(delta):'Inventario pendiente de conciliar.'),
@@ -61,9 +62,11 @@
     return {grid:site.uso,rows,terrain,difference,conditions,pending};
   }
   function architectureScale(g){
-    // Fixed references preserve area and height differences across cases.
-    return {ground:valid(g.terrain)?Math.sqrt(Math.max(0,Math.min(1,g.terrain/10000)))*90:null,
-      plate:valid(g.plate)?Math.sqrt(Math.max(0,Math.min(1,g.plate/10000)))*90:null,
+    // Preserve the existing scale for smaller plots and use a shared larger
+    // reference for terrain and footprint when either exceeds 10,000 m².
+    const reference=areaReference(g);
+    return {ground:valid(g.terrain)?Math.sqrt(Math.max(0,Math.min(1,g.terrain/reference)))*90:null,
+      plate:valid(g.plate)?Math.sqrt(Math.max(0,Math.min(1,g.plate/reference)))*90:null,
       height:valid(g.height)?Math.max(0,Math.min(1,g.height/120))*125:null};
   }
   if(typeof module==='object'&&module.exports)module.exports={describe,siteSummary,num,money,valid,architectureScale};
