@@ -1,15 +1,15 @@
 {
-  "model_revision": "2026-10-27.ppp-capacidad-tipologias.1",
-  "proposal_id": "CHG-PPP-TERRENO-AMPLIADO-20261027",
-  "summary": "Ampliar el rango de superficie del planificador mixto a 40,000 m² y mostrar las superficies grandes con una referencia gráfica compartida de 40,000 m². Se conservan las entradas anteriores, los cálculos, los escenarios y los permisos. El rango de la interfaz no acredita cabida ni autorización urbanística.",
-  "components": [
-    "SYS-POTENCIALES",
-    "SYS-YOD-OS"
-  ],
-  "tests": [
-    "Comprobar el rango y el cálculo con 2,500, 20,000, 35,000 y 40,000 m² usando datos sintéticos.",
-    "Conservar el resto de controles, los identificadores y el motor existente; comprobar escalas y accesos.",
-    "Recorrer el DOM con transporte sintético en Chromium y WebKit y comprobar los archivos publicados en main."
-  ],
-  "rollback": "Revertir el cambio de frontend conservando libros, fórmulas, escenarios y recibos existentes."
+"model_revision": "2026-10-27.ppp-capacidad-tipologias.1",
+"proposal_id": "CHG-PPP-VOLUMENES-NATIVOS-20261020",
+"summary": "Mostrar el motivo real cuando la creación de un caso falla por supuestos fuera del rango de la plantilla o por un programa que no concilia con la mezcla, y liberar el reintento. Solo cambia mensajes y el manejo de dos códigos de error en la interfaz; no cambia cálculos, libros, escenarios ni permisos.",
+"components": [
+"SYS-POTENCIALES",
+"SYS-YOD-OS"
+],
+"tests": [
+"Simular respuestas del servidor con invalid_factory_inputs y native_factory_inputs_incoherent y comprobar que se muestra el motivo y que newCasePending se libera.",
+"Simular un error desconocido y comprobar que el aviso por confirmar incluye el código y no envía otra creación.",
+"Conservar el resto de controles, identificadores y el motor existente; comprobar escalas y accesos."
+],
+"rollback": "Revertir el cambio de frontend conservando libros, fórmulas, escenarios y recibos existentes."
 }
