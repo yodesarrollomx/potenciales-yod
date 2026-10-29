@@ -183,3 +183,10 @@ test('the shared policy is immutable receipt identity and resource metadata is w
 test('withdrawing the whole-resource policy confirmation retires a local seed review',async()=>{
  const ctx=seedContext();ctx.native_capability.shared_resources=[{id:'shared-a',label:'Synthetic infrastructure'}];const h=mounted(ctx,null,{mode:'seed',onReview:async request=>({ok:true,status:'reviewed',request_id:request.request_id,template_revision:request.context.revision,volumes:request.volumes})});const choice=h.field('Política de recursos compartidos'),confirm=h.field('Confirmo aplicar esta política a todos los recursos listados');choice.value='built_area';choice.emit('change');confirm.checked=true;confirm.emit('change');assert.equal(await h.view.save(),true);assert.equal(h.view.snapshotStatus().reviewed,true);confirm.checked=false;confirm.emit('change');assert.equal(h.view.snapshotStatus().reviewed,false);assert.equal(h.button('Usar este programa para crear el proyecto').disabled,true);h.view.dispose();
 });
+
+
+test('stage-managed calendar remains native read-only without changing the 21-field volume schema',()=>{
+ const managed=['construction_start_month','construction_duration_months','sales_start_month'];const h=mounted(context({native_collection:canonical(),managed_volume_fields:managed}));const before=copy(h.view.snapshot());
+ for(const id of managed){const input=h.field(fields.find(f=>f.id===id).label+' · volumen 1');assert.equal(input.readOnly,true);h.edit(id,999);assert.equal(h.view.snapshot().volumes[0].values[id],before.volumes[0].values[id]);}
+ assert.equal(h.field('Viviendas por planta · promedio · volumen 1').readOnly,false);assert.match(h.container.textContent,/Calendario calculado por etapas en Sheets/);assert.equal(api.validateFields(h.view.snapshot().fields).length,21);assert.equal(h.view.snapshotStatus().dirty,false);h.view.dispose();
+});
