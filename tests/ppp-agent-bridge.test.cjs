@@ -63,3 +63,13 @@ test('unknown model contracts retain identity without borrowing patrimonial sema
  }
  const {store}=setup();delete store.model.modelo_revision;assert.equal(bridge.snapshot(store).metadata,undefined);
 });
+
+test('shared board labels a verified inactive cap without converting zero or relaxing proposals',async()=>{
+ const model=structuredClone(require('./fixtures/patrimonial-native.json')),e=model.escenarios.find(e=>e.id===model.activo),s=model.estados[model.activo];
+ e.inputs.inCapRateMercado=0;e.inputs.inValorM2Zona=25000;s.porM2=true;s.p.capMercado=0;s.inactive_fields=['inCapRateMercado'];
+ const store=new Store({id:model.caso_id,get:()=>{},post:()=>{throw Error('must not write');}});store.load(model);const before=JSON.stringify(store.model),snapshot=bridge.snapshot(store);
+ assert.deepEqual(snapshot.metadata.inactive_fields,['inCapRateMercado']);assert.equal(snapshot.results.porM2,true);assert.equal(snapshot.results.capMercado,0);assert.equal(snapshot.metadata.result_units.capMercado,'ratio');assert.equal(snapshot.metadata.input_units.inCapRateMercado,'percent');assert.equal(snapshot.inputs.inCapRateMercado,0);assert.equal(JSON.stringify(store.model),before);
+ const p={request_id:'board-cap-synthetic',case_id:store.id,scenario_id:store.model.activo,revision:store.model.revision,cambios:[{campo:'inCapRateMercado',valor:0}]};
+ await assert.rejects(()=>bridge.apply(store,p),/campo_invalido/);assert.equal(store.job,null);assert.equal(store.dirty(),false);
+ delete s.inactive_fields;e.inputs.inCapRateMercado=8;s.p.capMercado=.08;store.load(model);assert.equal(bridge.snapshot(store).metadata.inactive_fields,undefined);
+});
