@@ -7,8 +7,13 @@ for(const change of ['credential','case','offline','writing','stages'])test('lat
 test('concurrent reads share one request; invalid model remains unconfirmed and can retry',async()=>{const f=fixture(),a=f.ctx.reloadSheetModel(),b=f.ctx.reloadSheetModel();assert.equal(f.counts().reads,1);f.settle({ok:false,error:'unavailable'});assert.equal(await a,false);assert.equal(await b,false);assert.equal(f.ctx.sheetFailure,true);assert.equal(f.ctx.volumeIdentity,null);const next=f.ctx.reloadSheetModel();f.settle({ok:true,caso_id:'synthetic',revision:'new'});assert.equal(await next,true);assert.equal(f.counts().reads,2);assert.equal(f.ctx.volumeIdentity.credential,'synthetic-credential');});
 
 for(const type of ['macrolotes','unifamiliar','residencial'])test(type+': an older case read cannot replace a newly opened capture',async()=>{
-  const page=fs.readFileSync(require('node:path').join(__dirname,'../'+type+'.html'),'utf8'),start=page.indexOf('  async function abrirPorId(id){'),end=page.indexOf('  async function abrirPorPalabra',start);let epoch=0,resolveRead,applied=0;
-  const context={intakeBoard:{readGuard(){const own=epoch;return()=>own===epoch;}},apiGet:()=>new Promise(resolve=>{resolveRead=resolve;}),aplicarCasoRemoto:()=>applied++,toast:()=>{}};vm.createContext(context);vm.runInContext(page.slice(start,end),context);
-  const stale=context.abrirPorId('old-case');epoch++;resolveRead({ok:true,caso:{caso_id:'old-case'}});await stale;assert.equal(applied,0);
+  const page=fs.readFileSync(require('node:path').join(__dirname,'../'+type+'.html'),'utf8'),start=page.indexOf('  async function abrirPorId(id){'),end=page.indexOf('  async function abrirPorPalabra',start),guard=require('../ppp-intake.js').createReadGuard();let resolveRead,applied=0;
+  const context={intakeBoard:{readGuard:()=>guard.capture()},apiGet:()=>new Promise(resolve=>{resolveRead=resolve;}),aplicarCasoRemoto:()=>applied++,toast:()=>{}};vm.createContext(context);vm.runInContext(page.slice(start,end),context);
+  const stale=context.abrirPorId('old-case');guard.invalidate();resolveRead({ok:true,caso:{caso_id:'old-case'}});await stale;assert.equal(applied,0);
   const selected=context.abrirPorId('intended-case');resolveRead({ok:true,caso:{caso_id:'intended-case'}});await selected;assert.equal(applied,1,'an intentional selection in the current view still opens');
+});
+for(const type of ['macrolotes','unifamiliar','residencial'])for(const order of [['A','B'],['B','A']])test(type+': the most recently selected case wins with completion order '+order.join(' → '),async()=>{
+  const page=fs.readFileSync(require('node:path').join(__dirname,'../'+type+'.html'),'utf8'),start=page.indexOf('  async function abrirPorId(id){'),end=page.indexOf('  async function abrirPorPalabra',start),guard=require('../ppp-intake.js').createReadGuard(),waiting={},applied=[];
+  const context={intakeBoard:{readGuard:()=>guard.capture()},apiGet:({id})=>new Promise(resolve=>{waiting[id]=resolve;}),aplicarCasoRemoto:caso=>{applied.push(caso.caso_id);guard.invalidate();},toast:()=>{}};vm.createContext(context);vm.runInContext(page.slice(start,end),context);
+  const requests={A:context.abrirPorId('A'),B:context.abrirPorId('B')};for(const id of order){waiting[id]({ok:true,caso:{caso_id:id}});await requests[id];}assert.deepEqual(applied,['B']);
 });

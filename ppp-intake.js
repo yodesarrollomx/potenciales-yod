@@ -34,6 +34,10 @@
       Promise.resolve().then(run).then(value=>finish(resolve,value),error=>finish(reject,error));
     });
   }
+  function createReadGuard(){
+    let epoch=0;
+    return {capture(){const own=++epoch;return()=>own===epoch;},invalidate(){epoch++;}};
+  }
   const normalizeType=type=>{const value=String(type||'').toLowerCase();return value==='mixto'?'vertical':value;};
   function modelFor(type){const model=models[normalizeType(type)];if(!model)throw Error('tipo_invalido');return model;}
   function parseNumber(value){
@@ -87,7 +91,7 @@
     };
   }
   const PREWRITE_ERRORS=['invalid_request','invalid_model_type','access_denied','invalid_identity','not_intake_case','revision_required','invalid_stage_plan','invalid_intake_payload','invalid_intake_schema','model_type_mismatch','invalid_nombre_caso','invalid_ubicacion','invalid_fuente','invalid_intake_inputs','unknown_intake_field','invalid_intake_quantity','required_intake_field','use_stage_operation','invalid_initial_stage','empty_intake_update','intake_refresh_failed','revision_conflict','intake_case_operation_pending'];
-  const SAFE_ERRORS=new Set([...PREWRITE_ERRORS,'request_timeout','receipt_not_found','lock_busy','operation_pending','request_payload_mismatch','intake_readback_mismatch','native_write_rejected','recibo_no_disponible','creacion_por_confirmar','sin_confirmacion','clave','revocado','expirado','board','admin','tipo','intake_not_installed']);
+  const SAFE_ERRORS=new Set([...PREWRITE_ERRORS,'request_timeout','receipt_not_found','lock_busy','ocupado','operation_pending','request_payload_mismatch','intake_readback_mismatch','native_write_rejected','recibo_no_disponible','creacion_por_confirmar','sin_confirmacion','clave','revocado','expirado','board','admin','tipo','intake_not_installed']);
   const safeError=value=>typeof value==='string'&&SAFE_ERRORS.has(value)?value:'sin_confirmacion';
   function diagnosticText(state){
     if(!['error','uncertain'].includes(state?.status)||typeof state.request_id!=='string'||!/^[-A-Za-z0-9_.:]{1,256}$/.test(state.request_id))return '';
@@ -176,7 +180,7 @@
   function mountBoard({type,controls,adapter=null,onStart=()=>{},onOpen=()=>{},onExit=()=>{},mountStages=true,doc=globalThis.document,win=globalThis.window,storage=win.localStorage,getIdentity=()=>win.localStorage.getItem('pyod_clave_v1')||''}){
     type=normalizeType(type);modelFor(type);
     const main=doc.querySelector('main.container');if(!main)return null;
-    let draft=null,form=null,opening=false,active=false,banner=null,key=null,disposed=false,epoch=0,viewEpoch=0,readingNotice=null;
+    let draft=null,form=null,opening=false,active=false,banner=null,key=null,disposed=false,epoch=0,readingNotice=null;const viewGuard=createReadGuard();
     let receipt=null,pending={},job=null,busy=false,saveError='',saveTimer=null,writeEpoch=0;
     let stageEditor=null,stageHost=null,stageOperation=false,stageRefreshing=false,stagePending=false,stageJob=null,recoveredStage=false,leaving=false;
     let identity=getIdentity();
@@ -197,7 +201,7 @@
       const reload=doc.createElement('a');reload.href=win.location.href;reload.textContent='Volver a cargar';readingNotice.append(reload);host.append(readingNotice);
     }
     function clearReading(){doc.body.classList.remove('ppp-intake-reading');readingNotice?.remove();readingNotice=null;}
-    function readGuard(){const observed=viewEpoch;return()=>!disposed&&observed===viewEpoch;}
+    function readGuard(){const current=viewGuard.capture();return()=>!disposed&&current();}
     const dangerous='#btnWhats,#btnGuardar,#btnPropuesta,#gGuardarSolo,#gGuardarEnviar,#refreshJson,#applyJson,#exportJson,.preset-casa,.gate-mode,.rep-btn,.land-mode,#btnSoloLotes,#escBar button,[data-operation]';
     function persist(){if(!active||!draft||!key||identity!==getIdentity())return;try{
       if(receipt){storage.removeItem(key);storage.setItem(key+':case:'+receipt.caso_id,JSON.stringify({schema:'ppp-intake-pending-v1',model_type:type,caso_id:receipt.caso_id,revision:receipt.revision,job,pending,stage_job:stageJob}));}
@@ -240,7 +244,7 @@
     }
     function stageState(state){if(leaving||!receipt)return;stagePending=!!state.pending;if(!state.pending&&!state.busy&&!recoveredStage)stageJob=null;syncStageLock();persist();}
     function start(result){
-      viewEpoch++;clearReading();
+      viewGuard.invalidate();clearReading();
       leaving=false;
       receipt=result.status==='confirmed'?validateRead(result,{type}):null;pending={};job=null;busy=false;saveError='';writeEpoch++;
       active=true;opening=false;draft=copy(result.draft);doc.body.classList.remove('ppp-intake-opening');doc.body.classList.add('ppp-intake-capture');
@@ -265,7 +269,7 @@
     function captureInput(event){updateInput(event.target);paint();}
     function closeForm(){form?.destroy();form=null;opening=false;doc.body.classList.remove('ppp-intake-opening');}
     async function open(){
-      if(opening||disposed||stageLocked()||active&&!editable())return;checkIdentity();viewEpoch++;clearReading();onOpen();opening=true;const openingIdentity=identity;doc.body.classList.add('ppp-intake-opening');await scopeReady;
+      if(opening||disposed||stageLocked()||active&&!editable())return;checkIdentity();viewGuard.invalidate();clearReading();onOpen();opening=true;const openingIdentity=identity;doc.body.classList.add('ppp-intake-opening');await scopeReady;
       if(disposed||openingIdentity!==getIdentity())return;
       let prior=active?draft:null;
       if(!prior&&key){try{const saved=JSON.parse(storage.getItem(key)||'null');if(saved?.schema==='ppp-intake-v1'&&saved.model_type===type&&saved.inputs&&typeof saved.inputs==='object'&&!Array.isArray(saved.inputs)){
@@ -291,7 +295,7 @@
       host.scrollIntoView({block:'start'});
     }
     function deactivate(){
-      viewEpoch++;clearReading();
+      viewGuard.invalidate();clearReading();
       writeEpoch++;win.clearTimeout(saveTimer);receipt=null;pending={};job=null;busy=false;saveError='';
       stageEditor?.dispose();stageEditor=null;stageHost?.remove();stageHost=null;stageOperation=false;stageRefreshing=false;stagePending=false;stageJob=null;recoveredStage=false;
       closeForm();active=false;draft=null;doc.body.classList.remove('ppp-intake-capture');banner?.remove();banner=null;
@@ -400,5 +404,5 @@
     win.addEventListener('storage',checkIdentity);win.addEventListener('focus',checkIdentity);win.addEventListener('pagehide',leavePage);win.addEventListener('pageshow',resumePage);const identityTimer=win.setInterval(checkIdentity,1000);
     return {get active(){return active;},get blocking(){return active||opening;},get draft(){return draft?copy(draft):null;},readGuard,open,paint,persist,flush,checkSave,acceptRead,stageContext,saveStages,deactivate,destroy(){disposed=true;epoch++;deactivate();win.clearInterval(identityTimer);win.removeEventListener('storage',checkIdentity);win.removeEventListener('focus',checkIdentity);win.removeEventListener('pagehide',leavePage);win.removeEventListener('pageshow',resumePage);doc.removeEventListener('click',preventAction,true);host.remove();}};
   }
-  return {REQUEST_TIMEOUT_MS,boundedRequest,PREWRITE_ERRORS,prewriteRejected,safeError,diagnosticText,models,normalizeType,modelFor,parseNumber,validate,boardPath,validateRead,nativeAdapter,createController,mount,mountBoard};
+  return {REQUEST_TIMEOUT_MS,boundedRequest,createReadGuard,PREWRITE_ERRORS,prewriteRejected,safeError,diagnosticText,models,normalizeType,modelFor,parseNumber,validate,boardPath,validateRead,nativeAdapter,createController,mount,mountBoard};
 });

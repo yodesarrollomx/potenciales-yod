@@ -5,3 +5,5 @@
 .pi-stage-link{display:inline-flex;min-height:36px;align-items:center;margin-top:6px;padding:6px 10px;border:1px solid var(--border,#d8cdb6);border-radius:7px;background:transparent;color:inherit;font:600 12px system-ui;cursor:pointer}
 
 .ppp-intake-reading main.container,.ppp-intake-reading .sticky-header,.ppp-intake-reading .ppp-hud,.ppp-intake-reading #patrimonialNative,.ppp-intake-capture .sticky-header,.ppp-intake-capture .ppp-hud,.ppp-intake-capture #escBar,.ppp-intake-capture #pppVersiones,.ppp-intake-capture .gate-agua{display:none!important}
+
+.ppp-intake-opening .ppp-hud,.ppp-intake-opening #escBar,.ppp-intake-opening #pppVersiones,.ppp-intake-opening .gate-agua{display:none!important}
