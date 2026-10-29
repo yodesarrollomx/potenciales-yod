@@ -1,24 +1,23 @@
 {
   "model_revision": "2026-10-29.ppp-read-validation.1",
-  "proposal_id": "CHG-PPP-READ-VALIDATION-20261029",
-  "summary": "Conservar rechazo explícito board, error de validación tipado y categorías servidor/timeout/red durante la apertura exacta. Mostrar sólo códigos, motivos e identificadores permitidos; no publicar payload, cantidades, fórmulas, credenciales o mensajes internos. Una validación del modelo no se reintenta automáticamente. Mantener lectura exacta, tres intentos transitorios, sesión y descarte de respuestas tardías. Alcance causal de lectura: aceptar cap rate cero como campo no aplicado únicamente con marcador servidor inactive_fields exacto y cuatro condiciones coherentes de valuación por m². Presentar No aplicado; mantener cero original, fórmulas, Campos y controles de escritura.",
+  "proposal_id": "CHG-PPP-FICHA-ETAPAS-20261029",
+  "summary": "Propuesta autorizada de ficha mínima común para los cinco motores PPP, apertura del tablero normal y edición conversada de etapas con datos/fórmulas nativas en Sheets y coherencia por modificación. Preserva identidad, escenarios, permisos y recibos; implementación y despliegue se acreditan por separado. Se conservan los errores tipados de apertura y la señal de cap inactivo ya integrados en main.",
   "components": [
     "SYS-POTENCIALES",
     "GAS-PORTERO",
-    "SVC-AUTON-CLOUD",
-    "SHEET-PORTERO"
+    "SHEET-PORTERO",
+    "SHEET-PPP-MODELOS",
+    "SYS-YOD-OS",
+    "SYS-DESPACHO-3D",
+    "SVC-AUTON-CLOUD"
   ],
   "tests": [
-    "Rechazo board no autentica ni aplica modelo ni repite automáticamente.",
-    "Validación tipada preserva exclusivamente code/field_id/scenario_id/reason permitidos; no repite ni muestra valores internos.",
-    "Servidor, HTTP, timeout y red producen avisos diferentes y acotados.",
-    "Corregir la fuente y pulsar reconectar relee el mismo caso; no altera sesión ni cálculos.",
-    "Conservar descarte por generación, revocación y presupuesto de reintentos.",
-    "Cap cero sin marcador coherente no se acepta; modo cap y otras cantidades fuera de rango siguen rechazados.",
-    "Marcador exige valor por m² positivo, porM2 true, cap ingresado cero y cap calculado cero; no admite otros campos ni duplicados.",
-    "Las tarjetas y el editor muestran No aplicado sin sustituir la cantidad; los escritores rechazan cap cero y nullable permanece false.",
-    "Metadatos del puente conservan inactive_fields y porM2/capMercado leídos del mismo estado, sin convertir cantidades.",
-    "CI existente ejecuta Chromium y WebKit a1280/390px con errores tipados, reconexión y campos inactivos en tarjetas/tablero; cero escrituras de negocio."
+    "FICHA-5/PANEL: recorrer los cinco HTML con datos sintéticos, abrir tablero nativo y paneles en escritorio/móvil sin perder accesos, documentos ni escenarios.",
+    "ETAPA-1/INTENCION-3X12: alta compatible con una etapa; caso existente conserva etapas; texto final 3 etapas de 12 meses comparte ruta con dictado/voz y no aplica negaciones ni audio provisional.",
+    "COHERENCIA: comparar inventario, áreas, recursos únicos, calendario completo y flujos en fixtures y fórmulas nativas aisladas; no aceptar cálculo financiero paralelo.",
+    "CONCURRENCIA/CONFIRMADO: permisos, revisión obsoleta, cambio de caso/usuario, duplicado, ACK perdido y recibo exacto sin repetir escrituras inciertas.",
+    "ENTREGA: pruebas locales, CI, Pages, versión existente de GAS y lectura final se registran por separado; sin POST de pruebas a producción.",
+    "Apertura Patrimonial: conservar rechazo tipado, diagnóstico y cap inactivo en las condiciones estrictas ya integradas."
   ],
-  "rollback": "Revertir únicamente clasificación y presentación del error; conservar libros, fórmulas, valores, permisos y escenarios."
+  "rollback": "Deshabilitar sólo la capacidad nueva de etapas y revertir consumidores/handlers mediante commits y la versión previa de la misma implementación GAS. Conservar casos, escenarios, etapas, recibos, fórmulas, ACL e históricos; no restaurar libros completos ni borrar registros."
 }

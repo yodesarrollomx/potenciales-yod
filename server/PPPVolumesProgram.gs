@@ -38,12 +38,20 @@ var PPPVolumesProgram = (function () {
       if (!entry || entry.values[7] !== 'ready') fail('program_missing');
       var before = readCollection(ctx, ctx.scenario_id);
       if (desired.volumes.length < before.volumes.length || before.volumes.some(function (v, i) { return desired.volumes[i].id !== v.id; })) fail('volume_identity_conflict');
+      var stageStore = typeof hooks.stages === 'function' ? hooks.stages() : null;
+      var managedCalendar = !!(stageStore && stageStore.calendarOwned(ctx));
+      if (managedCalendar) {
+        try { stageStore.assertVolumeEdit(ctx, before, desired); }
+        catch (stageError) { fail(stageError.code === 'stage_volume_extension_requires_review' ? 'volume_identity_conflict' : 'protected_native_driver'); }
+      }
       if (hooks.hash(PPPVolumes.stable(formulaMaterial(entry))) !== entry.values[9]) fail('native_formula_manifest_changed');
       var program = ss.getSheetByName(String(entry.values[1])), defs = PPPVolumes.fields(), formulas = program.getRange(7, 1, 16, 21).getFormulas();
       // Validate ALL destinations before the first write. A formerly editable
       // input turned into a native formula is no longer a client destination.
       desired.volumes.forEach(function (row, i) { defs.forEach(function (d, j) {
-        if (d.writable && formulas[i][j]) fail('protected_native_driver');
+        var calendarFormula = managedCalendar && ['construction_start_month', 'construction_duration_months', 'sales_start_month'].indexOf(d.id) >= 0;
+        if (d.writable && formulas[i][j] && !calendarFormula) fail('protected_native_driver');
+        if (calendarFormula && !formulas[i][j]) fail('native_formula_missing');
         if (d.derived && !formulas[i][j]) fail('native_formula_missing');
         if (i < desired.count && d.writable && row.values[d.id] === null) fail('active_driver_missing');
       }); });
@@ -83,7 +91,10 @@ var PPPVolumesProgram = (function () {
       }
       // Contiguous driver blocks exclude every protected derived column. All
       // blocks, identities and count commit in ONE Sheets batchUpdate request.
-      [[1, 5], [7, 1], [10, 2], [14, 1], [16, 2], [19, 3]].forEach(function (block) {
+      // Native stage formulas own P/Q/S. Other volume inputs remain editable;
+      // neither a body save nor a count change may overwrite the calendar.
+      var driverBlocks = [[1, 5], [7, 1], [10, 2], [14, 1]].concat(managedCalendar ? [[20, 2]] : [[16, 2], [19, 3]]);
+      driverBlocks.forEach(function (block) {
         var matrix = desired.volumes.map(function (row) { return defs.slice(block[0] - 1, block[0] - 1 + block[1]).map(function (d) { return row.values[d.id] === null ? '' : row.values[d.id]; }); });
         update(program, 7, block[0], matrix);
       });

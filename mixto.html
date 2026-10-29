@@ -305,6 +305,8 @@
 </style>
 <link rel="stylesheet" href="ppp-ui.css?v=20261001-5">
 <link rel="stylesheet" href="ppp-volumes.css?v=20261020-native4">
+<link rel="stylesheet" href="ppp-stages.css?v=20261029">
+<link rel="stylesheet" href="ppp-intake.css?v=20261029">
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -369,6 +371,7 @@
   </section>
 
 <section class="seguimiento on"><details><summary>Datos exactos del documento · opcionales por escenario</summary><p class="note">Conserva el modo paramétrico dejando los valores en 0. El presupuesto consolidado reemplaza las partidas porcentuales; no se suma dos veces. Las condiciones de deuda y reparto siguen siendo supuestos del escenario.</p><div class="input-group"><div class="input-header"><label for="inInventarioExplicito">Inventario explícito · 0 paramétrico / 1 documento</label><div class="val-display" data-input="inInventarioExplicito">0</div></div><input type="range" id="inInventarioExplicito" min="0" max="1" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inUnidadesA">Unidades tipología A</label><div class="val-display" data-input="inUnidadesA">0</div></div><input type="range" id="inUnidadesA" min="0" max="1000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inUnidadesB">Unidades tipología B</label><div class="val-display" data-input="inUnidadesB">0</div></div><input type="range" id="inUnidadesB" min="0" max="1000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inUnidadesC">Unidades tipología C</label><div class="val-display" data-input="inUnidadesC">0</div></div><input type="range" id="inUnidadesC" min="0" max="1000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inComRentableExacto">Comercial rentable del documento (m²) · 0 paramétrico</label><div class="val-display" data-input="inComRentableExacto">0</div></div><input type="range" id="inComRentableExacto" min="0" max="10000" step="0.01" value="0"></div><div class="input-group"><div class="input-header"><label for="inCajonesResidExactos">Cajones residenciales del documento · 0 paramétrico</label><div class="val-display" data-input="inCajonesResidExactos">0</div></div><input type="range" id="inCajonesResidExactos" min="0" max="2000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inSotanoAreaExacta">Área construida de sótano (m²) · 0 paramétrico</label><div class="val-display" data-input="inSotanoAreaExacta">0</div></div><input type="range" id="inSotanoAreaExacta" min="0" max="100000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inObraDirectaTotal">Obra directa consolidada ($) · 0 paramétrico</label><div class="val-display" data-input="inObraDirectaTotal">0</div></div><input type="range" id="inObraDirectaTotal" min="0" max="2000000000" step="1" value="0"></div><div class="input-group"><div class="input-header"><label for="inIndirectosTotal">Indirectos consolidados ($) · 0 paramétrico</label><div class="val-display" data-input="inIndirectosTotal">0</div></div><input type="range" id="inIndirectosTotal" min="0" max="500000000" step="1" value="0"></div></details></section><section class="seguimiento on" id="mercadoDocumento" hidden></section>
+<section id="pppStages"></section>
 <section id="pppVolumes" hidden></section>
 <section id="pppSeedPanel" hidden><p id="pppSeedCaptured" class="note" role="status"></p><section id="pppSeedEditor" hidden></section></section>
   <section class="hero">
@@ -545,6 +548,8 @@
 <script src="ppp-case-loader.js?v=20261001-5"></script>
 <script src="ppp-volumes.js?v=20261020-native4"></script>
 <script src="ppp-volumes-native.js?v=20261020-native4"></script>
+<script src="ppp-stages.js?v=20261029"></script>
+<script src="ppp-intake.js?v=20261029"></script>
 <script src="ppp-version-bridge.js?v=20261020-native2"></script>
 <script>
 (() => {
@@ -557,7 +562,7 @@
   let caso={caso_id:'',palabra:'',correo:'',nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};
   let cfgBoard={}, casosCache=[], modoLocal=!cloudOn, restoredDraft=false, legacySavedInputs=null;
 
-  const $=id=>document.getElementById(id); const controls=[...document.querySelectorAll('input[type=range]')]; let state=null;
+  const $=id=>document.getElementById(id); const controls=[...document.querySelectorAll('input[type=range]')]; let state=null,intakeBoard=null;
   const fmtN=n=>Math.round(n||0).toLocaleString('en-US'); const fmtM=n=>'$'+((n||0)/1e6).toFixed(1)+' M'; const fmtMoney=n=>'$'+Math.round(n||0).toLocaleString('en-US'); const fmtK=n=>'$'+((n||0)/1000).toFixed(1)+'k'; const pct=(n,d=1)=>Number(n||0).toFixed(d)+'%'; const sM=n=>(n<0?'−':'+')+fmtM(Math.abs(n||0));
   // Prellenado oficial del caso de referencia (JSON torre-ruisenor v3 · 2026-07-09)
   const PRELLENADO={inTerreno:2500,inCOS:70,inCUS:6,inCom:250,inEfiViv:90,inM2Depto:93,inMixLoft:35,inM2Loft:60,inMix2Rec:20,inM22Rec:90,inMix3Rec:45,inM23Rec:120,inEfiCom:85,inDeptosPiso:12,inLocalesPB:5,inHabDepto:3.5,inAltPB:4.5,inAltViv:3.5,inAltMax:60,inCobSotano:100,inAltSotano:3.2,inAreaVerdePct:20,inM2Cajon:35,inM2ComCajon:40,inPreViv:58000,inDescPrev:4,inPreCom:60000,inEng:30,inObra:40,inPreventa:75,inMesesPreventa:18,inMesesEntrega:18,inPrecioCajon:320000,inCostRas:24000,inCostSot:17500,inInd:7,inImp:5,inCierreTierra:3,inLegal:2,inComision:5,inInicioObra:12,inMesesObra:36,inPIK:12,inTierraUSD:500,inTC:18.5,inVel:80,inAporteTierra:100,inEquity:10000000,inMaxDeuda:305000000,inLTC:60,inMinPreventaObra:15,inFeeDeuda:1.5,inPref:20,inResidualDueno:50,inTirObjetivo:25};
@@ -644,6 +649,7 @@
   // Only a fresh authenticated native model enables canonical volume quantities.
   // URL flags and restored browser copies never grant write capability.
   let volumeIdentity=null,volumeOperation=null,volumeEditorState={dirty:false,pending:false};
+  let stageEditor=null,stageOperation=null;
   let seedTemplate=null,seedReview=null,seedEditor=null,seedEpoch=0,seedLoading=false,newCasePending=null;
   function volumeContext(){
     if(!volumeIdentity||!clave||volumeIdentity.credential!==clave||modoLocal||caseSelection||sheetBusy||sheetPending||sheetFailure||sheetNeedsRefresh||volumeIdentity.case_id!==caso.caso_id||!window.PPPCaseLoader.validModel(sheetModel,caso.caso_id)||!escGet(escActivo))return null;
@@ -651,9 +657,9 @@
     let nativeCollection=null;
     try{if(sheetModel.volumes_by_scenario?.[escActivo]!==undefined)nativeCollection=window.PPPVolumesNative.collection(sheetModel.volumes_by_scenario[escActivo],cap?.max_volumes||16);}catch{return null;}
     if(!nativeCollection)cap=null;
-    return {verified:true,ready:true,model_type:'vertical',case_id:caso.caso_id,project_name:volumeIdentity.project_name,scenario_id:escActivo,scenario_name:escGet(escActivo).nombre,revision:sheetModel.revision,native_collection:nativeCollection,native_capability:cap};
+    return {verified:true,ready:true,model_type:'vertical',case_id:caso.caso_id,project_name:volumeIdentity.project_name,scenario_id:escActivo,scenario_name:escGet(escActivo).nombre,revision:sheetModel.revision,native_collection:nativeCollection,native_capability:cap,managed_volume_fields:sheetModel.capabilities?.stages?.managed_volume_fields||[]};
   }
-  function syncVolumes(){const context=volumeContext();if(context)volumeEditor.setContext(context);else if(volumeIdentity&&clave&&!modoLocal&&(caseSelection?.status==='loading'||sheetBusy||sheetPending))volumeEditor.suspend();else volumeEditor.revoke();}
+  function syncVolumes(){if(stageEditor&&!stageOperation)stageEditor.setContext(stageContext());const context=volumeContext();if(context)volumeEditor.setContext(context);else if(volumeIdentity&&clave&&!modoLocal&&(caseSelection?.status==='loading'||sheetBusy||sheetPending))volumeEditor.suspend();else volumeEditor.revoke();}
   async function saveNativeVolumes({context,volumes,request_id,reconcile=false}){
     const adapter=window.PPPVolumesNative,source=volumeContext();
     if(!source||source.case_id!==context?.case_id||source.scenario_id!==context?.scenario_id||!reconcile&&source.revision!==context?.revision||reconcile&&!source.native_capability?.read)return {ok:false,error:'volumes_unavailable',request_id};
@@ -693,6 +699,30 @@
       throw error;
     }finally{if(volumeIdentity===operation.identity&&caso.caso_id===payload.caso_id){sheetBusy=false;syncVolumes();versionBridge.publish();}}
   }
+  function stageContext(){
+    if(!volumeIdentity||!clave||volumeIdentity.credential!==clave||modoLocal||caseSelection||sheetPending||sheetFailure||sheetNeedsRefresh||volumeOperation||volumeIdentity.case_id!==caso.caso_id||!window.PPPCaseLoader.validModel(sheetModel,caso.caso_id))return null;
+    return {verified:true,ready:!sheetBusy||!!stageOperation,model_type:'vertical',case_id:caso.caso_id,scenario_id:escActivo,revision:sheetModel.revision,native_capability:sheetModel.capabilities?.stages,native_collection:sheetModel.stages_by_scenario?.[escActivo],native_checks:sheetModel.stage_checks_by_scenario?.[escActivo],native_calculated:sheetModel.stage_calculated_by_scenario?.[escActivo]};
+  }
+  async function saveNativeStages(payload,{reconcile=false}={}){
+    const context=stageContext();
+    if(!context||context.case_id!==payload.caso_id||context.scenario_id!==payload.escenario_id||!reconcile&&context.revision!==payload.revision_esperada)throw Error('stage_context_changed');
+    if(stageOperation&&JSON.stringify(stageOperation.payload)!==JSON.stringify(payload))throw Error('stage_operation_pending');
+    const operation=stageOperation||{payload,credential:clave,identity:volumeIdentity,attempted:reconcile};stageOperation=operation;
+    const current=()=>stageOperation===operation&&volumeIdentity===operation.identity&&clave===operation.credential&&!modoLocal&&!caseSelection&&caso.caso_id===payload.caso_id&&escActivo===payload.escenario_id;
+    sheetBusy=true;sheetStatus('Guardando etapas y comprobando Sheets…');
+    let timer;
+    try{
+      const read=operation.attempted;operation.attempted=true;
+      const model=await Promise.race([read?apiGet({recurso:'sheet-stages-receipt',caso_id:payload.caso_id,escenario_id:payload.escenario_id,request_id:payload.request_id}):apiPost(payload),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('stage_response_timeout')),60000);})]);
+      if(!current())throw Error('stage_context_changed');
+      if(model?.ok===false&&model.stage_rejection){await window.PPPStages.rejection(model,payload,async text=>{const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return [...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');});stageOperation=null;return model;}
+      const ack=window.PPPStages.receipt(model,payload,window.PPPCaseLoader.validModel);
+      if(!acceptSheetModel(model,payload.escenario_id))throw Error('invalid_native_model');
+      stageOperation=null;sheetStatus(ack.calculated?'Etapas guardadas · cálculo de Sheets comprobado':'Etapas guardadas · comprobaciones pendientes');
+      return model;
+    }catch(error){if(current())sheetStatus('Etapas por confirmar · comprueba la misma solicitud');throw error;}
+    finally{clearTimeout(timer);if(volumeIdentity===operation.identity&&caso.caso_id===payload.caso_id){sheetBusy=false;syncVolumes();versionBridge.publish();}}
+  }
   function sheetStatus(message){const d=$('syncDot');if(d)d.textContent=message;const s=$('sheetEstado');if(s)s.textContent=message;}
   function acceptSheetModel(m,selected=escActivo,keepInputs=false){
     if(!window.PPPCaseLoader.validModel(m,caso.caso_id)){sheetFailure=true;volumeEditor.setContext(null);sheetStatus('Respuesta de Sheets incompleta · se conserva el modelo anterior');return false;}
@@ -707,14 +737,14 @@
   function queueSheetSync(){
     state=sheetModel.estados[escActivo];
     const canonical=sheetModel.escenarios.find(e=>e.id===escActivo)?.inputs||{};
-    if(volumeOperation){Object.entries(canonical).forEach(([id,value])=>setControl(id,value));sheetStatus('Comprueba primero el guardado de volúmenes');render();return state;}
+    if(volumeOperation||stageOperation){Object.entries(canonical).forEach(([id,value])=>setControl(id,value));sheetStatus(stageOperation?'Comprueba primero el guardado de etapas':'Comprueba primero el guardado de volúmenes');render();return state;}
     const changed=Object.fromEntries(Object.entries(inputValues()).filter(([k,v])=>canonical[k]!==v));
     if(!Object.keys(changed).length){sheetPending=null;sheetFailure=sheetNeedsRefresh;render();renderComparador();if(sheetNeedsRefresh)sheetStatus('Copia de Sheets · verifica conexión antes de editar');return state;}
     sheetPending={scenario:escActivo,inputs:changed};sheetStatus('Cambios pendientes · calculando en Sheets');
     guardarDraft();clearTimeout(sheetTimer);if(sheetNeedsRefresh||volumeOperation){sheetStatus(volumeOperation?'Comprueba primero el guardado de volúmenes':'Copia de Sheets · cantidades pendientes; recarga para verificar');render();return state;}sheetTimer=setTimeout(flushSheetSync,450);return state;
   }
   async function flushSheetSync(){
-    if(sheetBusy||!sheetPending||!sheetModel||sheetNeedsRefresh||volumeOperation)return;
+    if(sheetBusy||!sheetPending||!sheetModel||sheetNeedsRefresh||volumeOperation||stageOperation)return;
     if(modoLocal){sheetFailure=true;sheetStatus('Sin conexión · cantidades pendientes; resultados anteriores');return;}
     const job=sheetPending;sheetPending=null;sheetBusy=true;
     try{const m=await apiPost({tipo:'sheet-cantidades',caso_id:caso.caso_id,escenario_id:job.scenario,inputs:job.inputs,revision_esperada:sheetModel.revision,request_id:nuevoRequestId()});
@@ -725,9 +755,9 @@
   }
   async function reloadSheetModel(){
     if(sheetReading)return sheetReading;
-    if(!sheetModel||sheetBusy||caseSelection||volumeOperation)return Promise.resolve(false);
+    if(!sheetModel||sheetBusy||caseSelection||volumeOperation||stageOperation)return Promise.resolve(false);
     const sourceModel=sheetModel,sourceCase=caso.caso_id,sourceCredential=clave;
-    const current=()=>sheetModel===sourceModel&&caso.caso_id===sourceCase&&clave===sourceCredential&&!modoLocal&&!caseSelection&&!sheetBusy&&!volumeOperation;
+    const current=()=>sheetModel===sourceModel&&caso.caso_id===sourceCase&&clave===sourceCredential&&!modoLocal&&!caseSelection&&!sheetBusy&&!volumeOperation&&!stageOperation;
     sheetStatus('Leyendo Sheets · conservamos los datos visibles');
     const request=(async()=>{
       try{
@@ -749,6 +779,7 @@
     sheetReading=request;return request;
   }
   async function sheetVersion(action,id,name){
+    if(stageOperation){toast('Comprueba primero el guardado de etapas');return;}
     if(sheetPending||sheetBusy||sheetFailure||sheetNeedsRefresh||volumeOperation){toast('Verifica conexión y cantidades guardadas antes de modificar versiones');return;}
     sheetBusy=true;
     try{const m=await apiPost({tipo:'sheet-version',accion:action,caso_id:caso.caso_id,escenario_id:id,nombre:name,revision_esperada:sheetModel.revision,request_id:nuevoRequestId()});if(!m.ok){toast('No se cambió la versión: '+m.error);return;}if(acceptSheetModel(m,action==='activar'?id:escActivo))toast('Versión actualizada en Sheets');else toast('No se confirmó la versión; se conserva la anterior');}catch(e){toast('Sin conexión: versión conservada');}finally{sheetBusy=false;syncVolumes();}
@@ -759,9 +790,9 @@
     const safe=/^https:\/\/docs.google.com\/spreadsheets\/d\//.test(sheetModel.libro_url)?sheetModel.libro_url:'';
     let h='<h2 class="serif">Libro conectado · cantidades y resultados</h2><p id="sheetEstado" class="note">Sheets · revisión '+esc(sheetModel.revision.slice(0,8))+'</p><a class="small-btn" target="_blank" rel="noopener" href="'+esc(safe)+'">Abrir el mismo modelo en Sheets</a> <button class="small-btn secondary" id="sheetRecargar">Actualizar desde Sheets</button>';
     if(sheetModel.reticula){const g=sheetModel.reticula;const colors=['#edf0f2','#bfe2d5','#f7d6b1','#c2d5f2','#edbcb7'];h+='<h3>Retícula 10 × 10 m · huellas conceptuales</h3><p class="note">Norte arriba. 1 sur · 2 cuerpo L · 3 torre · 4 rentas vigentes. Las áreas parciales y las selecciones se leen del libro.</p><svg viewBox="0 0 216 324" style="width:216px;max-width:100%" role="img" aria-label="Retícula conceptual del terreno">';g.uso.forEach((row,y)=>row.forEach((use,x)=>{h+='<rect x="'+x*36+'" y="'+y*36+'" width="35" height="35" fill="'+colors[use]+'" stroke="#97a8ad"/><text x="'+(x*36+18)+'" y="'+(y*36+23)+'" text-anchor="middle" font-size="14">'+esc(use)+'</text>';}));h+='</svg><table><tr><th>Uso / verificación</th><th>Área m²</th></tr>'+g.resumen.filter(r=>r[0]).map(r=>'<tr><td>'+esc(r[0])+'</td><td>'+Number(r[1]).toLocaleString('es-MX',{maximumFractionDigits:2})+'</td></tr>').join('')+'</table>'}
-    h+='<h3>Etapas y protección de rentas</h3><table><tr><th>Condición</th><th>Dato / estado</th><th>Fuente</th></tr>'+sheetModel.etapas.filter(r=>r[0]).map(r=>'<tr><td>'+esc(r[0])+'</td><td>'+esc(r[1]===''?'Pendiente':r[1])+'</td><td>'+esc(r[2])+'</td></tr>').join('')+'</table>';
-    if(sheetModel.cuerpos){h+='<details><summary>Programa y presupuesto de los tres cuerpos</summary><p class="note">Las huellas proceden de la retícula. El programa, presupuesto y calendario se completan en el mismo libro. Las diferencias vacías siguen pendientes de conciliación con la proforma vigente.</p>'+nativeTable(sheetModel.cuerpos.programa)+nativeTable(sheetModel.cuerpos.cruce)+nativeTable(sheetModel.cuerpos.calendario)+nativeTable(sheetModel.cuerpos.traslado)+'</details>';}
-    if(sheetModel.flujo_etapas?.length){h+='<details><summary>Flujo por etapas y continuidad de renta familiar</summary><p class="note">Costo mensual por cuerpo según presupuesto y calendario capturados. La renta familiar se mantiene separada del fondeo del desarrollo.</p><div style="max-height:440px;overflow:auto">'+nativeTable(sheetModel.flujo_etapas)+'</div></details>';}
+    if(!sheetModel.capabilities?.stages?.read)h+='<h3>Etapas y protección de rentas</h3><table><tr><th>Condición</th><th>Dato / estado</th><th>Fuente</th></tr>'+sheetModel.etapas.filter(r=>r[0]).map(r=>'<tr><td>'+esc(r[0])+'</td><td>'+esc(r[1]===''?'Pendiente':r[1])+'</td><td>'+esc(r[2])+'</td></tr>').join('')+'</table>';
+    if(sheetModel.cuerpos&&!sheetModel.capabilities?.stages?.read){h+='<details><summary>Programa y presupuesto de los tres cuerpos</summary><p class="note">Las huellas proceden de la retícula. El programa, presupuesto y calendario se completan en el mismo libro. Las diferencias vacías siguen pendientes de conciliación con la proforma vigente.</p>'+nativeTable(sheetModel.cuerpos.programa)+nativeTable(sheetModel.cuerpos.cruce)+nativeTable(sheetModel.cuerpos.calendario)+nativeTable(sheetModel.cuerpos.traslado)+'</details>';}
+    if(sheetModel.flujo_etapas?.length&&!sheetModel.capabilities?.stages?.read){h+='<details><summary>Flujo por etapas y continuidad de renta familiar</summary><p class="note">Costo mensual por cuerpo según presupuesto y calendario capturados. La renta familiar se mantiene separada del fondeo del desarrollo.</p><div style="max-height:440px;overflow:auto">'+nativeTable(sheetModel.flujo_etapas)+'</div></details>';}
     panel.innerHTML=h;$('sheetRecargar').onclick=reloadSheetModel;
   }
   function nativeTable(rows){if(!rows?.length)return '';const heads=rows[0];return '<div style="overflow:auto"><table><thead><tr>'+heads.map(v=>'<th>'+esc(v)+'</th>').join('')+'</tr></thead><tbody>'+rows.slice(1).map(row=>'<tr>'+heads.map((header,i)=>{let v=row[i];if(v===''||v===null||v===undefined)v='Pendiente';else if(typeof v==='number')v=/eficiencia/i.test(header)?pct(v*100,1):v.toLocaleString('es-MX',{maximumFractionDigits:2});return '<td>'+esc(v)+'</td>';}).join('')+'</tr>').join('')+'</tbody></table></div>';}
@@ -895,6 +926,7 @@
     devFlows[devFlows.length-1]+=devDist;const ownerFlows=Array(totalMonths).fill(0);if(ownerCapital>0){ownerFlows[0]=-ownerCapital;ownerFlows[ownerFlows.length-1]+=ownerDist}const devIrr=irr(devFlows),ownerIrr=ownerCapital?irr(ownerFlows):null,ownerMoic=ownerCapital?ownerDist/ownerCapital:null,profit=sales-projectCost-interest-feeDebt,margin=sales?profit/sales:0,marginBeforeFinance=sales?(sales-projectCost)/sales:0,residentialRevenueFactor=preventaEfectiva*(1-p.desc)+(1-preventaEfectiva),breakevenPreViv=resSell&&residentialRevenueFactor?Math.max(0,(projectCost+interest+feeDebt-comRev-parkingRev)/(resSell*residentialRevenueFactor)):0,preventaAtBuild=preventaEfectiva*Math.min(1,Math.max(0,p.buildStartMonth-1)/p.preMonths),preventaMinMonth=preventaEfectiva?Math.ceil(p.minPreventaObra/preventaEfectiva*p.preMonths):Infinity;
     return {p,footprint,areaLibre,greenRequested,greenArea,greenExcess,com,gross,resGross,resSell,comSell,units,mixTotal,mixValid,mixWeightedM2,unitM2Effective,mixLoftUnits,mix2Units,mix3Units,levels,fullLevels,lastFloorUnits,totalFloors,habitantes,m2PorLocal,height,floorPlate,lastFloorPlate,footprintMargin,unallocatedResSell,residentialSpaces,spaces,parkingArea,basementPlate,basements,basementArea,buildingVolume,parkingVolume,totalVolume,priceCushion:breakevenPreViv?p.preViv/breakevenPreViv-1:null,circVertical,amenidades,noVendResid,pasillosHoriz,circDeficit,comunM2,m2Loft,m2Dos,m2Tres,vendTotal,aguaViv,aguaCom,aguaTotal,drenajeDia,cisternaM3,cargaViv,cargaCom,cargaComun,cargaTotalKw,demandaKva,spacesVenta,spacesVisitas,elevadores,gasL,basuraM2,densidadViv,densidadHab,permeable,permeablePct,pluvialM3,cuotaProm,cuotaLoft,cuotaDos,cuotaTres,preventaEfectiva,preventaAtBuild,preventaMinMonth,preventaCovenantPass:preventaAtBuild>=p.minPreventaObra,presaleSellable,presaleUnits,presaleUnitsPerMonth,presaleRev,postRev,comRev,parkingRev,sales,land,landCash,closing,hard,indirect,cont,legal,commission,projectCost,cashCost,debtCap,peakLtc:projectCost?peak/projectCost:0,debtHeadroom:Math.max(0,debtCap-peak),interest,cashInterest,feeDebt,peak,peakMonth,debt,cash,fundingGap,debtDraws,debtRepayments,revTotal,costTotal,cashSourceTotal,cashUsesTotal,cashReconciliation,distributable,ownerSaleProceeds,ownerCapital,devCapital,equityUsed,ownerPrefTarget,devPrefTarget,prefTarget,effectiveOwnerResidual,ownerCapitalReturn,devCapitalReturn,ownerPrefPaid,devPrefPaid,ownerResidual,devResidual,ownerDist,ownerTotalProceeds,ownerGain:ownerDist-ownerCapital,ownerIrr,ownerMoic,devDist,devGain:devDist-devCapital,devIrr,devMoic:devCapital?devDist/devCapital:null,profit,margin,marginBeforeFinance,breakevenPreViv,flows,totalMonths,buildStart,buildFinish}}
   function calculate(){
+    if(intakeBoard?.blocking){intakeBoard.paint();intakeBoard.persist();return state;}
     if(sheetModel)return queueSheetSync();
     clampRelations();
     state=computar(inputValues());
@@ -907,9 +939,10 @@
   let escenarios=[],escActivo='';
   const MAX_ESC=8;
   const escId=()=>'e'+Math.random().toString(36).slice(2,8);
-  const versionBridge=window.PPPVersionBridge.create({modelType:'vertical',volumeContract:window.PPPVolumesNative,applyVolumes:saveNativeVolumes,read:()=>({caseId:caso.caso_id,scenarios:escenarios,active:escActivo,busy:sheetBusy||!!caseSelection,pending:!!sheetPending||!!volumeOperation||volumeEditorState.dirty||volumeEditorState.pending||sheetNeedsRefresh||modoLocal,draftInputs:sheetPending?.scenario===escActivo?{...(escGet(escActivo)?.inputs||{}),...sheetPending.inputs}:null,error:sheetFailure||sheetNeedsRefresh,labels:Object.fromEntries(Object.entries(factorHelp).map(([k,v])=>[k,v.t]))})});
+  const versionBridge=window.PPPVersionBridge.create({modelType:'vertical',volumeContract:window.PPPVolumesNative,applyVolumes:saveNativeVolumes,read:()=>({caseId:caso.caso_id,scenarios:escenarios,active:escActivo,busy:sheetBusy||!!caseSelection,pending:!!sheetPending||!!volumeOperation||!!stageOperation||volumeEditorState.dirty||volumeEditorState.pending||sheetNeedsRefresh||modoLocal,draftInputs:sheetPending?.scenario===escActivo?{...(escGet(escActivo)?.inputs||{}),...sheetPending.inputs}:null,error:sheetFailure||sheetNeedsRefresh,labels:Object.fromEntries(Object.entries(factorHelp).map(([k,v])=>[k,v.t]))})});
   const volumeEditor=window.PPPVolumes.mount({container:$('pppVolumes'),getContext:volumeContext,onSave:saveNativeVolumes,onState:value=>{volumeEditorState={dirty:value.dirty,pending:value.pending};versionBridge.publish();}});
-  function seedContext(){if(!seedTemplate||seedTemplate.credential!==clave||!clave||modoLocal||caso.caso_id||caseSelection)return null;return{verified:true,ready:true,model_type:'vertical',case_id:'native-template',scenario_id:'new-project',scenario_name:'Proyecto nuevo · programa por revisar',revision:seedTemplate.template_revision,native_collection:seedTemplate.volumes,native_capability:seedTemplate.capability};}
+  stageEditor=window.PPPStages.mount({container:$('pppStages'),getContext:stageContext,onSave:saveNativeStages,validModel:window.PPPCaseLoader.validModel});
+  function seedContext(){if(!seedTemplate||seedTemplate.credential!==clave||!clave||modoLocal||caso.caso_id||caseSelection)return null;return{verified:true,ready:true,model_type:'vertical',case_id:'native-template',scenario_id:'new-project',scenario_name:'Proyecto nuevo · programa por revisar',revision:seedTemplate.template_revision,native_collection:seedTemplate.volumes,native_capability:seedTemplate.capability,managed_volume_fields:seedTemplate.managed_volume_fields};}
   function retireSeed(){seedEpoch++;seedTemplate=null;seedReview=null;seedLoading=false;newCasePending=null;seedEditor?.revoke();$('pppSeedPanel').hidden=true;$('gSeedStatus').textContent='';$('gSeedCheck').hidden=true;}
   seedEditor=window.PPPVolumes.mount({container:$('pppSeedEditor'),mode:'seed',getContext:seedContext,onReview:async request=>{
     const context=seedContext();if(!context||context.revision!==request.context.revision)throw Error('seed_context_changed');
@@ -922,12 +955,12 @@
       if(response?.error==='clave'){reabrirGate();return false;}
       const capability=window.PPPVolumesNative.capability(response.capabilities?.volumes),collection=window.PPPVolumesNative.collection(response.volumes,capability?.max_volumes||16);
       if(response.ok!==true||response.kind!=='native_factory_preview'||response.persisted!==false||typeof response.template_revision!=='string'||!response.template_revision||response.template_revision.length>256||!capability?.read||!capability.write||collection.count!==1||collection.volumes.length!==1||!response.inputs||typeof response.inputs!=='object'||Array.isArray(response.inputs))throw Error('native_template_unavailable');
-      seedTemplate={template_revision:response.template_revision,volumes:collection,capability,credential};const captured=inputValues(),differences=Object.keys(captured).filter(id=>Object.hasOwn(response.inputs,id)&&response.inputs[id]!==captured[id]);
+      seedTemplate={template_revision:response.template_revision,volumes:collection,capability,credential,managed_volume_fields:response.capabilities?.stages?.schema===1&&response.capabilities.stages.read===true?response.capabilities.stages.managed_volume_fields||[]:[]};const captured=inputValues(),differences=Object.keys(captured).filter(id=>Object.hasOwn(response.inputs,id)&&response.inputs[id]!==captured[id]);
       $('pppSeedCaptured').textContent='Revisa este programa antes de crear el proyecto. Tus supuestos originales siguen capturados y se enviarán sin sustituirlos por la plantilla.'+(differences.length?' Datos que difieren de la plantilla: '+differences.map(id=>labelFor(id)+': '+captured[id]).join(' · ')+'. Revisa también los drivers de cada cuerpo.':'');
       seedEditor.setContext(seedContext());$('pppSeedPanel').scrollIntoView({behavior:'smooth',block:'start'});return true;
     }catch{if(own!==seedEpoch)return false;seedTemplate=null;seedReview=null;seedEditor.suspend();$('pppSeedCaptured').textContent='No se pudo confirmar la plantilla nativa. Conservamos tus datos y no creamos el proyecto. Vuelve a Guardar para reintentar la lectura.';return false;}finally{if(own===seedEpoch)seedLoading=false;}
   }
-  const retireVolumeIdentity=()=>{retireSeed();if(volumeOperation)sheetBusy=false;volumeIdentity=null;volumeOperation=null;volumeEditor.revoke();versionBridge.invalidate();};
+  const retireVolumeIdentity=()=>{if(stageOperation||volumeOperation)sheetBusy=false;stageOperation=null;stageEditor?.setContext(null);retireSeed();if(volumeOperation)sheetBusy=false;volumeIdentity=null;volumeOperation=null;volumeEditor.revoke();versionBridge.invalidate();};
   window.addEventListener('pagehide',retireVolumeIdentity);
   window.addEventListener('storage',event=>{if(event.key===null||event.key===LS.clave)retireVolumeIdentity();});
   function escGet(id){return escenarios.find(e=>e.id===id)}
@@ -935,7 +968,7 @@
   function escInicial(nombre){escenarios=[{id:escId(),nombre:nombre||'Base',esBase:true,inputs:inputValues()}];escActivo=escenarios[0].id}
   function escSyncActivo(){const e=escGet(escActivo);if(e)e.inputs=inputValues()}
   function escAplicar(e){setControl('inInventarioExplicito',0);setControl('inUnidadesA',0);setControl('inUnidadesB',0);setControl('inUnidadesC',0);setControl('inComRentableExacto',0);setControl('inCajonesResidExactos',0);setControl('inSotanoAreaExacta',0);setControl('inObraDirectaTotal',0);setControl('inIndirectosTotal',0);Object.entries(e.inputs||{}).forEach(([k,v])=>setControl(k,v))}
-  function escCambiar(id){if(sheetModel){if(sheetPending||sheetBusy){toast('Espera a guardar cantidades');return;}sheetVersion('activar',id);return;}if(id===escActivo)return;const e=escGet(id);if(!e)return;escSyncActivo();escActivo=id;escAplicar(e);calculate();toast('Versión activa: «'+e.nombre+'»',1800)}
+  function escCambiar(id){if(sheetModel){if(sheetPending||sheetBusy||stageOperation){toast('Espera a guardar cantidades');return;}sheetVersion('activar',id);return;}if(id===escActivo)return;const e=escGet(id);if(!e)return;escSyncActivo();escActivo=id;escAplicar(e);calculate();toast('Versión activa: «'+e.nombre+'»',1800)}
   function escNueva(){
     if(sheetModel){const n=prompt('Nombre de la nueva versión');if(n)sheetVersion('duplicar',escActivo,n);return;}
     if(escenarios.length>=MAX_ESC){toast('Máximo '+MAX_ESC+' versiones por caso');return}
@@ -1207,7 +1240,7 @@
   function apiGet(params){const q=new URLSearchParams(Object.assign({k:clave,tipo:NUBE.TIPO},params));return fetch(NUBE.ENDPOINT+'?'+q.toString()).then(r=>r.json())}
   function apiPost(body){body=Object.assign({k:clave,tipo_desarrollo:NUBE.TIPO},body);return fetch(NUBE.ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)}).then(r=>r.json())}
   function nuevoRequestId(){return (crypto.randomUUID?.()||Date.now()+'-'+Math.random())}
-  function guardarDraft(){try{localStorage.setItem(LS.draft,JSON.stringify({inputs:inputValues(),caso,escenarios,escActivo,sheetModel,sheetPending,savedInputs:legacySavedInputs}))}catch(e){}}
+  function guardarDraft(){if(intakeBoard?.blocking){intakeBoard.persist();return;}try{localStorage.setItem(LS.draft,JSON.stringify({inputs:inputValues(),caso,escenarios,escActivo,sheetModel,sheetPending,savedInputs:legacySavedInputs}))}catch(e){}}
   function cargarDraft(){try{const d=JSON.parse(localStorage.getItem(LS.draft)||'null');if(!d)return;restoredDraft=true;legacySavedInputs=d.savedInputs||null;if(d.sheetModel&&d.caso?.caso_id===d.sheetModel.caso_id&&d.sheetModel.revision&&Array.isArray(d.sheetModel.escenarios)&&d.sheetModel.estados){sheetModel=d.sheetModel;sheetNeedsRefresh=true;sheetFailure=true;sheetPending=d.sheetPending||null;}if(d.inputs)Object.entries(d.inputs).forEach(([id,v])=>setControl(id,v));if(d.caso)caso=Object.assign(caso,d.caso);
     if(Array.isArray(d.escenarios)&&d.escenarios.length){escenarios=d.escenarios;escActivo=d.escActivo&&escGet(d.escActivo)?d.escActivo:escenarios[0].id;const e=escGet(escActivo);if(e)escAplicar(e)}if(sheetModel&&d.inputs)Object.entries(d.inputs).forEach(([id,v])=>{if(Number($(id)?.value)!==Number(v))setControl(id,v)});
     // Share the cached canonical model without promoting this device's pending quantities.
@@ -1248,6 +1281,7 @@
      if(state)window.PPPView?.update(state,{native:!!sheetModel,revision:sheetModel?.revision,caseId:caso.caso_id,scenario:escActivo,scenarioName:escGet(escActivo)?.nombre,versionCount:escenarios.length,projectName:caso.nombre_caso,updated:sheetModel?.actualizado,bookUrl:sheetModel?.libro_url,site:sheetModel?.reticula,stages:sheetModel?.etapas});
   }
   function aplicarCasoRemoto(obj){
+    if(obj.calculo_sheet?.model_status==='MODELO_PENDIENTE'){return intakeBoard.acceptRead(obj.calculo_sheet);}
     if(!window.PPPCaseLoader.validModel(obj.calculo_sheet,obj.caso_id)){
       const copy=!!(sheetModel&&obj.caso_id===caso.caso_id);
       if(copy){sheetNeedsRefresh=true;sheetFailure=true;}
@@ -1258,7 +1292,8 @@
     }
     if(sheetModel&&obj.caso_id===caso.caso_id&&!obj.calculo_sheet){sheetNeedsRefresh=true;sheetFailure=true;sheetStatus('No se confirmó el modelo de Sheets · conserva copia anterior');toast('El servidor no confirmó el modelo nativo. Recarga cuando esté disponible.');return;}
     casePresentation('ready','',obj.caso_id);
-    if(volumeOperation)sheetBusy=false;volumeOperation=null;volumeIdentity={case_id:obj.caso_id,project_name:obj.nombre_caso||'',credential:clave};
+    if(volumeOperation||stageOperation)sheetBusy=false;stageOperation=null;stageEditor?.setContext(null);volumeOperation=null;volumeIdentity={case_id:obj.caso_id,project_name:obj.nombre_caso||'',credential:clave};
+    intakeBoard?.deactivate();
     sheetModel=obj.calculo_sheet||null;sheetPending=null;sheetFailure=false;sheetNeedsRefresh=false;
     Object.keys(obj).forEach(kk=>{if(/^in[A-Z]/.test(kk)&&$(kk)&&obj[kk]!==''&&isFinite(Number(obj[kk])))setControl(kk,Number(obj[kk]))});
     caso={caso_id:obj.caso_id||'',palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
@@ -1284,8 +1319,9 @@
   function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
   function fechaCorta(ts){const d=new Date(ts);return isNaN(d)?'':d.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'})}
   async function guardarCaso(enviarCorreo){
+    if(intakeBoard?.blocking){intakeBoard.paint();toast('Ficha inicial conservada; el guardado nativo está pendiente de conectar.');return;}
     if(!caso.caso_id&&newCasePending){$('gSeedStatus').textContent='La creación está por confirmar. Comprueba el proyecto por su palabra; no se enviará otra creación.';$('gSeedCheck').hidden=false;return;}
-    if(sheetModel&&(sheetPending||sheetBusy||sheetFailure||volumeOperation)){toast('Guarda y verifica las cantidades pendientes antes de continuar');return;}
+    if(sheetModel&&(sheetPending||sheetBusy||sheetFailure||volumeOperation||stageOperation)){toast('Guarda y verifica las cantidades pendientes antes de continuar');return;}
     if(modoLocal){toast('Estás sin nube: entra con la clave para guardar');return}
     const nombre=$('gNombre').value.trim(),palabra=$('gPalabra').value.trim(),correo=$('gCorreo').value.trim(),notas=$('gNotas').value;
     if(!palabra){toast('Elige una palabra para volver a tu caso');return}
@@ -1387,7 +1423,7 @@
   $('casosCerrar').onclick=cerrarOverlays;
   $('btnAbrirPalabra').onclick=()=>abrirPorPalabra($('abrirPalabra').value);
   $('abrirPalabra').addEventListener('keydown',e=>{if(e.key==='Enter')abrirPorPalabra($('abrirPalabra').value)});
-  $('btnNuevo').onclick=()=>{retireVolumeIdentity();caseReader.invalidate();casePresentation('ready','');const url=new URL(location.href);url.searchParams.delete('open');history.replaceState(null,'',url);legacySavedInputs=null;sheetModel=null;sheetPending=null;sheetNeedsRefresh=false;sheetFailure=false;Object.entries(DEFAULTS).forEach(([id,v])=>setControl(id,v));caso={caso_id:'',palabra:'',correo:caso.correo,nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};escInicial('Base');calculate();pintaCaso();toast('Caso nuevo: supuestos de referencia')};
+  $('btnNuevo').onclick=()=>intakeBoard?.open();
   /* ================== TRACK DE REUNIONES DEL PPP ==================
      Persiste SIN tocar el backend: cada reunión es un renglón de notas_seguimiento
      con el sello 📅. OJO: el Apps Script ANTEPONE su fecha a la nota, así que el
@@ -1503,7 +1539,15 @@
   setInterval(()=>{if(sheetModel&&!sheetPending&&!sheetBusy&&!document.hidden)reloadSheetModel();},45000);
   window.PPPHelp=(id,anchor)=>{const info=GLOSARIO[metricHelp[id]];if(info){showMetricTip(anchor,info);metricTip.dataset.for=id;}};
   window.PPPView?.mount();
-  cargarDraft();if(!escenarios.length)escInicial('Base');calculate();pintaCaso();
+  intakeBoard=window.PPPIntake.mountBoard({type:'vertical',controls,adapter:window.PPPIntake.nativeAdapter({type:'vertical',get:apiGet,post:apiPost}),onStart:(draft,receipt)=>{
+    retireVolumeIdentity();caseReader.invalidate();casePresentation('ready','');sheetModel=null;sheetPending=null;sheetNeedsRefresh=false;sheetFailure=false;sheetBusy=false;state=null;legacySavedInputs=null;
+    caso={caso_id:receipt?.caso_id||'',palabra:receipt?.palabra||'',correo:caso.correo,nombre_caso:draft.nombre_caso,estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:JSON.stringify({ubicacion:draft.ubicacion,fuente:draft.fuente}),version:0};
+    escenarios=[];escActivo='';const url=new URL(location.href);if(receipt?.caso_id){url.searchParams.set('open',receipt.caso_id);url.searchParams.delete('new');}else{url.searchParams.delete('open');url.searchParams.set('new','1');}history.replaceState(null,'',url);
+    window.PPPView?.update({p:{terrain:draft.inputs.inTerreno}},{native:false,projectName:draft.nombre_caso});
+    const context=$('pppContext');if(context)context.firstChild.textContent=(receipt?.persisted?'Ficha guardada en Sheets':'Ficha inicial')+' · 1 etapa · cantidades pendientes';
+  },onExit:()=>{if(state){render();pintaCaso();}}});
+  const initialNew=new URLSearchParams(location.search).get('new')==='1'&&!new URLSearchParams(location.search).get('open');
+  if(initialNew)intakeBoard.open();else{cargarDraft();if(!escenarios.length)escInicial('Base');calculate();pintaCaso();}
   if(modoLocal){$('gate').classList.add('off');$('modoLocalBanner').classList.add('on');const requested=new URLSearchParams(location.search).get('open');if(requested&&requested!==caso.caso_id)casePresentation('error','Conéctate para leer el proyecto solicitado. Los supuestos de referencia no son sus resultados.',requested);}
   else if(clave){
     const requested=new URLSearchParams(location.search).get('open');

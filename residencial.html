@@ -324,6 +324,10 @@
   #dVivienda.drawer.active{max-height:9000px}
   @media(max-width:700px){.viv-switch{grid-template-columns:1fr}.viv-grid{grid-template-columns:1fr}.viv-tipo-head{flex-wrap:wrap}.viv-tipo-head .viv-in{flex:1 1 100%}}
 </style>
+<link rel="stylesheet" href="ppp-intake.css?v=20261029">
+<script src="ppp-intake.js?v=20261029"></script>
+<link rel="stylesheet" href="ppp-stages.css?v=20261029">
+<script src="ppp-stages.js?v=20261029"></script>
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -571,6 +575,7 @@
   let cfgBoard={}, casosCache=[], modoLocal=!cloudOn;
 
   const $=id=>document.getElementById(id); const controls=[...document.querySelectorAll('input[type=range]')]; let state=null;
+  let intakeBoard=null;
   const fmtN=n=>Math.round(n||0).toLocaleString('en-US'); const fmtM=n=>Math.abs(n||0)>=1e6?'$'+((n||0)/1e6).toFixed(1)+' M':'$'+Math.round(n||0).toLocaleString('en-US'); const fmtMoney=n=>'$'+Math.round(n||0).toLocaleString('en-US'); const pct=(n,d=1)=>Number(n||0).toFixed(d)+'%'; const sM=n=>(n<0?'−':'+')+fmtM(Math.abs(n||0)); const fmtHa=n=>((n||0)/10000).toFixed(1)+' ha';
   // Prellenado: Guaymas SFF (el origen de la plantilla, recalculado limpio)
   const PRELLENADO={inSuperficie:17928,inFrente:75,inFondo:239,inPctVialidades:22,inPctVerdes:10,inPctEquipamiento:7,inEfSubdiv:95,
@@ -986,6 +991,7 @@
 
   /* ================== RENDER ================== */
   function calculate(){
+    if(intakeBoard?.blocking){state=null;intakeBoard.paint();return null;}
     state=computar(inputValues(),vivienda);
     escSyncActivo();
     render();renderEscenarios();renderComparador();guardarDraft();return state}
@@ -1582,7 +1588,7 @@
   function apiGet(params){const q=new URLSearchParams(Object.assign({k:clave,tipo:NUBE.TIPO},params));return fetch(NUBE.ENDPOINT+'?'+q.toString()).then(r=>r.json())}
   function apiPost(body){body=Object.assign({k:clave,tipo_desarrollo:NUBE.TIPO},body);return fetch(NUBE.ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)}).then(r=>r.json())}
   function nuevoRequestId(){return (crypto.randomUUID?.()||Date.now()+'-'+Math.random())}
-  function guardarDraft(){try{localStorage.setItem(LS.draft,JSON.stringify({inputs:inputValues(),caso,escenarios,escActivo}))}catch(e){}}
+  function guardarDraft(){if(intakeBoard?.blocking){intakeBoard.persist();return;}try{localStorage.setItem(LS.draft,JSON.stringify({inputs:inputValues(),caso,escenarios,escActivo}))}catch(e){}}
   function cargarDraft(){try{const d=JSON.parse(localStorage.getItem(LS.draft)||'null');if(!d)return;if(d.inputs)Object.entries(d.inputs).forEach(([id,v])=>setControl(id,v));if(d.caso)caso=Object.assign(caso,d.caso);
     if(Array.isArray(d.escenarios)&&d.escenarios.length){escenarios=d.escenarios;escActivo=d.escActivo&&escGet(d.escActivo)?d.escActivo:escenarios[0].id;const e=escGet(escActivo);if(e)escAplicar(e)}}catch(e){}}
   function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -1600,6 +1606,8 @@
     $('segLog').textContent=caso.notas_seguimiento||'Sin notas todavía.'+(caso.caso_id?'':' Guarda el caso primero.');
   }
   function aplicarCasoRemoto(obj){
+    if(obj?.calculo_sheet?.model_status==='MODELO_PENDIENTE'){try{intakeBoard.acceptRead(obj.calculo_sheet);cerrarOverlays();return true;}catch{toast('No se confirmó la ficha guardada. Se conserva la captura anterior.');return false;}}
+    intakeBoard?.deactivate();
     resetNuevos();
     Object.keys(obj).forEach(kk=>{if(/^in[A-Z]/.test(kk)&&obj[kk]!==''&&isFinite(Number(obj[kk])))setControl(kk,Number(obj[kk]))});
     caso={caso_id:obj.caso_id||'',palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
@@ -1610,6 +1618,7 @@
   async function abrirPorPalabra(palabra){if(!palabra.trim())return;try{const r=await apiGet({recurso:'caso',palabra:palabra.trim()});if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'No hay caso con esa palabra':'No se pudo abrir: '+r.error)}catch(e){toast('Sin conexión: no se pudo abrir')}}
   async function cargarLista(){const cont=$('listaCasos');cont.innerHTML='<p class="note">Cargando…</p>';try{const r=await apiGet({recurso:'lista'});if(!r.ok){cont.innerHTML='<p class="note">Error: '+r.error+'</p>';if(r.error==='clave')reabrirGate();return}casosCache=r.casos||[];cfgBoard=r.config||cfgBoard;if(!casosCache.length){cont.innerHTML='<p class="note">Aún no hay casos de Lotes Residenciales. Guarda el primero.</p>';return}cont.innerHTML=casosCache.map(c=>`<div class="caso-item" data-id="${c.caso_id}"><div><div class="ci-n">${esc(c.nombre_caso||c.palabra)}<span class="badge">${esc(c.estado||'—')}</span></div><div class="ci-m">palabra: ${esc(c.palabra)} · v${c.version||1} · ${fechaCorta(c.ts_actualizado)}${c.source==='test'?' · PRUEBA':''}</div></div><div class="ci-kpi">${c.utilidad!==''&&c.utilidad!==undefined?fmtM(Number(c.utilidad)):'—'}<span>utilidad · ${c.unidades!==''&&c.unidades!==undefined?fmtN(Number(c.unidades))+' lotes':'—'}</span></div></div>`).join('');cont.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>abrirPorId(el.dataset.id))}catch(e){cont.innerHTML='<p class="note">Sin conexión. Reintenta.</p>'}}
   async function guardarCaso(enviarCorreo){
+    if(intakeBoard?.blocking){toast("La ficha se conserva como captura local. El guardado requiere conectar el modelo nativo de Sheets.");return;}
     if(modoLocal){toast('Estás sin nube: entra con la clave para guardar');return}
     const nombre=$('gNombre').value.trim(),palabra=$('gPalabra').value.trim(),correo=$('gCorreo').value.trim(),notas=$('gNotas').value;
     if(!palabra){toast('Elige una palabra para volver a tu caso');return}
@@ -1693,7 +1702,7 @@
   $('casosCerrar').onclick=cerrarOverlays;
   $('btnAbrirPalabra').onclick=()=>abrirPorPalabra($('abrirPalabra').value);
   $('abrirPalabra').addEventListener('keydown',e=>{if(e.key==='Enter')abrirPorPalabra($('abrirPalabra').value)});
-  $('btnNuevo').onclick=()=>{Object.entries(DEFAULTS).forEach(([id,v])=>setControl(id,v));caso={caso_id:'',palabra:'',correo:caso.correo,nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};escInicial('Base');calculate();pintaCaso();toast('Caso nuevo: supuestos de Guaymas SFF (limpios)')};
+  $('btnNuevo').onclick=()=>intakeBoard.open();
   $('btnSeguimiento').onclick=()=>$('segPanel').classList.toggle('on');
   $('btnSegPaso').onclick=()=>{const v=$('segSiguiente').value.trim();caso.siguiente_paso=v;pintaCaso();guardarDraft();if(caso.caso_id&&!modoLocal)postSeguimiento({tipo:'estado',caso_id:caso.caso_id,siguiente_paso:v,request_id:nuevoRequestId()},'Siguiente paso fijado')};
   $('btnSegNota').onclick=()=>{const v=$('segNota').value.trim();if(!v)return;if(!caso.caso_id){toast('Guarda el caso primero');return}const sello=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit'});caso.notas_seguimiento=(caso.notas_seguimiento?caso.notas_seguimiento+'\n':'')+sello+' · '+v;$('segNota').value='';pintaCaso();guardarDraft();if(!modoLocal)postSeguimiento({tipo:'estado',caso_id:caso.caso_id,nota:v,request_id:nuevoRequestId()},'Nota registrada')};
@@ -1703,7 +1712,12 @@
   $('gateLocal').onclick=modoSinConexion;
   document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)cerrarOverlays()}));
   window.addEventListener('online',drenarCola);setInterval(drenarCola,25000);
-  cargarDraft();if(!escenarios.length)escInicial('Base');calculate();pintaCaso();
+  intakeBoard=PPPIntake.mountBoard({type:'residencial',controls,adapter:PPPIntake.nativeAdapter({type:'residencial',get:apiGet,post:apiPost}),onStart:(draft,receipt)=>{
+    state=null;escenarios=[];escActivo='';caso={caso_id:receipt?.caso_id||'',palabra:receipt?.palabra||'',correo:caso.correo,nombre_caso:draft.nombre_caso,estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'Ubicación: '+draft.ubicacion+(draft.fuente?'\nFuente: '+draft.fuente:''),version:0};pintaCaso();
+  },onExit:()=>{calculate();pintaCaso();}});
+  const intakeRequested=new URLSearchParams(location.search).get('new')==='1'&&!new URLSearchParams(location.search).get('open');
+  if(intakeRequested)intakeBoard.open();
+  if(!intakeRequested){cargarDraft();if(!escenarios.length)escInicial('Base');calculate();pintaCaso();}
   if(modoLocal){$('gate').classList.add('off');$('modoLocalBanner').classList.add('on')}
   else if(clave){apiGet({recurso:'lista'}).then(r=>{if(r.ok){casosCache=r.casos||[];cfgBoard=r.config||{};$('gate').classList.add('off');drenarCola();procesarOpen()}else{reabrirGate()}}).catch(()=>{modoSinConexion();toast('Sin conexión: trabajando en modo local')})}
 })();

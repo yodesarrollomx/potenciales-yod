@@ -33,6 +33,9 @@ jobs:
           node --test tests/ppp-agent-cards.test.cjs
           node --check ppp-agent-bridge.js
           node --test tests/ppp-agent-bridge.test.cjs tests/ppp-agent-receipts.test.cjs
+          node --check ppp-intake.js
+          node --check ppp-stages.js
+          node --test tests/index-entry.test.cjs tests/ppp-intake.test.cjs tests/ppp-intake-server.test.cjs tests/ppp-stages.test.cjs tests/ppp-stages-server.test.cjs tests/ppp-stages-program.test.cjs
           node --check ppp-ui.js
           node --check ppp-version-bridge.js
           node --check ppp-volumes.js
@@ -70,6 +73,8 @@ jobs:
         run: |
           node tests/ppp-version-bridge-browser.cjs
           node tests/ppp-navigation-browser.cjs
+          node tests/ppp-intake-browser.cjs
+          node tests/ppp-stages-browser.cjs
           node tests/ppp-volumes-browser.cjs
           node tests/ppp-restored-bridge-browser.cjs
           node tests/ppp-precision-recovery-browser.cjs
@@ -95,7 +100,7 @@ jobs:
           const fs=require('node:fs'),crypto=require('node:crypto');
           const digest=b=>crypto.createHash('sha256').update(b).digest('hex');
           (async()=>{
-            const paths=['index.html','ppp-projects.js','ppp-home.css','ppp-catalog.js','ppp-catalog.css','mapa.html','ppp-ui.js','ppp-version-bridge.js','ppp-volumes.js','ppp-volumes.css','ppp-volumes-native.js','tests/fixtures/departamentos-volumenes.html','mixto.html','macrolotes.html','patrimonial.html','ppp-case-opening.js','portero.js'];
+            const paths=['ppp-intake.js','ppp-intake.css','ppp-stages.js','ppp-stages.css','residencial.html','unifamiliar.html','index.html','ppp-projects.js','ppp-home.css','ppp-catalog.js','ppp-catalog.css','mapa.html','ppp-ui.js','ppp-version-bridge.js','ppp-volumes.js','ppp-volumes.css','ppp-volumes-native.js','tests/fixtures/departamentos-volumenes.html','mixto.html','macrolotes.html','patrimonial.html','ppp-case-opening.js','portero.js'];
             for(const path of paths){
               const expected=digest(fs.readFileSync(path));let verified=false;
               for(let attempt=0;attempt<6;attempt++){
