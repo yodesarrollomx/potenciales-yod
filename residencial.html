@@ -324,8 +324,8 @@
   #dVivienda.drawer.active{max-height:9000px}
   @media(max-width:700px){.viv-switch{grid-template-columns:1fr}.viv-grid{grid-template-columns:1fr}.viv-tipo-head{flex-wrap:wrap}.viv-tipo-head .viv-in{flex:1 1 100%}}
 </style>
-<link rel="stylesheet" href="ppp-intake.css?v=20261029">
-<script src="ppp-intake.js?v=20261029"></script>
+<link rel="stylesheet" href="ppp-intake.css?v=20261029-cierre34">
+<script src="ppp-intake.js?v=20261029-cierre34"></script>
 <link rel="stylesheet" href="ppp-stages.css?v=20261029">
 <script src="ppp-stages.js?v=20261029"></script>
 </head>
@@ -1614,8 +1614,8 @@
     if(!escDesdeJson(obj.escenarios_json))escInicial('Base');
     calculate();pintaCaso();cerrarOverlays();toast('Caso "'+(caso.nombre_caso||caso.palabra)+'" cargado'+(escenarios.length>1?' · '+escenarios.length+' versiones':''))
   }
-  async function abrirPorId(id){try{const r=await apiGet({recurso:'caso',id});if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'Ese caso ya no existe':'No se pudo abrir: '+r.error)}catch(e){toast('Sin conexión: no se pudo abrir el caso')}}
-  async function abrirPorPalabra(palabra){if(!palabra.trim())return;try{const r=await apiGet({recurso:'caso',palabra:palabra.trim()});if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'No hay caso con esa palabra':'No se pudo abrir: '+r.error)}catch(e){toast('Sin conexión: no se pudo abrir')}}
+  async function abrirPorId(id){const current=intakeBoard.readGuard();try{const r=await apiGet({recurso:'caso',id});if(!current())return;if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'Ese caso ya no existe':'No se pudo abrir: '+r.error)}catch(e){if(current())toast('Sin conexión: no se pudo abrir el caso')}}
+  async function abrirPorPalabra(palabra){if(!palabra.trim())return;const current=intakeBoard.readGuard();try{const r=await apiGet({recurso:'caso',palabra:palabra.trim()});if(!current())return;if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'No hay caso con esa palabra':'No se pudo abrir: '+r.error)}catch(e){if(current())toast('Sin conexión: no se pudo abrir')}}
   async function cargarLista(){const cont=$('listaCasos');cont.innerHTML='<p class="note">Cargando…</p>';try{const r=await apiGet({recurso:'lista'});if(!r.ok){cont.innerHTML='<p class="note">Error: '+r.error+'</p>';if(r.error==='clave')reabrirGate();return}casosCache=r.casos||[];cfgBoard=r.config||cfgBoard;if(!casosCache.length){cont.innerHTML='<p class="note">Aún no hay casos de Lotes Residenciales. Guarda el primero.</p>';return}cont.innerHTML=casosCache.map(c=>`<div class="caso-item" data-id="${c.caso_id}"><div><div class="ci-n">${esc(c.nombre_caso||c.palabra)}<span class="badge">${esc(c.estado||'—')}</span></div><div class="ci-m">palabra: ${esc(c.palabra)} · v${c.version||1} · ${fechaCorta(c.ts_actualizado)}${c.source==='test'?' · PRUEBA':''}</div></div><div class="ci-kpi">${c.utilidad!==''&&c.utilidad!==undefined?fmtM(Number(c.utilidad)):'—'}<span>utilidad · ${c.unidades!==''&&c.unidades!==undefined?fmtN(Number(c.unidades))+' lotes':'—'}</span></div></div>`).join('');cont.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>abrirPorId(el.dataset.id))}catch(e){cont.innerHTML='<p class="note">Sin conexión. Reintenta.</p>'}}
   async function guardarCaso(enviarCorreo){
     if(intakeBoard?.blocking){toast("La ficha se conserva como captura local. El guardado requiere conectar el modelo nativo de Sheets.");return;}

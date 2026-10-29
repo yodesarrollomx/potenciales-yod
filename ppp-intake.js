@@ -22,6 +22,22 @@
   const copy=value=>JSON.parse(JSON.stringify(value));
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const own=(object,key)=>Object.prototype.hasOwnProperty.call(object,key);
+  const REQUEST_TIMEOUT_MS=60000;
+  // A deadline releases the UI; it does not prove that an Apps Script write was
+  // cancelled. Late results are ignored and recovery must use its exact GET receipt.
+  function boundedRequest(run,{timeoutMs=REQUEST_TIMEOUT_MS,schedule=setTimeout,cancel=clearTimeout}={}){
+    if(!Number.isInteger(timeoutMs)||timeoutMs<1)throw Error('plazo_invalido');
+    return new Promise((resolve,reject)=>{
+      let settled=false,timer=null;
+      const finish=(fn,value)=>{if(settled)return;settled=true;if(timer!==null)cancel(timer);fn(value);};
+      timer=schedule(()=>finish(reject,Error('request_timeout')),timeoutMs);
+      Promise.resolve().then(run).then(value=>finish(resolve,value),error=>finish(reject,error));
+    });
+  }
+  function createReadGuard(){
+    let epoch=0;
+    return {capture(){const own=++epoch;return()=>own===epoch;},invalidate(){epoch++;}};
+  }
   const normalizeType=type=>{const value=String(type||'').toLowerCase();return value==='mixto'?'vertical':value;};
   function modelFor(type){const model=models[normalizeType(type)];if(!model)throw Error('tipo_invalido');return model;}
   function parseNumber(value){
@@ -64,40 +80,59 @@
     if(inputs)for(const [key,value] of Object.entries(inputs))if(!own(intake.inputs,key)||intake.inputs[key]!==value)throw Error('sin_confirmacion');
     return copy(response);
   }
-  function nativeAdapter({get,post,type}){
+  function nativeAdapter({get,post,type,...wait}){
     type=normalizeType(type);modelFor(type);
     const check=(response,expected)=>response?.ok===true?validateRead(response,{type,...expected}):response;
+    // Verified PPPIntake.operate serializes the same actor/request/payload under
+    // its lock: confirmed operations return their receipt; pending ones reconcile.
+    const open=async(draft,beforeSend=()=>true)=>{const {schema,model_type,nombre_caso,ubicacion,fuente,inputs,stages}=draft;return check(await boundedRequest(()=>{if(beforeSend()!==true)throw Error('contexto_cambiado');return post({tipo:'sheet-intake',tipo_desarrollo:type,request_id:draft.request_id,intake:{schema,model_type,nombre_caso,ubicacion,fuente,inputs,stages}});},wait),{request_id:draft.request_id,inputs});};
     return {
-      async open(draft){const {schema,model_type,nombre_caso,ubicacion,fuente,inputs,stages}=draft;return check(await post({tipo:'sheet-intake',tipo_desarrollo:type,request_id:draft.request_id,intake:{schema,model_type,nombre_caso,ubicacion,fuente,inputs,stages}}),{request_id:draft.request_id,inputs});},
-      async update(job){return check(await post({tipo:'sheet-intake',tipo_desarrollo:type,...job}),{id:job.caso_id,request_id:job.request_id,inputs:job.intake.inputs});},
-      async read({id,request_id}){return check(await get({recurso:'sheet-intake',tipo:type,...(id?{id}:{}),...(request_id?{request_id}:{})}),{id,request_id});},
-      async saveStages(payload,{reconcile=false}={}){return reconcile?get({recurso:'sheet-stages-receipt',tipo:type,caso_id:payload.caso_id,escenario_id:payload.escenario_id,request_id:payload.request_id}):post(payload);}
+      creationReplayContract:'ppp-intake-atomic-request-v1',open,replayCreation:(draft,{beforeSend}={})=>open(draft,typeof beforeSend==='function'?beforeSend:()=>false),
+      async update(job){return check(await boundedRequest(()=>post({tipo:'sheet-intake',tipo_desarrollo:type,...job}),wait),{id:job.caso_id,request_id:job.request_id,inputs:job.intake.inputs});},
+      async read({id,request_id}){return check(await boundedRequest(()=>get({recurso:'sheet-intake',tipo:type,...(id?{id}:{}),...(request_id?{request_id}:{})}),wait),{id,request_id});},
+      async saveStages(payload,{reconcile=false}={}){return boundedRequest(()=>reconcile?get({recurso:'sheet-stages-receipt',tipo:type,caso_id:payload.caso_id,escenario_id:payload.escenario_id,request_id:payload.request_id}):post(payload),wait);}
     };
   }
   const PREWRITE_ERRORS=['invalid_request','invalid_model_type','access_denied','invalid_identity','not_intake_case','revision_required','invalid_stage_plan','invalid_intake_payload','invalid_intake_schema','model_type_mismatch','invalid_nombre_caso','invalid_ubicacion','invalid_fuente','invalid_intake_inputs','unknown_intake_field','invalid_intake_quantity','required_intake_field','use_stage_operation','invalid_initial_stage','empty_intake_update','intake_refresh_failed','revision_conflict','intake_case_operation_pending'];
+  const SAFE_ERRORS=new Set([...PREWRITE_ERRORS,'request_timeout','receipt_not_found','lock_busy','ocupado','operation_pending','request_payload_mismatch','intake_readback_mismatch','native_write_rejected','recibo_no_disponible','creacion_por_confirmar','sin_confirmacion','clave','revocado','expirado','board','admin','tipo','intake_not_installed','creation_replay_unavailable','contexto_cambiado']);
+  const safeError=value=>typeof value==='string'&&SAFE_ERRORS.has(value)?value:'sin_confirmacion';
+  function diagnosticText(state){
+    if(!['error','uncertain'].includes(state?.status)||typeof state.request_id!=='string'||!/^[-A-Za-z0-9_.:]{1,256}$/.test(state.request_id))return '';
+    const initial=safeError(state.initial_error||state.error),latest=safeError(state.error);
+    return ' Diagnóstico: '+initial+(latest!==initial?' · última consulta: '+latest:'')+' · Solicitud: '+state.request_id;
+  }
   function prewriteRejected(response,request,reconcile=false){return !reconcile&&response?.ok===false&&response.persisted===false&&response.request_id===request?.request_id&&typeof request?.request_id==='string'&&PREWRITE_ERRORS.includes(response.error);}
-  function createController({adapter,onState=()=>{},requestId=()=>globalThis.crypto.randomUUID(),resumeRequest=null}){
+  function createController({adapter,onState=()=>{},requestId=()=>globalThis.crypto.randomUUID(),resumeRequest=null,canReplay=()=>false,...wait}){
     if(!adapter||typeof adapter.open!=='function')throw Error('adaptador_requerido');
-    let busy=false,destroyed=false,pending=null,completed=null,attempted=false;
+    let busy=false,destroyed=false,pending=null,completed=null,attempted=false,initialError=null,replayAllowed=false;
+    const replayCapable=()=>{try{return adapter.creationReplayContract==='ppp-intake-atomic-request-v1'&&typeof adapter.replayCreation==='function'&&canReplay()===true;}catch{return false;}};
+    function failure(status,error,request_id){const reason=safeError(error);if(!initialError)initialError=reason;onState({status,error:reason,initial_error:initialError,request_id,can_replay:replayAllowed&&replayCapable()});return{ok:false,error:reason};}
     if(resumeRequest){const checked=validate(resumeRequest);if(!checked.ok||typeof resumeRequest.request_id!=='string'||!/^[-A-Za-z0-9_.:]{1,256}$/.test(resumeRequest.request_id))throw Error('solicitud_invalida');pending={fingerprint:JSON.stringify(checked.value),request:{...checked.value,request_id:resumeRequest.request_id}};attempted=true;}
-    async function submit(raw){
+    async function submit(raw,replaying=false){
       if(destroyed)throw Error('ficha_cerrada');
       if(busy)return {ok:false,error:'ocupado'};
       if(completed)return copy(completed);
       const checked=validate(raw);if(!checked.ok){onState({status:'invalid',errors:checked.errors});return checked;}
       const fingerprint=JSON.stringify(checked.value);
-      if(pending&&pending.fingerprint!==fingerprint){const r={ok:false,error:'creacion_por_confirmar'};onState({status:'uncertain',...r});return r;}
-      if(!pending)pending={fingerprint,request:{...checked.value,request_id:requestId()}};
-      busy=true;onState({status:'opening',draft:copy(pending.request)});
+      if(pending&&pending.fingerprint!==fingerprint){replayAllowed=false;return failure('uncertain','creacion_por_confirmar',pending.request.request_id);}
+      if(replaying&&(!pending||!replayAllowed||!replayCapable())){replayAllowed=false;return failure('uncertain','creation_replay_unavailable',pending?.request.request_id);}
+      if(!pending){initialError=null;pending={fingerprint,request:{...checked.value,request_id:requestId()}};}
+      replayAllowed=false;busy=true;onState({status:'opening',draft:copy(pending.request),replaying});
       try{
-        const checking=attempted&&typeof adapter.read==='function';attempted=true;
-        const response=checking?await adapter.read({request_id:pending.request.request_id}):await adapter.open(copy(pending.request));
+        const checking=attempted&&!replaying;attempted=true;
+        if(checking&&typeof adapter.read!=='function')throw Error('recibo_no_disponible');
+        const response=await boundedRequest(()=>{
+          if(replaying){if(!replayCapable())throw Error('contexto_cambiado');return adapter.replayCreation(copy(pending.request),{beforeSend:replayCapable});}
+          return checking?adapter.read({request_id:pending.request.request_id}):adapter.open(copy(pending.request));
+        },wait);
         if(destroyed)return {ok:false,error:'ficha_cerrada'};
         if(response?.ok!==true){
           // Sólo un rechazo explícito SIN escritura permite corregir y generar otra solicitud.
-          if(prewriteRejected(response,pending.request,checking)){pending=null;attempted=false;}
-          onState({status:pending?'uncertain':'error',error:response?.error||'sin_confirmacion'});
-          return {ok:false,error:response?.error||'sin_confirmacion'};
+          const request_id=pending.request.request_id;
+          // A replay refusal describes only that attempt, not the earlier write.
+          if(prewriteRejected(response,pending.request,checking||replaying)){pending=null;attempted=false;}
+          else if(checking&&response?.ok===false&&response.error==='receipt_not_found'&&response.request_id===request_id&&Object.keys(response).sort().join('|')==='error|ok|request_id'&&replayCapable())replayAllowed=true;
+          return failure(pending?'uncertain':'error',response?.error,request_id);
         }
         if(response.request_id!==pending.request.request_id||!['draft','confirmed'].includes(response.status))throw Error('sin_confirmacion');
         if(response.status==='confirmed'&&(response.persisted!==true||!response.caso_id||typeof response.revision!=='string'||!response.revision))throw Error('sin_confirmacion');
@@ -106,27 +141,30 @@
         const path=boardPath(pending.request.model_type,response.status==='confirmed'?response.caso_id:undefined);
         completed={ok:true,...response,board_path:path,draft:copy(pending.request)};
         onState({status:response.status,result:copy(completed)});return copy(completed);
-      }catch(error){if(!destroyed)onState({status:'uncertain',error:'sin_confirmacion'});return {ok:false,error:'sin_confirmacion'};}
+      }catch(error){if(!destroyed)return failure('uncertain',error?.message,pending?.request.request_id);return {ok:false,error:'sin_confirmacion'};}
       finally{busy=false;}
     }
-    return {submit,get pending(){return pending?copy(pending.request):null;},destroy(){destroyed=true;}};
+    return {submit:raw=>submit(raw),replay:raw=>submit(raw,true),get pending(){return pending?copy(pending.request):null;},destroy(){destroyed=true;replayAllowed=false;}};
   }
-  function mount({container,type='',value={},adapter,onOpen=()=>{},onCancel=()=>{},onState=()=>{},resumeRequest=null,existingCaseId=''}){
+  function mount({container,type='',value={},adapter,onOpen=()=>{},onCancel=()=>{},onState=()=>{},resumeRequest=null,canReplay=()=>false,existingCaseId=''}){
     if(!container||existingCaseId)return null;
     const doc=container.ownerDocument;let selected=normalizeType(type||value.model_type),destroyed=false;
     if(selected&&!own(models,selected))throw Error('tipo_invalido');
     const drafts={};let common={nombre_caso:value.nombre_caso||'',ubicacion:value.ubicacion||'',fuente:value.fuente||''};
     if(selected)drafts[selected]={...(value.inputs||{})};
     const ui=doc.createElement('section');ui.className='ppp-intake';container.append(ui);
-    const controller=createController({adapter,resumeRequest,onState:state=>{
+    const controller=createController({adapter,resumeRequest,canReplay,onState:state=>{
       if(destroyed)return;
       const note=ui.querySelector('[data-intake-status]');
       const messages={opening:'Abriendo tu plan…',uncertain:'La apertura está por confirmar. Tus datos se conservan; reintenta con la misma ficha.',error:'No se pudo abrir el plan. Tus datos se conservan.',confirmed:'Plan guardado. Abriendo su tablero…',draft:'Ficha preparada. Todavía no está guardada en Sheets.'};
       note.textContent=messages[state.status]||'';
+      if(state.replaying)note.textContent='Reenviando la misma solicitud, con los mismos datos e identificador…';
       const refresh=state.status==='error'&&['revision_conflict','intake_case_operation_pending','intake_refresh_failed'].includes(state.error);
       if(refresh)note.textContent='El libro cambió o tiene otra operación pendiente. Tu ficha se conserva; relee antes de reintentar.';
       if(state.status==='error'&&state.error==='access_denied')note.textContent='Esta sesión no tiene acceso para guardar. Vuelve a abrir el plan con una sesión autorizada.';
-      ui.querySelector('.pi-submit').textContent=refresh?'Releer y reintentar':'Abrir mi plan →';
+      note.textContent+=diagnosticText(state);
+      const replay=ui.querySelector('[data-intake-replay]');if(replay)replay.hidden=state.can_replay!==true;
+      ui.querySelector('.pi-submit').textContent=state.status==='uncertain'?'Comprobar guardado':refresh?'Releer y reintentar':'Abrir mi plan →';
       ui.querySelectorAll('input,select,textarea,button').forEach(el=>el.disabled=state.status==='opening'||!!type&&el.name==='model_type');
       if(state.status==='invalid')showErrors(state.errors);
       onState(state);
@@ -142,19 +180,20 @@
         ${model?`<div class="pi-type-description">${esc(model.description)}</div><div class="pi-fields">${model.fields.filter(f=>f.required).map(inputMarkup).join('')}</div><details class="pi-optional"><summary>Si ya lo sabes, agrega estos datos <span>Opcional</span></summary><div class="pi-fields">${model.fields.filter(f=>!f.required).map(inputMarkup).join('')}</div></details>`:''}
         <label class="pi-field pi-source"><span>Fuente o referencia <small>Opcional</small></span><textarea name="fuente" maxlength="600" rows="2" placeholder="Plano, documento o referencia de los datos">${esc(common.fuente)}</textarea><small class="pi-error" data-error="fuente"></small></label>
         <div class="pi-start"><span class="pi-stage">1</span><div><strong>El plan comienza con una etapa</strong><p>Su duración queda pendiente. Los datos que aún no captures seguirán por definir.</p></div></div>
-        <p class="pi-error" data-error="inputs"></p><p class="pi-error" data-error="caso_id"></p><div class="pi-footer"><p data-intake-status role="status" aria-live="polite"></p><button class="pi-submit" type="submit">Abrir mi plan <span aria-hidden="true">→</span></button></div></form>`;
+        <p class="pi-error" data-error="inputs"></p><p class="pi-error" data-error="caso_id"></p><div class="pi-footer"><p data-intake-status role="status" aria-live="polite"></p><button data-intake-replay type="button" hidden>Reintentar misma solicitud</button><button class="pi-submit" type="submit">Abrir mi plan <span aria-hidden="true">→</span></button></div></form>`;
       ui.querySelector('[name="model_type"]').addEventListener('change',event=>{if(type)return;remember();selected=event.target.value;render();});
       ui.querySelector('[data-intake-cancel]').addEventListener('click',()=>onCancel());
-      ui.querySelector('form').addEventListener('submit',async event=>{event.preventDefault();remember();showErrors({});const result=await controller.submit({...common,model_type:selected,inputs:drafts[selected]||{}});if(result.ok&&!destroyed)onOpen(result);});
+      const send=async replay=>{remember();showErrors({});const raw={...common,model_type:selected,inputs:drafts[selected]||{}},result=await(replay?controller.replay(raw):controller.submit(raw));if(result.ok&&!destroyed)onOpen(result);};
+      ui.querySelector('form').addEventListener('submit',event=>{event.preventDefault();void send(false);});ui.querySelector('[data-intake-replay]').addEventListener('click',()=>void send(true));
     }
     render();return {element:ui,controller,destroy(){destroyed=true;controller.destroy();ui.remove();},get value(){remember();return {...common,model_type:selected,inputs:{...(drafts[selected]||{})}};}};
   }
   /* Adaptador de captura sobre los tableros existentes. El host debe detener su cálculo
      y su guardado legado mientras blocking sea true; los casos guardados usan deactivate(). */
-  function mountBoard({type,controls,adapter=null,onStart=()=>{},onExit=()=>{},mountStages=true,doc=globalThis.document,win=globalThis.window,storage=win.localStorage,getIdentity=()=>win.localStorage.getItem('pyod_clave_v1')||''}){
+  function mountBoard({type,controls,adapter=null,onStart=()=>{},onOpen=()=>{},onExit=()=>{},mountStages=true,doc=globalThis.document,win=globalThis.window,storage=win.localStorage,getIdentity=()=>win.localStorage.getItem('pyod_clave_v1')||''}){
     type=normalizeType(type);modelFor(type);
     const main=doc.querySelector('main.container');if(!main)return null;
-    let draft=null,form=null,opening=false,active=false,banner=null,key=null,disposed=false,epoch=0;
+    let draft=null,form=null,opening=false,active=false,banner=null,key=null,disposed=false,epoch=0,readingNotice=null;const viewGuard=createReadGuard();
     let receipt=null,pending={},job=null,busy=false,saveError='',saveTimer=null,writeEpoch=0;
     let stageEditor=null,stageHost=null,stageOperation=false,stageRefreshing=false,stagePending=false,stageJob=null,recoveredStage=false,leaving=false;
     let identity=getIdentity();
@@ -169,6 +208,13 @@
     const editable=()=>!receipt||receipt.capabilities?.intake?.write===true;
     const stageLocked=()=>stageOperation||stagePending||!!stageJob;
     const host=doc.createElement('div');host.className='ppp-intake-host';main.before(host);
+    // Vertical and Patrimonial already have case-specific loading/retry surfaces.
+    if(['macrolotes','unifamiliar','residencial'].includes(type)&&new URL(win.location.href).searchParams.get('open')){
+      doc.body.classList.add('ppp-intake-reading');readingNotice=doc.createElement('section');readingNotice.className='ppp-intake';readingNotice.setAttribute('role','status');readingNotice.textContent='Leyendo el plan solicitado. Los datos del caso anterior permanecen ocultos. ';
+      const reload=doc.createElement('a');reload.href=win.location.href;reload.textContent='Volver a cargar';readingNotice.append(reload);host.append(readingNotice);
+    }
+    function clearReading(){doc.body.classList.remove('ppp-intake-reading');readingNotice?.remove();readingNotice=null;}
+    function readGuard(){const current=viewGuard.capture();return()=>!disposed&&current();}
     const dangerous='#btnWhats,#btnGuardar,#btnPropuesta,#gGuardarSolo,#gGuardarEnviar,#refreshJson,#applyJson,#exportJson,.preset-casa,.gate-mode,.rep-btn,.land-mode,#btnSoloLotes,#escBar button,[data-operation]';
     function persist(){if(!active||!draft||!key||identity!==getIdentity())return;try{
       if(receipt){storage.removeItem(key);storage.setItem(key+':case:'+receipt.caso_id,JSON.stringify({schema:'ppp-intake-pending-v1',model_type:type,caso_id:receipt.caso_id,revision:receipt.revision,job,pending,stage_job:stageJob}));}
@@ -190,7 +236,8 @@
         doc.querySelectorAll('[data-input="'+control.id+'"]').forEach(label=>label.textContent=value===null?'Por definir':new Intl.NumberFormat('es-MX',{maximumFractionDigits:6}).format(value));
         control.closest('.input-group')?.classList.toggle('pi-pending-input',value===null);
       }
-      main.querySelectorAll('.kpi-val,.hero-grid .big,.hero-grid .sub2,.micro-readout,.lectura,[id^="hud"],#covenantPanel,.pm-fig-main,.pm-fig-sub,.pm-secsum,.pm-secfig,.pm-sum,.pm-hudline').forEach(el=>el.textContent='Por definir');
+      doc.querySelectorAll('.kpi-val,.hero-grid .big,.hero-grid .sub2,.micro-readout,.lectura,[id^="hud"],#covenantPanel,.pm-fig-main,.pm-fig-sub,.pm-secsum,.pm-secfig,.pm-sum,.pm-hudline').forEach(el=>el.textContent='Por definir');
+      doc.getElementById('escChips')?.replaceChildren();
       main.querySelectorAll('[id^="read"]').forEach(el=>{if(!el.querySelector('input,button,select'))el.textContent='Resultados pendientes de cálculo en Sheets.';});
       main.querySelectorAll('.viz-svg').forEach(el=>el.replaceChildren());
       main.querySelectorAll('.flow-table tbody,.proforma-table tbody,#sourcesUses,#rentaRows,#flowRows').forEach(el=>el.replaceChildren());
@@ -210,6 +257,7 @@
     }
     function stageState(state){if(leaving||!receipt)return;stagePending=!!state.pending;if(!state.pending&&!state.busy&&!recoveredStage)stageJob=null;syncStageLock();persist();}
     function start(result){
+      viewGuard.invalidate();clearReading();
       leaving=false;
       receipt=result.status==='confirmed'?validateRead(result,{type}):null;pending={};job=null;busy=false;saveError='';writeEpoch++;
       active=true;opening=false;draft=copy(result.draft);doc.body.classList.remove('ppp-intake-opening');doc.body.classList.add('ppp-intake-capture');
@@ -234,7 +282,7 @@
     function captureInput(event){updateInput(event.target);paint();}
     function closeForm(){form?.destroy();form=null;opening=false;doc.body.classList.remove('ppp-intake-opening');}
     async function open(){
-      if(opening||disposed||stageLocked()||active&&!editable())return;checkIdentity();opening=true;const openingIdentity=identity;doc.body.classList.add('ppp-intake-opening');await scopeReady;
+      if(opening||disposed||stageLocked()||active&&!editable())return;checkIdentity();viewGuard.invalidate();clearReading();onOpen();opening=true;const openingIdentity=identity;doc.body.classList.add('ppp-intake-opening');await scopeReady;
       if(disposed||openingIdentity!==getIdentity())return;
       let prior=active?draft:null;
       if(!prior&&key){try{const saved=JSON.parse(storage.getItem(key)||'null');if(saved?.schema==='ppp-intake-v1'&&saved.model_type===type&&saved.inputs&&typeof saved.inputs==='object'&&!Array.isArray(saved.inputs)){
@@ -252,7 +300,7 @@
         if(prewriteRejected(response,value)&&['revision_conflict','intake_case_operation_pending'].includes(response.error))refreshMetadata=true;
         return response;
       },read:({request_id})=>adapter.read({id:metadataCase,request_id})}:adapter||{open:async value=>({ok:true,status:'draft',persisted:false,request_id:value.request_id})};
-      form=mount({container:host,type,value:known,adapter:formAdapter,resumeRequest:creation,onState:state=>{if(receipt||!key||openingIdentity!==getIdentity())return;try{if(state.status==='opening'&&state.draft)storage.setItem(key+':creating',JSON.stringify(state.draft));if(['confirmed','draft','error'].includes(state.status))storage.removeItem(key+':creating');}catch{}},onOpen:result=>{
+      form=mount({container:host,type,value:known,adapter:formAdapter,resumeRequest:creation,canReplay:()=>!receipt&&!disposed&&openingIdentity===getIdentity(),onState:state=>{if(receipt||!key||openingIdentity!==getIdentity())return;try{if(state.status==='opening'&&state.draft)storage.setItem(key+':creating',JSON.stringify(state.draft));if(['confirmed','draft','error'].includes(state.status))storage.removeItem(key+':creating');}catch{}},onOpen:result=>{
         if(openingIdentity!==getIdentity()){checkIdentity();return;}
         // Conservar capturas de otras áreas, pero un opcional borrado de la ficha sigue vacío.
         if(prior){const areaInputs=Object.fromEntries(Object.entries(prior.inputs).filter(([id])=>!models[type].fields.some(f=>f.id===id)));result.draft.inputs={...areaInputs,...result.draft.inputs};}start(result);
@@ -260,6 +308,7 @@
       host.scrollIntoView({block:'start'});
     }
     function deactivate(){
+      viewGuard.invalidate();clearReading();
       writeEpoch++;win.clearTimeout(saveTimer);receipt=null;pending={};job=null;busy=false;saveError='';
       stageEditor?.dispose();stageEditor=null;stageHost?.remove();stageHost=null;stageOperation=false;stageRefreshing=false;stagePending=false;stageJob=null;recoveredStage=false;
       closeForm();active=false;draft=null;doc.body.classList.remove('ppp-intake-capture');banner?.remove();banner=null;
@@ -366,7 +415,7 @@
     function resumePage(){if(!leaving)return;leaving=false;if(active&&stageJob){recoveredStage=true;stagePending=true;stageOperation=false;paint();persist();}}
     doc.addEventListener('click',preventAction,true);
     win.addEventListener('storage',checkIdentity);win.addEventListener('focus',checkIdentity);win.addEventListener('pagehide',leavePage);win.addEventListener('pageshow',resumePage);const identityTimer=win.setInterval(checkIdentity,1000);
-    return {get active(){return active;},get blocking(){return active||opening;},get draft(){return draft?copy(draft):null;},open,paint,persist,flush,checkSave,acceptRead,stageContext,saveStages,deactivate,destroy(){disposed=true;epoch++;deactivate();win.clearInterval(identityTimer);win.removeEventListener('storage',checkIdentity);win.removeEventListener('focus',checkIdentity);win.removeEventListener('pagehide',leavePage);win.removeEventListener('pageshow',resumePage);doc.removeEventListener('click',preventAction,true);host.remove();}};
+    return {get active(){return active;},get blocking(){return active||opening;},get draft(){return draft?copy(draft):null;},readGuard,open,paint,persist,flush,checkSave,acceptRead,stageContext,saveStages,deactivate,destroy(){disposed=true;epoch++;deactivate();win.clearInterval(identityTimer);win.removeEventListener('storage',checkIdentity);win.removeEventListener('focus',checkIdentity);win.removeEventListener('pagehide',leavePage);win.removeEventListener('pageshow',resumePage);doc.removeEventListener('click',preventAction,true);host.remove();}};
   }
-  return {PREWRITE_ERRORS,prewriteRejected,models,normalizeType,modelFor,parseNumber,validate,boardPath,validateRead,nativeAdapter,createController,mount,mountBoard};
+  return {REQUEST_TIMEOUT_MS,boundedRequest,createReadGuard,PREWRITE_ERRORS,prewriteRejected,safeError,diagnosticText,models,normalizeType,modelFor,parseNumber,validate,boardPath,validateRead,nativeAdapter,createController,mount,mountBoard};
 });

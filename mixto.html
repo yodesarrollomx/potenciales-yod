@@ -306,7 +306,7 @@
 <link rel="stylesheet" href="ppp-ui.css?v=20261001-5">
 <link rel="stylesheet" href="ppp-volumes.css?v=20261020-native4">
 <link rel="stylesheet" href="ppp-stages.css?v=20261029">
-<link rel="stylesheet" href="ppp-intake.css?v=20261029">
+<link rel="stylesheet" href="ppp-intake.css?v=20261029-cierre34">
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -549,7 +549,7 @@
 <script src="ppp-volumes.js?v=20261020-native4"></script>
 <script src="ppp-volumes-native.js?v=20261020-native4"></script>
 <script src="ppp-stages.js?v=20261029"></script>
-<script src="ppp-intake.js?v=20261029"></script>
+<script src="ppp-intake.js?v=20261029-cierre34"></script>
 <script src="ppp-version-bridge.js?v=20261020-native2"></script>
 <script>
 (() => {
@@ -1302,13 +1302,15 @@
     if(sheetModel)acceptSheetModel(sheetModel,sheetModel.activo);else calculate();pintaCaso();if(sheetModel)sheetStatus('Sheets · revisión '+sheetModel.revision.slice(0,8));cerrarOverlays();toast('Caso "'+(caso.nombre_caso||caso.palabra)+'" cargado'+(escenarios.length>1?' · '+escenarios.length+' versiones':''))
   }
   async function readSelectedCase(params){
+    const current=intakeBoard.readGuard();
     const same=!!(params.id&&params.id===caso.caso_id&&sheetModel);
     casePresentation('loading',same?'Verificando la copia de Sheets…':'Leyendo el proyecto y su versión desde Sheets…',params.id,same,()=>readSelectedCase(params));
     try{
-      const response=await caseReader.load({recurso:'caso',...params});if(!response)return;
+      const response=await caseReader.load({recurso:'caso',...params});if(!response||!current())return;
       if(!response.ok||!response.caso||params.id&&response.caso.caso_id!==params.id)throw Error(response.error||'respuesta_incompleta');
       aplicarCasoRemoto(response.caso);
     }catch(error){
+      if(!current())return;
       casePresentation('error',error.message==='no_existe'?'El proyecto no está disponible. Puedes elegir otro en Mis casos.':'No se pudo confirmar el proyecto. Reintenta sin perder tu selección.',params.id,same,()=>readSelectedCase(params));
       if(error.message==='clave')reabrirGate();
     }
@@ -1539,7 +1541,7 @@
   setInterval(()=>{if(sheetModel&&!sheetPending&&!sheetBusy&&!document.hidden)reloadSheetModel();},45000);
   window.PPPHelp=(id,anchor)=>{const info=GLOSARIO[metricHelp[id]];if(info){showMetricTip(anchor,info);metricTip.dataset.for=id;}};
   window.PPPView?.mount();
-  intakeBoard=window.PPPIntake.mountBoard({type:'vertical',controls,adapter:window.PPPIntake.nativeAdapter({type:'vertical',get:apiGet,post:apiPost}),onStart:(draft,receipt)=>{
+  intakeBoard=window.PPPIntake.mountBoard({type:'vertical',controls,adapter:window.PPPIntake.nativeAdapter({type:'vertical',get:apiGet,post:apiPost}),onOpen:()=>{caseReader.invalidate();casePresentation('ready','');},onStart:(draft,receipt)=>{
     retireVolumeIdentity();caseReader.invalidate();casePresentation('ready','');sheetModel=null;sheetPending=null;sheetNeedsRefresh=false;sheetFailure=false;sheetBusy=false;state=null;legacySavedInputs=null;
     caso={caso_id:receipt?.caso_id||'',palabra:receipt?.palabra||'',correo:caso.correo,nombre_caso:draft.nombre_caso,estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:JSON.stringify({ubicacion:draft.ubicacion,fuente:draft.fuente}),version:0};
     escenarios=[];escActivo='';const url=new URL(location.href);if(receipt?.caso_id){url.searchParams.set('open',receipt.caso_id);url.searchParams.delete('new');}else{url.searchParams.delete('open');url.searchParams.set('new','1');}history.replaceState(null,'',url);

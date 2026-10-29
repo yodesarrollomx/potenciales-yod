@@ -44,12 +44,12 @@ test('No se abre otro plan ni se anuncia confirmación si el adaptador responde 
   }
 });
 test('Una creación incierta reusa solicitud idéntica y no permite crear otro caso con datos distintos',async()=>{
-  let calls=0;const requests=[];
-  const controller=intake.createController({requestId:()=> 'req-1',adapter:{open:async request=>{requests.push(request);if(++calls===1)throw Error('network');return{ok:true,status:'confirmed',persisted:true,caso_id:'case-1',revision:'rev-1',request_id:request.request_id};}}});
+  let calls=0,reads=0;const requests=[];
+  const controller=intake.createController({requestId:()=> 'req-1',adapter:{open:async request=>{requests.push(request);calls++;throw Error('network');},read:async request=>{reads++;assert.equal(request.request_id,requests[0].request_id);return{ok:true,status:'confirmed',persisted:true,caso_id:'case-1',revision:'rev-1',request_id:request.request_id};}}});
   assert.equal((await controller.submit(sample())).ok,false);
   assert.equal((await controller.submit({...sample(),nombre_caso:'Otro'})).error,'creacion_por_confirmar');assert.equal(calls,1);
-  const r=await controller.submit(sample());assert.equal(r.ok,true);assert.equal(r.board_path,'mixto.html?open=case-1');assert.deepEqual(requests[0],requests[1]);
-  await controller.submit(sample());assert.equal(calls,2);
+  const r=await controller.submit(sample());assert.equal(r.ok,true);assert.equal(r.board_path,'mixto.html?open=case-1');assert.equal(reads,1);
+  await controller.submit(sample());assert.equal(calls,1);assert.equal(reads,1);
 });
 test('El modo borrador es explícito y nunca afirma persistencia Sheets',async()=>{
   const controller=intake.createController({requestId:()=> 'draft-1',adapter:{open:async request=>({ok:true,status:'draft',persisted:false,request_id:request.request_id})}});
@@ -82,4 +82,62 @@ test('Sólo el rechazo conocido del POST inicial con ID exacto retira una creaci
     let reads=0;const x=intake.createController({requestId:()=> 'new-request',adapter:{open:async()=>{throw Error('timeout');},read:async p=>{reads++;return{ok:false,error,persisted:false,request_id:p.request_id};}}});await x.submit(sample());await x.submit(sample());assert.equal(reads,1);assert.equal(x.pending.request_id,'new-request','GET '+error+' cannot discard an earlier write');
   }
   for(const error of ['unexpected','operation_pending','receipt_not_found','request_payload_mismatch','intake_readback_mismatch']){const c=intake.createController({requestId:()=> 'new-request',adapter:{open:async p=>({ok:false,error,persisted:false,request_id:p.request_id})}});await c.submit(sample());assert.equal(c.pending.request_id,'new-request');}
+});
+
+function clock(){let next=0;const timers=new Map();return{schedule(fn,ms){const id=++next;timers.set(id,{fn,ms});return id;},cancel(id){timers.delete(id);},expire(){assert.equal(timers.size,1);const [id,t]=timers.entries().next().value;timers.delete(id);t.fn();return t.ms;},get size(){return timers.size;}};}
+const turn=()=>new Promise(resolve=>setImmediate(resolve));
+test('A slow creation releases the UI at 60 seconds, ignores its late ACK and recovers only by exact GET',async()=>{
+  const timer=clock(),states=[],calls=[];let resolvePost,resolveRead;
+  const controller=intake.createController({...timer,requestId:()=> 'slow-creation',onState:s=>states.push(s.status),adapter:{open:request=>{calls.push(['POST',request.request_id]);return new Promise(resolve=>{resolvePost=resolve;});},read:request=>{calls.push(['GET',request.request_id]);return new Promise(resolve=>{resolveRead=resolve;});}}});
+  const opening=controller.submit(sample());await turn();assert.equal((await controller.submit(sample())).error,'ocupado');assert.equal(timer.expire(),60000);assert.equal((await opening).ok,false);assert.equal(states.at(-1),'uncertain');assert.equal(controller.pending.request_id,'slow-creation');
+  resolvePost({ok:true,status:'confirmed',persisted:true,caso_id:'late-case',revision:'r1',request_id:'slow-creation'});await turn();assert.equal(states.includes('confirmed'),false);
+  const checking=controller.submit(sample());await turn();assert.deepEqual(calls,[['POST','slow-creation'],['GET','slow-creation']]);
+  resolveRead({ok:true,status:'confirmed',persisted:true,caso_id:'canonical-case',revision:'r2',request_id:'slow-creation'});assert.equal((await checking).caso_id,'canonical-case');assert.equal(states.at(-1),'confirmed');assert.equal(timer.size,0);
+});
+test('A slow receipt read is bounded and remains recoverable without another POST or request ID',async()=>{
+  const timer=clock();let posts=0,reads=0,resolveLate;
+  const controller=intake.createController({...timer,requestId:()=> 'same-request',adapter:{open:async()=>{posts++;throw Error('lost_ack');},read:()=>{reads++;if(reads===1)return new Promise(resolve=>{resolveLate=resolve;});return Promise.resolve({ok:true,status:'confirmed',persisted:true,caso_id:'same-case',revision:'r1',request_id:'same-request'});}}});
+  await controller.submit(sample());const checking=controller.submit(sample());await turn();timer.expire();assert.equal((await checking).ok,false);resolveLate({ok:false,persisted:false,error:'invalid_request',request_id:'same-request'});await turn();assert.equal(controller.pending.request_id,'same-request');assert.equal((await controller.submit(sample())).caso_id,'same-case');assert.equal(posts,1);assert.equal(reads,2);
+});
+test('An uncertain custom adapter without a receipt reader never repeats the write',async()=>{
+  let posts=0;const controller=intake.createController({requestId:()=> 'once-only',adapter:{open:async()=>{posts++;throw Error('lost_ack');}}});await controller.submit(sample());await controller.submit(sample());assert.equal(posts,1);assert.equal(controller.pending.request_id,'once-only');
+});
+test('Native autosave and both stage transports share a bounded wait without retrying any transport',async()=>{
+  for(const operation of ['update','read','stage-write','stage-read']){
+    const timer=clock(),calls=[];const adapter=intake.nativeAdapter({...timer,type:'vertical',get:query=>{calls.push(['GET',query]);return new Promise(()=>{});},post:payload=>{calls.push(['POST',payload]);return new Promise(()=>{});}});
+    const job={caso_id:'case-1',request_id:'same-operation',intake:{inputs:{inTerreno:500}}};
+    const waiting=operation==='update'?adapter.update(job):operation==='read'?adapter.read({id:'case-1',request_id:job.request_id}):adapter.saveStages(job,{reconcile:operation==='stage-read'});const rejected=assert.rejects(waiting,/request_timeout/);await turn();assert.equal(timer.expire(),60000);await rejected;assert.equal(calls.length,1);assert.equal(calls[0][0],['read','stage-read'].includes(operation)?'GET':'POST');
+  }
+});
+test('Creation diagnostics retain the first failure and latest receipt reason without exposing arbitrary server content',async()=>{
+  const states=[];let posts=0;const controller=intake.createController({requestId:()=> 'support-operation',onState:s=>states.push(s),adapter:{open:async()=>{posts++;return{ok:false,error:'lock_busy'};},read:async()=>({ok:false,error:'receipt_not_found'})}});
+  await controller.submit(sample());await controller.submit(sample());const current=states.at(-1);assert.equal(current.initial_error,'lock_busy');assert.equal(current.error,'receipt_not_found');assert.equal(posts,1);assert.equal(intake.diagnosticText(current),' Diagnóstico: lock_busy · última consulta: receipt_not_found · Solicitud: support-operation');
+  const unsafe={status:'uncertain',request_id:'support-operation',initial_error:'<img src=x> SECRET_TOKEN',error:'Bearer private-value'};assert.equal(intake.diagnosticText(unsafe),' Diagnóstico: sin_confirmacion · Solicitud: support-operation');assert.equal(intake.diagnosticText({...unsafe,request_id:'token<script>'}), '');
+  const busy=intake.createController({requestId:()=> 'server-busy',adapter:{open:async()=>({ok:false,persisted:false,error:'ocupado',request_id:'server-busy'})}});await busy.submit(sample());assert.equal(busy.pending.request_id,'server-busy');assert.equal(intake.safeError('ocupado'),'ocupado');assert.equal(intake.PREWRITE_ERRORS.includes('ocupado'),false,'a support code never authorizes another POST');
+});
+
+const confirmed=request_id=>({ok:true,status:'confirmed',persisted:true,pending:true,calculated:false,model_status:'MODELO_PENDIENTE',caso_id:'recovered-case',revision:'r1',request_id,intake:{...intake.validate(sample()).value}});
+test('Native creation exposes an explicit same-request replay only after an exact missing receipt; no automatic POST',async()=>{
+  const calls=[],states=[];let books=0;const adapter=intake.nativeAdapter({type:'vertical',post:async payload=>{calls.push(JSON.parse(JSON.stringify(payload)));if(calls.length===1)return{ok:false,error:'ocupado'};books++;return confirmed(payload.request_id);},get:async query=>({ok:false,error:'receipt_not_found',request_id:query.request_id})});
+  const controller=intake.createController({adapter,canReplay:()=>true,requestId:()=> 'immutable-create',onState:s=>states.push(s)});
+  await controller.submit(sample());assert.equal((await controller.replay(sample())).error,'creation_replay_unavailable');assert.equal(calls.length,1);
+  await controller.submit(sample());assert.equal(states.at(-1).can_replay,true);await turn();assert.equal(calls.length,1,'a GET never schedules a POST');
+  assert.equal((await controller.replay(sample())).caso_id,'recovered-case');assert.equal(books,1);assert.equal(calls.length,2);assert.deepEqual(calls[1],calls[0]);
+});
+test('A late original creation and an explicit idempotent replay keep one case and ignore the old ACK',async()=>{
+  const timer=clock(),posts=[],states=[];let resolveOriginal,books=0;const adapter={creationReplayContract:'ppp-intake-atomic-request-v1',open:request=>{posts.push(JSON.stringify(request));return new Promise(resolve=>{resolveOriginal=()=>{books++;resolve(confirmed(request.request_id));};});},read:async request=>({ok:false,error:'receipt_not_found',request_id:request.request_id}),replayCreation:async request=>{posts.push(JSON.stringify(request));return confirmed(request.request_id);}};
+  const controller=intake.createController({...timer,adapter,canReplay:()=>true,requestId:()=> 'racing-create',onState:s=>states.push(s.status)});
+  const pending=controller.submit(sample());await turn();timer.expire();await pending;await controller.submit(sample());resolveOriginal();await turn();assert.equal(states.includes('confirmed'),false);assert.equal((await controller.replay(sample())).caso_id,'recovered-case');assert.equal(books,1);assert.deepEqual(posts,[posts[0],posts[0]]);
+});
+test('Missing-receipt evidence must be exact and custom adapters never gain a replay contract implicitly',async()=>{
+  for(const response of [{ok:false,error:'receipt_not_found'},{ok:false,error:'receipt_not_found',request_id:'foreign'},{ok:false,error:'receipt_not_found',request_id:'bound',persisted:true},{ok:false,error:'operation_pending',request_id:'bound'},{ok:null,error:'receipt_not_found',request_id:'bound'},{ok:0,error:'receipt_not_found',request_id:'bound'},{ok:undefined,error:'receipt_not_found',request_id:'bound'},{error:'receipt_not_found',request_id:'bound'}]){
+    let posts=0;const adapter={creationReplayContract:'ppp-intake-atomic-request-v1',open:async()=>{posts++;throw Error('lost_ack');},read:async()=>response,replayCreation:async()=>{posts++;return confirmed('bound');}},controller=intake.createController({adapter,canReplay:()=>true,requestId:()=> 'bound'});await controller.submit(sample());await controller.submit(sample());assert.equal((await controller.replay(sample())).ok,false);assert.equal(posts,1);assert.equal(controller.pending.request_id,'bound');
+  }
+  let posts=0;const adapter={open:async()=>{posts++;throw Error('lost_ack');},read:async()=>({ok:false,error:'receipt_not_found',request_id:'bound'}),replayCreation:async()=>{posts++;return confirmed('bound');}},controller=intake.createController({adapter,canReplay:()=>true,requestId:()=> 'bound'});await controller.submit(sample());await controller.submit(sample());await controller.replay(sample());assert.equal(posts,1);
+});
+for(const changeAt of ['before-click','before-controller-transport','between-controller-and-native-transport'])test('A changed identity blocks native replay '+changeAt,async()=>{
+  let identity='original',posts=0;const adapter=intake.nativeAdapter({type:'vertical',post:async()=>{posts++;return{ok:false,error:'ocupado'};},get:async query=>({ok:false,error:'receipt_not_found',request_id:query.request_id})}),controller=intake.createController({adapter,canReplay:()=>identity==='original',requestId:()=> 'owned-request'});await controller.submit(sample());await controller.submit(sample());if(changeAt==='before-click')identity='other';const replay=controller.replay(sample());if(changeAt==='between-controller-and-native-transport')queueMicrotask(()=>{identity='other';});else identity='other';assert.equal((await replay).ok,false);assert.equal(posts,1);assert.equal(controller.pending.request_id,'owned-request');
+});
+test('A replay refusal never retires the original operation, and modified form data never changes its payload',async()=>{
+  let posts=0;const adapter=intake.nativeAdapter({type:'vertical',post:async payload=>{posts++;return posts===1?{ok:false,error:'ocupado'}:{ok:false,error:'access_denied',persisted:false,request_id:payload.request_id};},get:async query=>({ok:false,error:'receipt_not_found',request_id:query.request_id})}),controller=intake.createController({adapter,canReplay:()=>true,requestId:()=> 'same-operation'});await controller.submit(sample());await controller.submit(sample());await controller.replay({...sample(),nombre_caso:'Changed after GET'});assert.equal(posts,1);assert.equal(controller.pending.nombre_caso,sample().nombre_caso);await controller.submit(sample());await controller.replay(sample());assert.equal(posts,2);assert.equal(controller.pending.request_id,'same-operation');
 });
