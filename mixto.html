@@ -10,6 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css">
 <link rel="stylesheet" href="https://yodesarrollomx.github.io/yod-portal/os/shell.css">
+<link rel="stylesheet" href="ppp40-ui.css?v=20261029-semilla1">
+<style>body.ppp40-mode > [hidden]{display:none!important}body.ppp40-mode{background:#171713}#ppp40-root{max-width:1360px;margin:auto}.ppp40-loading{padding:28px;color:#e9e6df}.ppp40-session{display:block;margin:16px auto 40px;padding:10px 16px;background:transparent;color:#e9e6df;border:1px solid #827c6c;border-radius:8px;cursor:pointer}</style>
 <style>
   /* ===== Fintech Editorial (oscuro) · tokens por ROL, convención de los boards YoD ===== */
   :root{--bg:#f6f3ed;--card:#ffffff;--surface:rgba(35,29,20,.04);--text:#231d14;--muted:#766f62;--suave:#8a8272;--linea:#e1dacb;--lineaf:#d8cfbb;--box:rgba(35,29,20,.04);
@@ -551,10 +553,17 @@
 <script src="ppp-stages.js?v=20261029-paso56"></script>
 <script src="ppp-intake.js?v=20261029-paso56"></script>
 <script src="ppp-version-bridge.js?v=20261020-native2"></script>
+<script src="ppp40-graph.js?v=20261029-semilla1"></script>
+<script src="ppp40-ui.js?v=20261029-semilla1"></script>
+<script src="ppp40-bootstrap.js?v=20261029-semilla1"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
   const NUBE={ENDPOINT:(window.YOD_PORTERO||{}).original,TIPO:'vertical',SITE:'https://yodesarrollomx.github.io/potenciales-yod/'};
+  if(window.PPP40Bootstrap.selected(location.href)){
+    window.PPP40Bootstrap.mount({endpoint:NUBE.ENDPOINT,doc:document,win:window});
+    return;
+  }
   const cloudOn=/^https:\/\//.test(NUBE.ENDPOINT);
   const LS={clave:'pyod_clave_v1',draft:'pyod_draft_v1',cola:'pyod_postq_v1'};
   const ESTADOS=['EXPLORACIÓN','ANÁLISIS','PROPUESTA','NEGOCIACIÓN','CERRADO','DESCARTADO'];

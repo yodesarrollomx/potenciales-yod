@@ -1,29 +1,20 @@
 {
-  "model_revision": "2026-10-29.ppp-read-validation.1",
-  "proposal_id": "CHG-PPP-FICHA-ETAPAS-20261029",
-  "summary": "Propuesta autorizada de ficha mínima común para los cinco motores PPP, apertura del tablero normal y edición conversada de etapas con datos/fórmulas nativas en Sheets y coherencia por modificación. Preserva identidad, escenarios, permisos y recibos; implementación y despliegue se acreditan por separado. Se conservan los errores tipados de apertura y la señal de cap inactivo ya integrados en main. Se agrega un planificador de QA puro para copias de captura con diario atómico y lectura de recuperación; no cambia runtime, ACL, backend ni fórmulas financieras. La ficha limita a 60 segundos las esperas y conserva la operación incierta para consultar su recibo por GET. Oculta resúmenes y versiones de otros casos durante la lectura y la captura pendiente, descarta lecturas de vistas anteriores y muestra códigos de diagnóstico conocidos. La recuperación nativa puede reenviar manualmente la misma creación con identidad, ID y payload inmutables después de un GET exacto receipt_not_found; el CORE deduplica bajo lock y nunca se reenvía automáticamente. Paso5–6 piloto: vista previa ligada a caso/versión/revisión, aclaración de orden y guardado explícito; recuperación manual del mismo cambio tras reserva previa sin lote y conciliación del lote aplicado. No inventa fechas ni repartos. El host reutiliza el ledger y la URL existente, con escritura opt-in en una copia aislada y lectura de sus 72 fórmulas; publicación y QA real se acreditan por separado.",
+  "model_revision": "2026-10-29.ppp40-semilla.1",
+  "proposal_id": "CHG-PPP40-SEMILLA-20261029",
+  "summary": "PPP4 incremental: catálogo literal, grafo puro y semilla incompleta versionada dentro del frontend existente. Persistencia propuesta por módulo opt-in en la MISMA implementación GAS y tablas del master. Sin nueva URL, ACL, segundo motor financiero ni datos privados. Seed_id pre-alta es identidad de borrador, no board_case_id; promoción debe preservar vínculo explícito y no se presenta implementada.",
   "components": [
     "SYS-POTENCIALES",
     "GAS-PORTERO",
     "SHEET-PORTERO",
     "SHEET-PPP-MODELOS",
-    "SYS-YOD-OS",
-    "SYS-DESPACHO-3D",
     "SVC-AUTON-CLOUD"
   ],
   "tests": [
-    "FICHA-5/PANEL: recorrer los cinco HTML con datos sintéticos, abrir tablero nativo y paneles en escritorio/móvil sin perder accesos, documentos ni escenarios.",
-    "ETAPA-1/INTENCION-3X12: alta compatible con una etapa; caso existente conserva etapas; texto final 3 etapas de 12 meses comparte ruta con dictado/voz y no aplica negaciones ni audio provisional.",
-    "COHERENCIA: comparar inventario, áreas, recursos únicos, calendario completo y flujos en fixtures y fórmulas nativas aisladas; no aceptar cálculo financiero paralelo.",
-    "CONCURRENCIA/CONFIRMADO: permisos, revisión obsoleta, cambio de caso/usuario, duplicado, ACK perdido y recibo exacto sin repetir escrituras inciertas.",
-    "ENTREGA: pruebas locales, CI, Pages, versión existente de GAS y lectura final se registran por separado; sin POST de pruebas a producción.",
-    "Apertura Patrimonial: conservar rechazo tipado, diagnóstico y cap inactivo en las condiciones estrictas ya integradas.",
-    "PASO4-COPIAS: planificar solamente constantes de calendario y espejos permitidos; conservar 72 fórmulas; comprobar diario/preimagen, recálculo efectivo y recuperación de solo lectura. Fixtures sintéticas en CI y evidencia aislada de cinco tipos por separado.",
-    "PLAZO-60/RECIBO: creación y GET colgados liberan busy al plazo; ACK tardío no confirma; recuperación conserva request_id, no repite POST automáticamente y adaptadores sin lector no reenvían escrituras. Autosave y etapas comparten espera acotada. Reloj virtual, contratos y navegador sintético.",
-    "AISLAMIENTO-VISTA: cache previo con otro caso y versiones en los cinco HTML; durante lectura remota no se muestra el tablero anterior y una ficha pendiente no presenta su HUD ni escenarios. GET previo a la nueva ficha no reemplaza la selección. Diagnóstico conserva primer/último código conocido y request_id sin mensajes arbitrarios. Dos selecciones concurrentes A/B siempre conservan la última solicitada, cualquiera que sea el orden de llegada. El código ocupado es diagnóstico y nunca prueba ausencia de escritura.",
-    "REPLAY-MISMA-CREACION: contrato idempotente explícito del adaptador nativo; GET ok:false/receipt_not_found/ID exacto; botón manual; payload y UUID originales; identidad actual justo antes de POST. Cambios de sesión o formulario, ausencia de contrato y respuestas incompletas rechazan el reenvío. Un rechazo del replay no retira la incertidumbre original. Dos transportes del mismo ID conservan un solo libro; pending solo reconcilia.",
-    "PASO56-TEXTO: positivos, negación, decimal/rango, contradicción y comando extra; no truncar fuente; propuesta obsoleta al cambiar caso/versión/revisión/capacidad; selección de paralelo no compatible sin POST.",
-    "PASO56-RECUPERACION: mismo request y payload tras reserva durable; reanudar sólo mediante botón explícito después de evidencia exacta; retorno incierto no genera otro ID ni afirma aplicado; protección de 72 fórmulas y fallo después de lote con conciliación por GET."
+    "Semilla incompleta preserva null y fuente literal; superficie conocida debe ser positiva. Estado durable requiere recibo y lectura; el grafo distingue cero de ausencia.",
+    "ACL vertical existente, revisión/CAS, repetición/payload mismatch y recuperación por lectura sin segundo POST.",
+    "Catálogo 18 módulos/96 preguntas extraído sin convertir texto en reglas; grafo separa pertenencia y cálculo, rechaza ciclos.",
+    "UI descarta respuesta al cambiar identidad/revisión; propuesta sólo manualmente confirmada; conexión ausente no simula éxito.",
+    "Agente real, promoción a caso, calendario y recorrido online aún requieren integración/QA antes de nivel Básico."
   ],
-  "rollback": "Deshabilitar sólo la capacidad nueva de etapas y revertir consumidores/handlers mediante commits y la versión previa de la misma implementación GAS. Conservar casos, escenarios, etapas, recibos, fórmulas, ACL e históricos; no restaurar libros completos ni borrar registros."
+  "rollback": "Revertir commits de consumidores y desactivar capacidad semilla en la implementación existente. Preservar semillas, casos, recibos e historia; no borrar ni restaurar libros."
 }
