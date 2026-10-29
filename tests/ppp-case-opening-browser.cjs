@@ -33,7 +33,7 @@ const parent='<!doctype html><meta name="viewport" content="width=device-width,i
   if(scenario==='catalog-independent'||scenario==='transient'){if(scenario==='catalog-independent')await openingHeld;await frame.locator('#pppCaseOpening').getByText(scenario==='transient'?'Recuperando conexión':'Abriendo tu plan de potencial',{exact:true}).waitFor();assert.equal(await frame.getByRole('button',{name:'Volver a conectar el plan',includeHidden:true}).isVisible(),false);assert.equal(await frame.locator('#pppCaseOpening').getByRole('button',{name:'Entrar con Google',includeHidden:true}).isVisible(),false);if(scenario==='catalog-independent')releaseOpeningRead();}
   if(['board-denied','typed-validation'].includes(scenario)){
    const opening=frame.locator('#pppCaseOpening');await opening.getByText('No se pudo abrir este plan',{exact:true}).waitFor();
-   assert.match(await opening.locator('p').innerText(),scenario==='board-denied'?/permiso para este tablero/:/Cap de mercado.*mínimo/);
+   assert.match(await opening.locator('p').innerText(),scenario==='board-denied'?/permiso para este tablero/:/^Cap rate de mercado \(%\) · para valuar el activo está por debajo del mínimo permitido para este modelo\./);
    assert.match(await opening.locator('small').innerText(),scenario==='board-denied'?/board/:/cantidad_fuera_rango.*below_min.*synthetic/);
    assert.doesNotMatch(await opening.innerText(),/PRIVATE_DIAGNOSTIC/);
    assert.equal(await opening.getByRole('button',{name:'Entrar con Google',includeHidden:true}).isVisible(),false);
