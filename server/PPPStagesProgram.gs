@@ -32,7 +32,7 @@ var PPPStagesProgram = (function () {
     function bound(entry) {
       if (!entry || entry.values[4] !== 'ready') return false;
       var versions = ss.getSheetByName('Versiones'); if (!versions) return false;
-      var matches = versions.getDataRange().getValues().slice(1).filter(function (r) { return String(r[0]) === String(entry.values[0]) && r[5] !== 'ARCHIVADO'; });
+      var matches = versions.getDataRange().getValues().slice(1).filter(function (r) { return String(r[0]) === String(entry.values[0]) && (r[5] !== 'ARCHIVADO' || (typeof hooks.allowUnpublishedVersion === 'function' && hooks.allowUnpublishedVersion(r, entry) === true)); });
       return matches.length === 1 && String(matches[0][4]) === String(entry.values[3]);
     }
     function stageSheet(entry) { var h = ss.getSheetByName(String(entry.values[1])); if (!h) fail('stage_binding_missing'); return h; }

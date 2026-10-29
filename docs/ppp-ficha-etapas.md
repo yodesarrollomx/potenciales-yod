@@ -28,4 +28,6 @@ Una ficha guardada permanece en `MODELO_PENDIENTE`, incluso si después se llena
 
 El programa vertical nativo completo dispone de un ejecutor de etapas separado, con fórmulas de Sheets y nueve comprobaciones. Su prueba real aislada de una a tres etapas de doce meses conservó inventario e importes. Esa prueba no acredita modelos financieros nativos de los otros cuatro tipos ni convierte automáticamente las nuevas fichas.
 
+La plantilla general de alta financiera se conserva. No se promueve globalmente la plantilla con etapas, porque limitaría la creación existente de proyectos con dos o tres cuerpos. La activación financiera por caso requiere una instalación recuperable desde su propio programa revisado y un recibo durable; pertenece a la siguiente migración, no a la captura inicial publicada.
+
 Reversión: deshabilitar la capacidad nueva y revertir los commits de consumidor/handler, conservando datos e históricos. Volver a la versión previa de la misma implementación GAS cuando corresponda. No borrar etapas, restaurar libros completos ni alterar ACL como parte del rollback.

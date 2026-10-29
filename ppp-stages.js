@@ -13,12 +13,16 @@
  const rev=v=>typeof v==='string'&&!!v&&v.length<=256;
  const exact=(v,keys)=>object(v)&&Object.keys(v).length===keys.length&&keys.every(k=>Object.prototype.hasOwnProperty.call(v,k));
  const single=(v,word)=>Array.isArray(v)&&v.length===1&&v[0]===word;
+  const PREWRITE_ERRORS=['invalid_request','invalid_model_type','access_denied','invalid_identity','not_intake_case','revision_required','invalid_stage_plan','invalid_intake_payload','invalid_intake_schema','model_type_mismatch','invalid_nombre_caso','invalid_ubicacion','invalid_fuente','invalid_intake_inputs','unknown_intake_field','invalid_intake_quantity','required_intake_field','use_stage_operation','invalid_initial_stage','empty_intake_update','intake_refresh_failed','revision_conflict','intake_case_operation_pending'];
+  function prewriteRejected(response,request,reconcile=false){return !reconcile&&response?.ok===false&&response.persisted===false&&response.request_id===request?.request_id&&typeof request?.request_id==='string'&&PREWRITE_ERRORS.includes(response.error);}
  function capability(v){
   if(!object(v)||v.schema!==1||v.read!==true||typeof v.write!=='boolean'||!Number.isInteger(v.max_stages)||v.max_stages<1||v.max_stages>MAX_STAGES||!Number.isInteger(v.max_months)||v.max_months<1||v.max_months>MAX_MONTHS||!single(v.modes,'sequential')||!single(v.allocation_modes,'preserve')||typeof v.assumption!=='string'||!v.assumption.trim()||v.assumption.length>300)return null;
-  return{schema:1,read:true,write:v.write,max_stages:v.max_stages,max_months:v.max_months,modes:['sequential'],allocation_modes:['preserve'],assumption:v.assumption};
+  const min=v.min_duration_months===undefined?1:v.min_duration_months,max=v.max_duration_months===undefined?v.max_months:v.max_duration_months;
+  if(!Number.isInteger(min)||!Number.isInteger(max)||min<1||max<min||max>v.max_months)return null;
+  return{schema:1,read:true,write:v.write,max_stages:v.max_stages,max_months:v.max_months,min_duration_months:min,max_duration_months:max,modes:['sequential'],allocation_modes:['preserve'],assumption:v.assumption};
  }
- function validateStages(v,max=MAX_STAGES,months=MAX_MONTHS){
-  if(!exact(v,['schema','count','duration_months','mode','allocation'])||v.schema!==1||!Number.isInteger(v.count)||v.count<1||v.count>max||!Number.isInteger(v.duration_months)||v.duration_months<1||v.duration_months>months||v.count*v.duration_months>months||v.mode!=='sequential'||v.allocation!=='preserve')throw Error('invalid_stages');
+ function validateStages(v,max=MAX_STAGES,months=MAX_MONTHS,minDuration=1,maxDuration=months){
+  if(!exact(v,['schema','count','duration_months','mode','allocation'])||v.schema!==1||!Number.isInteger(v.count)||v.count<1||v.count>max||!Number.isInteger(v.duration_months)||v.duration_months<minDuration||v.duration_months>maxDuration||v.count*v.duration_months>months||v.mode!=='sequential'||v.allocation!=='preserve')throw Error('invalid_stages');
   return{schema:1,count:v.count,duration_months:v.duration_months,mode:'sequential',allocation:'preserve'};
  }
  function validateCollection(v,max=MAX_STAGES,months=MAX_MONTHS){
@@ -35,7 +39,7 @@
  function initialPending(c){const v=c?.native_pending_stages;return validContext(c)&&capability(c.native_capability)?.read===true&&c.native_capability.initial_pending===true&&c.native_collection==null&&exact(v,['schema','count','duration_months','mode','allocation'])&&v.schema===1&&v.count===1&&v.duration_months===null&&v.mode==='sequential'&&v.allocation==='preserve';}
  function nativeChecks(c){if(!validContext(c)||!capability(c.native_capability)?.read||!exact(c.native_checks,CHECKS)||CHECKS.some(k=>typeof c.native_checks[k]!=='boolean')||typeof c.native_calculated!=='boolean'||c.native_calculated!==CHECKS.every(k=>c.native_checks[k]))return null;return clone(c.native_checks);}
  function identity(c){return validContext(c)?[c.model_type,c.case_id,c.scenario_id].join('|'):null;}
- function request(c,stages,requestId){const cap=capability(c?.native_capability);if(!validContext(c)||!cap?.write||!id(requestId))throw Error('native_stages_unavailable');return{tipo:'sheet-stages',tipo_desarrollo:c.model_type.toUpperCase(),caso_id:c.case_id,escenario_id:c.scenario_id,revision_esperada:c.revision,request_id:requestId,stages:validateStages(stages,cap.max_stages,cap.max_months)};}
+ function request(c,stages,requestId){const cap=capability(c?.native_capability);if(!validContext(c)||!cap?.write||!id(requestId))throw Error('native_stages_unavailable');return{tipo:'sheet-stages',tipo_desarrollo:c.model_type.toUpperCase(),caso_id:c.case_id,escenario_id:c.scenario_id,revision_esperada:c.revision,request_id:requestId,stages:validateStages(stages,cap.max_stages,cap.max_months,cap.min_duration_months,cap.max_duration_months)};}
  function receipt(model,payload,validModel){
   const base=typeof validModel==='function'?validModel(model,payload.caso_id):model?.ok===true&&model.caso_id===payload.caso_id&&rev(model.revision)&&Array.isArray(model.escenarios)&&model.escenarios.some(e=>e.id===payload.escenario_id);
   const cap=capability(model?.capabilities?.stages),r=model?.stage_receipt;
@@ -65,10 +69,10 @@
   const match=normalized.match(/^(.+?) etapas? (?:de|con) (.+?) mes(?:es)?(?: (?:cada una|cada etapa|por etapa))?$/);
   if(!match)throw Error('invalid_stage_command');
   const count=integer(match[1]),duration=integer(match[2]);
-  return validateStages({schema:1,count,duration_months:duration,mode:'sequential',allocation:'preserve'},limits.max_stages,limits.max_months);
+  return validateStages({schema:1,count,duration_months:duration,mode:'sequential',allocation:'preserve'},limits.max_stages,limits.max_months,limits.min_duration_months,limits.max_duration_months);
  }
  function describeProposal(v,assumption='Se conservan las distribuciones existentes.'){const s=validateStages(v);if(typeof assumption!=='string'||!assumption.trim()||assumption.length>300)throw Error('invalid_stage_assumption');const total=s.count*s.duration_months;return`${s.count} ${s.count===1?'etapa':'etapas'} de ${s.duration_months} ${s.duration_months===1?'mes':'meses'}. Supuesto: consecutivas, ${total} ${total===1?'mes':'meses'} para las etapas. ${assumption}`;}
- async function rejection(response,payload,hash){
+ async function rejection(response,payload,hash=sha256){
   const proof=response?.stage_rejection,atomic=proof?.stage==='atomic_write',keys=['request_id','caso_id','escenario_id','base_revision','actor','payload_hash','stage','write_attempted','error','rejected_at'].concat(atomic?['committed']:[]);
   if(response?.ok!==false||response.error!=='operation_rejected'||response.request_id!==payload.request_id||response.stage_operation_status!=='rejected'||!exact(proof,keys)||proof.request_id!==payload.request_id||proof.caso_id!==payload.caso_id||proof.escenario_id!==payload.escenario_id||proof.base_revision!==payload.revision_esperada||typeof proof.actor!=='string'||!proof.actor||proof.actor.length>256||(atomic?(proof.write_attempted!==true||proof.committed!==false||proof.error!=='native_stage_write_rejected'):(proof.stage!=='prewrite'||proof.write_attempted!==false||!REJECTIONS.includes(proof.error)))||typeof proof.payload_hash!=='string'||!/^[a-f0-9]{64}$/.test(proof.payload_hash)||typeof proof.rejected_at!=='string'||!Number.isFinite(Date.parse(proof.rejected_at))||Date.parse(proof.rejected_at)>Date.now()+5000||typeof hash!=='function')throw Error('unconfirmed_stage_rejection');
   if(await hash(stable({actor:proof.actor,caso_id:payload.caso_id,escenario_id:payload.escenario_id,base_revision:payload.revision_esperada,stages:validateStages(payload.stages)}))!==proof.payload_hash)throw Error('unconfirmed_stage_rejection');
@@ -85,6 +89,12 @@
    if(context&&identity(context)!==identity(next))clear();else if(context&&context.revision!==next.revision&&!pending&&!operation){lastReceipt=null;error='';phase='idle';}context=clone(next);if(!pending&&!operation&&['idle','ready','unavailable'].includes(phase))phase=capability(next.native_capability)?.write?'ready':'unavailable';notify();return true;
   }
   function setCommand(value){if(pending||operation||disposed)return false;command=String(value).slice(0,300);error='';lastReceipt=null;if(phase!=='conflict')phase='ready';notify();return true;}
+  function rejectedState(result,payload){pending=null;phase=result.error==='revision_conflict'?'conflict':'rejected';conflictRevision=payload.revision_esperada;error=result.error==='revision_conflict'?'El libro cambió. Actualiza desde Sheets y revisa la instrucción; no se sobrescribió la otra edición.':'El libro confirmó que el cambio no se aplicó. Actualiza desde Sheets y revisa el calendario; tu instrucción se conserva.';}
+  async function restoreRejection(response,payload){
+   if(disposed||operation||pending)return false;const fresh=getContext(),own=epoch;
+   if(!validContext(fresh)||!context||identity(fresh)!==identity(context)||payload?.tipo!=='sheet-stages'||payload.tipo_desarrollo!==fresh.model_type.toUpperCase()||payload.caso_id!==fresh.case_id||payload.escenario_id!==fresh.scenario_id)return false;
+   try{const result=await rejection(response,payload,hash);if(disposed||own!==epoch||operation||pending||identity(getContext())!==identity(fresh))return false;const s=validateStages(payload.stages);command=`${s.count} etapas de ${s.duration_months} meses`;lastReceipt=null;rejectedState(result,payload);notify();return true;}catch{return false;}
+  }
   async function save(){
    if(disposed||operation)return false;const fresh=getContext();if(!validContext(fresh)||!context||identity(fresh)!==identity(context)){clear();return false;}
    const reconcile=!!pending;
@@ -93,13 +103,16 @@
    try{
     const model=await onSave(payload,{reconcile});if(disposed||own!==epoch||!pending||pending.request_id!==payload.request_id)return false;
     const latest=getContext();if(!validContext(latest)||identity(latest)!==identity(context)){clear();return false;}
-    if(model?.ok===false&&model.persisted===false&&model.error==='intake_case_operation_pending'){pending=null;phase='blocked';error='Hay otro cambio pendiente en este libro. Esta instrucción no se aplicó; comprueba el cambio anterior y vuelve a intentarlo.';return false;}
-    if(model?.ok===false&&model.stage_rejection){const rejected=await rejection(model,payload,hash);if(disposed||own!==epoch)return false;pending=null;phase=rejected.error==='revision_conflict'?'conflict':'rejected';conflictRevision=payload.revision_esperada;error=rejected.error==='revision_conflict'?'El libro cambió. Actualiza desde Sheets y revisa la instrucción; no se sobrescribió la otra edición.':'El libro confirmó que el cambio no se aplicó. Actualiza desde Sheets y revisa el calendario; tu instrucción se conserva.';return false;}
+    if(prewriteRejected(model,payload,reconcile)){
+     if(model.error==='revision_conflict'){rejectedState(model,payload);return false;}
+     pending=null;phase=model.error==='intake_case_operation_pending'?'blocked':'invalid';error=model.error==='intake_case_operation_pending'?'Hay otro cambio pendiente en este libro. Esta instrucción no se aplicó; comprueba el cambio anterior y vuelve a intentarlo.':model.error==='invalid_stage_plan'?'La duración o cantidad de etapas está fuera del rango permitido por este libro. No se aplicó el cambio; revisa la instrucción.':'Sheets rechazó esta instrucción antes de escribir. Se conserva para revisarla y volver a intentarlo.';return false;
+    }
+    if(model?.ok===false&&model.stage_rejection){const rejected=await rejection(model,payload,hash);if(disposed||own!==epoch)return false;rejectedState(rejected,payload);return false;}
     const ack=receipt(model,payload,validModel);if(latest.revision!==model.revision||JSON.stringify(validateCollection(latest.native_collection))!==JSON.stringify(validateCollection(model.stages_by_scenario[payload.escenario_id])))throw Error('stage_view_not_updated');lastReceipt=ack;pending=null;context=clone(latest);phase=ack.status==='confirmed_superseded'?'superseded':ack.calculated?'saved':'needs_review';error='';conflictRevision=null;return true;
    }catch{if(!disposed&&own===epoch){phase='unconfirmed';error='Aún no hay confirmación. Comprobar consulta la misma solicitud; conserva tu instrucción.';}return false;}
    finally{operation=null;resolveOperation();if(!disposed){if(phase==='idle'&&validContext(context))phase=capability(context.native_capability)?.write?'ready':'unavailable';notify();}}
   }
-  return{setContext,setCommand,save,reconcile(){return pending?save():Promise.resolve(false);},status,clear,dispose(){clear();disposed=true;}};
+  return{setContext,setCommand,save,restoreRejection,reconcile(){return pending?save():Promise.resolve(false);},status,clear,dispose(){clear();disposed=true;}};
  }
  const RECONCILE_DELAYS=[15000,30000,60000,60000,60000,60000];
  function createReconciler({getState,getContext,check,schedule=setTimeout,cancel=clearTimeout}){
@@ -123,34 +136,41 @@
   }
   return{observe,reset,dispose(){disposed=true;reset();}};
  }
- function mount({container,getContext,onSave,onState=()=>{},validModel,uuid,doc=globalThis.document,win=globalThis.window,schedule=setTimeout,cancel=clearTimeout}){
+ function mount({container,getContext,onSave,onRefresh,onState=()=>{},validModel,uuid,doc=globalThis.document,win=globalThis.window,schedule=setTimeout,cancel=clearTimeout}){
   if(!container||!doc)throw Error('stage_container_required');
-  let recognition=null,listening=false,disposed=false,reconciler=null;
+  let recognition=null,listening=false,disposed=false,reconciler=null,refreshing=false;
   const make=(tag,cls,text)=>{const e=doc.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
   container.classList.add('ppp-stages');
   const heading=make('h3','','Etapas del proyecto'),intro=make('p','ppp-stages-intro','Dile al plan cómo organizar el calendario. Los cambios se guardan en el mismo libro.'),current=make('p','ppp-stages-current'),list=make('ol','ppp-stages-list');
   const form=make('form','ppp-stages-form'),label=make('label','','Instrucción para etapas'),input=make('textarea');input.rows=2;input.maxLength=300;input.placeholder='Van a ser 3 etapas de 12 meses';input.setAttribute('aria-label','Instrucción para etapas');label.append(input);
-  const preview=make('p','ppp-stages-preview'),buttons=make('div','ppp-stages-actions'),submit=make('button','','Aplicar al plan'),mic=make('button','','Dictar'),retry=make('button','','Comprobar guardado'),statusEl=make('p','ppp-stages-status'),checks=make('ul','ppp-stages-checks');
-  submit.type='submit';mic.type='button';retry.type='button';retry.hidden=true;statusEl.setAttribute('role','status');statusEl.setAttribute('aria-live','polite');preview.setAttribute('aria-live','polite');buttons.append(submit,mic,retry);form.append(label,preview,buttons);container.append(heading,intro,current,list,form,statusEl,checks);
+  const preview=make('p','ppp-stages-preview'),buttons=make('div','ppp-stages-actions'),submit=make('button','','Aplicar al plan'),mic=make('button','','Dictar'),retry=make('button','','Comprobar guardado'),reload=make('button','','Releer calendario'),statusEl=make('p','ppp-stages-status'),checks=make('ul','ppp-stages-checks');
+  submit.type='submit';mic.type='button';retry.type='button';reload.type='button';retry.hidden=true;reload.hidden=true;statusEl.setAttribute('role','status');statusEl.setAttribute('aria-live','polite');preview.setAttribute('aria-live','polite');buttons.append(submit,mic,retry,reload);form.append(label,preview,buttons);container.append(heading,intro,current,list,form,statusEl,checks);
   const Speech=win?.SpeechRecognition||win?.webkitSpeechRecognition;mic.hidden=!Speech;
   function paint(s){
    if(disposed)return;const cap=capability(s.context?.native_capability),available=validContext(s.context)&&cap?.write;
-   input.value=s.command;input.disabled=s.busy||s.pending||!available;submit.disabled=s.busy||s.pending||!available;mic.disabled=s.busy||s.pending||!available;retry.hidden=!s.pending;retry.disabled=s.busy||!validContext(s.context);list.replaceChildren();checks.replaceChildren();
+   input.value=s.command;input.disabled=refreshing||s.busy||s.pending||!available;submit.disabled=refreshing||s.busy||s.pending||!available;mic.disabled=refreshing||s.busy||s.pending||!available;retry.hidden=!s.pending;retry.disabled=refreshing||s.busy||!validContext(s.context);reload.hidden=typeof onRefresh!=='function'||!['conflict','rejected','blocked'].includes(s.phase);reload.disabled=refreshing||s.busy||s.pending||!available;list.replaceChildren();checks.replaceChildren();
    let collection;try{collection=validateCollection(s.context?.native_collection,cap?.max_stages,cap?.max_months);}catch{}
    const pendingInitial=initialPending(s.context);
    current.textContent=collection?`${collection.count} ${collection.count===1?'etapa actual':'etapas actuales'} · lectura de Sheets · revisión ${s.context.revision.slice(0,12)}`:pendingInitial?`1 etapa actual · duración pendiente · lectura de Sheets · revisión ${s.context.revision.slice(0,12)}`:'El calendario del libro todavía no está conectado a este tablero.';
    if(pendingInitial)list.append(make('li','ppp-stage-pending','Etapa 1 · duración por definir'));
    if(collection)for(const stage of collection.stages)list.append(make('li','',`Etapa ${stage.order} · mes ${stage.start_month} a ${stage.end_month} · ${stage.duration_months} meses`));
-   try{preview.textContent=s.command?describeProposal(parseCommand(s.command,cap||undefined),cap?.assumption):cap?.assumption||'Las etapas serán consecutivas; se conservarán las distribuciones existentes.';}catch{preview.textContent='Indica una sola cantidad de etapas y los meses de cada etapa.';}
+   try{preview.textContent=s.command?describeProposal(parseCommand(s.command,cap||undefined),cap?.assumption):cap?.assumption||'Las etapas serán consecutivas; se conservarán las distribuciones existentes.';}catch{preview.textContent=cap?`Indica de 1 a ${cap.max_stages} etapas, de ${cap.min_duration_months} a ${cap.max_duration_months} meses cada una, dentro de ${cap.max_months} meses.`:'Indica una sola cantidad de etapas y los meses de cada etapa.';}
    const messages={idle:'Abre un proyecto para organizar sus etapas.',unavailable:'La edición de etapas aún no está habilitada en este libro.',ready:'Escribe o dicta la instrucción y pulsa Aplicar al plan.',saving:'Guardando etapas y leyendo el cálculo de Sheets…',checking:'Consultando la confirmación del mismo cambio…',saved:'Etapas guardadas y comprobaciones de Sheets confirmadas.',needs_review:'Etapas guardadas. Hay comprobaciones pendientes en Sheets.',superseded:'Tu cambio quedó guardado. El libro tiene una revisión posterior; consulta su calendario actual.'};
-   statusEl.textContent=s.error||messages[s.phase]||messages.unavailable;
+   statusEl.textContent=refreshing?'Leyendo el calendario actual. Tu instrucción se conserva…':s.error||messages[s.phase]||messages.unavailable;
    const currentChecks=nativeChecks(s.context)||(s.receipt&&s.receipt.revision===s.context?.revision?s.receipt.checks:null);
    if(currentChecks)for(const k of CHECKS)checks.append(make('li',currentChecks[k]?'ppp-check-ok':'ppp-check-pending',`${CHECK_LABELS[k]}: ${currentChecks[k]?'conciliado':'pendiente'}`));
-   container.dataset.stageState=s.phase;onState({phase:s.phase,dirty:!!s.command&&!s.receipt,pending:s.pending,busy:s.busy,calculated:!!currentChecks&&CHECKS.every(k=>currentChecks[k]),error:s.error});reconciler?.observe(s);
+   container.dataset.stageState=s.phase;onState({phase:s.phase,dirty:!!s.command&&!s.receipt,pending:s.pending,busy:s.busy||refreshing,calculated:!!currentChecks&&CHECKS.every(k=>currentChecks[k]),error:s.error});reconciler?.observe(s);
   }
   const controller=createController({getContext,onSave,onState:paint,validModel,uuid});
   reconciler=createReconciler({getState:controller.status,getContext,check:controller.reconcile,schedule,cancel});
-  input.addEventListener('input',()=>controller.setCommand(input.value));form.addEventListener('submit',e=>{e.preventDefault();controller.save();});retry.addEventListener('click',()=>controller.reconcile());
+  async function refresh(){
+   const before=controller.status();if(disposed||refreshing||before.busy||before.pending||typeof onRefresh!=='function'||!validContext(before.context)||!['conflict','rejected','blocked'].includes(before.phase))return false;
+   refreshing=true;paint(before);let failed=false;
+   try{await onRefresh();if(disposed||identity(getContext())!==identity(before.context))return false;return controller.setContext(getContext());}
+   catch{failed=true;return false;}
+   finally{refreshing=false;if(!disposed){paint(controller.status());if(failed)statusEl.textContent='No se pudo releer el calendario. Tu instrucción se conserva; vuelve a intentarlo.';}}
+  }
+  input.addEventListener('input',()=>{if(!refreshing)controller.setCommand(input.value);});form.addEventListener('submit',e=>{e.preventDefault();if(!refreshing)controller.save();});retry.addEventListener('click',()=>controller.reconcile());reload.addEventListener('click',refresh);
   mic.addEventListener('click',()=>{
    if(!Speech||mic.disabled)return;if(listening){recognition?.stop();return;}
    const dictationContext=controller.status().context;
@@ -162,7 +182,7 @@
    }catch{statusEl.textContent='El dictado no está disponible. Escribe la instrucción para continuar.';}
   });
   const revoke=()=>{recognition?.abort?.();controller.clear();};const storage=e=>{if(e.key===null||e.key==='pyod_clave_v1')revoke();};win?.addEventListener('pagehide',revoke);win?.addEventListener('storage',storage);controller.setContext(getContext());
-  return{setContext:controller.setContext,setCommand:controller.setCommand,save:controller.save,snapshotStatus:controller.status,dispose(){disposed=true;reconciler.dispose();recognition?.abort?.();controller.dispose();win?.removeEventListener('pagehide',revoke);win?.removeEventListener('storage',storage);container.replaceChildren();}};
+  return{setContext:controller.setContext,setCommand:controller.setCommand,save:controller.save,refresh,restoreRejection:controller.restoreRejection,snapshotStatus:controller.status,dispose(){disposed=true;reconciler.dispose();recognition?.abort?.();controller.dispose();win?.removeEventListener('pagehide',revoke);win?.removeEventListener('storage',storage);container.replaceChildren();}};
  }
- return{MAX_STAGES,MAX_MONTHS,CHECKS,REJECTIONS,RECONCILE_DELAYS,stable,rejection,capability,validateStages,validateCollection,validContext,initialPending,nativeChecks,request,receipt,parseCommand,describeProposal,createController,createReconciler,mount};
+ return{PREWRITE_ERRORS,prewriteRejected,MAX_STAGES,MAX_MONTHS,CHECKS,REJECTIONS,RECONCILE_DELAYS,stable,rejection,capability,validateStages,validateCollection,validContext,initialPending,nativeChecks,request,receipt,parseCommand,describeProposal,createController,createReconciler,mount};
 });

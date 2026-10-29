@@ -73,3 +73,13 @@ test('Una creación incierta recuperada tras recarga consulta el request_id guar
   const restored=intake.createController({adapter,resumeRequest:first.pending,requestId:()=>{throw Error('must not generate another identity');}});
   assert.equal((await restored.submit(sample())).caso_id,'case-created');assert.deepEqual(calls,['POST',{request_id:'creation-uncertain'}]);
 });
+test('Sólo el rechazo conocido del POST inicial con ID exacto retira una creación sin escritura',async()=>{
+  const stages=require('../ppp-stages.js');assert.deepEqual(intake.PREWRITE_ERRORS,stages.PREWRITE_ERRORS);
+  for(const error of intake.PREWRITE_ERRORS){
+    const states=[],c=intake.createController({requestId:()=> 'new-request',adapter:{open:async p=>({ok:false,error,persisted:false,request_id:p.request_id})},onState:s=>states.push(s.status)});
+    await c.submit(sample());assert.equal(c.pending,null,error);assert.equal(states.at(-1),'error');
+    for(const request_id of [undefined,'foreign']){const x=intake.createController({requestId:()=> 'new-request',adapter:{open:async()=>({ok:false,error,persisted:false,request_id})}});await x.submit(sample());assert.equal(x.pending.request_id,'new-request',error);}
+    let reads=0;const x=intake.createController({requestId:()=> 'new-request',adapter:{open:async()=>{throw Error('timeout');},read:async p=>{reads++;return{ok:false,error,persisted:false,request_id:p.request_id};}}});await x.submit(sample());await x.submit(sample());assert.equal(reads,1);assert.equal(x.pending.request_id,'new-request','GET '+error+' cannot discard an earlier write');
+  }
+  for(const error of ['unexpected','operation_pending','receipt_not_found','request_payload_mismatch','intake_readback_mismatch']){const c=intake.createController({requestId:()=> 'new-request',adapter:{open:async p=>({ok:false,error,persisted:false,request_id:p.request_id})}});await c.submit(sample());assert.equal(c.pending.request_id,'new-request');}
+});

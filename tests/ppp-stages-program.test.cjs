@@ -135,6 +135,31 @@ test('unbound, archived, duplicate and foreign scenarios cannot borrow the stage
   assert.throws(() => f.store.readPlan(f.ctx, 'scenario-a'), /native_stage_template_mismatch/);
 });
 
+test('archived versions require an explicit true management callback and the same unique scenario binding', () => {
+  const f = fixture(); f.versions.data[1][5] = 'ARCHIVADO';
+  assert.equal(f.store.readPlan(f.ctx, 'scenario-a'), null);
+  for (const result of [false, undefined, 1, 'true']) {
+    f.hooks.allowUnpublishedVersion = () => result;
+    assert.equal(f.store.readPlan(f.ctx, 'scenario-a'), null);
+    assert.equal(f.store.capability(f.ctx).write, false);
+  }
+  const calls = [];
+  f.hooks.allowUnpublishedVersion = (version, entry) => {
+    calls.push({version: clone(version), entry: clone(entry.values)});
+    return version[0] === 'scenario-a' && version[4] === 'Financial_A' && entry.values[0] === 'scenario-a' && entry.values[3] === 'Financial_A';
+  };
+  assert.equal(f.store.readPlan(f.ctx, 'scenario-a').count, 1);
+  assert.equal(f.store.capability(f.ctx).write, true); assert.ok(calls.length > 0);
+  assert.ok(calls.every(call => call.version[5] === 'ARCHIVADO' && call.entry[0] === 'scenario-a'));
+  // The callback cannot bypass the store's sheet identity or uniqueness checks.
+  f.hooks.allowUnpublishedVersion = () => true;
+  f.versions.data[1][4] = 'Foreign_Sheet'; assert.equal(f.store.readPlan(f.ctx, 'scenario-a'), null);
+  f.versions.data[1][4] = 'Financial_A';
+  f.versions.data.push(clone(f.versions.data[1])); assert.equal(f.store.readPlan(f.ctx, 'scenario-a'), null);
+  f.versions.data.pop(); f.index.data[1][4] = 'pending'; assert.equal(f.store.readPlan(f.ctx, 'scenario-a'), null);
+  assert.equal(f.store.readPlan(f.ctx, 'scenario-b'), null); assert.equal(f.calls.atomic.length, 0);
+});
+
 test('formula, baseline and protection changes fail closed before the atomic writer', () => {
   const mutations = [
     [f => f.program.put(1, 25, '=FALSE()', true), /native_stage_formula_changed/],
@@ -159,6 +184,14 @@ test('horizon checks retain the observed start and longest delivery tail', () =>
   assert.equal(f.store.validateWrite(f.ctx, before, spec(1, 114)), true); // month 3 + 114 - 1 + delivery 4 = 120
   assert.throws(() => f.store.validateWrite(f.ctx, before, spec(1, 115)), /native_stage_horizon_conflict/);
   assert.throws(() => f.store.validateWrite(f.ctx, { ...clone(before), count: 2 }, spec()), /invalid_native_stage_calendar|native_stage_template_mismatch/);
+  assert.equal(f.calls.atomic.length, 0);
+});
+
+test('stage horizon includes the currently edited delivery tail instead of the installation baseline', () => {
+  const f = fixture(), before = f.store.readPlan(f.ctx, 'scenario-a');
+  assert.equal(f.stage.getRange(37, 6).getValue(), 2, 'captured installation baseline remains unchanged');
+  f.program.put(7, 21, 100); // U is still an editable native volume driver.
+  assert.throws(() => f.store.validateWrite(f.ctx, before, spec(3, 12)), /native_stage_horizon_conflict/);
   assert.equal(f.calls.atomic.length, 0);
 });
 

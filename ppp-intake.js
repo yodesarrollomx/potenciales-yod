@@ -74,6 +74,8 @@
       async saveStages(payload,{reconcile=false}={}){return reconcile?get({recurso:'sheet-stages-receipt',tipo:type,caso_id:payload.caso_id,escenario_id:payload.escenario_id,request_id:payload.request_id}):post(payload);}
     };
   }
+  const PREWRITE_ERRORS=['invalid_request','invalid_model_type','access_denied','invalid_identity','not_intake_case','revision_required','invalid_stage_plan','invalid_intake_payload','invalid_intake_schema','model_type_mismatch','invalid_nombre_caso','invalid_ubicacion','invalid_fuente','invalid_intake_inputs','unknown_intake_field','invalid_intake_quantity','required_intake_field','use_stage_operation','invalid_initial_stage','empty_intake_update','intake_refresh_failed','revision_conflict','intake_case_operation_pending'];
+  function prewriteRejected(response,request,reconcile=false){return !reconcile&&response?.ok===false&&response.persisted===false&&response.request_id===request?.request_id&&typeof request?.request_id==='string'&&PREWRITE_ERRORS.includes(response.error);}
   function createController({adapter,onState=()=>{},requestId=()=>globalThis.crypto.randomUUID(),resumeRequest=null}){
     if(!adapter||typeof adapter.open!=='function')throw Error('adaptador_requerido');
     let busy=false,destroyed=false,pending=null,completed=null,attempted=false;
@@ -93,7 +95,7 @@
         if(destroyed)return {ok:false,error:'ficha_cerrada'};
         if(response?.ok!==true){
           // Sólo un rechazo explícito SIN escritura permite corregir y generar otra solicitud.
-          if(response?.persisted===false){pending=null;attempted=false;}
+          if(prewriteRejected(response,pending.request,checking)){pending=null;attempted=false;}
           onState({status:pending?'uncertain':'error',error:response?.error||'sin_confirmacion'});
           return {ok:false,error:response?.error||'sin_confirmacion'};
         }
@@ -121,6 +123,10 @@
       const note=ui.querySelector('[data-intake-status]');
       const messages={opening:'Abriendo tu plan…',uncertain:'La apertura está por confirmar. Tus datos se conservan; reintenta con la misma ficha.',error:'No se pudo abrir el plan. Tus datos se conservan.',confirmed:'Plan guardado. Abriendo su tablero…',draft:'Ficha preparada. Todavía no está guardada en Sheets.'};
       note.textContent=messages[state.status]||'';
+      const refresh=state.status==='error'&&['revision_conflict','intake_case_operation_pending','intake_refresh_failed'].includes(state.error);
+      if(refresh)note.textContent='El libro cambió o tiene otra operación pendiente. Tu ficha se conserva; relee antes de reintentar.';
+      if(state.status==='error'&&state.error==='access_denied')note.textContent='Esta sesión no tiene acceso para guardar. Vuelve a abrir el plan con una sesión autorizada.';
+      ui.querySelector('.pi-submit').textContent=refresh?'Releer y reintentar':'Abrir mi plan →';
       ui.querySelectorAll('input,select,textarea,button').forEach(el=>el.disabled=state.status==='opening'||!!type&&el.name==='model_type');
       if(state.status==='invalid')showErrors(state.errors);
       onState(state);
@@ -150,7 +156,7 @@
     const main=doc.querySelector('main.container');if(!main)return null;
     let draft=null,form=null,opening=false,active=false,banner=null,key=null,disposed=false,epoch=0;
     let receipt=null,pending={},job=null,busy=false,saveError='',saveTimer=null,writeEpoch=0;
-    let stageEditor=null,stageHost=null,stageOperation=false,stagePending=false,stageJob=null,recoveredStage=false,leaving=false;
+    let stageEditor=null,stageHost=null,stageOperation=false,stageRefreshing=false,stagePending=false,stageJob=null,recoveredStage=false,leaving=false;
     let identity=getIdentity();
     async function resolveScope(){
       key=null;const ownEpoch=++epoch,owner=identity;
@@ -193,14 +199,14 @@
       const name=doc.getElementById('casoNombreBar');if(name)name.textContent=draft.nombre_caso+' · sin guardar en Sheets';
       const dot=doc.getElementById('syncDot');if(dot)dot.textContent='· captura local';
       if(receipt){if(dot)dot.textContent=busy?'· guardando':saveError||job?'· guardado por confirmar':Object.keys(pending).length?'· cambios pendientes':'· captura guardada en Sheets';if(name)name.textContent=draft.nombre_caso+' · ficha en Sheets';}
-      if(banner){const stageCount=draft.stages?.count||1;banner.querySelector('.pi-kicker').textContent='FICHA DEL PLAN · '+stageCount+(stageCount===1?' ETAPA':' ETAPAS');const status=banner.querySelector('[data-intake-board-status]');status.textContent=receipt?(busy?'Guardando los datos en Sheets…':saveError==='case_operation_pending'?'Hay otro cambio pendiente en este libro. Este ajuste no se envió a las celdas; conservamos tus cantidades para releer y reintentar después.':saveError==='conflicto_revision'?'Otra edición cambió el libro. Tus datos pendientes se conservan. Relee antes de continuar.':saveError||job?'El guardado está por confirmar. Conservamos tus datos; comprueba el recibo antes de seguir.':Object.keys(pending).length?'Cambios pendientes de guardar.':'Ficha guardada en Sheets · revisión '+receipt.revision.slice(0,12)+'. Los resultados siguen pendientes de completar el modelo nativo.'):(key?'Captura conservada en este navegador para tu sesión.':'Captura sólo en esta pestaña; mantenla abierta.')+' Los resultados y el guardado en Sheets están pendientes de conectar el modelo nativo.';
-        const retry=banner.querySelector('[data-intake-check]');if(retry){retry.hidden=!job&&!Object.keys(pending).length&&!recoveredStage;retry.disabled=busy||stageOperation||stageLocked()&&!recoveredStage||saveError==='conflicto_revision'&&!job;retry.textContent=recoveredStage?'Comprobar etapas':job?'Comprobar guardado':saveError==='case_operation_pending'?'Releer y reintentar':'Guardar cambios pendientes';}}
+      if(banner){const stageCount=draft.stages?.count||1;banner.querySelector('.pi-kicker').textContent='FICHA DEL PLAN · '+stageCount+(stageCount===1?' ETAPA':' ETAPAS');const status=banner.querySelector('[data-intake-board-status]');status.textContent=receipt?(busy?'Guardando los datos en Sheets…':saveError==='case_operation_pending'?'Hay otro cambio pendiente en este libro. Este ajuste no se envió a las celdas; conservamos tus cantidades para releer y reintentar después.':['conflicto_revision','revision_rejected'].includes(saveError)?'Otra edición cambió el libro. Tus datos pendientes se conservan. Relee antes de continuar.':saveError==='input_rejected'?'Sheets rechazó este ajuste antes de escribir. Revisa tus cantidades; se conservan para corregir y reintentar.':saveError||job?'El guardado está por confirmar. Conservamos tus datos; comprueba el recibo antes de seguir.':Object.keys(pending).length?'Cambios pendientes de guardar.':'Ficha guardada en Sheets · revisión '+receipt.revision.slice(0,12)+'. El cálculo financiero de esta ficha aún no está conectado.'):((key?'Captura conservada en este navegador para tu sesión.':'Captura sólo en esta pestaña; mantenla abierta.')+' Esta ficha todavía no está guardada en Sheets. El cálculo financiero aún no está conectado.');
+        const retry=banner.querySelector('[data-intake-check]');if(retry){retry.hidden=!job&&!Object.keys(pending).length&&!recoveredStage;retry.disabled=busy||stageOperation||stageLocked()&&!recoveredStage||saveError==='conflicto_revision'&&!job;retry.textContent=recoveredStage?'Comprobar etapas':job?'Comprobar guardado':['case_operation_pending','revision_rejected','input_rejected'].includes(saveError)?'Releer y reintentar':'Guardar cambios pendientes';}}
       syncStageLock();
       stageEditor?.setContext(stageContext());
     }
     function syncStageLock(){
       if(!active)return;const locked=stageLocked();controls.forEach(control=>control.disabled=locked||!editable()||isStageDriver(control.id));
-      if(banner){banner.querySelector('[data-intake-edit]').disabled=locked||!editable();if(locked)banner.querySelector('[data-intake-board-status]').textContent='El cambio de etapas está por confirmar. Las cantidades y versiones permanecen bloqueadas hasta comprobar el mismo recibo.';else if(receipt&&!busy&&!saveError&&!job&&!Object.keys(pending).length)banner.querySelector('[data-intake-board-status]').textContent='Ficha guardada en Sheets · revisión '+receipt.revision.slice(0,12)+'. Los resultados siguen pendientes de completar el modelo nativo.';}
+      if(banner){banner.querySelector('[data-intake-edit]').disabled=locked||!editable();if(locked)banner.querySelector('[data-intake-board-status]').textContent=stageRefreshing?'Leyendo el calendario actual de Sheets. Las cantidades se habilitarán al terminar.':'El cambio de etapas está por confirmar. Las cantidades y versiones permanecen bloqueadas hasta comprobar el mismo recibo.';else if(receipt&&!busy&&!saveError&&!job&&!Object.keys(pending).length)banner.querySelector('[data-intake-board-status]').textContent='Ficha guardada en Sheets · revisión '+receipt.revision.slice(0,12)+'. El cálculo financiero de esta ficha aún no está conectado.';}
     }
     function stageState(state){if(leaving||!receipt)return;stagePending=!!state.pending;if(!state.pending&&!state.busy&&!recoveredStage)stageJob=null;syncStageLock();persist();}
     function start(result){
@@ -223,7 +229,7 @@
       banner.querySelector('h2').textContent=draft.nombre_caso;banner.querySelector('[data-intake-edit]').onclick=open;banner.querySelector('[data-intake-check]').onclick=checkSave;
       banner.querySelector('[data-intake-edit]').disabled=!editable();
       onStart(copy(draft),receipt?copy(receipt):null);paint();persist();win.dispatchEvent(new win.CustomEvent('ppp:intake-opened',{detail:{model_type:type,persisted:!!receipt}}));
-      if(mountStages&&win.PPPStages&&receipt&&adapter?.saveStages&&!stageEditor){stageHost=doc.createElement('section');stageHost.id='pppIntakeStages';banner.after(stageHost);stageEditor=win.PPPStages.mount({container:stageHost,getContext:stageContext,onSave:saveStages,onState:stageState,validModel:model=>{try{validateRead(model,{type,id:receipt?.caso_id});return true;}catch{return false;}},doc,win});}
+      if(mountStages&&win.PPPStages&&receipt&&adapter?.saveStages&&!stageEditor){stageHost=doc.createElement('section');stageHost.id='pppIntakeStages';banner.after(stageHost);stageEditor=win.PPPStages.mount({container:stageHost,getContext:stageContext,onSave:saveStages,onRefresh:refreshStages,onState:stageState,validModel:model=>{try{validateRead(model,{type,id:receipt?.caso_id});return true;}catch{return false;}},doc,win});}
     }
     function captureInput(event){updateInput(event.target);paint();}
     function closeForm(){form?.destroy();form=null;opening=false;doc.body.classList.remove('ppp-intake-opening');}
@@ -237,11 +243,15 @@
       }}catch{}}
       const known=prior?{...prior,inputs:Object.fromEntries(models[type].fields.filter(f=>own(prior.inputs,f.id)).map(f=>[f.id,prior.inputs[f.id]]))}:{};
       let creation=null;if(!receipt&&key){try{const saved=JSON.parse(storage.getItem(key+':creating')||'null');if(saved?.model_type===type&&validate(saved).ok&&typeof saved.request_id==='string'&&/^[-A-Za-z0-9_.:]{1,256}$/.test(saved.request_id)){creation=saved;Object.assign(known,saved);}}catch{}}
+      let refreshMetadata=false;const metadataCase=receipt?.caso_id;
       const formAdapter=receipt&&adapter?.update?{open:async value=>{
-        if(job||busy||stageLocked()||Object.keys(pending).length)return {ok:false,persisted:false,error:'cambios_pendientes'};
+        if(job||busy||stageLocked()||Object.keys(pending).length)return {ok:false,persisted:false,error:'intake_case_operation_pending',request_id:value.request_id};
+        if(refreshMetadata){try{const fresh=await adapter.read({id:metadataCase});if(openingIdentity!==getIdentity()||receipt?.caso_id!==metadataCase)throw Error('contexto_cambiado');receipt=validateRead(fresh,{type,id:metadataCase});refreshMetadata=false;paint();persist();}catch{return{ok:false,persisted:false,error:'intake_refresh_failed',request_id:value.request_id};}}
         const values=Object.fromEntries(models[type].fields.map(field=>[field.id,own(value.inputs,field.id)?value.inputs[field.id]:null]));
-        return adapter.update({caso_id:receipt.caso_id,revision_esperada:receipt.revision,request_id:value.request_id,intake:{inputs:values,nombre_caso:value.nombre_caso,ubicacion:value.ubicacion,fuente:value.fuente}});
-      }}:adapter||{open:async value=>({ok:true,status:'draft',persisted:false,request_id:value.request_id})};
+        const response=await adapter.update({caso_id:receipt.caso_id,revision_esperada:receipt.revision,request_id:value.request_id,intake:{inputs:values,nombre_caso:value.nombre_caso,ubicacion:value.ubicacion,fuente:value.fuente}});
+        if(prewriteRejected(response,value)&&['revision_conflict','intake_case_operation_pending'].includes(response.error))refreshMetadata=true;
+        return response;
+      },read:({request_id})=>adapter.read({id:metadataCase,request_id})}:adapter||{open:async value=>({ok:true,status:'draft',persisted:false,request_id:value.request_id})};
       form=mount({container:host,type,value:known,adapter:formAdapter,resumeRequest:creation,onState:state=>{if(receipt||!key||openingIdentity!==getIdentity())return;try{if(state.status==='opening'&&state.draft)storage.setItem(key+':creating',JSON.stringify(state.draft));if(['confirmed','draft','error'].includes(state.status))storage.removeItem(key+':creating');}catch{}},onOpen:result=>{
         if(openingIdentity!==getIdentity()){checkIdentity();return;}
         // Conservar capturas de otras áreas, pero un opcional borrado de la ficha sigue vacío.
@@ -251,7 +261,7 @@
     }
     function deactivate(){
       writeEpoch++;win.clearTimeout(saveTimer);receipt=null;pending={};job=null;busy=false;saveError='';
-      stageEditor?.dispose();stageEditor=null;stageHost?.remove();stageHost=null;stageOperation=false;stagePending=false;stageJob=null;recoveredStage=false;
+      stageEditor?.dispose();stageEditor=null;stageHost?.remove();stageHost=null;stageOperation=false;stageRefreshing=false;stagePending=false;stageJob=null;recoveredStage=false;
       closeForm();active=false;draft=null;doc.body.classList.remove('ppp-intake-capture');banner?.remove();banner=null;
       for(const [control,old] of original){control.removeEventListener('input',captureInput);control.removeEventListener('change',captureInput);control.type=old.type;control.step=old.step;control.value=old.value;control.disabled=old.disabled;control.removeAttribute('placeholder');if(old.title===null)control.removeAttribute('title');else control.setAttribute('title',old.title);control.closest('.input-group')?.classList.remove('pi-pending-input');}original.clear();main.querySelectorAll('.pi-stage-link').forEach(el=>el.remove());
       for(const [button,disabled] of blockedButtons)button.disabled=disabled;blockedButtons.clear();
@@ -267,7 +277,7 @@
       if(!active||!receipt||!adapter?.update||busy||stageLocked()||saveError||job||!Object.keys(pending).length||identity!==getIdentity())return;
       job={caso_id:receipt.caso_id,revision_esperada:receipt.revision,request_id:win.crypto.randomUUID(),intake:{inputs:copy(pending)}};pending={};busy=true;paint();persist();const generation=writeEpoch,owner=identity;
       try{const response=await adapter.update(copy(job));if(generation!==writeEpoch||owner!==getIdentity())return;
-        if(response?.ok===false&&response.persisted===false&&response.error==='intake_case_operation_pending'){pending={...job.intake.inputs,...pending};job=null;saveError='case_operation_pending';persist();return;}
+        if(prewriteRejected(response,job)){pending={...job.intake.inputs,...pending};job=null;saveError=response.error==='revision_conflict'?'revision_rejected':response.error==='intake_case_operation_pending'?'case_operation_pending':'input_rejected';persist();return;}
         if(response?.ok!==true)throw Error(response?.error||'sin_confirmacion');acceptSaved(response,job);}
       catch(error){if(generation===writeEpoch){saveError=/revision|conflict/.test(error.message)?'conflicto_revision':'sin_confirmacion';}}
       finally{if(generation===writeEpoch){busy=false;paint();if(!saveError&&!job&&Object.keys(pending).length)saveTimer=win.setTimeout(flush,650);}}
@@ -275,7 +285,7 @@
     async function checkSave(){
       if(recoveredStage)return recoverStage();
       if(stageLocked())return;
-      if(!job&&saveError==='case_operation_pending')return refreshBlocked();
+      if(!job&&['case_operation_pending','revision_rejected','input_rejected'].includes(saveError))return refreshBlocked();
       if(!job){return flush();}
       if(!active||!receipt||!adapter?.read||busy||identity!==getIdentity())return;busy=true;paint();const generation=writeEpoch,owner=identity;
       try{const response=await adapter.read({id:receipt.caso_id,request_id:job.request_id});if(generation!==writeEpoch||owner!==getIdentity())return;if(response?.ok!==true)throw Error('sin_confirmacion');acceptSaved(response,job);
@@ -285,9 +295,9 @@
     }
     async function refreshBlocked(){
       if(!active||!receipt||busy||stageLocked()||!adapter?.read||identity!==getIdentity())return;
-      const generation=writeEpoch,owner=identity;busy=true;paint();let refreshed=false;
+      const generation=writeEpoch,owner=identity,previousError=saveError;busy=true;paint();let refreshed=false;
       try{const fresh=await adapter.read({id:receipt.caso_id});if(generation!==writeEpoch||owner!==getIdentity())return;receipt=validateRead(fresh,{type,id:receipt.caso_id});draft={...draft,...copy(receipt.intake),inputs:Object.fromEntries(Object.entries({...receipt.intake.inputs,...pending}).filter(([,v])=>v!==null))};for(const control of controls)control.value=own(draft.inputs,control.id)?draft.inputs[control.id]:'';saveError='';refreshed=true;}
-      catch{if(generation===writeEpoch)saveError='case_operation_pending';}
+      catch{if(generation===writeEpoch)saveError=previousError;}
       finally{if(generation===writeEpoch){busy=false;paint();persist();if(refreshed)void flush();}}
     }
     function acceptRead(response){
@@ -310,7 +320,13 @@
     }
     function stageContext(){
       if(!active||!receipt||identity!==getIdentity())return null;
-      const cap=receipt.capabilities?.stages;
+      let cap=receipt.capabilities?.stages;
+      // These mirrored drivers publish their business bounds in the canonical read.
+      // Keep the server's optional capability limits; older readers supply campos.
+      if(cap&&['macrolotes','residencial'].includes(type)&&Array.isArray(receipt.campos)){
+        const fields=receipt.campos.filter(f=>f?.id==='inMesesUrbEtapa'),f=fields[0];
+        if(fields.length===1&&f.kind==='number'&&Number.isInteger(f.min)&&Number.isInteger(f.max)&&f.min>=1&&f.max>=f.min&&f.max<=cap.max_months)cap={...cap,min_duration_months:cap.min_duration_months??f.min,max_duration_months:cap.max_duration_months??f.max};
+      }
       return {verified:true,ready:!busy&&!job&&!saveError&&!recoveredStage&&!Object.keys(pending).length,model_type:type,case_id:receipt.caso_id,scenario_id:receipt.activo||'base',revision:receipt.revision,native_capability:cap,native_collection:receipt.stages_by_scenario?.[receipt.activo||'base'],native_checks:receipt.stage_checks_by_scenario?.[receipt.activo||'base'],native_calculated:receipt.stage_calculated_by_scenario?.[receipt.activo||'base'],...(cap?.initial_pending===true&&receipt.intake.stages?.count===1&&receipt.intake.stages.duration_months===null?{native_pending_stages:copy(receipt.intake.stages)}:{})};
     }
     async function saveStages(payload,options){
@@ -320,10 +336,22 @@
         if(response?.ok===true){receipt=validateRead(response,{type,id:receipt.caso_id});draft={...draft,...copy(receipt.intake),inputs:Object.fromEntries(Object.entries(receipt.intake.inputs).filter(([,v])=>v!==null))};for(const control of controls)control.value=own(draft.inputs,control.id)?draft.inputs[control.id]:'';paint();persist();}return response;
       }finally{if(generation===writeEpoch){stageOperation=false;syncStageLock();}}
     }
+    async function refreshStages(){
+      if(!active||!receipt||!adapter?.read||stageLocked()||busy||job||Object.keys(pending).length||identity!==getIdentity())throw Error('pendientes');
+      const generation=writeEpoch,owner=identity,id=receipt.caso_id;stageOperation=true;stageRefreshing=true;syncStageLock();
+      try{const response=await adapter.read({id});if(generation!==writeEpoch||owner!==getIdentity())throw Error('contexto_cambiado');
+        receipt=validateRead(response,{type,id});draft={...draft,...copy(receipt.intake),inputs:Object.fromEntries(Object.entries(receipt.intake.inputs).filter(([,v])=>v!==null))};for(const control of controls)control.value=own(draft.inputs,control.id)?draft.inputs[control.id]:'';paint();persist();
+      }finally{if(generation===writeEpoch){stageOperation=false;stageRefreshing=false;syncStageLock();}}
+    }
     async function recoverStage(){
       if(!recoveredStage||!stageJob||stageOperation||!active||identity!==getIdentity())return;
       const expected=copy(stageJob),generation=writeEpoch,owner=identity;stageOperation=true;paint();
       try{const response=await adapter.saveStages(expected,{reconcile:true});if(generation!==writeEpoch||owner!==getIdentity())return;
+        if(response?.ok===false&&response.stage_rejection){
+          await win.PPPStages.rejection(response,expected);if(generation!==writeEpoch||owner!==getIdentity())return;
+          stageJob=null;stagePending=false;recoveredStage=false;stageOperation=false;paint();persist();
+          await stageEditor?.restoreRejection(response,expected);return;
+        }
         const confirmed=validateRead(response,{type,id:receipt.caso_id});win.PPPStages.receipt(confirmed,expected,()=>true);
         receipt=confirmed;draft={...draft,...copy(confirmed.intake),inputs:Object.fromEntries(Object.entries(confirmed.intake.inputs).filter(([,v])=>v!==null))};for(const control of controls)control.value=own(draft.inputs,control.id)?draft.inputs[control.id]:'';stageJob=null;stagePending=false;recoveredStage=false;
       }catch{}finally{if(generation===writeEpoch){stageOperation=false;paint();persist();}}
@@ -340,5 +368,5 @@
     win.addEventListener('storage',checkIdentity);win.addEventListener('focus',checkIdentity);win.addEventListener('pagehide',leavePage);win.addEventListener('pageshow',resumePage);const identityTimer=win.setInterval(checkIdentity,1000);
     return {get active(){return active;},get blocking(){return active||opening;},get draft(){return draft?copy(draft):null;},open,paint,persist,flush,checkSave,acceptRead,stageContext,saveStages,deactivate,destroy(){disposed=true;epoch++;deactivate();win.clearInterval(identityTimer);win.removeEventListener('storage',checkIdentity);win.removeEventListener('focus',checkIdentity);win.removeEventListener('pagehide',leavePage);win.removeEventListener('pageshow',resumePage);doc.removeEventListener('click',preventAction,true);host.remove();}};
   }
-  return {models,normalizeType,modelFor,parseNumber,validate,boardPath,validateRead,nativeAdapter,createController,mount,mountBoard};
+  return {PREWRITE_ERRORS,prewriteRejected,models,normalizeType,modelFor,parseNumber,validate,boardPath,validateRead,nativeAdapter,createController,mount,mountBoard};
 });
