@@ -3,20 +3,23 @@ const test=require('node:test'),assert=require('node:assert/strict'),crypto=requ
 const api=require('../ppp-stages.js');
 const clone=x=>JSON.parse(JSON.stringify(x));
 const hash=async text=>crypto.createHash('sha256').update(text).digest('hex');
+const ambiguous=(count=3,duration=12)=>({schema:1,count,duration_months:duration,mode:null,allocation:'preserve'});
 const spec=(count=3,duration=12)=>({schema:1,count,duration_months:duration,mode:'sequential',allocation:'preserve'});
 const canonical=(count=3,duration=12)=>({...spec(count,duration),stages:Array.from({length:count},(_,i)=>({id:'stage-'+(i+1),order:i+1,start_month:1+i*duration,duration_months:duration,end_month:(i+1)*duration}))});
 const cap=()=>({schema:1,read:true,write:true,max_stages:24,max_months:1200,modes:['sequential'],allocation_modes:['preserve'],assumption:'Etapas consecutivas; se conservan las distribuciones existentes.'});
 const context=(patch={})=>({verified:true,ready:true,model_type:'vertical',case_id:'synthetic-case',scenario_id:'scenario-a',revision:'r1',native_capability:cap(),native_collection:canonical(1,12),...patch});
 function model(payload,patch={}){const collection=canonical(payload.stages.count,payload.stages.duration_months);return{ok:true,caso_id:payload.caso_id,revision:'r2',escenarios:[{id:payload.escenario_id}],capabilities:{stages:cap()},stages_by_scenario:{[payload.escenario_id]:collection},stage_receipt:{request_id:payload.request_id,caso_id:payload.caso_id,escenario_id:payload.escenario_id,base_revision:payload.revision_esperada,result_revision:'r2',stages:collection,calculated:true,checks:Object.fromEntries(api.CHECKS.map(k=>[k,true]))},...patch};}
-function harness(onSave){let current=context(),i=0;const states=[];const c=api.createController({getContext:()=>current,onSave:(p,o)=>onSave(p,o,h),onState:s=>states.push(s),hash,uuid:()=>String(++i)});const h={c,states,setContext(n){current=n;c.setContext(n);},getContext:()=>current,accept(m){current=context({revision:m.revision,native_collection:m.stages_by_scenario['scenario-a']});c.setContext(current);}};c.setContext(current);return h;}
+function harness(onSave){let current=context(),i=0;const states=[];const c=api.createController({getContext:()=>current,onSave:(p,o)=>onSave(p,o,h),onState:s=>states.push(s),hash,uuid:()=>String(++i)});const h={c,states,setContext(n){current=n;c.setContext(n);},getContext:()=>current,accept(m){current=context({revision:m.revision,native_collection:m.stages_by_scenario['scenario-a']});c.setContext(current);}};c.setContext(current);
+ // Transport regression tests take the same review and explicit-order path a user takes.
+ const save=c.save;c.save=()=>{if(!c.status().pending&&!c.status().busy){if(!c.prepare())return Promise.resolve(false);if(c.status().phase==='clarify')c.chooseMode('sequential');}return save();};return h;}
 async function rejection(p,error='revision_conflict'){const actor='synthetic-actor';const proof={request_id:p.request_id,caso_id:p.caso_id,escenario_id:p.escenario_id,base_revision:p.revision_esperada,actor,payload_hash:await hash(api.stable({actor,caso_id:p.caso_id,escenario_id:p.escenario_id,base_revision:p.revision_esperada,stages:p.stages})),stage:'prewrite',write_attempted:false,error,rejected_at:new Date().toISOString()};return{ok:false,error:'operation_rejected',request_id:p.request_id,stage_operation_status:'rejected',stage_rejection:proof};}
 
 test('typed and dictated Spanish produce the same bounded stages drivers',()=>{
- for(const text of ['3 etapas de 12 meses','Van a ser 3 etapas de 12 meses.','mira van a ser tres etapas de doce meses','Serán tres etapas de doce meses cada una','Por favor, organiza en tres etapas con doce meses por etapa','cambia a tres etapas de doce meses, por favor'])assert.deepEqual(api.parseCommand(text),spec());
- assert.deepEqual(api.parseCommand('una etapa de treinta y seis meses'),spec(1,36));
- assert.deepEqual(api.parseCommand('dos etapas de ciento veinte meses'),spec(2,120));
- assert.deepEqual(api.parseCommand('1 etapa de mil doscientos meses'),spec(1,1200));
- assert.match(api.describeProposal(spec()),/consecutivas, 36 meses/);assert.match(api.describeProposal(spec()),/distribuciones existentes/);
+ for(const text of ['3 etapas de 12 meses','Van a ser 3 etapas de 12 meses.','mira van a ser tres etapas de doce meses','Serán tres etapas de doce meses cada una','Por favor, organiza en tres etapas con doce meses por etapa','cambia a tres etapas de doce meses, por favor'])assert.deepEqual(api.parseCommand(text),ambiguous());
+ assert.deepEqual(api.parseCommand('una etapa de treinta y seis meses'),ambiguous(1,36));
+ assert.deepEqual(api.parseCommand('dos etapas de ciento veinte meses'),ambiguous(2,120));
+ assert.deepEqual(api.parseCommand('1 etapa de mil doscientos meses'),ambiguous(1,1200));
+ assert.match(api.describeProposal(spec()),/Consecutivas: 36 meses/);assert.match(api.describeProposal(spec()),/distribuciones existentes/);
 });
 test('ambiguous, negative, fractional, multiple and unsupported commands never write',()=>{
  for(const text of ['3 etapas','3 etapas de 12 o 18 meses','3 etapas de doce meses y 2 etapas de seis meses','no hagas 3 etapas de 12 meses','3.5 etapas de 12 meses','-3 etapas de 12 meses','3 etapas de 12.5 meses','3 etapas simultáneas de 12 meses','3 etapas de 12 meses vende 20','cero etapas de 12 meses','25 etapas de 12 meses','3 etapas de 600 meses','=3 etapas de 12 meses','3 etapas de $12 meses'])assert.throws(()=>api.parseCommand(text),text);
@@ -62,10 +65,10 @@ test('proven conflict preserves instruction, blocks stale resubmit and permits r
  const h=harness(async(p,o,h)=>{if(h.getContext().revision==='r1')return rejection(p);const m=model(p,{revision:'r3'});m.stage_receipt.result_revision='r3';h.accept(m);return m;});h.c.setCommand('3 etapas de 12 meses');assert.equal(await h.c.save(),false);assert.equal(h.c.status().phase,'conflict');assert.equal(h.c.status().pending,false);assert.equal(h.c.status().command,'3 etapas de 12 meses');assert.equal(await h.c.save(),false);h.setContext(context({revision:'r2'}));assert.equal(await h.c.save(),true);
 });
 class Element{constructor(tag){this.tag=tag;this.children=[];this.attrs={};this.listeners={};this.dataset={};this.classList={add(){}};this.value='';this._text='';this.hidden=false;}set textContent(v){this.children=[];this._text=String(v);}get textContent(){return this._text+this.children.map(x=>x.textContent).join(' ');}append(...nodes){this.children.push(...nodes);}replaceChildren(...nodes){this.children=nodes;this._text='';}setAttribute(k,v){this.attrs[k]=String(v);}addEventListener(k,f){(this.listeners[k]??=[]).push(f);}removeEventListener(k,f){this.listeners[k]=(this.listeners[k]||[]).filter(x=>x!==f);}emit(k,e={}){for(const f of this.listeners[k]||[])f(e);}all(){return this.children.flatMap(n=>[n,...n.all()]);}}
-function mounted({speech,initial=context(),onSave=async()=>{throw Error('timeout');},onRefresh,clock}={}){let current=initial;const container=new Element('section'),win=new Element('window'),doc={createElement:t=>new Element(t)};if(speech)win.SpeechRecognition=speech;const view=api.mount({container,getContext:()=>current,onSave,onRefresh,doc,win,uuid:()=> 'synthetic-1',...(clock?{schedule:clock.schedule,cancel:clock.cancel}:{})});return{view,container,win,setContext(c){current=c;view.setContext(c);},button:text=>container.all().find(x=>x.tag==='button'&&x.textContent===text),input:()=>container.all().find(x=>x.tag==='textarea')};}
+function mounted({speech,initial=context(),onSave=async()=>{throw Error('timeout');},onRefresh,clock}={}){let current=initial;const container=new Element('section'),win=new Element('window'),doc={createElement:t=>new Element(t)};if(speech)win.SpeechRecognition=speech;const view=api.mount({container,getContext:()=>current,onSave,onRefresh,doc,win,uuid:()=> 'synthetic-1',...(clock?{schedule:clock.schedule,cancel:clock.cancel}:{})});const save=view.save;view.save=()=>{if(!view.snapshotStatus().pending&&!view.snapshotStatus().busy){if(!view.prepare())return Promise.resolve(false);if(view.snapshotStatus().phase==='clarify')view.chooseMode('sequential');}return save();};return{view,container,win,setContext(c){current=c;view.setContext(c);},button:text=>container.all().find(x=>x.tag==='button'&&x.textContent===text),input:()=>container.all().find(x=>x.tag==='textarea')};}
 test('same inline panel has text alternative and disables unverified capabilities',()=>{
- const h=mounted();assert.equal(h.button('Dictar').hidden,true);assert.equal(h.input().disabled,false);assert.match(h.container.textContent,/1 etapa actual/);h.view.setCommand('3 etapas de 12 meses');assert.match(h.container.textContent,/36 meses/);h.view.dispose();
- const noCap=mounted({initial:context({native_capability:null})});assert.equal(noCap.input().disabled,true);assert.equal(noCap.button('Aplicar al plan').disabled,true);assert.match(noCap.container.textContent,/no está habilitada/);noCap.view.dispose();
+ const h=mounted();assert.equal(h.button('Dictar').hidden,true);assert.equal(h.input().disabled,false);assert.match(h.container.textContent,/1 etapa actual/);h.view.setCommand('3 etapas de 12 meses');h.view.prepare();h.view.chooseMode('sequential');assert.match(h.container.textContent,/36 meses/);h.view.dispose();
+ const noCap=mounted({initial:context({native_capability:null})});assert.equal(noCap.input().disabled,true);assert.equal(noCap.button('Revisar cambio').disabled,true);assert.match(noCap.container.textContent,/no está habilitada/);noCap.view.dispose();
 });
 test('speech starts only on click and returns editable text without submitting',()=>{
  let speech,started=0,writes=0;class Speech{constructor(){speech=this;}start(){started++;}abort(){}stop(){this.onend();}}
@@ -83,7 +86,7 @@ test('a bound atomic rejection releases uncertainty only with explicit committed
 
 
 test('single month is valid Spanish while the malformed singular mese is rejected',()=>{
- assert.deepEqual(api.parseCommand('una etapa de un mes'),spec(1,1));assert.throws(()=>api.parseCommand('una etapa de un mese'));assert.match(api.describeProposal(spec(1,1)),/de 1 mes\. Supuesto: consecutivas, 1 mes para las etapas/);
+ assert.deepEqual(api.parseCommand('una etapa de un mes'),ambiguous(1,1));assert.throws(()=>api.parseCommand('una etapa de un mese'));assert.match(api.describeProposal(spec(1,1)),/de 1 mes cada una\. Consecutivas: 1 mes para las etapas/);
 });
 test('canonical initial stage is displayed pending only with its explicit authoritative signal',()=>{
  const initial={schema:1,count:1,duration_months:null,mode:'sequential',allocation:'preserve'};const c=context({native_capability:{...cap(),initial_pending:true},native_collection:null,native_pending_stages:initial});assert.equal(api.initialPending(c),true);
@@ -101,7 +104,7 @@ test('native checks describe the current revision after unrelated edits and neve
  assert.equal(api.nativeChecks(context({native_checks:pending,native_calculated:true})),null);assert.equal(api.nativeChecks(context({native_checks:{cash:false},native_calculated:false})),null);
 });
 test('command preview uses the native calendar assumption without claiming the full project horizon',()=>{
- const assumption='La obra conserva las proporciones del calendario original y los plazos de preventa y entrega.';const h=mounted({initial:context({native_capability:{...cap(),assumption}})});h.view.setCommand('3 etapas de 12 meses');assert.match(h.container.textContent,/36 meses para las etapas/);assert.match(h.container.textContent,/conserva las proporciones del calendario original/);assert.doesNotMatch(h.container.textContent,/36 meses en total/);h.view.dispose();
+ const assumption='La obra conserva las proporciones del calendario original y los plazos de preventa y entrega.';const h=mounted({initial:context({native_capability:{...cap(),assumption}})});h.view.setCommand('3 etapas de 12 meses');h.view.prepare();h.view.chooseMode('sequential');assert.match(h.container.textContent,/36 meses para las etapas/);assert.match(h.container.textContent,/conserva las proporciones del calendario original/);assert.doesNotMatch(h.container.textContent,/36 meses en total/);h.view.dispose();
 });
 
 function fakeClock(){let id=0;const tasks=new Map(),delays=[];return{tasks,delays,schedule(fn,ms){const next=++id;tasks.set(next,fn);delays.push(ms);return next;},cancel(id){tasks.delete(id);},async next(){const task=tasks.entries().next().value;if(!task)return false;tasks.delete(task[0]);await task[1]();return true;}};}
@@ -132,8 +135,8 @@ test('native duration bounds stop out-of-range instructions before sending a req
   const limits={...cap(),max_stages:8,max_months:192,min_duration_months:min,max_duration_months:24},c=context({model_type,native_capability:limits});let calls=0;
   const h=harness(async()=>{calls++;});h.setContext(c);
   for(const duration of [1,min-1,25]){const command=`1 etapa de ${duration} meses`;assert.throws(()=>api.parseCommand(command,limits));assert.throws(()=>api.request(c,spec(1,duration),'invalid-duration'));h.c.setCommand(command);assert.equal(await h.c.save(),false);assert.equal(h.c.status().phase,'invalid');assert.equal(h.c.status().pending,false);}
-  assert.equal(calls,0);assert.deepEqual(api.parseCommand(`8 etapas de ${min} meses`,limits),spec(8,min));assert.deepEqual(api.request(c,spec(8,24),'valid-duration').stages,spec(8,24));
-  const ui=mounted({initial:c});ui.view.setCommand('1 etapa de 1 mes');assert.match(ui.container.textContent,new RegExp(`de ${min} a 24 meses`));ui.view.dispose();
+  assert.equal(calls,0);assert.deepEqual(api.parseCommand(`8 etapas de ${min} meses`,limits),ambiguous(8,min));assert.deepEqual(api.request(c,spec(8,24),'valid-duration').stages,spec(8,24));
+  const ui=mounted({initial:c});ui.view.setCommand('1 etapa de 1 mes');ui.view.prepare();assert.match(ui.container.textContent,/No pude interpretar/);ui.view.dispose();
  }
  for(const limits of [{min_duration_months:0},{min_duration_months:25,max_duration_months:24},{max_duration_months:1201},{min_duration_months:'3'}])assert.equal(api.capability({...cap(),...limits}),null);
  assert.deepEqual(api.request(context(),spec(1,36),'vertical-duration').stages,spec(1,36));
@@ -156,6 +159,54 @@ test('restored durable rejections preserve the instruction and require the same 
 test('a visible calendar refresh retains a rejected instruction and never applies it automatically',async()=>{
  let posts=0,reads=0,finish;const h=mounted({onSave:async p=>{posts++;return{ok:false,error:'revision_conflict',persisted:false,request_id:p.request_id};},onRefresh:()=>{reads++;return new Promise(resolve=>{finish=()=>{h.setContext(context({revision:'r2'}));resolve();};});}});
  h.view.setCommand('3 etapas de 12 meses');await h.view.save();assert.equal(h.view.snapshotStatus().phase,'conflict');assert.equal(h.button('Releer calendario').hidden,false);assert.equal(h.view.snapshotStatus().pending,false);
- const reading=h.view.refresh();assert.equal(await h.view.refresh(),false);assert.equal(h.button('Aplicar al plan').disabled,true);assert.equal(reads,1);assert.equal(posts,1);finish();assert.equal(await reading,true);assert.equal(h.input().value,'3 etapas de 12 meses');assert.equal(h.view.snapshotStatus().context.revision,'r2');assert.equal(h.view.snapshotStatus().phase,'ready');assert.equal(posts,1,'refresh must never apply the instruction');h.view.dispose();
+ const reading=h.view.refresh();assert.equal(await h.view.refresh(),false);assert.equal(h.button('Revisar cambio').disabled,true);assert.equal(reads,1);assert.equal(posts,1);finish();assert.equal(await reading,true);assert.equal(h.input().value,'3 etapas de 12 meses');assert.equal(h.view.snapshotStatus().context.revision,'r2');assert.equal(h.view.snapshotStatus().phase,'ready');assert.equal(posts,1,'refresh must never apply the instruction');h.view.dispose();
  const failed=mounted({onSave:async p=>({ok:false,error:'revision_conflict',persisted:false,request_id:p.request_id}),onRefresh:async()=>{throw Error('read failed');}});failed.view.setCommand('3 etapas de 12 meses');await failed.view.save();assert.equal(await failed.view.refresh(),false);assert.equal(failed.input().value,'3 etapas de 12 meses');assert.equal(failed.view.snapshotStatus().phase,'conflict');assert.match(failed.container.textContent,/No se pudo releer/);failed.view.dispose();
+});
+
+
+test('ambiguous instruction requires review, explicit order and save bound to the original case and version',async()=>{
+ let current=context(),calls=[];const c=api.createController({getContext:()=>current,uuid:()=> 'unique',onSave:async(p,o)=>{calls.push({p,o});const m=model(p);current=context({revision:m.revision,native_collection:m.stages_by_scenario['scenario-a']});c.setContext(current);return m;}});c.setContext(current);
+ c.setCommand('serán tres etapas de 12 meses');assert.equal(await c.save(),false);assert.equal(c.prepare(),true);assert.equal(c.status().phase,'clarify');assert.equal(c.status().proposal.stages.mode,null);assert.equal(await c.save(),false);assert.equal(calls.length,0);
+ assert.equal(c.prepare(),true);assert.equal(c.chooseMode('sequential'),true);assert.equal(c.status().phase,'preview');assert.equal(await c.confirm(),true);assert.equal(calls.length,1);assert.deepEqual(calls[0].p,{tipo:'sheet-stages',tipo_desarrollo:'VERTICAL',caso_id:'synthetic-case',escenario_id:'scenario-a',revision_esperada:'r1',request_id:'stages-unique',stages:spec()});
+});
+test('explicit succession previews directly; parallel and contradictory instructions never post',async()=>{
+ let calls=0;const c=api.createController({getContext:()=>context(),uuid:()=> 'unique',onSave:async()=>{calls++;}});c.setContext(context());
+ c.setCommand('serán tres etapas de 12 meses consecutivas');assert.equal(c.prepare(),true);assert.equal(c.status().phase,'preview');assert.equal(c.status().proposal.stages.mode,'sequential');
+ for(const text of ['no serán tres etapas de 12 meses','3 etapas de 12 meses con 24 meses en total','3 etapas de 12 meses no consecutivas','3 etapas de 12.5 meses','3 a 4 etapas de 12 meses','3 etapas de 12 meses consecutivas y en paralelo']){c.setCommand(text);assert.equal(c.prepare(),false,text);assert.equal(await c.save(),false);}
+ c.setCommand('3 etapas de 12 meses en paralelo');assert.equal(c.prepare(),true);assert.equal(c.status().phase,'unsupported');assert.equal(await c.save(),false);assert.equal(calls,0);
+});
+test('editing instruction, case, version, revision or capability invalidates a reviewed proposal',async()=>{
+ for(const update of [c=>({...c,case_id:'case-2'}),c=>({...c,scenario_id:'version-2'}),c=>({...c,revision:'r2'}),c=>({...c,native_capability:{...c.native_capability,max_stages:8}})]){
+  let current=context(),calls=0;const c=api.createController({getContext:()=>current,onSave:async()=>{calls++;}});c.setContext(current);c.setCommand('3 etapas de 12 meses consecutivas');c.prepare();current=update(current);c.setContext(current);assert.equal(c.status().proposal,null);assert.equal(await c.save(),false);assert.equal(calls,0);
+ }
+ let current=context(),calls=0;const c=api.createController({getContext:()=>current,onSave:async()=>{calls++;}});c.setContext(current);c.setCommand('3 etapas de 12 meses consecutivas');c.prepare();c.setCommand('4 etapas de 12 meses consecutivas');assert.equal(c.status().proposal,null);assert.equal(await c.save(),false);assert.equal(calls,0);
+});
+test('clarification UI displays understanding and context before save, without assuming succession',()=>{
+ const h=mounted();h.view.setCommand('serán tres etapas de 12 meses');h.view.prepare();assert.match(h.container.textContent,/Entendí: 3 etapas de 12 meses/);assert.match(h.container.textContent,/Caso: synthetic-case · versión: scenario-a · revisión: r1/);assert.match(h.container.textContent,/Falta definir si serán consecutivas o en paralelo/);assert.doesNotMatch(h.container.textContent,/Etapas consecutivas; se conservan/);assert.equal(h.button('Guardar').hidden,true);assert.equal(h.button('Consecutivas').hidden,false);h.view.chooseMode('parallel');assert.equal(h.button('Guardar').hidden,true);h.view.chooseMode('sequential');assert.equal(h.button('Guardar').hidden,false);assert.match(h.container.textContent,/No se propone reparto financiero/);h.view.dispose();
+});
+
+test('an unannounced revision or capability change cannot be saved through a stale preview',async()=>{
+ for(const patch of [{revision:'r2'},{native_capability:{...cap(),write:false}}]){let current=context(),calls=0;const c=api.createController({getContext:()=>current,onSave:async()=>{calls++;}});c.setContext(current);c.setCommand('3 etapas consecutivas de 12 meses');assert.equal(c.prepare(),true);current=context(patch);assert.equal(await c.confirm(),false);assert.equal(calls,0);assert.equal(c.status().proposal,null);}
+});
+
+test('a long instruction is preserved intact and rejected instead of applying its valid prefix',async()=>{
+ let calls=0;const h=harness(async()=>{calls++;});const text='3 etapas de 12 meses consecutivas'.padEnd(300,' ')+' y cambia el precio';
+ h.c.setCommand(text);assert.equal(h.c.status().command,text);assert.equal(h.c.prepare(),false);assert.equal(await h.c.confirm(),false);assert.equal(h.c.status().pending,false);assert.equal(calls,0);
+ const ui=mounted();ui.view.setCommand(text);assert.equal(ui.input().value,text);assert.equal(ui.view.prepare(),false);assert.equal(ui.view.snapshotStatus().proposal,null);ui.view.dispose();
+});
+
+test('dictation from an earlier visit or revoked session cannot repopulate the same case and revision',()=>{
+ for(const change of [h=>{h.setContext(context({case_id:'other'}));h.setContext(context());},h=>{h.win.emit('storage',{key:'pyod_clave_v1'});h.setContext(context());}]){
+  let speech;class Speech{constructor(){speech=this;}start(){}abort(){}}
+  const h=mounted({speech:Speech});h.button('Dictar').emit('click');change(h);speech.onresult({resultIndex:0,results:[Object.assign([{transcript:'tres etapas de doce meses'}],{isFinal:true})]});assert.equal(h.input().value,'');assert.equal(h.view.snapshotStatus().proposal,null);h.view.dispose();
+ }
+});
+
+test('a recoverable pending change resumes only by an explicit click with the original request and payload',async()=>{
+ const calls=[];const h=harness(async(p,o,h)=>{calls.push({p:clone(p),o:clone(o)});if(calls.length===1)throw Error('timeout');if(o.reconcile)return{ok:false,error:'recoverable_prewrite',request_id:p.request_id};assert.equal(o.resume,true);const m=model(p);h.accept(m);return m;});
+ h.c.setCommand('3 etapas de 12 meses');assert.equal(await h.c.save(),false);assert.equal(await h.c.resume(),false);assert.equal(calls.length,1);assert.equal(await h.c.reconcile(),false);assert.equal(h.c.status().phase,'resumable');assert.equal(h.c.status().resume_allowed,true);assert.equal(calls.length,2);assert.equal(await h.c.resume(),true);assert.equal(h.c.status().pending,false);assert.equal(h.c.status().phase,'saved');assert.deepEqual(calls[0].p,calls[1].p);assert.deepEqual(calls[0].p,calls[2].p);assert.deepEqual(calls.map(c=>c.o.reconcile),[false,true,false]);assert.equal(await h.c.resume(),false);
+});
+test('a recoverable response needs the exact request and shape; resumption never retires an earlier uncertain write on a POST refusal',async()=>{
+ for(const bad of [{ok:false,error:'recoverable_prewrite'}, {ok:false,error:'recoverable_prewrite',request_id:'foreign'}, {ok:false,error:'recoverable_prewrite',request_id:'stages-1',persisted:false}]){const h=harness(async()=>bad);h.c.setCommand('3 etapas de 12 meses');await h.c.save();assert.equal(h.c.status().resume_allowed,false);assert.equal(await h.c.resume(),false);}
+ const h=harness(async(p,o)=>o.resume?{ok:false,error:'revision_conflict',persisted:false,request_id:p.request_id}:{ok:false,error:'recoverable_prewrite',request_id:p.request_id});h.c.setCommand('3 etapas de 12 meses');await h.c.save();await h.c.resume();assert.equal(h.c.status().pending,true);assert.equal(h.c.status().phase,'unconfirmed');
 });

@@ -66,12 +66,19 @@
   if(typeof text!=='string'||text.length>300)throw Error('invalid_stage_command');
   let normalized=text.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/[.!?]+$/,'').trim().replace(/\s+/g,' ');
   normalized=normalized.replace(/^(?:(?:mira|por favor),? )?(?:van a ser|seran|vamos a tener|quiero que sean|quiero|cambia a|cambialo a|organiza en|organizalo en|establece|serian|haz) /,'').replace(/,? por favor$/,'');
-  const match=normalized.match(/^(.+?) etapas? (?:de|con) (.+?) mes(?:es)?(?: (?:cada una|cada etapa|por etapa))?$/);
-  if(!match)throw Error('invalid_stage_command');
-  const count=integer(match[1]),duration=integer(match[2]);
-  return validateStages({schema:1,count,duration_months:duration,mode:'sequential',allocation:'preserve'},limits.max_stages,limits.max_months,limits.min_duration_months,limits.max_duration_months);
+  // Full-string grammar intentionally rejects negatives, conflicting totals, decimals and ranges.
+  const match=normalized.match(/^(.+?) etapas?(?: (consecutivas?|secuenciales?|en sucesion|en paralelo|paralelas?))? (?:de|con) (.+?) mes(?:es)?(?: (?:cada una|cada etapa|por etapa))?(?: (consecutivas?|secuenciales?|en sucesion|una (?:despues|tras) (?:de )?otra|en paralelo|paralelas?))?$/);
+  if(!match||match[2]&&match[4])throw Error('invalid_stage_command');
+  const count=integer(match[1]),duration=integer(match[3]);
+  validateStages({schema:1,count,duration_months:duration,mode:'sequential',allocation:'preserve'},limits.max_stages,limits.max_months,limits.min_duration_months,limits.max_duration_months);
+  const order=match[2]||match[4],mode=!order?null:/paralel/.test(order)?'parallel':'sequential';
+  return {schema:1,count,duration_months:duration,mode,allocation:'preserve'};
  }
- function describeProposal(v,assumption='Se conservan las distribuciones existentes.'){const s=validateStages(v);if(typeof assumption!=='string'||!assumption.trim()||assumption.length>300)throw Error('invalid_stage_assumption');const total=s.count*s.duration_months;return`${s.count} ${s.count===1?'etapa':'etapas'} de ${s.duration_months} ${s.duration_months===1?'mes':'meses'}. Supuesto: consecutivas, ${total} ${total===1?'mes':'meses'} para las etapas. ${assumption}`;}
+ function describeProposal(v,assumption='Se conservan las distribuciones existentes.'){
+  if(!object(v)||!['sequential','parallel',null].includes(v.mode))throw Error('invalid_stage_command');
+  const s=validateStages({...v,mode:'sequential'});if(typeof assumption!=='string'||!assumption.trim()||assumption.length>300)throw Error('invalid_stage_assumption');
+  return `Entendí: ${s.count} ${s.count===1?'etapa':'etapas'} de ${s.duration_months} ${s.duration_months===1?'mes':'meses'} cada una. `+(v.mode==='sequential'?`Consecutivas: ${s.count*s.duration_months} ${s.count*s.duration_months===1?'mes':'meses'} para las etapas. `:v.mode==='parallel'?'En paralelo. ':'Falta definir si serán consecutivas o en paralelo. ')+assumption;
+ }
  async function rejection(response,payload,hash=sha256){
   const proof=response?.stage_rejection,atomic=proof?.stage==='atomic_write',keys=['request_id','caso_id','escenario_id','base_revision','actor','payload_hash','stage','write_attempted','error','rejected_at'].concat(atomic?['committed']:[]);
   if(response?.ok!==false||response.error!=='operation_rejected'||response.request_id!==payload.request_id||response.stage_operation_status!=='rejected'||!exact(proof,keys)||proof.request_id!==payload.request_id||proof.caso_id!==payload.caso_id||proof.escenario_id!==payload.escenario_id||proof.base_revision!==payload.revision_esperada||typeof proof.actor!=='string'||!proof.actor||proof.actor.length>256||(atomic?(proof.write_attempted!==true||proof.committed!==false||proof.error!=='native_stage_write_rejected'):(proof.stage!=='prewrite'||proof.write_attempted!==false||!REJECTIONS.includes(proof.error)))||typeof proof.payload_hash!=='string'||!/^[a-f0-9]{64}$/.test(proof.payload_hash)||typeof proof.rejected_at!=='string'||!Number.isFinite(Date.parse(proof.rejected_at))||Date.parse(proof.rejected_at)>Date.now()+5000||typeof hash!=='function')throw Error('unconfirmed_stage_rejection');
@@ -80,30 +87,44 @@
  }
  async function sha256(text){const bytes=await globalThis.crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return Array.from(new Uint8Array(bytes),b=>b.toString(16).padStart(2,'0')).join('');}
  function createController({getContext,onSave,onState=()=>{},validModel,hash=sha256,uuid=()=>globalThis.crypto.randomUUID()}){
-  let context=null,command='',pending=null,phase='idle',error='',lastReceipt=null,epoch=0,operation=null,disposed=false,conflictRevision=null;
-  function status(){return{phase,command,pending:!!pending,pending_request_id:pending?.request_id||null,busy:!!operation,error,receipt:lastReceipt?clone(lastReceipt):null,context:context?clone(context):null};}
+  let context=null,command='',proposal=null,pending=null,resumeAllowed=false,phase='idle',error='',lastReceipt=null,epoch=0,operation=null,disposed=false,conflictRevision=null;
+  function status(){return{phase,command,generation:epoch,proposal:proposal?clone(proposal):null,pending:!!pending,resume_allowed:resumeAllowed,pending_request_id:pending?.request_id||null,busy:!!operation,error,receipt:lastReceipt?clone(lastReceipt):null,context:context?clone(context):null};}
   const notify=()=>onState(status());
-  function clear(){epoch++;context=null;command='';pending=null;phase='idle';error='';lastReceipt=null;conflictRevision=null;notify();}
+  function clear(){epoch++;context=null;command='';proposal=null;pending=null;resumeAllowed=false;phase='idle';error='';lastReceipt=null;conflictRevision=null;notify();}
   function setContext(next){
    const authoritative=getContext();if(!validContext(next)||!validContext(authoritative)||identity(next)!==identity(authoritative)||next.revision!==authoritative.revision){clear();return false;}
-   if(context&&identity(context)!==identity(next))clear();else if(context&&context.revision!==next.revision&&!pending&&!operation){lastReceipt=null;error='';phase='idle';}context=clone(next);if(!pending&&!operation&&['idle','ready','unavailable'].includes(phase))phase=capability(next.native_capability)?.write?'ready':'unavailable';notify();return true;
+   if(context&&identity(context)!==identity(next))clear();else if(context&&!pending&&!operation&&(context.revision!==next.revision||stable(context.native_capability)!==stable(next.native_capability)||stable(context.native_collection)!==stable(next.native_collection))) {proposal=null;lastReceipt=null;error='';phase='idle';}context=clone(next);if(!pending&&!operation&&['idle','ready','unavailable'].includes(phase))phase=capability(next.native_capability)?.write?'ready':'unavailable';notify();return true;
   }
-  function setCommand(value){if(pending||operation||disposed)return false;command=String(value).slice(0,300);error='';lastReceipt=null;if(phase!=='conflict')phase='ready';notify();return true;}
+  function setCommand(value){if(pending||operation||disposed)return false;command=String(value);proposal=null;error='';lastReceipt=null;if(phase!=='conflict')phase='ready';notify();return true;}
   function rejectedState(result,payload){pending=null;phase=result.error==='revision_conflict'?'conflict':'rejected';conflictRevision=payload.revision_esperada;error=result.error==='revision_conflict'?'El libro cambió. Actualiza desde Sheets y revisa la instrucción; no se sobrescribió la otra edición.':'El libro confirmó que el cambio no se aplicó. Actualiza desde Sheets y revisa el calendario; tu instrucción se conserva.';}
   async function restoreRejection(response,payload){
    if(disposed||operation||pending)return false;const fresh=getContext(),own=epoch;
    if(!validContext(fresh)||!context||identity(fresh)!==identity(context)||payload?.tipo!=='sheet-stages'||payload.tipo_desarrollo!==fresh.model_type.toUpperCase()||payload.caso_id!==fresh.case_id||payload.escenario_id!==fresh.scenario_id)return false;
    try{const result=await rejection(response,payload,hash);if(disposed||own!==epoch||operation||pending||identity(getContext())!==identity(fresh))return false;const s=validateStages(payload.stages);command=`${s.count} etapas de ${s.duration_months} meses`;lastReceipt=null;rejectedState(result,payload);notify();return true;}catch{return false;}
   }
-  async function save(){
+  function binding(c){return stable({model_type:c.model_type,case_id:c.case_id,scenario_id:c.scenario_id,revision:c.revision,book_url:c.book_url||null,stage_binding:c.stage_binding||null,capability:c.native_capability,collection:c.native_collection,pending_stages:c.native_pending_stages});}
+  function prepare(){
+   if(disposed||operation||pending)return false;const fresh=getContext();
+   if(!validContext(fresh)||!context||identity(fresh)!==identity(context)||binding(fresh)!==binding(context)||!capability(fresh.native_capability)?.write){proposal=null;phase='unavailable';error='El contexto cambió. Relee el calendario antes de revisar.';notify();return false;}
+   try{if(conflictRevision===fresh.revision)throw Error('revision_conflict');const parsed=parseCommand(command,capability(fresh.native_capability));proposal={command,binding:binding(fresh),stages:parsed};phase=parsed.mode==='parallel'?'unsupported':parsed.mode?'preview':'clarify';error=parsed.mode==='parallel'?'Las etapas en paralelo aún no están disponibles; no se ha guardado el cambio.':'';notify();return true;}
+   catch(e){proposal=null;phase=e.message==='revision_conflict'?'conflict':'invalid';error=e.message==='revision_conflict'?'Actualiza desde Sheets y revisa el cambio antes de enviarlo.':'No pude interpretar la instrucción. Indica una cantidad y duración enteras, por ejemplo: 3 etapas de 12 meses.';notify();return false;}
+  }
+  function chooseMode(mode){
+   if(disposed||operation||pending||!proposal||!['sequential','parallel'].includes(mode))return false;
+   const fresh=getContext();if(!validContext(fresh)||binding(fresh)!==proposal.binding||proposal.command!==command){proposal=null;phase='ready';error='El contexto cambió. Revisa de nuevo la instrucción.';notify();return false;}
+   proposal.stages.mode=mode;phase=mode==='parallel'?'unsupported':'preview';error=mode==='parallel'?'Las etapas en paralelo aún no están disponibles; no se ha guardado el cambio.':'';notify();return true;
+  }
+  async function save({resume=false}={}){
    if(disposed||operation)return false;const fresh=getContext();if(!validContext(fresh)||!context||identity(fresh)!==identity(context)){clear();return false;}
-   const reconcile=!!pending;
-   if(!pending){try{if(conflictRevision===fresh.revision)throw Error('revision_conflict');const cap=capability(fresh.native_capability);pending=request(fresh,parseCommand(command,cap||undefined),'stages-'+uuid());}catch(e){phase=e.message==='revision_conflict'?'conflict':'invalid';error=e.message==='revision_conflict'?'Actualiza desde Sheets y revisa el cambio antes de enviarlo.':'Escribe una cantidad y una duración, por ejemplo: 3 etapas de 12 meses. Revisa el límite del calendario.';notify();return false;}}
-   const payload=clone(pending),own=epoch;phase=reconcile?'checking':'saving';error='';let resolveOperation;operation=new Promise(resolve=>{resolveOperation=resolve;});notify();
+   if(resume&&(!pending||!resumeAllowed))return false;
+   const reconcile=!!pending&&!resume;
+   if(!pending){if(!proposal||phase!=='preview'||proposal.stages.mode!=='sequential'||proposal.command!==command||proposal.binding!==binding(fresh)){proposal=null;phase='ready';error='Revisa el cambio y elige el orden antes de guardar.';notify();return false;}try{pending=request(fresh,proposal.stages,'stages-'+uuid());proposal=null;}catch{proposal=null;phase='invalid';error='El calendario ya no admite esta propuesta. Revisa de nuevo.';notify();return false;}}
+   const payload=clone(pending),own=epoch;resumeAllowed=false;phase=reconcile?'checking':'saving';error='';let resolveOperation;operation=new Promise(resolve=>{resolveOperation=resolve;});notify();
    try{
-    const model=await onSave(payload,{reconcile});if(disposed||own!==epoch||!pending||pending.request_id!==payload.request_id)return false;
+    const model=await onSave(payload,{reconcile,...(resume?{resume:true}:{})});if(disposed||own!==epoch||!pending||pending.request_id!==payload.request_id)return false;
     const latest=getContext();if(!validContext(latest)||identity(latest)!==identity(context)){clear();return false;}
-    if(prewriteRejected(model,payload,reconcile)){
+    if(model?.ok===false&&model.error==='recoverable_prewrite'&&model.request_id===payload.request_id&&Object.keys(model).sort().join('|')==='error|ok|request_id'){resumeAllowed=true;phase='resumable';error='Sheets conserva la solicitud pendiente y confirmó que su calendario base sigue intacto. Puedes reanudar el mismo cambio.';return false;}
+    if(prewriteRejected(model,payload,reconcile||resume)){
      if(model.error==='revision_conflict'){rejectedState(model,payload);return false;}
      pending=null;phase=model.error==='intake_case_operation_pending'?'blocked':'invalid';error=model.error==='intake_case_operation_pending'?'Hay otro cambio pendiente en este libro. Esta instrucción no se aplicó; comprueba el cambio anterior y vuelve a intentarlo.':model.error==='invalid_stage_plan'?'La duración o cantidad de etapas está fuera del rango permitido por este libro. No se aplicó el cambio; revisa la instrucción.':'Sheets rechazó esta instrucción antes de escribir. Se conserva para revisarla y volver a intentarlo.';return false;
     }
@@ -112,7 +133,7 @@
    }catch{if(!disposed&&own===epoch){phase='unconfirmed';error='Aún no hay confirmación. Comprobar consulta la misma solicitud; conserva tu instrucción.';}return false;}
    finally{operation=null;resolveOperation();if(!disposed){if(phase==='idle'&&validContext(context))phase=capability(context.native_capability)?.write?'ready':'unavailable';notify();}}
   }
-  return{setContext,setCommand,save,restoreRejection,reconcile(){return pending?save():Promise.resolve(false);},status,clear,dispose(){clear();disposed=true;}};
+  return{setContext,setCommand,prepare,chooseMode,confirm:save,save,resume(){return save({resume:true});},restoreRejection,reconcile(){return pending?save():Promise.resolve(false);},status,clear,dispose(){clear();disposed=true;}};
  }
  const RECONCILE_DELAYS=[15000,30000,60000,60000,60000,60000];
  function createReconciler({getState,getContext,check,schedule=setTimeout,cancel=clearTimeout}){
@@ -141,21 +162,27 @@
   let recognition=null,listening=false,disposed=false,reconciler=null,refreshing=false;
   const make=(tag,cls,text)=>{const e=doc.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
   container.classList.add('ppp-stages');
-  const heading=make('h3','','Etapas del proyecto'),intro=make('p','ppp-stages-intro','Dile al plan cómo organizar el calendario. Los cambios se guardan en el mismo libro.'),current=make('p','ppp-stages-current'),list=make('ol','ppp-stages-list');
-  const form=make('form','ppp-stages-form'),label=make('label','','Instrucción para etapas'),input=make('textarea');input.rows=2;input.maxLength=300;input.placeholder='Van a ser 3 etapas de 12 meses';input.setAttribute('aria-label','Instrucción para etapas');label.append(input);
-  const preview=make('p','ppp-stages-preview'),buttons=make('div','ppp-stages-actions'),submit=make('button','','Aplicar al plan'),mic=make('button','','Dictar'),retry=make('button','','Comprobar guardado'),reload=make('button','','Releer calendario'),statusEl=make('p','ppp-stages-status'),checks=make('ul','ppp-stages-checks');
-  submit.type='submit';mic.type='button';retry.type='button';reload.type='button';retry.hidden=true;reload.hidden=true;statusEl.setAttribute('role','status');statusEl.setAttribute('aria-live','polite');preview.setAttribute('aria-live','polite');buttons.append(submit,mic,retry,reload);form.append(label,preview,buttons);container.append(heading,intro,current,list,form,statusEl,checks);
+  const heading=make('h3','','Etapas del proyecto'),intro=make('p','ppp-stages-intro','Dile al plan cómo organizar el calendario. Los cambios se guardan en el mismo libro.'),current=make('p','ppp-stages-current'),sourceEl=make('p','ppp-stages-source'),receiptEl=make('p','ppp-stages-receipt'),list=make('ol','ppp-stages-list');
+  const form=make('form','ppp-stages-form'),label=make('label','','Instrucción para etapas'),input=make('textarea');input.rows=2;input.placeholder='Van a ser 3 etapas de 12 meses';input.setAttribute('aria-label','Instrucción para etapas');label.append(input);
+  const preview=make('p','ppp-stages-preview'),buttons=make('div','ppp-stages-actions'),submit=make('button','','Revisar cambio'),confirm=make('button','','Guardar'),sequential=make('button','','Consecutivas'),parallel=make('button','','En paralelo'),mic=make('button','','Dictar'),retry=make('button','','Comprobar guardado'),resumeButton=make('button','','Reanudar mismo cambio'),reload=make('button','','Releer calendario'),statusEl=make('p','ppp-stages-status'),checks=make('ul','ppp-stages-checks');
+  submit.type='submit';confirm.type='button';sequential.type='button';parallel.type='button';mic.type='button';retry.type='button';resumeButton.type='button';reload.type='button';retry.hidden=true;reload.hidden=true;statusEl.setAttribute('role','status');statusEl.setAttribute('aria-live','polite');preview.setAttribute('aria-live','polite');buttons.append(submit,confirm,sequential,parallel,mic,retry,resumeButton,reload);form.append(label,preview,buttons);container.append(heading,intro,current,sourceEl,list,form,statusEl,receiptEl,checks);
   const Speech=win?.SpeechRecognition||win?.webkitSpeechRecognition;mic.hidden=!Speech;
   function paint(s){
    if(disposed)return;const cap=capability(s.context?.native_capability),available=validContext(s.context)&&cap?.write;
-   input.value=s.command;input.disabled=refreshing||s.busy||s.pending||!available;submit.disabled=refreshing||s.busy||s.pending||!available;mic.disabled=refreshing||s.busy||s.pending||!available;retry.hidden=!s.pending;retry.disabled=refreshing||s.busy||!validContext(s.context);reload.hidden=typeof onRefresh!=='function'||!['conflict','rejected','blocked'].includes(s.phase);reload.disabled=refreshing||s.busy||s.pending||!available;list.replaceChildren();checks.replaceChildren();
+   input.value=s.command;input.disabled=refreshing||s.busy||s.pending||!available;submit.disabled=refreshing||s.busy||s.pending||!available;confirm.hidden=s.phase!=='preview';confirm.disabled=refreshing||s.busy||s.pending||!available;sequential.hidden=parallel.hidden=!['clarify','unsupported'].includes(s.phase);sequential.disabled=parallel.disabled=refreshing||s.busy||s.pending||!available;mic.disabled=refreshing||s.busy||s.pending||!available;resumeButton.hidden=!s.resume_allowed;resumeButton.disabled=refreshing||s.busy||!available;retry.hidden=!s.pending;retry.disabled=refreshing||s.busy||!validContext(s.context);reload.hidden=typeof onRefresh!=='function'||!['conflict','rejected','blocked'].includes(s.phase);reload.disabled=refreshing||s.busy||s.pending||!available;list.replaceChildren();checks.replaceChildren();
    let collection;try{collection=validateCollection(s.context?.native_collection,cap?.max_stages,cap?.max_months);}catch{}
    const pendingInitial=initialPending(s.context);
    current.textContent=collection?`${collection.count} ${collection.count===1?'etapa actual':'etapas actuales'} · lectura de Sheets · revisión ${s.context.revision.slice(0,12)}`:pendingInitial?`1 etapa actual · duración pendiente · lectura de Sheets · revisión ${s.context.revision.slice(0,12)}`:'El calendario del libro todavía no está conectado a este tablero.';
+   sourceEl.replaceChildren();const source=s.context?.stage_binding;if(source&&typeof source.spreadsheet_id==='string'&&Number.isInteger(source.sheet_id)){sourceEl.textContent=`Tipo: ${s.context.model_type} · versión: ${s.context.scenario_id} · libro: ${source.spreadsheet_id} · hoja Etapas: ${source.sheet_id}. `;const link=make('a','','Abrir Etapas en Sheets');link.href='https://docs.google.com/spreadsheets/d/'+encodeURIComponent(source.spreadsheet_id)+'/edit#gid='+source.sheet_id;link.target='_blank';link.rel='noopener';sourceEl.append(link);}
+   receiptEl.textContent=s.receipt?`Recibo: ${s.receipt.request_id} · base: ${s.receipt.base_revision} · resultado: ${s.receipt.revision}. Calendario confirmado; los resultados financieros se indican por separado.`:s.pending?`Solicitud pendiente: ${s.pending_request_id}. Aún no se declara aplicada.`:'';
    if(pendingInitial)list.append(make('li','ppp-stage-pending','Etapa 1 · duración por definir'));
    if(collection)for(const stage of collection.stages)list.append(make('li','',`Etapa ${stage.order} · mes ${stage.start_month} a ${stage.end_month} · ${stage.duration_months} meses`));
-   try{preview.textContent=s.command?describeProposal(parseCommand(s.command,cap||undefined),cap?.assumption):cap?.assumption||'Las etapas serán consecutivas; se conservarán las distribuciones existentes.';}catch{preview.textContent=cap?`Indica de 1 a ${cap.max_stages} etapas, de ${cap.min_duration_months} a ${cap.max_duration_months} meses cada una, dentro de ${cap.max_months} meses.`:'Indica una sola cantidad de etapas y los meses de cada etapa.';}
-   const messages={idle:'Abre un proyecto para organizar sus etapas.',unavailable:'La edición de etapas aún no está habilitada en este libro.',ready:'Escribe o dicta la instrucción y pulsa Aplicar al plan.',saving:'Guardando etapas y leyendo el cálculo de Sheets…',checking:'Consultando la confirmación del mismo cambio…',saved:'Etapas guardadas y comprobaciones de Sheets confirmadas.',needs_review:'Etapas guardadas. Hay comprobaciones pendientes en Sheets.',superseded:'Tu cambio quedó guardado. El libro tiene una revisión posterior; consulta su calendario actual.'};
+   if(s.proposal){
+    const prior=collection?`${collection.count} etapas de ${collection.duration_months} meses`:pendingInitial?'1 etapa con duración pendiente':'calendario no disponible';
+    preview.textContent=describeProposal(s.proposal.stages,s.proposal.stages.mode==='sequential'?cap?.assumption:'El reparto financiero no se propone en este cambio.')+` Cambio: ${prior} → ${s.proposal.stages.count} etapas de ${s.proposal.stages.duration_months} meses. Caso: ${s.context.case_id} · versión: ${s.context.scenario_id} · revisión: ${s.context.revision}. No se propone reparto financiero.`;
+   }else preview.textContent='Revisa la instrucción para ver el cambio antes de guardarlo.';
+
+   const messages={idle:'Abre un proyecto para organizar sus etapas.',unavailable:'La edición de etapas aún no está habilitada en este libro.',ready:'Escribe o dicta la instrucción y pulsa Revisar cambio.',clarify:'¿Las etapas serán consecutivas o en paralelo?',preview:'Revisa lo entendido y pulsa Guardar.',unsupported:'Las etapas en paralelo aún no están disponibles.',saving:'Guardando etapas y leyendo el cálculo de Sheets…',checking:'Consultando la confirmación del mismo cambio…',saved:'Etapas guardadas y comprobaciones de Sheets confirmadas.',needs_review:'Etapas guardadas. Hay comprobaciones pendientes en Sheets.',superseded:'Tu cambio quedó guardado. El libro tiene una revisión posterior; consulta su calendario actual.'};
    statusEl.textContent=refreshing?'Leyendo el calendario actual. Tu instrucción se conserva…':s.error||messages[s.phase]||messages.unavailable;
    const currentChecks=nativeChecks(s.context)||(s.receipt&&s.receipt.revision===s.context?.revision?s.receipt.checks:null);
    if(currentChecks)for(const k of CHECKS)checks.append(make('li',currentChecks[k]?'ppp-check-ok':'ppp-check-pending',`${CHECK_LABELS[k]}: ${currentChecks[k]?'conciliado':'pendiente'}`));
@@ -170,19 +197,20 @@
    catch{failed=true;return false;}
    finally{refreshing=false;if(!disposed){paint(controller.status());if(failed)statusEl.textContent='No se pudo releer el calendario. Tu instrucción se conserva; vuelve a intentarlo.';}}
   }
-  input.addEventListener('input',()=>{if(!refreshing)controller.setCommand(input.value);});form.addEventListener('submit',e=>{e.preventDefault();if(!refreshing)controller.save();});retry.addEventListener('click',()=>controller.reconcile());reload.addEventListener('click',refresh);
+  input.addEventListener('input',()=>{if(!refreshing)controller.setCommand(input.value);});form.addEventListener('submit',e=>{e.preventDefault();if(!refreshing)controller.prepare();});confirm.addEventListener('click',()=>controller.confirm());sequential.addEventListener('click',()=>controller.chooseMode('sequential'));parallel.addEventListener('click',()=>controller.chooseMode('parallel'));retry.addEventListener('click',()=>controller.reconcile());resumeButton.addEventListener('click',()=>controller.resume());reload.addEventListener('click',refresh);
   mic.addEventListener('click',()=>{
    if(!Speech||mic.disabled)return;if(listening){recognition?.stop();return;}
-   const dictationContext=controller.status().context;
+   const dictationState=controller.status(),dictationContext=dictationState.context;
    try{recognition=new Speech();recognition.lang='es-MX';recognition.interimResults=false;recognition.continuous=false;
-    recognition.onresult=e=>{const now=controller.status().context;if(disposed||!dictationContext||identity(now)!==identity(dictationContext)||now.revision!==dictationContext.revision)return;const result=e.results?.[e.resultIndex||0];if(result?.isFinal!==false&&result?.[0]?.transcript)controller.setCommand(result[0].transcript);};
+    recognition.onresult=e=>{const current=controller.status(),now=current.context;if(disposed||!dictationContext||current.generation!==dictationState.generation||identity(now)!==identity(dictationContext)||now.revision!==dictationContext.revision)return;const result=e.results?.[e.resultIndex||0];if(result?.isFinal!==false&&result?.[0]?.transcript)controller.setCommand(result[0].transcript);};
     recognition.onerror=()=>{statusEl.textContent='No se pudo completar el dictado. Puedes escribir la misma instrucción.';};
     recognition.onend=()=>{listening=false;mic.textContent='Dictar';mic.setAttribute('aria-pressed','false');};
     recognition.start();listening=true;mic.textContent='Detener dictado';mic.setAttribute('aria-pressed','true');
    }catch{statusEl.textContent='El dictado no está disponible. Escribe la instrucción para continuar.';}
   });
   const revoke=()=>{recognition?.abort?.();controller.clear();};const storage=e=>{if(e.key===null||e.key==='pyod_clave_v1')revoke();};win?.addEventListener('pagehide',revoke);win?.addEventListener('storage',storage);controller.setContext(getContext());
-  return{setContext:controller.setContext,setCommand:controller.setCommand,save:controller.save,refresh,restoreRejection:controller.restoreRejection,snapshotStatus:controller.status,dispose(){disposed=true;reconciler.dispose();recognition?.abort?.();controller.dispose();win?.removeEventListener('pagehide',revoke);win?.removeEventListener('storage',storage);container.replaceChildren();}};
+  return{setContext:controller.setContext,setCommand:controller.setCommand,prepare:controller.prepare,chooseMode:controller.chooseMode,confirm:controller.confirm,save:controller.save,resume:controller.resume,refresh,restoreRejection:controller.restoreRejection,snapshotStatus:controller.status,dispose(){disposed=true;reconciler.dispose();recognition?.abort?.();controller.dispose();win?.removeEventListener('pagehide',revoke);win?.removeEventListener('storage',storage);container.replaceChildren();}};
  }
  return{PREWRITE_ERRORS,prewriteRejected,MAX_STAGES,MAX_MONTHS,CHECKS,REJECTIONS,RECONCILE_DELAYS,stable,rejection,capability,validateStages,validateCollection,validContext,initialPending,nativeChecks,request,receipt,parseCommand,describeProposal,createController,createReconciler,mount};
 });
+
