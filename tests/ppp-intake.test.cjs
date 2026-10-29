@@ -109,3 +109,8 @@ test('Native autosave and both stage transports share a bounded wait without ret
     const waiting=operation==='update'?adapter.update(job):operation==='read'?adapter.read({id:'case-1',request_id:job.request_id}):adapter.saveStages(job,{reconcile:operation==='stage-read'});const rejected=assert.rejects(waiting,/request_timeout/);await turn();assert.equal(timer.expire(),60000);await rejected;assert.equal(calls.length,1);assert.equal(calls[0][0],['read','stage-read'].includes(operation)?'GET':'POST');
   }
 });
+test('Creation diagnostics retain the first failure and latest receipt reason without exposing arbitrary server content',async()=>{
+  const states=[];let posts=0;const controller=intake.createController({requestId:()=> 'support-operation',onState:s=>states.push(s),adapter:{open:async()=>{posts++;return{ok:false,error:'lock_busy'};},read:async()=>({ok:false,error:'receipt_not_found'})}});
+  await controller.submit(sample());await controller.submit(sample());const current=states.at(-1);assert.equal(current.initial_error,'lock_busy');assert.equal(current.error,'receipt_not_found');assert.equal(posts,1);assert.equal(intake.diagnosticText(current),' Diagnóstico: lock_busy · última consulta: receipt_not_found · Solicitud: support-operation');
+  const unsafe={status:'uncertain',request_id:'support-operation',initial_error:'<img src=x> SECRET_TOKEN',error:'Bearer private-value'};assert.equal(intake.diagnosticText(unsafe),' Diagnóstico: sin_confirmacion · Solicitud: support-operation');assert.equal(intake.diagnosticText({...unsafe,request_id:'token<script>'}), '');
+});

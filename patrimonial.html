@@ -1229,7 +1229,7 @@
   $('gateLocal').onclick=modoSinConexion;
   document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)cerrarOverlays()}));
   window.addEventListener('online',drenarCola);setInterval(drenarCola,25000);
-  intakeBoard=PPPIntake.mountBoard({type:'patrimonial',controls,adapter:PPPIntake.nativeAdapter({type:'patrimonial',get:apiGet,post:apiPost}),onStart:(draft,receipt)=>{
+  intakeBoard=PPPIntake.mountBoard({type:'patrimonial',controls,adapter:PPPIntake.nativeAdapter({type:'patrimonial',get:apiGet,post:apiPost}),onOpen:()=>{caseOpening.invalidate();paintOpening({phase:'ready'});},onStart:(draft,receipt)=>{
     if(nativeAdapter){nativeAdapter.destroy();nativeAdapter=null;}
     state=null;escenarios=[];escActivo='';caso={caso_id:receipt?.caso_id||'',palabra:receipt?.palabra||'',correo:caso.correo,nombre_caso:draft.nombre_caso,estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'Ubicación: '+draft.ubicacion+(draft.fuente?'\nFuente: '+draft.fuente:''),version:0};pintaCaso();
   },onExit:()=>{calculate();pintaCaso();}});

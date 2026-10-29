@@ -24,6 +24,8 @@ Cada operación conserva su identificador. Si Sheets tarda o se pierde la respue
 
 La ficha, sus guardados y sus consultas de etapas dejan de esperar tras 60 segundos. Ese plazo libera el indicador de espera y muestra «Comprobar guardado»; no significa que Apps Script haya cancelado la operación. La solicitud y los datos se conservan y la recuperación consulta únicamente su recibo por GET. Una respuesta que llegue después del plazo no abre un caso ni sustituye una lectura posterior. Si el servidor todavía no confirma el recibo, el estado continúa pendiente; no se envía otro POST para repetir una creación incierta.
 
+Al reabrir un caso por su enlace, el tablero oculta la captura anterior mientras confirma el caso solicitado. En una ficha pendiente mantiene ocultos los resúmenes financieros y versiones legadas, y limpia sus indicadores visibles sin inventar ceros. Una lectura iniciada antes de abrir otra ficha pierde su autorización para reemplazar la vista. El diagnóstico de creación muestra únicamente códigos conocidos y el identificador de solicitud; conserva el primer fallo y el de la última consulta sin mostrar mensajes arbitrarios del servidor.
+
 ## Límite financiero de esta entrega
 
 Una ficha guardada permanece en `MODELO_PENDIENTE`, incluso si después se llenan todos sus campos. Esta entrega no contiene la migración transaccional de esa captura al programa financiero nativo. `calculated:false` y las comprobaciones financieras pendientes son deliberados; guardar datos o un calendario no acredita utilidad, caja, deuda ni reparto calculados.
