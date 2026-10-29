@@ -1,15 +1,24 @@
 {
-"model_revision": "2026-10-27.ppp-capacidad-tipologias.1",
-"proposal_id": "CHG-PPP-VOLUMENES-NATIVOS-20261020",
-"summary": "Mostrar el motivo real cuando la creación de un caso falla por supuestos fuera del rango de la plantilla o por un programa que no concilia con la mezcla, y liberar el reintento. Solo cambia mensajes y el manejo de dos códigos de error en la interfaz; no cambia cálculos, libros, escenarios ni permisos.",
-"components": [
-"SYS-POTENCIALES",
-"SYS-YOD-OS"
-],
-"tests": [
-"Simular respuestas del servidor con invalid_factory_inputs y native_factory_inputs_incoherent y comprobar que se muestra el motivo y que newCasePending se libera.",
-"Simular un error desconocido y comprobar que el aviso por confirmar incluye el código y no envía otra creación.",
-"Conservar el resto de controles, identificadores y el motor existente; comprobar escalas y accesos."
-],
-"rollback": "Revertir el cambio de frontend conservando libros, fórmulas, escenarios y recibos existentes."
+  "model_revision": "2026-10-29.ppp-read-validation.1",
+  "proposal_id": "CHG-PPP-READ-VALIDATION-20261029",
+  "summary": "Conservar rechazo explícito board, error de validación tipado y categorías servidor/timeout/red durante la apertura exacta. Mostrar sólo códigos, motivos e identificadores permitidos; no publicar payload, cantidades, fórmulas, credenciales o mensajes internos. Una validación del modelo no se reintenta automáticamente. Mantener lectura exacta, tres intentos transitorios, sesión y descarte de respuestas tardías. Alcance causal de lectura: aceptar cap rate cero como campo no aplicado únicamente con marcador servidor inactive_fields exacto y cuatro condiciones coherentes de valuación por m². Presentar No aplicado; mantener cero original, fórmulas, Campos y controles de escritura.",
+  "components": [
+    "SYS-POTENCIALES",
+    "GAS-PORTERO",
+    "SVC-AUTON-CLOUD",
+    "SHEET-PORTERO"
+  ],
+  "tests": [
+    "Rechazo board no autentica ni aplica modelo ni repite automáticamente.",
+    "Validación tipada preserva exclusivamente code/field_id/scenario_id/reason permitidos; no repite ni muestra valores internos.",
+    "Servidor, HTTP, timeout y red producen avisos diferentes y acotados.",
+    "Corregir la fuente y pulsar reconectar relee el mismo caso; no altera sesión ni cálculos.",
+    "Conservar descarte por generación, revocación y presupuesto de reintentos.",
+    "Cap cero sin marcador coherente no se acepta; modo cap y otras cantidades fuera de rango siguen rechazados.",
+    "Marcador exige valor por m² positivo, porM2 true, cap ingresado cero y cap calculado cero; no admite otros campos ni duplicados.",
+    "Las tarjetas y el editor muestran No aplicado sin sustituir la cantidad; los escritores rechazan cap cero y nullable permanece false.",
+    "Metadatos del puente conservan inactive_fields y porM2/capMercado leídos del mismo estado, sin convertir cantidades.",
+    "CI existente ejecuta Chromium y WebKit a1280/390px con errores tipados, reconexión y campos inactivos en tarjetas/tablero; cero escrituras de negocio."
+  ],
+  "rollback": "Revertir únicamente clasificación y presentación del error; conservar libros, fórmulas, valores, permisos y escenarios."
 }

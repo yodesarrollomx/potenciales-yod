@@ -11,11 +11,11 @@
  const labels={capacidadConstruida:'Construcción máxima · m²',capacidadRentable:'Capacidad rentable · m²',rentableSeleccionado:'Rentable seleccionado · m²',rentaMes:'Renta mensual',noi:'NOI anual',valorCap:'Valor del activo',equity:'Capital propio',yieldOnCost:'Rendimiento sobre inversión',mensCredito:'Pago mensual del crédito',dscr:'DSCR',coc:'Cash-on-Cash',patrimH:'Patrimonio al horizonte'};
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const number=v=>typeof v==='number'&&Number.isFinite(v)?new Intl.NumberFormat('es-MX',{maximumFractionDigits:2}).format(v):'Pendiente';
- function cards(model,labelFor=id=>id){
+ function cards(model,labelFor=id=>id,fieldNote=()=> ''){
   const scenario=model.escenarios.find(e=>e.id===model.activo),state=model.estados[model.activo],known=new Set();
   const result=groups.map(([id,title,ids,outputs])=>{
    const fields=ids.filter(id=>model.campos.some(c=>c.id===id));fields.forEach(id=>known.add(id));
-   return{id,title,fields,inputs:fields.map(id=>({id,label:labelFor(id)||id,value:number(scenario.inputs[id])})),results:outputs.map(id=>({id,label:labels[id],value:!state.modeloValido&&!id.startsWith('capacidad')&&id!=='rentableSeleccionado'?'Pendiente':['yieldOnCost','coc'].includes(id)?(Number.isFinite(state[id])?number(state[id]*100)+' %':'Pendiente'):number(state[id])}))};
+   return{id,title,fields,inputs:fields.map(id=>({id,label:labelFor(id)||id,value:fieldNote(id)||number(scenario.inputs[id])})),results:outputs.map(id=>({id,label:labels[id],value:!state.modeloValido&&!id.startsWith('capacidad')&&id!=='rentableSeleccionado'?'Pendiente':['yieldOnCost','coc'].includes(id)?(Number.isFinite(state[id])?number(state[id]*100)+' %':'Pendiente'):number(state[id])}))};
   });
   const units=model.campos.filter(c=>c.id.startsWith('unidad')).map(c=>c.id);units.forEach(id=>known.add(id));
   if(units.length)result.push({id:'mezcla',title:'Mezcla por puerta',fields:units,inputs:units.map(id=>({id,label:id.replace(/^unidad(\d+)_(.+)$/,(_,n,key)=>'Puerta '+Number(n)+' · '+({tipo:'Tipo (0 depa / 1 local)',nivel:'Nivel (0 PB / 1 PA / 2 RT)',m2:'m² capturados',renta:'Renta capturada'}[key]||key)),value:number(scenario.inputs[id])})),results:[]});
@@ -25,7 +25,7 @@
  function render(root,{store,metadata,labelFor,status,onFocus,refresh}){
   const open=root.querySelector('details.pn-data-card[open]')?.dataset.card||null;
   const focused=root.ownerDocument.activeElement?.closest('summary')?.parentElement?.dataset.card;
-  const model=store.model,scenario=store.active(),items=cards(model,labelFor);
+  const model=store.model,scenario=store.active(),items=cards(model,labelFor,id=>store.fieldNote?.(id)||'');
   const shortLabels={inTerrenoM2:'Terreno (m²)',inCus:'CUS',inUnidades:'Puertas',inRentaUnidadMes:'Renta mensual por puerta',inInversionTotal:'Inversión capturada',inTerrenoCosto:'Costo del terreno',inCreditoPct:'Crédito (%)',inTasaCredito:'Tasa anual (%)',inHorizonte:'Años',inPlusvaliaPct:'Plusvalía (%)'};
   const preview=c=>{
    if(c.id==='mezcla')return esc(number(scenario.inputs.inUnidades))+' puertas · '+(scenario.inputs.inProf===1?'Mezcla detallada activa':'Supuestos globales');

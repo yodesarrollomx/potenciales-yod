@@ -1,11 +1,11 @@
 'use strict';
 // The checked-in Patrimonial HTML, opener, Store and bridge run together. All requests are intercepted.
-const {chromium,webkit}=require('playwright'),assert=require('node:assert/strict');
+const {chromium,webkit}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {install}=require('./ppp-fixture.js'),fixture=require('./fixtures/patrimonial-native.json');
 const session='sy-synthetic-browser-session';
 const parent='<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="margin:0"><iframe title="PPP" src="/potenciales-yod/patrimonial.html?open=synthetic-case&agent=1&embed=1&view=cards" style="width:100%;height:100vh;border:0"></iframe><script>window.board=null;addEventListener("message",e=>{if(e.origin===location.origin&&e.source===document.querySelector("iframe").contentWindow&&e.data?.type==="yod:ppp:state"&&e.data.nonce==="opening-test-140")window.board=e.data.board;});setInterval(()=>document.querySelector("iframe").contentWindow.postMessage({type:"yod:ppp:hello",version:1,nonce:"opening-test-140",case_id:"synthetic-case"},location.origin),100);</script>';
 (async()=>{for(const [engineName,engine] of Object.entries({chromium,webkit})){
- const browser=await engine.launch();try{for(const width of [1280,390])for(const scenario of ['catalog-independent','transient','wrong-case','revoked','pending-conflict','job-conflict','invalid-native'])for(const presentation of scenario==='catalog-independent'?['cards','board']:['pending-conflict','job-conflict'].includes(scenario)?['board']:['cards']){
+ const browser=await engine.launch();try{for(const width of [1280,390])for(const scenario of ['catalog-independent','transient','wrong-case','revoked','pending-conflict','job-conflict','invalid-native','board-denied','typed-validation','inactive-cap'])for(const presentation of ['catalog-independent','inactive-cap'].includes(scenario)?['cards','board']:['pending-conflict','job-conflict'].includes(scenario)?['board']:['cards']){
   const context=await browser.newContext({viewport:{width,height:900},reducedMotion:'reduce'});await install(context,{seed:null});
   const reads=[],businessPosts=[],errors=[];let caseReads=0,corrected=false,releaseOpeningRead=null,signalHeld;const openingHeld=new Promise(resolve=>signalHeld=resolve);
   if(['pending-conflict','job-conflict'].includes(scenario))await context.addInitScript(({model,job})=>{const old=JSON.parse(JSON.stringify(model));old.revision+='-older';localStorage.setItem('pyod_patrimonial_native_v1:synthetic-case',JSON.stringify({model:old,metadata:{caso_id:'synthetic-case',nombre_caso:'PPP de prueba',palabra:'ensayo',version:1},pending:job?{}:{inCus:4},job:job?{tipo:'sheet-cantidades',caso_id:'synthetic-case',escenario_id:old.activo,revision_esperada:old.revision,inputs:{inCus:4},request_id:'board-uncertain-140'}:null,receipts:[]}));},{model:fixture,job:scenario==='job-conflict'});
@@ -20,7 +20,9 @@ const parent='<!doctype html><meta name="viewport" content="width=device-width,i
      caseReads++;if(scenario==='catalog-independent'&&caseReads===1)await new Promise(resolve=>{releaseOpeningRead=resolve;signalHeld();});
      if(scenario==='transient'&&caseReads===1)out={ok:false,error:'lock_busy'};
      else if(scenario==='revoked'&&!corrected)out={ok:false,error:'revocado'};
-     else {const model=structuredClone(fixture),id=scenario==='wrong-case'&&!corrected?'other-case':model.caso_id;model.caso_id=id;if(scenario==='invalid-native'&&!corrected)model.modelo_tipo='other-engine';out={ok:true,caso:{caso_id:id,nombre_caso:'PPP de prueba',palabra:'ensayo',version:1,calculo_sheet:model}};}
+     else if(scenario==='board-denied'&&!corrected)out={ok:false,error:'board'};
+     else if(scenario==='typed-validation'&&!corrected)out={ok:false,error:'modelo_invalido',validation:{code:'cantidad_fuera_rango',field_id:'inCapRateMercado',scenario_id:'synthetic',reason:'below_min'},detail:'PRIVATE_DIAGNOSTIC_MUST_NOT_RENDER'};
+     else {const model=structuredClone(fixture),id=scenario==='wrong-case'&&!corrected?'other-case':model.caso_id;model.caso_id=id;if(scenario==='inactive-cap'){const input=model.escenarios.find(e=>e.id===model.activo).inputs,state=model.estados[model.activo];input.inCapRateMercado=0;input.inValorM2Zona=25000;state.porM2=true;state.p.capMercado=0;state.inactive_fields=['inCapRateMercado'];}if(scenario==='invalid-native'&&!corrected)model.modelo_tipo='other-engine';out={ok:true,caso:{caso_id:id,nombre_caso:'PPP de prueba',palabra:'ensayo',version:1,calculo_sheet:model}};}
     }else if(action==='sheet-model')out=structuredClone(fixture);
    }
    return route.fulfill({contentType:'application/json',body:JSON.stringify(out)});
@@ -29,6 +31,18 @@ const parent='<!doctype html><meta name="viewport" content="width=device-width,i
   const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
   await page.goto('https://ppp.test/yod-portal/despacho3d/__opening');const frame=page.frameLocator('iframe[title=PPP]');
   if(scenario==='catalog-independent'||scenario==='transient'){if(scenario==='catalog-independent')await openingHeld;await frame.locator('#pppCaseOpening').getByText(scenario==='transient'?'Recuperando conexión':'Abriendo tu plan de potencial',{exact:true}).waitFor();assert.equal(await frame.getByRole('button',{name:'Volver a conectar el plan',includeHidden:true}).isVisible(),false);assert.equal(await frame.locator('#pppCaseOpening').getByRole('button',{name:'Entrar con Google',includeHidden:true}).isVisible(),false);if(scenario==='catalog-independent')releaseOpeningRead();}
+  if(['board-denied','typed-validation'].includes(scenario)){
+   const opening=frame.locator('#pppCaseOpening');await opening.getByText('No se pudo abrir este plan',{exact:true}).waitFor();
+   assert.match(await opening.locator('p').innerText(),scenario==='board-denied'?/permiso para este tablero/:/^Cap rate de mercado \(%\) · para valuar el activo está por debajo del mínimo permitido para este modelo\./);
+   assert.match(await opening.locator('small').innerText(),scenario==='board-denied'?/board/:/cantidad_fuera_rango.*below_min.*synthetic/);
+   assert.doesNotMatch(await opening.innerText(),/PRIVATE_DIAGNOSTIC/);
+   assert.equal(await opening.getByRole('button',{name:'Entrar con Google',includeHidden:true}).isVisible(),false);
+   assert.equal(await frame.locator('#patrimonialNative').count(),0);
+   await page.waitForTimeout(2300);assert.equal(caseReads,1,'permission and validation failures do not retry automatically');
+   assert.equal(await page.frames().find(f=>f.url().includes('patrimonial.html')).evaluate(()=>localStorage.getItem('pyod_clave_v1')),session);
+   if(process.env.PPP_SCREENSHOTS){fs.mkdirSync(process.env.PPP_SCREENSHOTS,{recursive:true});await page.screenshot({path:path.join(process.env.PPP_SCREENSHOTS,engineName+'-'+width+'-opening-'+scenario+'.png')});}
+   corrected=true;await opening.getByRole('button',{name:'Volver a conectar el plan'}).click();
+  }
   if(scenario==='wrong-case'||scenario==='invalid-native'){
    await frame.locator('#pppCaseOpening').getByText(scenario==='wrong-case'?'La respuesta no corresponde a este caso. No se aplicó.':'El modelo no pudo verificarse. Se conservan las cantidades anteriores sin presentar otra lectura como actual.').waitFor();
    assert.equal(await frame.locator('#patrimonialNative').count(),0,'foreign model was not mounted');
@@ -42,7 +56,25 @@ const parent='<!doctype html><meta name="viewport" content="width=device-width,i
    await frame.locator('#patrimonialNative').waitFor();if(['pending-conflict','job-conflict'].includes(scenario)){await frame.locator('.pn-status').filter({hasText:'Otra edición cambió el libro.'}).waitFor();await page.waitForFunction(()=>window.board?.pending===true&&window.board.confirmed===false);assert.equal(await frame.locator('[data-native-field=inCus]').inputValue(),'4');assert.equal(await frame.locator('[data-action=discard]').isVisible(),true,'original reconciliation remains available');}else await page.waitForFunction(()=>window.board?.confirmed===true);
    assert.equal(await frame.locator('#pppCaseOpening').isVisible(),false);
    if(presentation==='cards'){assert.equal(await frame.locator('.pn-data-card').count(),6);assert.equal(await frame.locator('.pn-data-card[open]').count(),0,'native cards stay closed');}else{assert.equal(await frame.locator('.pn-summary').count(),1,'existing board presentation remains available');}
-   if(scenario==='transient')assert.equal(caseReads,2);else if(['catalog-independent','pending-conflict','job-conflict'].includes(scenario))assert.equal(caseReads,1);else assert.equal(caseReads,2);
+   if(scenario==='transient')assert.equal(caseReads,2);else if(['catalog-independent','pending-conflict','job-conflict','inactive-cap'].includes(scenario))assert.equal(caseReads,1);else assert.equal(caseReads,2);
+  }
+  if(scenario==='inactive-cap'){
+   const snapshot=await page.evaluate(()=>window.board);
+   assert.deepEqual(snapshot.metadata.inactive_fields,['inCapRateMercado']);assert.equal(snapshot.inputs.inCapRateMercado,0);assert.equal(snapshot.results.porM2,true);assert.equal(snapshot.results.capMercado,0);
+   const cap=snapshot.fields.find(f=>f.id==='inCapRateMercado');assert.equal(cap.min,5);assert.equal(cap.max,14);assert.equal(cap.nullable,false);
+   if(presentation==='cards'){
+    await frame.locator('[data-card=inversion] summary').click();
+    assert.equal(await frame.locator('[data-input=inCapRateMercado] strong').innerText(),'No aplicado: valuación por m²');
+   }else{
+    const input=frame.locator('[data-native-field=inCapRateMercado]');await input.scrollIntoViewIfNeeded();
+    assert.equal(await input.inputValue(),'');assert.equal(await input.getAttribute('min'),'5');assert.equal(await input.getAttribute('max'),'14');
+    assert.match(await input.locator('xpath=..').innerText(),/No aplicado: valuación por m²/);
+   }
+   if(process.env.PPP_SCREENSHOTS){fs.mkdirSync(process.env.PPP_SCREENSHOTS,{recursive:true});await page.screenshot({path:path.join(process.env.PPP_SCREENSHOTS,engineName+'-'+width+'-inactive-cap-'+presentation+'.png')});}
+   if(presentation==='board'){
+    const input=frame.locator('[data-native-field=inCapRateMercado]');await input.fill('0');await input.dispatchEvent('change');
+    assert.equal(await input.evaluate(el=>el.validity.valid),false);await page.waitForTimeout(650);assert.equal(businessPosts.length,0,'inactive read does not authorize a zero write');
+   }
   }
   const inner=page.frames().find(f=>f.url().includes('patrimonial.html'));
   assert.equal(await inner.evaluate(()=>localStorage.getItem('pyod_clave_v1')),session,'PPP must not erase OS credential');
