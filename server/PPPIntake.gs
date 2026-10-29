@@ -18,6 +18,12 @@ var PPPIntake = (function () {
   function modelType(v) { var t=String(v||'').toLowerCase().trim();if(!own(FIELDS,t))fail('invalid_model_type');return t; }
   function fields(t) { t=modelType(t);return FIELDS[t].map(function(f){return {id:f[0],min:f[1],max:f[2],step:f[3],editable:true,nullable:true,kind:'number'};}); }
   function stageSeed() { return {schema:1,count:1,duration_months:null,mode:'sequential',allocation:'preserve'}; }
+  function mirrorStages(intake) {
+    if(intake.model_type!=='macrolotes'&&intake.model_type!=='residencial')return intake;
+    var defs=fields(intake.model_type),count=defs.filter(function(f){return f.id==='inEtapas';})[0],duration=defs.filter(function(f){return f.id==='inMesesUrbEtapa';})[0],s=intake.stages;
+    if(s.count<count.min||s.count>count.max||s.duration_months!==null&&(s.duration_months<duration.min||s.duration_months>duration.max))fail('invalid_stage_plan');
+    intake.inputs.inEtapas=s.count;intake.inputs.inMesesUrbEtapa=s.duration_months;return intake;
+  }
   function stagePlan(v,initial) {
     if(!plain(v)||Object.keys(v).sort().join('|')!=='allocation|count|duration_months|mode|schema'||v.schema!==1||v.mode!=='sequential'||v.allocation!=='preserve'||!Number.isInteger(v.count)||v.count<1||v.count>24)fail('invalid_stage_plan');
     if(initial&&v.count===1&&v.duration_months===null)return stageSeed();
@@ -30,12 +36,16 @@ var PPPIntake = (function () {
     if(own(raw,'schema')&&raw.schema!==SCHEMA||own(raw,'model_type')&&modelType(raw.model_type)!==t)fail('model_type_mismatch');
     var out=before?clone(before):{schema:SCHEMA,model_type:t,nombre_caso:'',ubicacion:'',fuente:'',inputs:{},stages:stageSeed()};
     [['nombre_caso',120,true],['ubicacion',240,true],['fuente',600,false]].forEach(function(f){if(!before||own(raw,f[0]))out[f[0]]=text(raw[f[0]]===undefined?'':raw[f[0]],f[0],f[1],f[2]);});
-    var allow={};FIELDS[t].forEach(function(f){allow[f[0]]=f;if(!own(out.inputs,f[0]))out.inputs[f[0]]=null;});
+    var allow=Object.create(null);FIELDS[t].forEach(function(f){allow[f[0]]=f;if(!own(out.inputs,f[0]))out.inputs[f[0]]=null;});
     if(raw.inputs!==undefined&&!plain(raw.inputs))fail('invalid_intake_inputs');
-    Object.keys(raw.inputs||{}).forEach(function(k){var f=allow[k],v=raw.inputs[k];if(!f)fail('unknown_intake_field');if(v!==null&&(typeof v!=='number'||!isFinite(v)||v<f[1]||v>f[2]))fail('invalid_intake_quantity');out.inputs[k]=v;});
+    Object.keys(raw.inputs||{}).forEach(function(k){if(!own(allow,k))fail('unknown_intake_field');var f=allow[k],v=raw.inputs[k];if(v!==null&&(typeof v!=='number'||!isFinite(v)||v<f[1]||v>f[2]||((t==='unifamiliar'&&k==='inNiveles'||t==='patrimonial'&&k==='inUnidades')&&!Number.isInteger(v))))fail('invalid_intake_quantity');out.inputs[k]=v;});
     if(!before)REQUIRED[t].forEach(function(k){if(out.inputs[k]===null||out.inputs[k]<=0)fail('required_intake_field');});
     if(own(raw,'stages')) { var s=stagePlan(raw.stages,true);if(stable(s)!==stable(before?before.stages:stageSeed()))fail('use_stage_operation');out.stages=s; }
     if(!before&&stable(out.stages)!==stable(stageSeed()))fail('invalid_initial_stage');
+    if(t==='macrolotes'||t==='residencial'){
+      if(raw.inputs&&(own(raw.inputs,'inEtapas')&&raw.inputs.inEtapas!==out.stages.count||own(raw.inputs,'inMesesUrbEtapa')&&raw.inputs.inMesesUrbEtapa!==out.stages.duration_months))fail('use_stage_operation');
+      mirrorStages(out);
+    }
     if(before&&!Object.keys(raw).some(function(k){return ['inputs','nombre_caso','ubicacion','fuente'].indexOf(k)>=0;}))fail('empty_intake_update');
     return out;
   }
@@ -47,7 +57,7 @@ var PPPIntake = (function () {
   function snapshot(s,id,t) { if(!s||s.caso_id!==id||s.model_type!==t||s.model_status!==STATUS||typeof s.revision!=='string'||!s.revision||!plain(s.intake)||s.intake.model_type!==t)fail('not_intake_case');return s; }
   function asModel(s,ctx) {
     snapshot(s,s.caso_id,ctx.type);var plan=canonicalStage(s.stage_plan),state={p:{},flows:[],pending:true,calculated:false},all={};if(plan)all.base=plan;
-    return {ok:true,status:'confirmed',persisted:true,pending:true,calculated:false,model_status:STATUS,caso_id:s.caso_id,modelo_tipo:s.model_type,model_type:s.model_type,modelo_revision:SCHEMA,revision:s.revision,activo:'base',intake:clone(s.intake),inputs:clone(s.intake.inputs),pending_fields:Object.keys(s.intake.inputs).filter(function(k){return s.intake.inputs[k]===null;}),pending_reasons:['native_model_not_ready'],escenarios:[{id:'base',nombre:'Base',esBase:true,activo:true,inputs:clone(s.intake.inputs)}],state:state,estados:{base:clone(state)},stages_by_scenario:all,stage_assumption:ASSUMPTION,campos:fields(s.model_type),capabilities:{intake:{schema:1,read:true,write:ctx.can_write===true},stages:{schema:1,read:true,write:ctx.can_write===true,max_stages:24,max_months:1200,modes:['sequential'],allocation_modes:['preserve'],assumption:ASSUMPTION,initial_pending:!plan}},libro_url:s.libro_url||null};
+    return {ok:true,status:'confirmed',persisted:true,pending:true,calculated:false,model_status:STATUS,caso_id:s.caso_id,modelo_tipo:s.model_type,model_type:s.model_type,modelo_revision:SCHEMA,revision:s.revision,activo:'base',intake:clone(s.intake),inputs:clone(s.intake.inputs),pending_fields:Object.keys(s.intake.inputs).filter(function(k){return s.intake.inputs[k]===null;}),pending_reasons:['native_model_not_ready'],escenarios:[{id:'base',nombre:'Base',esBase:true,activo:true,inputs:clone(s.intake.inputs)}],state:state,estados:{base:clone(state)},stages_by_scenario:all,native_pending_stages:plan?null:clone(s.intake.stages),stage_assumption:ASSUMPTION,campos:fields(s.model_type),capabilities:{intake:{schema:1,read:true,write:ctx.can_write===true},stages:{schema:1,read:true,write:ctx.can_write===true,max_stages:s.model_type==='macrolotes'||s.model_type==='residencial'?8:24,max_months:s.model_type==='macrolotes'||s.model_type==='residencial'?192:1200,modes:['sequential'],allocation_modes:['preserve'],assumption:ASSUMPTION,initial_pending:!plan}},libro_url:s.libro_url||null};
   }
   function createService(host) {
     ['authorize','withLock','hash','findOperation','reserveOperation','newCaseId','createCapture','readCapture','writeCapture','reconcile','finishOperation','audit'].forEach(function(k){if(typeof host[k]!=='function')fail('missing_host_'+k);});
@@ -55,7 +65,7 @@ var PPPIntake = (function () {
     function checkOp(op,ctx,d,kind) {if(op.actor!==ctx.actor)fail('request_actor_mismatch');if(op.model_type!==ctx.type||kind&&op.kind!==kind||d.caso_id&&d.caso_id!==op.caso_id||d.id&&d.id!==op.caso_id)fail('request_context_mismatch');return op;}
     function result(ctx,op,s) {
       var r=asModel(s,ctx);r.request_id=op.request_id;
-      var receipt=op.receipt;if(receipt){if(op.kind==='stages'){r.stage_receipt=clone(receipt);if(s.revision!==receipt.result_revision)r.stage_receipt_status='superseded';}else{r.intake_receipt=clone(receipt);if(s.revision!==receipt.result_revision)r.intake_receipt_status='superseded';}}
+      var receipt=op.receipt;if(!receipt||receipt.request_id!==op.request_id||receipt.caso_id!==op.caso_id||receipt.actor!==op.actor||!receipt.result_revision)fail('intake_receipt_missing');if(receipt){if(op.kind==='stages'){r.stage_receipt=clone(receipt);if(s.revision!==receipt.result_revision)r.stage_receipt_status='superseded';}else{r.intake_receipt=clone(receipt);if(s.revision!==receipt.result_revision)r.intake_receipt_status='superseded';}}
       return r;
     }
     function finish(ctx,op) {
@@ -75,7 +85,7 @@ var PPPIntake = (function () {
         var old=host.findOperation(d.request_id);if(old){attempted=true;checkOp(old,ctx,d,kind);}
         var before=null,after;
         if(id){var s=snapshot(host.readCapture(ctx,id),id,ctx.type);before=s.intake;if(typeof d.revision_esperada!=='string'||!d.revision_esperada)fail('revision_required');}
-        if(kind==='stages'){after=clone(before);after.stages=stagePlan(d.stages,false);}else after=normalize(d.intake,ctx.type,before);
+        if(kind==='stages'){after=clone(before);after.stages=stagePlan(d.stages,false);mirrorStages(after);}else after=normalize(d.intake,ctx.type,before);
         var payload=host.hash(stable({actor:ctx.actor,model_type:ctx.type,kind:kind,caso_id:id,base_revision:d.revision_esperada||null,intake:kind==='stages'?d.stages:d.intake}));
         if(old){if(old.payload_hash!==payload)fail('request_payload_mismatch');if(old.state==='confirmed')return result(ctx,old,snapshot(host.readCapture(ctx,old.caso_id),old.caso_id,ctx.type));return finish(ctx,old);}
         if(id&&host.readCapture(ctx,id).revision!==d.revision_esperada)fail('revision_conflict');
@@ -83,7 +93,7 @@ var PPPIntake = (function () {
         attempted=true;host.reserveOperation(op);if(id)host.writeCapture(ctx,op);else host.createCapture(ctx,op);return finish(ctx,op);
       });}catch(e){var out={ok:false,error:e.code||'operation_pending',request_id:d&&d.request_id};if(!attempted)out.persisted=false;return out;}
     }
-    function read(d,kind) {try{return host.withLock(function(){var ctx=context(d,'read'),id=d.caso_id||d.id,op=d.request_id?host.findOperation(identity(d.request_id)):null;if(d.request_id&&!op)return {ok:false,error:'receipt_not_found',request_id:d.request_id};if(op){checkOp(op,ctx,d,kind);if(op.state!=='confirmed')return finish(ctx,op);return result(ctx,op,snapshot(host.readCapture(ctx,op.caso_id),op.caso_id,ctx.type));}id=identity(id);return asModel(snapshot(host.readCapture(ctx,id),id,ctx.type),ctx);});}catch(e){return {ok:false,error:e.code||'operation_pending',request_id:d&&d.request_id};}}
+    function read(d,kind) {try{return host.withLock(function(){var ctx=context(d,'read');if(kind==='stages'&&d.escenario_id!=='base')fail('invalid_identity');var id=d.caso_id||d.id,op=d.request_id?host.findOperation(identity(d.request_id)):null;if(d.request_id&&!op)return {ok:false,error:'receipt_not_found',request_id:d.request_id};if(op){checkOp(op,ctx,d,kind);if(op.state!=='confirmed')return finish(ctx,op);return result(ctx,op,snapshot(host.readCapture(ctx,op.caso_id),op.caso_id,ctx.type));}id=identity(id);return asModel(snapshot(host.readCapture(ctx,id),id,ctx.type),ctx);});}catch(e){return {ok:false,error:e.code||'operation_pending',request_id:d&&d.request_id};}}
     return {write:function(d){return operate(d,'intake');},read:function(d){return read(d,'intake');},writeStages:function(d){return operate(d,'stages');},readStages:function(d){return read(d,'stages');}};
   }
   return {createService:createService,fields:fields,modelType:modelType,normalize:normalize,stageSeed:stageSeed,stagePlan:stagePlan,asModel:asModel,stable:stable,schema:SCHEMA,status:STATUS,assumption:ASSUMPTION};

@@ -69,7 +69,10 @@ var PPPStagesProgram = (function () {
       desired = PPPStages.normalize(desired, false); var entry = info(ctx.scenario_id); integrity(entry);
       // Domain-only horizon check; all actual calendar and financial results
       // are read from Sheets. Preserve the longest existing delivery tail.
-      var rows = baseline(entry).slice(0, Number(entry.values[8])), first = stageSheet(entry).getRange('B3').getValue(), tail = Math.max.apply(null, rows.map(function (r) { return r[5]; }));
+      // Delivery remains an editable native input after installation. The
+      // current tail, not the captured installation tail, limits the next plan.
+      var tails = ss.getSheetByName(String(entry.values[2])).getRange(7, 21, Number(entry.values[8]), 1).getValues();
+      var first = stageSheet(entry).getRange('B3').getValue(), tail = Math.max.apply(null, tails.map(function (r) { return r[0]; }));
       if (!int(first, 1, 120) || !int(tail, 1, 120) || first + desired.count * desired.duration_months - 1 + tail > 120) fail('native_stage_horizon_conflict');
       if (!same(PPPStages.project(readPlan(ctx, ctx.scenario_id)), PPPStages.project(before))) fail('native_stage_template_mismatch');
       return true;
@@ -173,7 +176,7 @@ var PPPStagesProgram = (function () {
         '=ABS(' + metric('cashReconciliation') + ')<1',
         '=AND(COUNT(' + ['debtDraws','interest','cashInterest','feeDebt','debtRepayments','debt'].map(metric).join(',') + ')=6,ABS(' + metric('debtDraws') + '+' + metric('interest') + '-' + metric('cashInterest') + '+' + metric('feeDebt') + '-' + metric('debtRepayments') + '-' + metric('debt') + ')<1)',
         '=AND(COUNT(' + ['ownerDist','devDist','distributable','ownerCapitalReturn','ownerPrefPaid','ownerResidual','devCapitalReturn','devPrefPaid','devResidual','ownerTotalProceeds','ownerSaleProceeds'].map(metric).join(',') + ')=11,ABS(' + metric('ownerDist') + '+' + metric('devDist') + '-' + metric('distributable') + ')<1,ABS(' + metric('ownerDist') + '-' + metric('ownerCapitalReturn') + '-' + metric('ownerPrefPaid') + '-' + metric('ownerResidual') + ')<1,ABS(' + metric('devDist') + '-' + metric('devCapitalReturn') + '-' + metric('devPrefPaid') + '-' + metric('devResidual') + ')<1,ABS(' + metric('ownerTotalProceeds') + '-' + metric('ownerSaleProceeds') + '-' + metric('ownerDist') + ')<1)',
-        '=AND(' + metric('horizonPass') + ',MAX(E' + FIRST + ':E' + (FIRST + CAPACITY - 1) + ')<=120)',
+        '=AND(' + metric('horizonPass') + ',MAX(E' + FIRST + ':E' + (FIRST + CAPACITY - 1) + ')<=120,MAX(' + programRef + 'R7:R22)=MAX(E' + FIRST + ':E' + (FIRST + CAPACITY - 1) + '))',
         '=AND(' + programRef + 'Y1,' + programRef + 'Y2)'
       ];
       PPPStages.checkIds.forEach(function (key, n) { requests.push(cellRequest(stage, n + 1, 6, [[key]], false)); formula(stage, n + 1, 7, assertions[n]); });

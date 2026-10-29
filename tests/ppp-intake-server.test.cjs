@@ -130,8 +130,13 @@ test('all five model types persist their own minimal capture without inventing f
     assert.equal(result.model_status, 'MODELO_PENDIENTE');
     assert.equal(result.intake.model_type, type);
     assert.deepEqual(result.intake.stages, initialStages());
+    assert.deepEqual(result.state.p, {}); assert.deepEqual(result.state.flows, []);
+    assert.equal(result.state.sales, undefined); assert.equal(result.state.profit, undefined);
     for (const [field, value] of Object.entries(minimum[type])) assert.equal(result.intake.inputs[field], value);
-    for (const [field, value] of Object.entries(result.intake.inputs)) if (!(field in minimum[type])) assert.equal(value, null, field);
+    for (const [field, value] of Object.entries(result.intake.inputs)) if (!(field in minimum[type])) {
+      const structural = ['macrolotes', 'residencial'].includes(type) && field === 'inEtapas';
+      assert.equal(value, structural ? 1 : null, field);
+    }
     assert.equal(f.createCalls, 1); assert.equal(f.businessWrites, 1);
   }
 });
@@ -161,7 +166,7 @@ test('formula strings, booleans, infinite quantities and out-of-range values nev
 });
 
 test('fields from another model and arbitrary ranges or formulas are rejected', () => {
-  for (const key of ['inTerrenoM2', 'A1', '__proto__', 'formula']) {
+  for (const key of ['inTerrenoM2', 'A1', '__proto__', 'constructor', 'toString', 'formula']) {
     const f = fixture(), d = request();
     Object.defineProperty(d.intake.inputs, key, { value: 1000, enumerable: true });
     assert.equal(f.service.write(d).ok, false, key);
@@ -175,6 +180,14 @@ test('metadata requires the name and location and respects bounded text', () => 
   for (const change of [{ nombre_caso: '' }, { ubicacion: '' }, { nombre_caso: 'x'.repeat(121) }, { ubicacion: 'x'.repeat(241) }, { fuente: 'x'.repeat(601) }]) {
     const f = fixture(), d = request(); Object.assign(d.intake, change);
     assert.equal(f.service.write(d).ok, false); assert.equal(f.reserves, 0);
+  }
+});
+
+test('integer-only initial fields cannot persist fractional units or levels', () => {
+  for (const [type, field] of [['unifamiliar', 'inNiveles'], ['patrimonial', 'inUnidades']]) {
+    const f = fixture(type), d = request(type); d.intake.inputs[field] = 1.5;
+    assert.equal(f.service.write(d).ok, false, type + ':' + field);
+    assert.equal(f.reserves, 0); assert.equal(f.businessWrites, 0);
   }
 });
 
@@ -237,6 +250,23 @@ test('matching captured values without an operation marker do not confirm a writ
   assert.equal(f.createCalls, 1); assert.equal(f.businessWrites, 1);
 });
 
+test('a marker cannot confirm a different actor, payload or case', () => {
+  for (const [field, value] of [['actor', 'actor-other'], ['caso_id', 'case-other'], ['payload_hash', 'different-payload']]) {
+    const f = fixture(); f.throwAfterCommit = true; f.create(); f.throwAfterCommit = false;
+    const op = f.operations.get('capture-request-1'); f.markers.get(op.request_id)[field] = value;
+    assert.equal(f.read(op.caso_id, op.request_id).ok, false, field);
+    assert.equal(f.finishes, 0); assert.equal(f.createCalls, 1);
+  }
+});
+
+test('partial readback cannot confirm a captured operation or discard its uncertainty', () => {
+  const f = fixture(); f.partialReadback = true;
+  const result = f.create();
+  assert.equal(result.ok, false); assert.notEqual(result.persisted, false);
+  assert.equal(f.finishes, 0); assert.equal(f.businessWrites, 1);
+  assert.equal(f.create().ok, false); assert.equal(f.createCalls, 1);
+});
+
 test('an update changes only submitted inputs and retains explicit null instead of substituting zero', () => {
   const f = fixture(), created = f.create();
   const result = clone(f.update(created, { inputs: { inCOS: null } }));
@@ -245,6 +275,22 @@ test('an update changes only submitted inputs and retains explicit null instead 
   assert.equal(result.intake.nombre_caso, created.intake.nombre_caso);
   assert.equal(result.intake.ubicacion, created.intake.ubicacion);
   assert.equal(result.calculated, false); assert.notEqual(result.revision, created.revision);
+});
+
+test('autosave accepts explicit allowlisted board inputs beyond the minimal intake in every model', () => {
+  const edits = {
+    vertical: { inPreViv: 30000 }, macrolotes: { inCostoNave: 8000 },
+    unifamiliar: { inRentaMes: 15000 }, residencial: { inUrbM2: 800 },
+    patrimonial: { inRentaUnidadMes: 5000 }
+  };
+  for (const [type, inputs] of Object.entries(edits)) {
+    const f = fixture(type), created = f.create();
+    const saved = clone(f.update(created, { inputs }));
+    assert.equal(saved.ok, true, type);
+    for (const [field, value] of Object.entries(inputs)) assert.equal(saved.intake.inputs[field], value);
+    assert.equal(saved.pending, true); assert.equal(saved.calculated, false);
+    assert.deepEqual(saved.state.flows, []); assert.equal(f.writeCalls, 1);
+  }
 });
 
 test('stale revisions and updates to another case cannot overwrite captured data', () => {
@@ -286,8 +332,29 @@ test('ordinary read returns the saved capture without repeating a business write
   const f = fixture(), created = f.create();
   const read = clone(f.read(created.caso_id));
   assert.equal(read.ok, true); assert.equal(read.persisted, true);
-  assert.deepEqual(read.intake, created.intake); assert.equal(read.revision, created.revision);
+  assert.deepEqual(read.intake, clone(created.intake)); assert.equal(read.revision, created.revision);
   assert.equal(f.createCalls, 1); assert.equal(f.writeCalls, 0);
+});
+
+test('a superseded receipt remains distinct from the currently saved capture', () => {
+  const f = fixture(), created = clone(f.create());
+  const updated = clone(f.update(created, { inputs: { inCOS: 70 } }));
+  const oldReceipt = clone(f.read(created.caso_id, 'capture-request-1'));
+  assert.equal(oldReceipt.ok, true); assert.equal(oldReceipt.revision, updated.revision);
+  assert.equal(oldReceipt.intake.inputs.inCOS, 70);
+  assert.equal(oldReceipt.intake_receipt_status, 'superseded');
+  assert.equal(oldReceipt.intake_receipt.result_revision, created.revision);
+  assert.equal(oldReceipt.intake_receipt.intake.inputs.inCOS, 60);
+  assert.equal(f.businessWrites, 2);
+});
+
+test('read-only access never advertises capture or stage write capability', () => {
+  const f = fixture(), created = f.create(); f.writable = false;
+  const read = clone(f.read(created.caso_id));
+  assert.equal(read.ok, true);
+  assert.equal(read.capabilities.intake.write, false); assert.equal(read.capabilities.stages.write, false);
+  assert.equal(f.update(created, { inputs: { inCOS: 70 } }).ok, false);
+  assert.equal(f.writeCalls, 0);
 });
 
 test('a pending model can persist three successive twelve-month stages while financial checks stay pending', () => {
@@ -302,6 +369,10 @@ test('a pending model can persist three successive twelve-month stages while fin
     assert.deepEqual(result.stage_receipt.stages.stages.map(row => [row.start_month, row.end_month]), [[1, 12], [13, 24], [25, 36]]);
     assert.equal(result.stage_receipt.checks.inventory, false); assert.equal(result.stage_receipt.checks.cash, false);
     assert.equal(result.stage_receipt.checks.formulas, true); assert.equal(result.stage_receipt.checks.horizon, true);
+    if (['macrolotes', 'residencial'].includes(type)) {
+      assert.equal(result.intake.inputs.inEtapas, 3);
+      assert.equal(result.intake.inputs.inMesesUrbEtapa, 12);
+    }
     assert.equal(f.snapshots.get(created.caso_id).intake.inputs.inTerreno ?? null, created.intake.inputs.inTerreno ?? null);
     assert.equal(f.writeCalls, 1);
   }
@@ -327,4 +398,60 @@ test('stage command recovery uses the original operation and never repeats the s
   assert.equal(result.ok, true); assert.equal(result.stage_receipt.request_id, command.request_id);
   assert.equal(result.stage_receipt.calculated, false); assert.equal(f.writeCalls, 1);
   assert.equal(f.service.writeStages(command).ok, true); assert.equal(f.writeCalls, 1);
+});
+
+test('stage receipt reads and writes cannot change scenario or reuse a stale revision', () => {
+  const f = fixture(), created = f.create(), command = {
+    tipo_desarrollo: 'vertical', caso_id: created.caso_id, escenario_id: 'base',
+    revision_esperada: created.revision, request_id: 'stages-request-1',
+    stages: { schema: 1, count: 3, duration_months: 12, mode: 'sequential', allocation: 'preserve' }
+  };
+  assert.equal(f.service.writeStages({ ...command, escenario_id: 'foreign' }).ok, false);
+  assert.equal(f.service.writeStages({ ...command, revision_esperada: 'stale' }).ok, false);
+  assert.equal(f.writeCalls, 0);
+  assert.equal(f.service.writeStages(command).ok, true);
+  assert.equal(f.service.readStages({ ...command, escenario_id: 'foreign' }).ok, false);
+  assert.equal(f.writeCalls, 1);
+});
+
+test('Macrolotes and Residencial mirror their initial stage structurally without inventing duration', () => {
+  for (const type of ['macrolotes', 'residencial']) {
+    const f = fixture(type), created = clone(f.create());
+    assert.equal(created.intake.inputs.inEtapas, 1);
+    assert.equal(created.intake.inputs.inMesesUrbEtapa, null);
+    const same = f.update(created, { inputs: { inEtapas: 1, inMesesUrbEtapa: null } });
+    assert.equal(same.ok, true); assert.equal(same.intake.stages.count, 1);
+    assert.equal(same.intake.stages.duration_months, null);
+  }
+});
+
+test('direct stage-driver changes cannot contradict the canonical stage plan', () => {
+  for (const type of ['macrolotes', 'residencial']) {
+    for (const inputs of [{ inEtapas: 2 }, { inEtapas: null }, { inMesesUrbEtapa: 12 }]) {
+      const f = fixture(type), created = f.create(), before = clone(f.snapshots.get(created.caso_id));
+      const result = f.update(created, { inputs });
+      assert.equal(result.ok, false); assert.equal(result.error, 'use_stage_operation');
+      assert.equal(f.writeCalls, 0); assert.deepEqual(f.snapshots.get(created.caso_id), before);
+    }
+    const f = fixture(type), d = request(type); d.intake.inputs.inEtapas = 2;
+    assert.equal(f.service.write(d).ok, false); assert.equal(f.createCalls, 0);
+  }
+});
+
+test('stage counts and durations respect the Macrolotes and Residencial driver bounds', () => {
+  for (const [type, minDuration] of [['macrolotes', 4], ['residencial', 3]]) {
+    for (const [count, duration] of [[9, 12], [3, 100], [3, minDuration - 1]]) {
+      const f = fixture(type), created = f.create();
+      const result = f.service.writeStages({ tipo_desarrollo: type, caso_id: created.caso_id, escenario_id: 'base', revision_esperada: created.revision, request_id: 'stage-bound-reject', stages: { schema: 1, count, duration_months: duration, mode: 'sequential', allocation: 'preserve' } });
+      assert.equal(result.ok, false, type + ':' + count + 'x' + duration);
+      assert.equal(f.writeCalls, 0);
+    }
+    for (const [count, duration] of [[1, minDuration], [8, 24]]) {
+      const f = fixture(type), created = f.create();
+      const result = clone(f.service.writeStages({ tipo_desarrollo: type, caso_id: created.caso_id, escenario_id: 'base', revision_esperada: created.revision, request_id: 'stage-bound-accept', stages: { schema: 1, count, duration_months: duration, mode: 'sequential', allocation: 'preserve' } }));
+      assert.equal(result.ok, true, type + ':' + count + 'x' + duration);
+      assert.equal(result.intake.inputs.inEtapas, count); assert.equal(result.intake.inputs.inMesesUrbEtapa, duration);
+      assert.equal(result.stage_receipt.calculated, false); assert.equal(f.writeCalls, 1);
+    }
+  }
 });

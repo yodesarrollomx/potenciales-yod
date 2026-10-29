@@ -32,6 +32,8 @@
  function sameStages(a,b){try{return JSON.stringify(validateStages(a))===JSON.stringify(validateStages(b));}catch{return false;}}
  function drivers(collection){return Object.fromEntries(['schema','count','duration_months','mode','allocation'].map(k=>[k,collection[k]]));}
  function validContext(c){return c?.verified===true&&c.ready===true&&TYPES.includes(c.model_type)&&id(c.case_id)&&id(c.scenario_id)&&rev(c.revision);}
+ function initialPending(c){const v=c?.native_pending_stages;return validContext(c)&&capability(c.native_capability)?.read===true&&c.native_capability.initial_pending===true&&c.native_collection==null&&exact(v,['schema','count','duration_months','mode','allocation'])&&v.schema===1&&v.count===1&&v.duration_months===null&&v.mode==='sequential'&&v.allocation==='preserve';}
+ function nativeChecks(c){if(!validContext(c)||!capability(c.native_capability)?.read||!exact(c.native_checks,CHECKS)||CHECKS.some(k=>typeof c.native_checks[k]!=='boolean')||typeof c.native_calculated!=='boolean'||c.native_calculated!==CHECKS.every(k=>c.native_checks[k]))return null;return clone(c.native_checks);}
  function identity(c){return validContext(c)?[c.model_type,c.case_id,c.scenario_id].join('|'):null;}
  function request(c,stages,requestId){const cap=capability(c?.native_capability);if(!validContext(c)||!cap?.write||!id(requestId))throw Error('native_stages_unavailable');return{tipo:'sheet-stages',tipo_desarrollo:c.model_type.toUpperCase(),caso_id:c.case_id,escenario_id:c.scenario_id,revision_esperada:c.revision,request_id:requestId,stages:validateStages(stages,cap.max_stages,cap.max_months)};}
  function receipt(model,payload,validModel){
@@ -60,12 +62,12 @@
   if(typeof text!=='string'||text.length>300)throw Error('invalid_stage_command');
   let normalized=text.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/[.!?]+$/,'').trim().replace(/\s+/g,' ');
   normalized=normalized.replace(/^(?:(?:mira|por favor),? )?(?:van a ser|seran|vamos a tener|quiero que sean|quiero|cambia a|cambialo a|organiza en|organizalo en|establece|serian|haz) /,'').replace(/,? por favor$/,'');
-  const match=normalized.match(/^(.+?) etapas? (?:de|con) (.+?) meses?(?: (?:cada una|cada etapa|por etapa))?$/);
+  const match=normalized.match(/^(.+?) etapas? (?:de|con) (.+?) mes(?:es)?(?: (?:cada una|cada etapa|por etapa))?$/);
   if(!match)throw Error('invalid_stage_command');
   const count=integer(match[1]),duration=integer(match[2]);
   return validateStages({schema:1,count,duration_months:duration,mode:'sequential',allocation:'preserve'},limits.max_stages,limits.max_months);
  }
- function describeProposal(v){const s=validateStages(v);return`${s.count} ${s.count===1?'etapa':'etapas'} de ${s.duration_months} meses. Supuesto: consecutivas, ${s.count*s.duration_months} meses en total. Se conservan las distribuciones existentes.`;}
+ function describeProposal(v,assumption='Se conservan las distribuciones existentes.'){const s=validateStages(v);if(typeof assumption!=='string'||!assumption.trim()||assumption.length>300)throw Error('invalid_stage_assumption');const total=s.count*s.duration_months;return`${s.count} ${s.count===1?'etapa':'etapas'} de ${s.duration_months} ${s.duration_months===1?'mes':'meses'}. Supuesto: consecutivas, ${total} ${total===1?'mes':'meses'} para las etapas. ${assumption}`;}
  async function rejection(response,payload,hash){
   const proof=response?.stage_rejection,atomic=proof?.stage==='atomic_write',keys=['request_id','caso_id','escenario_id','base_revision','actor','payload_hash','stage','write_attempted','error','rejected_at'].concat(atomic?['committed']:[]);
   if(response?.ok!==false||response.error!=='operation_rejected'||response.request_id!==payload.request_id||response.stage_operation_status!=='rejected'||!exact(proof,keys)||proof.request_id!==payload.request_id||proof.caso_id!==payload.caso_id||proof.escenario_id!==payload.escenario_id||proof.base_revision!==payload.revision_esperada||typeof proof.actor!=='string'||!proof.actor||proof.actor.length>256||(atomic?(proof.write_attempted!==true||proof.committed!==false||proof.error!=='native_stage_write_rejected'):(proof.stage!=='prewrite'||proof.write_attempted!==false||!REJECTIONS.includes(proof.error)))||typeof proof.payload_hash!=='string'||!/^[a-f0-9]{64}$/.test(proof.payload_hash)||typeof proof.rejected_at!=='string'||!Number.isFinite(Date.parse(proof.rejected_at))||Date.parse(proof.rejected_at)>Date.now()+5000||typeof hash!=='function')throw Error('unconfirmed_stage_rejection');
@@ -80,7 +82,7 @@
   function clear(){epoch++;context=null;command='';pending=null;phase='idle';error='';lastReceipt=null;conflictRevision=null;notify();}
   function setContext(next){
    const authoritative=getContext();if(!validContext(next)||!validContext(authoritative)||identity(next)!==identity(authoritative)||next.revision!==authoritative.revision){clear();return false;}
-   if(context&&identity(context)!==identity(next))clear();context=clone(next);if(!pending&&!operation&&['idle','ready','unavailable'].includes(phase))phase=capability(next.native_capability)?.write?'ready':'unavailable';notify();return true;
+   if(context&&identity(context)!==identity(next))clear();else if(context&&context.revision!==next.revision&&!pending&&!operation){lastReceipt=null;error='';phase='idle';}context=clone(next);if(!pending&&!operation&&['idle','ready','unavailable'].includes(phase))phase=capability(next.native_capability)?.write?'ready':'unavailable';notify();return true;
   }
   function setCommand(value){if(pending||operation||disposed)return false;command=String(value).slice(0,300);error='';lastReceipt=null;if(phase!=='conflict')phase='ready';notify();return true;}
   async function save(){
@@ -112,13 +114,16 @@
    if(disposed)return;const cap=capability(s.context?.native_capability),available=validContext(s.context)&&cap?.write;
    input.value=s.command;input.disabled=s.busy||s.pending||!available;submit.disabled=s.busy||s.pending||!available;mic.disabled=s.busy||s.pending||!available;retry.hidden=!s.pending;retry.disabled=s.busy||!validContext(s.context);list.replaceChildren();checks.replaceChildren();
    let collection;try{collection=validateCollection(s.context?.native_collection,cap?.max_stages,cap?.max_months);}catch{}
-   current.textContent=collection?`${collection.count} ${collection.count===1?'etapa actual':'etapas actuales'} · lectura de Sheets · revisión ${s.context.revision.slice(0,12)}`:'El calendario del libro todavía no está conectado a este tablero.';
+   const pendingInitial=initialPending(s.context);
+   current.textContent=collection?`${collection.count} ${collection.count===1?'etapa actual':'etapas actuales'} · lectura de Sheets · revisión ${s.context.revision.slice(0,12)}`:pendingInitial?`1 etapa actual · duración pendiente · lectura de Sheets · revisión ${s.context.revision.slice(0,12)}`:'El calendario del libro todavía no está conectado a este tablero.';
+   if(pendingInitial)list.append(make('li','ppp-stage-pending','Etapa 1 · duración por definir'));
    if(collection)for(const stage of collection.stages)list.append(make('li','',`Etapa ${stage.order} · mes ${stage.start_month} a ${stage.end_month} · ${stage.duration_months} meses`));
-   try{preview.textContent=s.command?describeProposal(parseCommand(s.command,cap||undefined)):cap?.assumption||'Las etapas serán consecutivas; se conservarán las distribuciones existentes.';}catch{preview.textContent='Indica una sola cantidad de etapas y los meses de cada etapa.';}
+   try{preview.textContent=s.command?describeProposal(parseCommand(s.command,cap||undefined),cap?.assumption):cap?.assumption||'Las etapas serán consecutivas; se conservarán las distribuciones existentes.';}catch{preview.textContent='Indica una sola cantidad de etapas y los meses de cada etapa.';}
    const messages={idle:'Abre un proyecto para organizar sus etapas.',unavailable:'La edición de etapas aún no está habilitada en este libro.',ready:'Escribe o dicta la instrucción y pulsa Aplicar al plan.',saving:'Guardando etapas y leyendo el cálculo de Sheets…',checking:'Consultando la confirmación del mismo cambio…',saved:'Etapas guardadas y comprobaciones de Sheets confirmadas.',needs_review:'Etapas guardadas. Hay comprobaciones pendientes en Sheets.',superseded:'Tu cambio quedó guardado. El libro tiene una revisión posterior; consulta su calendario actual.'};
    statusEl.textContent=s.error||messages[s.phase]||messages.unavailable;
-   if(s.receipt)for(const k of CHECKS)checks.append(make('li',s.receipt.checks[k]?'ppp-check-ok':'ppp-check-pending',`${CHECK_LABELS[k]}: ${s.receipt.checks[k]?'conciliado':'pendiente'}`));
-   container.dataset.stageState=s.phase;onState({phase:s.phase,dirty:!!s.command&&!s.receipt,pending:s.pending,busy:s.busy,calculated:s.receipt?.calculated===true,error:s.error});
+   const currentChecks=nativeChecks(s.context)||(s.receipt&&s.receipt.revision===s.context?.revision?s.receipt.checks:null);
+   if(currentChecks)for(const k of CHECKS)checks.append(make('li',currentChecks[k]?'ppp-check-ok':'ppp-check-pending',`${CHECK_LABELS[k]}: ${currentChecks[k]?'conciliado':'pendiente'}`));
+   container.dataset.stageState=s.phase;onState({phase:s.phase,dirty:!!s.command&&!s.receipt,pending:s.pending,busy:s.busy,calculated:!!currentChecks&&CHECKS.every(k=>currentChecks[k]),error:s.error});
   }
   const controller=createController({getContext,onSave,onState:paint,validModel,uuid});
   input.addEventListener('input',()=>controller.setCommand(input.value));form.addEventListener('submit',e=>{e.preventDefault();controller.save();});retry.addEventListener('click',()=>controller.save());
@@ -135,5 +140,5 @@
   const revoke=()=>{recognition?.abort?.();controller.clear();};const storage=e=>{if(e.key===null||e.key==='pyod_clave_v1')revoke();};win?.addEventListener('pagehide',revoke);win?.addEventListener('storage',storage);controller.setContext(getContext());
   return{setContext:controller.setContext,setCommand:controller.setCommand,save:controller.save,snapshotStatus:controller.status,dispose(){disposed=true;recognition?.abort?.();controller.dispose();win?.removeEventListener('pagehide',revoke);win?.removeEventListener('storage',storage);container.replaceChildren();}};
  }
- return{MAX_STAGES,MAX_MONTHS,CHECKS,REJECTIONS,stable,rejection,capability,validateStages,validateCollection,validContext,request,receipt,parseCommand,describeProposal,createController,mount};
+ return{MAX_STAGES,MAX_MONTHS,CHECKS,REJECTIONS,stable,rejection,capability,validateStages,validateCollection,validContext,initialPending,nativeChecks,request,receipt,parseCommand,describeProposal,createController,mount};
 });

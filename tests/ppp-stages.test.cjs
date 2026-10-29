@@ -80,3 +80,26 @@ test('a bound atomic rejection releases uncertainty only with explicit committed
  const p=api.request(context(),spec(),'stages-1'),r=await rejection(p);Object.assign(r.stage_rejection,{stage:'atomic_write',write_attempted:true,committed:false,error:'native_stage_write_rejected'});assert.equal((await api.rejection(r,p,hash)).status,'rejected');
  for(const change of [r=>r.stage_rejection.committed=true,r=>delete r.stage_rejection.committed,r=>r.stage_rejection.write_attempted=false,r=>r.stage_rejection.payload_hash='0'.repeat(64)]){const v=clone(r);change(v);await assert.rejects(()=>api.rejection(v,p,hash));}
 });
+
+
+test('single month is valid Spanish while the malformed singular mese is rejected',()=>{
+ assert.deepEqual(api.parseCommand('una etapa de un mes'),spec(1,1));assert.throws(()=>api.parseCommand('una etapa de un mese'));assert.match(api.describeProposal(spec(1,1)),/de 1 mes\. Supuesto: consecutivas, 1 mes para las etapas/);
+});
+test('canonical initial stage is displayed pending only with its explicit authoritative signal',()=>{
+ const initial={schema:1,count:1,duration_months:null,mode:'sequential',allocation:'preserve'};const c=context({native_capability:{...cap(),initial_pending:true},native_collection:null,native_pending_stages:initial});assert.equal(api.initialPending(c),true);
+ const h=mounted({initial:c});assert.match(h.container.textContent,/1 etapa actual · duración pendiente · lectura de Sheets/);assert.match(h.container.textContent,/Etapa 1 · duración por definir/);assert.equal(h.input().disabled,false);assert.equal(h.container.all().filter(e=>e.tag==='li').length,1);assert.equal(h.view.snapshotStatus().receipt,null);h.view.dispose();
+ for(const patch of [{verified:false},{native_capability:cap()},{native_collection:canonical()},{native_pending_stages:{...initial,count:2}},{native_pending_stages:{...initial,duration_months:0}},{native_pending_stages:{...initial,stages:[]}}])assert.equal(api.initialPending({...c,...patch}),false);
+ assert.throws(()=>api.validateStages(initial));assert.throws(()=>api.request(c,initial,'stages-1'));assert.deepEqual(api.request(c,spec(),'stages-1').stages,spec());
+});
+test('initial pending stage becomes a canonical calendar with pending finance checks after readback',async()=>{
+ const c=context({native_capability:{...cap(),initial_pending:true},native_collection:null,native_pending_stages:{schema:1,count:1,duration_months:null,mode:'sequential',allocation:'preserve'}});const h=harness(async(p,o,h)=>{const m=model(p);m.stage_receipt.calculated=false;for(const key of ['sales','costs','cash','debt','distribution'])m.stage_receipt.checks[key]=false;h.accept(m);return m;});h.setContext(c);h.c.setCommand('3 etapas de 12 meses');assert.equal(await h.c.save(),true);assert.equal(h.c.status().phase,'needs_review');assert.equal(h.c.status().receipt.calculated,false);assert.equal(h.c.status().context.native_collection.count,3);
+});
+
+test('native checks describe the current revision after unrelated edits and never replay old confirmation',async()=>{
+ const all=Object.fromEntries(api.CHECKS.map(k=>[k,true])),pending={...all,cash:false};const h=harness(async(p,o,h)=>{const m=model(p);h.accept(m);return m;});h.c.setCommand('3 etapas de 12 meses');assert.equal(await h.c.save(),true);h.setContext(context({revision:'r3',native_collection:canonical(),native_checks:pending,native_calculated:false}));assert.equal(h.c.status().receipt,null);assert.equal(h.c.status().phase,'ready');assert.deepEqual(api.nativeChecks(h.getContext()),pending);
+ const ui=mounted({initial:h.getContext()});assert.equal(ui.container.all().filter(e=>e.className==='ppp-check-pending').length,1);assert.match(ui.container.textContent,/Caja: pendiente/);ui.view.dispose();
+ assert.equal(api.nativeChecks(context({native_checks:pending,native_calculated:true})),null);assert.equal(api.nativeChecks(context({native_checks:{cash:false},native_calculated:false})),null);
+});
+test('command preview uses the native calendar assumption without claiming the full project horizon',()=>{
+ const assumption='La obra conserva las proporciones del calendario original y los plazos de preventa y entrega.';const h=mounted({initial:context({native_capability:{...cap(),assumption}})});h.view.setCommand('3 etapas de 12 meses');assert.match(h.container.textContent,/36 meses para las etapas/);assert.match(h.container.textContent,/conserva las proporciones del calendario original/);assert.doesNotMatch(h.container.textContent,/36 meses en total/);h.view.dispose();
+});

@@ -701,7 +701,7 @@
   }
   function stageContext(){
     if(!volumeIdentity||!clave||volumeIdentity.credential!==clave||modoLocal||caseSelection||sheetPending||sheetFailure||sheetNeedsRefresh||volumeOperation||volumeIdentity.case_id!==caso.caso_id||!window.PPPCaseLoader.validModel(sheetModel,caso.caso_id))return null;
-    return {verified:true,ready:!sheetBusy||!!stageOperation,model_type:'vertical',case_id:caso.caso_id,scenario_id:escActivo,revision:sheetModel.revision,native_capability:sheetModel.capabilities?.stages,native_collection:sheetModel.stages_by_scenario?.[escActivo]};
+    return {verified:true,ready:!sheetBusy||!!stageOperation,model_type:'vertical',case_id:caso.caso_id,scenario_id:escActivo,revision:sheetModel.revision,native_capability:sheetModel.capabilities?.stages,native_collection:sheetModel.stages_by_scenario?.[escActivo],native_checks:sheetModel.stage_checks_by_scenario?.[escActivo],native_calculated:sheetModel.stage_calculated_by_scenario?.[escActivo]};
   }
   async function saveNativeStages(payload,{reconcile=false}={}){
     const context=stageContext();
@@ -737,7 +737,7 @@
   function queueSheetSync(){
     state=sheetModel.estados[escActivo];
     const canonical=sheetModel.escenarios.find(e=>e.id===escActivo)?.inputs||{};
-    if(volumeOperation||stageOperation){Object.entries(canonical).forEach(([id,value])=>setControl(id,value));sheetStatus('Comprueba primero el guardado de volúmenes');render();return state;}
+    if(volumeOperation||stageOperation){Object.entries(canonical).forEach(([id,value])=>setControl(id,value));sheetStatus(stageOperation?'Comprueba primero el guardado de etapas':'Comprueba primero el guardado de volúmenes');render();return state;}
     const changed=Object.fromEntries(Object.entries(inputValues()).filter(([k,v])=>canonical[k]!==v));
     if(!Object.keys(changed).length){sheetPending=null;sheetFailure=sheetNeedsRefresh;render();renderComparador();if(sheetNeedsRefresh)sheetStatus('Copia de Sheets · verifica conexión antes de editar');return state;}
     sheetPending={scenario:escActivo,inputs:changed};sheetStatus('Cambios pendientes · calculando en Sheets');

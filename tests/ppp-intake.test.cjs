@@ -66,3 +66,10 @@ test('El adaptador nativo manda sólo datos originales y verifica identidad, rec
   assert.throws(()=>intake.validateRead(response,{type:'vertical',inputs:{inCUS:3}}),/sin_confirmacion/);
   await adapter.read({id:'native-case',request_id:'req-native'});assert.deepEqual(sent[1],{recurso:'sheet-intake',tipo:'vertical',id:'native-case',request_id:'req-native'});
 });
+test('Una creación incierta recuperada tras recarga consulta el request_id guardado sin un segundo POST',async()=>{
+  const draft={...intake.validate(sample()).value,request_id:'creation-uncertain'},calls=[];
+  const adapter={open:async()=>{calls.push('POST');throw Error('timeout');},read:async request=>{calls.push(request);return {ok:true,status:'confirmed',persisted:true,caso_id:'case-created',revision:'r1',request_id:request.request_id};}};
+  const first=intake.createController({adapter,requestId:()=>draft.request_id});assert.equal((await first.submit(sample())).ok,false);
+  const restored=intake.createController({adapter,resumeRequest:first.pending,requestId:()=>{throw Error('must not generate another identity');}});
+  assert.equal((await restored.submit(sample())).caso_id,'case-created');assert.deepEqual(calls,['POST',{request_id:'creation-uncertain'}]);
+});

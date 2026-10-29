@@ -70,12 +70,14 @@
     return {
       async open(draft){const {schema,model_type,nombre_caso,ubicacion,fuente,inputs,stages}=draft;return check(await post({tipo:'sheet-intake',tipo_desarrollo:type,request_id:draft.request_id,intake:{schema,model_type,nombre_caso,ubicacion,fuente,inputs,stages}}),{request_id:draft.request_id,inputs});},
       async update(job){return check(await post({tipo:'sheet-intake',tipo_desarrollo:type,...job}),{id:job.caso_id,request_id:job.request_id,inputs:job.intake.inputs});},
-      async read({id,request_id}){return check(await get({recurso:'sheet-intake',tipo:type,id,...(request_id?{request_id}:{})}),{id,request_id});}
+      async read({id,request_id}){return check(await get({recurso:'sheet-intake',tipo:type,...(id?{id}:{}),...(request_id?{request_id}:{})}),{id,request_id});},
+      async saveStages(payload,{reconcile=false}={}){return reconcile?get({recurso:'sheet-stages-receipt',tipo:type,caso_id:payload.caso_id,escenario_id:payload.escenario_id,request_id:payload.request_id}):post(payload);}
     };
   }
-  function createController({adapter,onState=()=>{},requestId=()=>globalThis.crypto.randomUUID()}){
+  function createController({adapter,onState=()=>{},requestId=()=>globalThis.crypto.randomUUID(),resumeRequest=null}){
     if(!adapter||typeof adapter.open!=='function')throw Error('adaptador_requerido');
-    let busy=false,destroyed=false,pending=null,completed=null;
+    let busy=false,destroyed=false,pending=null,completed=null,attempted=false;
+    if(resumeRequest){const checked=validate(resumeRequest);if(!checked.ok||typeof resumeRequest.request_id!=='string'||!/^[-A-Za-z0-9_.:]{1,256}$/.test(resumeRequest.request_id))throw Error('solicitud_invalida');pending={fingerprint:JSON.stringify(checked.value),request:{...checked.value,request_id:resumeRequest.request_id}};attempted=true;}
     async function submit(raw){
       if(destroyed)throw Error('ficha_cerrada');
       if(busy)return {ok:false,error:'ocupado'};
@@ -86,16 +88,18 @@
       if(!pending)pending={fingerprint,request:{...checked.value,request_id:requestId()}};
       busy=true;onState({status:'opening',draft:copy(pending.request)});
       try{
-        const response=await adapter.open(copy(pending.request));
+        const checking=attempted&&typeof adapter.read==='function';attempted=true;
+        const response=checking?await adapter.read({request_id:pending.request.request_id}):await adapter.open(copy(pending.request));
         if(destroyed)return {ok:false,error:'ficha_cerrada'};
         if(response?.ok!==true){
           // Sólo un rechazo explícito SIN escritura permite corregir y generar otra solicitud.
-          if(response?.persisted===false)pending=null;
+          if(response?.persisted===false){pending=null;attempted=false;}
           onState({status:pending?'uncertain':'error',error:response?.error||'sin_confirmacion'});
           return {ok:false,error:response?.error||'sin_confirmacion'};
         }
         if(response.request_id!==pending.request.request_id||!['draft','confirmed'].includes(response.status))throw Error('sin_confirmacion');
         if(response.status==='confirmed'&&(response.persisted!==true||!response.caso_id||typeof response.revision!=='string'||!response.revision))throw Error('sin_confirmacion');
+        if(response.status==='confirmed'&&response.intake&&(response.intake.model_type!==pending.request.model_type||['nombre_caso','ubicacion','fuente'].some(key=>response.intake[key]!==pending.request[key])||Object.entries(pending.request.inputs).some(([key,value])=>response.intake.inputs?.[key]!==value)))throw Error('sin_confirmacion');
         if(response.status==='draft'&&response.persisted!==false)throw Error('sin_confirmacion');
         const path=boardPath(pending.request.model_type,response.status==='confirmed'?response.caso_id:undefined);
         completed={ok:true,...response,board_path:path,draft:copy(pending.request)};
@@ -105,20 +109,21 @@
     }
     return {submit,get pending(){return pending?copy(pending.request):null;},destroy(){destroyed=true;}};
   }
-  function mount({container,type='',value={},adapter,onOpen=()=>{},onCancel=()=>{},existingCaseId=''}){
+  function mount({container,type='',value={},adapter,onOpen=()=>{},onCancel=()=>{},onState=()=>{},resumeRequest=null,existingCaseId=''}){
     if(!container||existingCaseId)return null;
     const doc=container.ownerDocument;let selected=normalizeType(type||value.model_type),destroyed=false;
     if(selected&&!own(models,selected))throw Error('tipo_invalido');
     const drafts={};let common={nombre_caso:value.nombre_caso||'',ubicacion:value.ubicacion||'',fuente:value.fuente||''};
     if(selected)drafts[selected]={...(value.inputs||{})};
     const ui=doc.createElement('section');ui.className='ppp-intake';container.append(ui);
-    const controller=createController({adapter,onState:state=>{
+    const controller=createController({adapter,resumeRequest,onState:state=>{
       if(destroyed)return;
       const note=ui.querySelector('[data-intake-status]');
       const messages={opening:'Abriendo tu plan…',uncertain:'La apertura está por confirmar. Tus datos se conservan; reintenta con la misma ficha.',error:'No se pudo abrir el plan. Tus datos se conservan.',confirmed:'Plan guardado. Abriendo su tablero…',draft:'Ficha preparada. Todavía no está guardada en Sheets.'};
       note.textContent=messages[state.status]||'';
       ui.querySelectorAll('input,select,textarea,button').forEach(el=>el.disabled=state.status==='opening'||!!type&&el.name==='model_type');
       if(state.status==='invalid')showErrors(state.errors);
+      onState(state);
     }});
     function remember(){for(const key of Object.keys(common)){const el=ui.querySelector('[name="'+key+'"]');if(el)common[key]=el.value;}if(selected){drafts[selected]=drafts[selected]||{};for(const f of models[selected].fields){const el=ui.querySelector('[name="'+f.id+'"]');if(el)drafts[selected][f.id]=el.value;}}}
     function showErrors(errors){ui.querySelectorAll('[data-error]').forEach(el=>{el.textContent=errors[el.dataset.error]||'';});ui.querySelectorAll('[name]').forEach(el=>el.setAttribute('aria-invalid',errors[el.name]?'true':'false'));const key=Object.keys(errors)[0],el=ui.querySelector('[name="'+key+'"]');if(el?.closest('details'))el.closest('details').open=true;el?.focus();}
@@ -140,11 +145,12 @@
   }
   /* Adaptador de captura sobre los tableros existentes. El host debe detener su cálculo
      y su guardado legado mientras blocking sea true; los casos guardados usan deactivate(). */
-  function mountBoard({type,controls,adapter=null,onStart=()=>{},onExit=()=>{},doc=globalThis.document,win=globalThis.window,storage=win.localStorage,getIdentity=()=>win.localStorage.getItem('pyod_clave_v1')||''}){
+  function mountBoard({type,controls,adapter=null,onStart=()=>{},onExit=()=>{},mountStages=true,doc=globalThis.document,win=globalThis.window,storage=win.localStorage,getIdentity=()=>win.localStorage.getItem('pyod_clave_v1')||''}){
     type=normalizeType(type);modelFor(type);
     const main=doc.querySelector('main.container');if(!main)return null;
     let draft=null,form=null,opening=false,active=false,banner=null,key=null,disposed=false,epoch=0;
     let receipt=null,pending={},job=null,busy=false,saveError='',saveTimer=null,writeEpoch=0;
+    let stageEditor=null,stageHost=null,stageOperation=false;
     let identity=getIdentity();
     async function resolveScope(){
       key=null;const ownEpoch=++epoch,owner=identity;
@@ -153,11 +159,16 @@
     }
     let scopeReady=resolveScope();
     const original=new Map(),blockedButtons=new Map();
+    const isStageDriver=id=>['macrolotes','residencial'].includes(type)&&['inEtapas','inMesesUrbEtapa'].includes(id);
+    const editable=()=>!receipt||receipt.capabilities?.intake?.write===true;
     const host=doc.createElement('div');host.className='ppp-intake-host';main.before(host);
     const dangerous='#btnWhats,#btnGuardar,#btnPropuesta,#gGuardarSolo,#gGuardarEnviar,#refreshJson,#applyJson,#exportJson,.preset-casa,.gate-mode,.rep-btn,.land-mode,#btnSoloLotes,#escBar button,[data-operation]';
-    function persist(){if(!active||!draft||!key||identity!==getIdentity())return;try{storage.setItem(key,JSON.stringify(draft));}catch{if(banner)banner.querySelector('[data-intake-board-status]').textContent='La captura no se pudo conservar en este navegador. Mantén esta pestaña abierta.';}}
+    function persist(){if(!active||!draft||!key||identity!==getIdentity())return;try{
+      if(receipt){storage.removeItem(key);storage.setItem(key+':case:'+receipt.caso_id,JSON.stringify({schema:'ppp-intake-pending-v1',model_type:type,caso_id:receipt.caso_id,revision:receipt.revision,job,pending}));}
+      else storage.setItem(key,JSON.stringify(draft));
+    }catch{if(banner)banner.querySelector('[data-intake-board-status]').textContent='La captura no se pudo conservar en este navegador. Mantén esta pestaña abierta.';}}
     function updateInput(el){
-      if(!active||!draft||!controls.includes(el))return;
+      if(!active||!draft||stageOperation||!editable()||isStageDriver(el.id)||!controls.includes(el))return;
       let value;try{value=parseNumber(el.value);}catch{return;}
       if(value===null)delete draft.inputs[el.id];
       else if(value>=Number(el.min)&&value<=Number(el.max))draft.inputs[el.id]=value;else return;
@@ -180,8 +191,9 @@
       const name=doc.getElementById('casoNombreBar');if(name)name.textContent=draft.nombre_caso+' · sin guardar en Sheets';
       const dot=doc.getElementById('syncDot');if(dot)dot.textContent='· captura local';
       if(receipt){if(dot)dot.textContent=busy?'· guardando':saveError||job?'· guardado por confirmar':Object.keys(pending).length?'· cambios pendientes':'· captura guardada en Sheets';if(name)name.textContent=draft.nombre_caso+' · ficha en Sheets';}
-      if(banner){const status=banner.querySelector('[data-intake-board-status]');status.textContent=receipt?(busy?'Guardando los datos en Sheets…':saveError==='conflicto_revision'?'Otra edición cambió el libro. Tus datos pendientes se conservan. Relee antes de continuar.':saveError||job?'El guardado está por confirmar. Conservamos tus datos; comprueba el recibo antes de seguir.':Object.keys(pending).length?'Cambios pendientes de guardar.':'Ficha guardada en Sheets · revisión '+receipt.revision.slice(0,12)+'. Los resultados siguen pendientes de completar el modelo nativo.'):(key?'Captura conservada en este navegador para tu sesión.':'Captura sólo en esta pestaña; mantenla abierta.')+' Los resultados y el guardado en Sheets están pendientes de conectar el modelo nativo.';
-        const retry=banner.querySelector('[data-intake-check]');if(retry){retry.hidden=!job;retry.disabled=busy;}}
+      if(banner){const stageCount=draft.stages?.count||1;banner.querySelector('.pi-kicker').textContent='FICHA DEL PLAN · '+stageCount+(stageCount===1?' ETAPA':' ETAPAS');const status=banner.querySelector('[data-intake-board-status]');status.textContent=receipt?(busy?'Guardando los datos en Sheets…':saveError==='conflicto_revision'?'Otra edición cambió el libro. Tus datos pendientes se conservan. Relee antes de continuar.':saveError||job?'El guardado está por confirmar. Conservamos tus datos; comprueba el recibo antes de seguir.':Object.keys(pending).length?'Cambios pendientes de guardar.':'Ficha guardada en Sheets · revisión '+receipt.revision.slice(0,12)+'. Los resultados siguen pendientes de completar el modelo nativo.'):(key?'Captura conservada en este navegador para tu sesión.':'Captura sólo en esta pestaña; mantenla abierta.')+' Los resultados y el guardado en Sheets están pendientes de conectar el modelo nativo.';
+        const retry=banner.querySelector('[data-intake-check]');if(retry){retry.hidden=!job&&!Object.keys(pending).length;retry.disabled=busy||saveError==='conflicto_revision'&&!job;retry.textContent=job?'Comprobar guardado':'Guardar cambios pendientes';}}
+      stageEditor?.setContext(stageContext());
     }
     function start(result){
       receipt=result.status==='confirmed'?validateRead(result,{type}):null;pending={};job=null;busy=false;saveError='';writeEpoch++;
@@ -190,20 +202,24 @@
       if(receipt){const url=new URL(win.location.href);url.searchParams.delete('new');url.searchParams.set('open',receipt.caso_id);win.history.replaceState(null,'',url);}
       form?.destroy();form=null;
       for(const control of controls){
-        if(!original.has(control))original.set(control,{type:control.type,value:control.value,step:control.step,disabled:control.disabled});
+        if(!original.has(control))original.set(control,{type:control.type,value:control.value,step:control.step,disabled:control.disabled,title:control.getAttribute('title')});
         control.type='number';control.step='any';control.placeholder='Por definir';control.value=own(draft.inputs,control.id)?draft.inputs[control.id]:'';
+        control.disabled=!editable()||isStageDriver(control.id);
+        if(isStageDriver(control.id)){control.title='Se modifica desde Etapas del proyecto.';if(control.id==='inEtapas'&&!control.parentElement.querySelector('.pi-stage-link')){const link=doc.createElement('button');link.type='button';link.className='pi-stage-link';link.textContent='Cambiar etapas';link.onclick=()=>stageHost?.scrollIntoView({behavior:'smooth',block:'center'});control.after(link);}}
         if(control.id==='inEtapas'&&!receipt){control.value=1;draft.inputs.inEtapas=1;}
         control.addEventListener('input',captureInput);control.addEventListener('change',captureInput);
       }
       if(!banner){banner=doc.createElement('section');banner.className='pi-board-banner';main.querySelector('.caso-bar')?.after(banner);if(!banner.isConnected)main.prepend(banner);}
       banner.innerHTML='<div><span class="pi-kicker">FICHA INICIAL · UNA ETAPA</span><h2></h2><p data-intake-board-status></p></div><button type="button" data-intake-check hidden>Comprobar guardado</button><button type="button" data-intake-edit>Editar ficha</button>';
       banner.querySelector('h2').textContent=draft.nombre_caso;banner.querySelector('[data-intake-edit]').onclick=open;banner.querySelector('[data-intake-check]').onclick=checkSave;
+      banner.querySelector('[data-intake-edit]').disabled=!editable();
       onStart(copy(draft),receipt?copy(receipt):null);paint();persist();win.dispatchEvent(new win.CustomEvent('ppp:intake-opened',{detail:{model_type:type,persisted:!!receipt}}));
+      if(mountStages&&win.PPPStages&&receipt&&adapter?.saveStages&&!stageEditor){stageHost=doc.createElement('section');stageHost.id='pppIntakeStages';banner.after(stageHost);stageEditor=win.PPPStages.mount({container:stageHost,getContext:stageContext,onSave:saveStages,validModel:model=>{try{validateRead(model,{type,id:receipt?.caso_id});return true;}catch{return false;}},doc,win});}
     }
     function captureInput(event){updateInput(event.target);paint();}
     function closeForm(){form?.destroy();form=null;opening=false;doc.body.classList.remove('ppp-intake-opening');}
     async function open(){
-      if(opening||disposed)return;checkIdentity();opening=true;const openingIdentity=identity;doc.body.classList.add('ppp-intake-opening');await scopeReady;
+      if(opening||disposed||active&&!editable())return;checkIdentity();opening=true;const openingIdentity=identity;doc.body.classList.add('ppp-intake-opening');await scopeReady;
       if(disposed||openingIdentity!==getIdentity())return;
       let prior=active?draft:null;
       if(!prior&&key){try{const saved=JSON.parse(storage.getItem(key)||'null');if(saved?.schema==='ppp-intake-v1'&&saved.model_type===type&&saved.inputs&&typeof saved.inputs==='object'&&!Array.isArray(saved.inputs)){
@@ -211,12 +227,13 @@
         if(validate({...saved,inputs:knownInputs}).ok){prior={...saved,inputs:{}};for(const control of controls){const v=saved.inputs[control.id];if(typeof v==='number'&&Number.isFinite(v)&&v>=Number(control.min)&&v<=Number(control.max))prior.inputs[control.id]=v;}}
       }}catch{}}
       const known=prior?{...prior,inputs:Object.fromEntries(models[type].fields.filter(f=>own(prior.inputs,f.id)).map(f=>[f.id,prior.inputs[f.id]]))}:{};
+      let creation=null;if(!receipt&&key){try{const saved=JSON.parse(storage.getItem(key+':creating')||'null');if(saved?.model_type===type&&validate(saved).ok&&typeof saved.request_id==='string'&&/^[-A-Za-z0-9_.:]{1,256}$/.test(saved.request_id)){creation=saved;Object.assign(known,saved);}}catch{}}
       const formAdapter=receipt&&adapter?.update?{open:async value=>{
         if(job||busy||Object.keys(pending).length)return {ok:false,persisted:false,error:'cambios_pendientes'};
         const values=Object.fromEntries(models[type].fields.map(field=>[field.id,own(value.inputs,field.id)?value.inputs[field.id]:null]));
         return adapter.update({caso_id:receipt.caso_id,revision_esperada:receipt.revision,request_id:value.request_id,intake:{inputs:values,nombre_caso:value.nombre_caso,ubicacion:value.ubicacion,fuente:value.fuente}});
       }}:adapter||{open:async value=>({ok:true,status:'draft',persisted:false,request_id:value.request_id})};
-      form=mount({container:host,type,value:known,adapter:formAdapter,onOpen:result=>{
+      form=mount({container:host,type,value:known,adapter:formAdapter,resumeRequest:creation,onState:state=>{if(receipt||!key||openingIdentity!==getIdentity())return;try{if(state.status==='opening'&&state.draft)storage.setItem(key+':creating',JSON.stringify(state.draft));if(['confirmed','draft','error'].includes(state.status))storage.removeItem(key+':creating');}catch{}},onOpen:result=>{
         if(openingIdentity!==getIdentity()){checkIdentity();return;}
         // Conservar capturas de otras áreas, pero un opcional borrado de la ficha sigue vacío.
         if(prior){const areaInputs=Object.fromEntries(Object.entries(prior.inputs).filter(([id])=>!models[type].fields.some(f=>f.id===id)));result.draft.inputs={...areaInputs,...result.draft.inputs};}start(result);
@@ -225,8 +242,9 @@
     }
     function deactivate(){
       writeEpoch++;win.clearTimeout(saveTimer);receipt=null;pending={};job=null;busy=false;saveError='';
+      stageEditor?.dispose();stageEditor=null;stageHost?.remove();stageHost=null;stageOperation=false;
       closeForm();active=false;draft=null;doc.body.classList.remove('ppp-intake-capture');banner?.remove();banner=null;
-      for(const [control,old] of original){control.removeEventListener('input',captureInput);control.removeEventListener('change',captureInput);control.type=old.type;control.step=old.step;control.value=old.value;control.disabled=old.disabled;control.removeAttribute('placeholder');control.closest('.input-group')?.classList.remove('pi-pending-input');}original.clear();
+      for(const [control,old] of original){control.removeEventListener('input',captureInput);control.removeEventListener('change',captureInput);control.type=old.type;control.step=old.step;control.value=old.value;control.disabled=old.disabled;control.removeAttribute('placeholder');if(old.title===null)control.removeAttribute('title');else control.setAttribute('title',old.title);control.closest('.input-group')?.classList.remove('pi-pending-input');}original.clear();main.querySelectorAll('.pi-stage-link').forEach(el=>el.remove());
       for(const [button,disabled] of blockedButtons)button.disabled=disabled;blockedButtons.clear();
     }
     function acceptSaved(response,expected){
@@ -237,19 +255,46 @@
       paint();persist();
     }
     async function flush(){
-      if(!active||!receipt||!adapter?.update||busy||saveError||job||!Object.keys(pending).length||identity!==getIdentity())return;
-      job={caso_id:receipt.caso_id,revision_esperada:receipt.revision,request_id:win.crypto.randomUUID(),intake:{inputs:copy(pending)}};pending={};busy=true;paint();const generation=writeEpoch,owner=identity;
+      if(!active||!receipt||!adapter?.update||busy||stageOperation||saveError||job||!Object.keys(pending).length||identity!==getIdentity())return;
+      job={caso_id:receipt.caso_id,revision_esperada:receipt.revision,request_id:win.crypto.randomUUID(),intake:{inputs:copy(pending)}};pending={};busy=true;paint();persist();const generation=writeEpoch,owner=identity;
       try{const response=await adapter.update(copy(job));if(generation!==writeEpoch||owner!==getIdentity())return;if(response?.ok!==true)throw Error(response?.error||'sin_confirmacion');acceptSaved(response,job);}
       catch(error){if(generation===writeEpoch){saveError=/revision|conflict/.test(error.message)?'conflicto_revision':'sin_confirmacion';}}
       finally{if(generation===writeEpoch){busy=false;paint();if(!saveError&&!job&&Object.keys(pending).length)saveTimer=win.setTimeout(flush,650);}}
     }
     async function checkSave(){
-      if(!active||!receipt||!job||!adapter?.read||busy||identity!==getIdentity())return;busy=true;paint();const generation=writeEpoch,owner=identity;
-      try{const response=await adapter.read({id:receipt.caso_id,request_id:job.request_id});if(generation!==writeEpoch||owner!==getIdentity())return;if(response?.ok!==true)throw Error('sin_confirmacion');acceptSaved(response,job);}
+      if(!job){return flush();}
+      if(!active||!receipt||!adapter?.read||busy||identity!==getIdentity())return;busy=true;paint();const generation=writeEpoch,owner=identity;
+      try{const response=await adapter.read({id:receipt.caso_id,request_id:job.request_id});if(generation!==writeEpoch||owner!==getIdentity())return;if(response?.ok!==true)throw Error('sin_confirmacion');acceptSaved(response,job);
+        const fresh=await adapter.read({id:receipt.caso_id});if(generation!==writeEpoch||owner!==getIdentity())return;const latest=validateRead(fresh,{type,id:receipt.caso_id});receipt=latest;draft={...draft,...copy(latest.intake),inputs:Object.fromEntries(Object.entries({...latest.intake.inputs,...pending}).filter(([,v])=>v!==null))};for(const control of controls)control.value=own(draft.inputs,control.id)?draft.inputs[control.id]:'';persist();}
       catch{if(generation===writeEpoch)saveError='sin_confirmacion';}
       finally{if(generation===writeEpoch){busy=false;paint();if(!saveError&&!job&&Object.keys(pending).length)saveTimer=win.setTimeout(flush,650);}}
     }
-    function acceptRead(response){const confirmed=validateRead(response,{type});deactivate();start({...confirmed,status:'confirmed',draft:confirmed.intake});return true;}
+    function acceptRead(response){
+      const confirmed=validateRead(response,{type}),owner=identity,generation=++writeEpoch;
+      void scopeReady.then(()=>{
+        if(disposed||generation!==writeEpoch||owner!==getIdentity())return;
+        let cached=null;try{if(key)cached=JSON.parse(storage.getItem(key+':case:'+confirmed.caso_id)||'null');}catch{}
+        deactivate();start({...confirmed,status:'confirmed',draft:confirmed.intake});
+        if(cached?.schema!=='ppp-intake-pending-v1'||cached.model_type!==type||cached.caso_id!==confirmed.caso_id)return;
+        const validPatch=values=>!!values&&typeof values==='object'&&!Array.isArray(values)&&Object.entries(values).every(([id,v])=>{const c=controls.find(c=>c.id===id);return c&&(v===null||typeof v==='number'&&Number.isFinite(v)&&v>=Number(c.min)&&v<=Number(c.max));});
+        if(!validPatch(cached.pending))return;
+        if(cached.job){const j=cached.job;if(j.caso_id!==confirmed.caso_id||typeof j.revision_esperada!=='string'||!j.revision_esperada||typeof j.request_id!=='string'||!/^[-A-Za-z0-9_.:]{1,256}$/.test(j.request_id)||!validPatch(j.intake?.inputs))return;job=copy(j);saveError='sin_confirmacion';}
+        pending=copy(cached.pending);if(!job&&Object.keys(pending).length&&cached.revision!==confirmed.revision)saveError='conflicto_revision';
+        const values={...confirmed.intake.inputs,...(job?.intake.inputs||{}),...pending};draft.inputs=Object.fromEntries(Object.entries(values).filter(([,v])=>v!==null));for(const control of controls)control.value=own(draft.inputs,control.id)?draft.inputs[control.id]:'';paint();persist();
+      });return true;
+    }
+    function stageContext(){
+      if(!active||!receipt||identity!==getIdentity())return null;
+      const cap=receipt.capabilities?.stages;
+      return {verified:true,ready:!busy&&!job&&!saveError&&!Object.keys(pending).length,model_type:type,case_id:receipt.caso_id,scenario_id:receipt.activo||'base',revision:receipt.revision,native_capability:cap,native_collection:receipt.stages_by_scenario?.[receipt.activo||'base'],native_checks:receipt.stage_checks_by_scenario?.[receipt.activo||'base'],native_calculated:receipt.stage_calculated_by_scenario?.[receipt.activo||'base'],...(cap?.initial_pending===true&&receipt.intake.stages?.count===1&&receipt.intake.stages.duration_months===null?{native_pending_stages:copy(receipt.intake.stages)}:{})};
+    }
+    async function saveStages(payload,options){
+      if(!active||!receipt||!adapter?.saveStages||stageOperation||busy||job||Object.keys(pending).length||identity!==getIdentity())throw Error('pendientes');
+      const generation=writeEpoch,owner=identity;stageOperation=true;controls.forEach(control=>control.disabled=true);
+      try{const response=await adapter.saveStages(payload,options);if(generation!==writeEpoch||owner!==getIdentity())throw Error('contexto_cambiado');
+        if(response?.ok===true){receipt=validateRead(response,{type,id:receipt.caso_id});draft={...draft,...copy(receipt.intake),inputs:Object.fromEntries(Object.entries(receipt.intake.inputs).filter(([,v])=>v!==null))};for(const control of controls)control.value=own(draft.inputs,control.id)?draft.inputs[control.id]:'';paint();persist();}return response;
+      }finally{if(generation===writeEpoch){stageOperation=false;controls.forEach(control=>control.disabled=!editable()||isStageDriver(control.id));}}
+    }
     function checkIdentity(){
       const next=getIdentity();if(next===identity)return;
       const hadCapture=active||opening;deactivate();identity=next;scopeReady=resolveScope();
@@ -258,7 +303,7 @@
     function preventAction(event){if(active&&event.target.closest?.(dangerous)){event.preventDefault();event.stopImmediatePropagation();}}
     doc.addEventListener('click',preventAction,true);
     win.addEventListener('storage',checkIdentity);win.addEventListener('focus',checkIdentity);const identityTimer=win.setInterval(checkIdentity,1000);
-    return {get active(){return active;},get blocking(){return active||opening;},get draft(){return draft?copy(draft):null;},open,paint,persist,flush,checkSave,acceptRead,deactivate,destroy(){disposed=true;epoch++;deactivate();win.clearInterval(identityTimer);win.removeEventListener('storage',checkIdentity);win.removeEventListener('focus',checkIdentity);doc.removeEventListener('click',preventAction,true);host.remove();}};
+    return {get active(){return active;},get blocking(){return active||opening;},get draft(){return draft?copy(draft):null;},open,paint,persist,flush,checkSave,acceptRead,stageContext,saveStages,deactivate,destroy(){disposed=true;epoch++;deactivate();win.clearInterval(identityTimer);win.removeEventListener('storage',checkIdentity);win.removeEventListener('focus',checkIdentity);doc.removeEventListener('click',preventAction,true);host.remove();}};
   }
   return {models,normalizeType,modelFor,parseNumber,validate,boardPath,validateRead,nativeAdapter,createController,mount,mountBoard};
 });
