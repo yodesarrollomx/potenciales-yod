@@ -22,6 +22,8 @@ La captura comienza con una etapa cuya duración aún no está definida. Texto o
 
 Cada operación conserva su identificador. Si Sheets tarda o se pierde la respuesta, el tablero busca el recibo por GET sin repetir la escritura. Mientras se confirma una operación de etapas se bloquean otras ediciones del mismo caso. El navegador cancela la reconciliación al cambiar de caso o sesión.
 
+La ficha, sus guardados y sus consultas de etapas dejan de esperar tras 60 segundos. Ese plazo libera el indicador de espera y muestra «Comprobar guardado»; no significa que Apps Script haya cancelado la operación. La solicitud y los datos se conservan y la recuperación consulta únicamente su recibo por GET. Una respuesta que llegue después del plazo no abre un caso ni sustituye una lectura posterior. Si el servidor todavía no confirma el recibo, el estado continúa pendiente; no se envía otro POST para repetir una creación incierta.
+
 ## Límite financiero de esta entrega
 
 Una ficha guardada permanece en `MODELO_PENDIENTE`, incluso si después se llenan todos sus campos. Esta entrega no contiene la migración transaccional de esa captura al programa financiero nativo. `calculated:false` y las comprobaciones financieras pendientes son deliberados; guardar datos o un calendario no acredita utilidad, caja, deuda ni reparto calculados.

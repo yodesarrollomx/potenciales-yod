@@ -22,6 +22,18 @@
   const copy=value=>JSON.parse(JSON.stringify(value));
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const own=(object,key)=>Object.prototype.hasOwnProperty.call(object,key);
+  const REQUEST_TIMEOUT_MS=60000;
+  // A deadline releases the UI; it does not prove that an Apps Script write was
+  // cancelled. Late results are ignored and recovery must use its exact GET receipt.
+  function boundedRequest(run,{timeoutMs=REQUEST_TIMEOUT_MS,schedule=setTimeout,cancel=clearTimeout}={}){
+    if(!Number.isInteger(timeoutMs)||timeoutMs<1)throw Error('plazo_invalido');
+    return new Promise((resolve,reject)=>{
+      let settled=false,timer=null;
+      const finish=(fn,value)=>{if(settled)return;settled=true;if(timer!==null)cancel(timer);fn(value);};
+      timer=schedule(()=>finish(reject,Error('request_timeout')),timeoutMs);
+      Promise.resolve().then(run).then(value=>finish(resolve,value),error=>finish(reject,error));
+    });
+  }
   const normalizeType=type=>{const value=String(type||'').toLowerCase();return value==='mixto'?'vertical':value;};
   function modelFor(type){const model=models[normalizeType(type)];if(!model)throw Error('tipo_invalido');return model;}
   function parseNumber(value){
@@ -64,19 +76,19 @@
     if(inputs)for(const [key,value] of Object.entries(inputs))if(!own(intake.inputs,key)||intake.inputs[key]!==value)throw Error('sin_confirmacion');
     return copy(response);
   }
-  function nativeAdapter({get,post,type}){
+  function nativeAdapter({get,post,type,...wait}){
     type=normalizeType(type);modelFor(type);
     const check=(response,expected)=>response?.ok===true?validateRead(response,{type,...expected}):response;
     return {
-      async open(draft){const {schema,model_type,nombre_caso,ubicacion,fuente,inputs,stages}=draft;return check(await post({tipo:'sheet-intake',tipo_desarrollo:type,request_id:draft.request_id,intake:{schema,model_type,nombre_caso,ubicacion,fuente,inputs,stages}}),{request_id:draft.request_id,inputs});},
-      async update(job){return check(await post({tipo:'sheet-intake',tipo_desarrollo:type,...job}),{id:job.caso_id,request_id:job.request_id,inputs:job.intake.inputs});},
-      async read({id,request_id}){return check(await get({recurso:'sheet-intake',tipo:type,...(id?{id}:{}),...(request_id?{request_id}:{})}),{id,request_id});},
-      async saveStages(payload,{reconcile=false}={}){return reconcile?get({recurso:'sheet-stages-receipt',tipo:type,caso_id:payload.caso_id,escenario_id:payload.escenario_id,request_id:payload.request_id}):post(payload);}
+      async open(draft){const {schema,model_type,nombre_caso,ubicacion,fuente,inputs,stages}=draft;return check(await boundedRequest(()=>post({tipo:'sheet-intake',tipo_desarrollo:type,request_id:draft.request_id,intake:{schema,model_type,nombre_caso,ubicacion,fuente,inputs,stages}}),wait),{request_id:draft.request_id,inputs});},
+      async update(job){return check(await boundedRequest(()=>post({tipo:'sheet-intake',tipo_desarrollo:type,...job}),wait),{id:job.caso_id,request_id:job.request_id,inputs:job.intake.inputs});},
+      async read({id,request_id}){return check(await boundedRequest(()=>get({recurso:'sheet-intake',tipo:type,...(id?{id}:{}),...(request_id?{request_id}:{})}),wait),{id,request_id});},
+      async saveStages(payload,{reconcile=false}={}){return boundedRequest(()=>reconcile?get({recurso:'sheet-stages-receipt',tipo:type,caso_id:payload.caso_id,escenario_id:payload.escenario_id,request_id:payload.request_id}):post(payload),wait);}
     };
   }
   const PREWRITE_ERRORS=['invalid_request','invalid_model_type','access_denied','invalid_identity','not_intake_case','revision_required','invalid_stage_plan','invalid_intake_payload','invalid_intake_schema','model_type_mismatch','invalid_nombre_caso','invalid_ubicacion','invalid_fuente','invalid_intake_inputs','unknown_intake_field','invalid_intake_quantity','required_intake_field','use_stage_operation','invalid_initial_stage','empty_intake_update','intake_refresh_failed','revision_conflict','intake_case_operation_pending'];
   function prewriteRejected(response,request,reconcile=false){return !reconcile&&response?.ok===false&&response.persisted===false&&response.request_id===request?.request_id&&typeof request?.request_id==='string'&&PREWRITE_ERRORS.includes(response.error);}
-  function createController({adapter,onState=()=>{},requestId=()=>globalThis.crypto.randomUUID(),resumeRequest=null}){
+  function createController({adapter,onState=()=>{},requestId=()=>globalThis.crypto.randomUUID(),resumeRequest=null,...wait}){
     if(!adapter||typeof adapter.open!=='function')throw Error('adaptador_requerido');
     let busy=false,destroyed=false,pending=null,completed=null,attempted=false;
     if(resumeRequest){const checked=validate(resumeRequest);if(!checked.ok||typeof resumeRequest.request_id!=='string'||!/^[-A-Za-z0-9_.:]{1,256}$/.test(resumeRequest.request_id))throw Error('solicitud_invalida');pending={fingerprint:JSON.stringify(checked.value),request:{...checked.value,request_id:resumeRequest.request_id}};attempted=true;}
@@ -90,8 +102,9 @@
       if(!pending)pending={fingerprint,request:{...checked.value,request_id:requestId()}};
       busy=true;onState({status:'opening',draft:copy(pending.request)});
       try{
-        const checking=attempted&&typeof adapter.read==='function';attempted=true;
-        const response=checking?await adapter.read({request_id:pending.request.request_id}):await adapter.open(copy(pending.request));
+        const checking=attempted;attempted=true;
+        if(checking&&typeof adapter.read!=='function')throw Error('recibo_no_disponible');
+        const response=await boundedRequest(()=>checking?adapter.read({request_id:pending.request.request_id}):adapter.open(copy(pending.request)),wait);
         if(destroyed)return {ok:false,error:'ficha_cerrada'};
         if(response?.ok!==true){
           // Sólo un rechazo explícito SIN escritura permite corregir y generar otra solicitud.
@@ -126,7 +139,7 @@
       const refresh=state.status==='error'&&['revision_conflict','intake_case_operation_pending','intake_refresh_failed'].includes(state.error);
       if(refresh)note.textContent='El libro cambió o tiene otra operación pendiente. Tu ficha se conserva; relee antes de reintentar.';
       if(state.status==='error'&&state.error==='access_denied')note.textContent='Esta sesión no tiene acceso para guardar. Vuelve a abrir el plan con una sesión autorizada.';
-      ui.querySelector('.pi-submit').textContent=refresh?'Releer y reintentar':'Abrir mi plan →';
+      ui.querySelector('.pi-submit').textContent=state.status==='uncertain'?'Comprobar guardado':refresh?'Releer y reintentar':'Abrir mi plan →';
       ui.querySelectorAll('input,select,textarea,button').forEach(el=>el.disabled=state.status==='opening'||!!type&&el.name==='model_type');
       if(state.status==='invalid')showErrors(state.errors);
       onState(state);
@@ -368,5 +381,5 @@
     win.addEventListener('storage',checkIdentity);win.addEventListener('focus',checkIdentity);win.addEventListener('pagehide',leavePage);win.addEventListener('pageshow',resumePage);const identityTimer=win.setInterval(checkIdentity,1000);
     return {get active(){return active;},get blocking(){return active||opening;},get draft(){return draft?copy(draft):null;},open,paint,persist,flush,checkSave,acceptRead,stageContext,saveStages,deactivate,destroy(){disposed=true;epoch++;deactivate();win.clearInterval(identityTimer);win.removeEventListener('storage',checkIdentity);win.removeEventListener('focus',checkIdentity);win.removeEventListener('pagehide',leavePage);win.removeEventListener('pageshow',resumePage);doc.removeEventListener('click',preventAction,true);host.remove();}};
   }
-  return {PREWRITE_ERRORS,prewriteRejected,models,normalizeType,modelFor,parseNumber,validate,boardPath,validateRead,nativeAdapter,createController,mount,mountBoard};
+  return {REQUEST_TIMEOUT_MS,boundedRequest,PREWRITE_ERRORS,prewriteRejected,models,normalizeType,modelFor,parseNumber,validate,boardPath,validateRead,nativeAdapter,createController,mount,mountBoard};
 });

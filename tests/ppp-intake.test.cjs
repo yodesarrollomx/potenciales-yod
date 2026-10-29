@@ -44,12 +44,12 @@ test('No se abre otro plan ni se anuncia confirmación si el adaptador responde 
   }
 });
 test('Una creación incierta reusa solicitud idéntica y no permite crear otro caso con datos distintos',async()=>{
-  let calls=0;const requests=[];
-  const controller=intake.createController({requestId:()=> 'req-1',adapter:{open:async request=>{requests.push(request);if(++calls===1)throw Error('network');return{ok:true,status:'confirmed',persisted:true,caso_id:'case-1',revision:'rev-1',request_id:request.request_id};}}});
+  let calls=0,reads=0;const requests=[];
+  const controller=intake.createController({requestId:()=> 'req-1',adapter:{open:async request=>{requests.push(request);calls++;throw Error('network');},read:async request=>{reads++;assert.equal(request.request_id,requests[0].request_id);return{ok:true,status:'confirmed',persisted:true,caso_id:'case-1',revision:'rev-1',request_id:request.request_id};}}});
   assert.equal((await controller.submit(sample())).ok,false);
   assert.equal((await controller.submit({...sample(),nombre_caso:'Otro'})).error,'creacion_por_confirmar');assert.equal(calls,1);
-  const r=await controller.submit(sample());assert.equal(r.ok,true);assert.equal(r.board_path,'mixto.html?open=case-1');assert.deepEqual(requests[0],requests[1]);
-  await controller.submit(sample());assert.equal(calls,2);
+  const r=await controller.submit(sample());assert.equal(r.ok,true);assert.equal(r.board_path,'mixto.html?open=case-1');assert.equal(reads,1);
+  await controller.submit(sample());assert.equal(calls,1);assert.equal(reads,1);
 });
 test('El modo borrador es explícito y nunca afirma persistencia Sheets',async()=>{
   const controller=intake.createController({requestId:()=> 'draft-1',adapter:{open:async request=>({ok:true,status:'draft',persisted:false,request_id:request.request_id})}});
@@ -82,4 +82,30 @@ test('Sólo el rechazo conocido del POST inicial con ID exacto retira una creaci
     let reads=0;const x=intake.createController({requestId:()=> 'new-request',adapter:{open:async()=>{throw Error('timeout');},read:async p=>{reads++;return{ok:false,error,persisted:false,request_id:p.request_id};}}});await x.submit(sample());await x.submit(sample());assert.equal(reads,1);assert.equal(x.pending.request_id,'new-request','GET '+error+' cannot discard an earlier write');
   }
   for(const error of ['unexpected','operation_pending','receipt_not_found','request_payload_mismatch','intake_readback_mismatch']){const c=intake.createController({requestId:()=> 'new-request',adapter:{open:async p=>({ok:false,error,persisted:false,request_id:p.request_id})}});await c.submit(sample());assert.equal(c.pending.request_id,'new-request');}
+});
+
+function clock(){let next=0;const timers=new Map();return{schedule(fn,ms){const id=++next;timers.set(id,{fn,ms});return id;},cancel(id){timers.delete(id);},expire(){assert.equal(timers.size,1);const [id,t]=timers.entries().next().value;timers.delete(id);t.fn();return t.ms;},get size(){return timers.size;}};}
+const turn=()=>new Promise(resolve=>setImmediate(resolve));
+test('A slow creation releases the UI at 60 seconds, ignores its late ACK and recovers only by exact GET',async()=>{
+  const timer=clock(),states=[],calls=[];let resolvePost,resolveRead;
+  const controller=intake.createController({...timer,requestId:()=> 'slow-creation',onState:s=>states.push(s.status),adapter:{open:request=>{calls.push(['POST',request.request_id]);return new Promise(resolve=>{resolvePost=resolve;});},read:request=>{calls.push(['GET',request.request_id]);return new Promise(resolve=>{resolveRead=resolve;});}}});
+  const opening=controller.submit(sample());await turn();assert.equal((await controller.submit(sample())).error,'ocupado');assert.equal(timer.expire(),60000);assert.equal((await opening).ok,false);assert.equal(states.at(-1),'uncertain');assert.equal(controller.pending.request_id,'slow-creation');
+  resolvePost({ok:true,status:'confirmed',persisted:true,caso_id:'late-case',revision:'r1',request_id:'slow-creation'});await turn();assert.equal(states.includes('confirmed'),false);
+  const checking=controller.submit(sample());await turn();assert.deepEqual(calls,[['POST','slow-creation'],['GET','slow-creation']]);
+  resolveRead({ok:true,status:'confirmed',persisted:true,caso_id:'canonical-case',revision:'r2',request_id:'slow-creation'});assert.equal((await checking).caso_id,'canonical-case');assert.equal(states.at(-1),'confirmed');assert.equal(timer.size,0);
+});
+test('A slow receipt read is bounded and remains recoverable without another POST or request ID',async()=>{
+  const timer=clock();let posts=0,reads=0,resolveLate;
+  const controller=intake.createController({...timer,requestId:()=> 'same-request',adapter:{open:async()=>{posts++;throw Error('lost_ack');},read:()=>{reads++;if(reads===1)return new Promise(resolve=>{resolveLate=resolve;});return Promise.resolve({ok:true,status:'confirmed',persisted:true,caso_id:'same-case',revision:'r1',request_id:'same-request'});}}});
+  await controller.submit(sample());const checking=controller.submit(sample());await turn();timer.expire();assert.equal((await checking).ok,false);resolveLate({ok:false,persisted:false,error:'invalid_request',request_id:'same-request'});await turn();assert.equal(controller.pending.request_id,'same-request');assert.equal((await controller.submit(sample())).caso_id,'same-case');assert.equal(posts,1);assert.equal(reads,2);
+});
+test('An uncertain custom adapter without a receipt reader never repeats the write',async()=>{
+  let posts=0;const controller=intake.createController({requestId:()=> 'once-only',adapter:{open:async()=>{posts++;throw Error('lost_ack');}}});await controller.submit(sample());await controller.submit(sample());assert.equal(posts,1);assert.equal(controller.pending.request_id,'once-only');
+});
+test('Native autosave and both stage transports share a bounded wait without retrying any transport',async()=>{
+  for(const operation of ['update','read','stage-write','stage-read']){
+    const timer=clock(),calls=[];const adapter=intake.nativeAdapter({...timer,type:'vertical',get:query=>{calls.push(['GET',query]);return new Promise(()=>{});},post:payload=>{calls.push(['POST',payload]);return new Promise(()=>{});}});
+    const job={caso_id:'case-1',request_id:'same-operation',intake:{inputs:{inTerreno:500}}};
+    const waiting=operation==='update'?adapter.update(job):operation==='read'?adapter.read({id:'case-1',request_id:job.request_id}):adapter.saveStages(job,{reconcile:operation==='stage-read'});const rejected=assert.rejects(waiting,/request_timeout/);await turn();assert.equal(timer.expire(),60000);await rejected;assert.equal(calls.length,1);assert.equal(calls[0][0],['read','stage-read'].includes(operation)?'GET':'POST');
+  }
 });
