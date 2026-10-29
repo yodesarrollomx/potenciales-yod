@@ -123,5 +123,23 @@ const copy=value=>JSON.parse(JSON.stringify(value));
   await page.evaluate(()=>localStorage.setItem('pyod_clave_v1','sy-second-synthetic-user'));
   await page.getByText('La sesión cambió.',{exact:false}).waitFor();assert.equal(await page.locator('.ppp-intake [name=nombre_caso]').count(),0);
   assert.deepEqual(errors,[]);assert.equal(net.posts.length,0);await context.close();console.log(type+' '+width+'px: minimum→same board, native capture, blank unknowns, edit CAS/readback, reopen, session revoke PASS');
- }}finally{await browser.close();}
+ }
+ // A lock rejection before reservation is recovered by an explicit, identical
+ // native POST after the exact GET says its receipt is not present yet.
+ const replayContext=await browser.newContext({viewport:{width:390,height:900}}),replayNet=await install(replayContext,{seed:null}),replayPage=await replayContext.newPage(),replayPosts=[];let replayBooks=0;
+ await replayContext.route('**/*',async route=>{
+  const request=route.request(),url=new URL(request.url());if(!/script\.google/.test(url.hostname))return route.fallback();
+  const payload=request.method()==='POST'?request.postDataJSON():null;
+  if(payload?.tipo==='sheet-intake'){
+   replayPosts.push(copy(payload));if(replayPosts.length===1)return route.fulfill({contentType:'application/json',body:'{"ok":false,"error":"ocupado"}'});
+   replayBooks++;const response={ok:true,status:'confirmed',persisted:true,pending:true,calculated:false,model_status:'MODELO_PENDIENTE',caso_id:'replay-synthetic-residencial',revision:'replay-r1',request_id:payload.request_id,intake:copy(payload.intake),activo:'base',escenarios:[{id:'base',nombre:'Base',activo:true,esBase:true}],capabilities:{intake:{schema:1,read:true,write:true}}};return route.fulfill({contentType:'application/json',body:JSON.stringify(response)});
+  }
+  if(request.method()==='GET'&&url.searchParams.get('recurso')==='sheet-intake')return route.fulfill({contentType:'application/json',body:JSON.stringify({ok:false,error:'receipt_not_found',request_id:url.searchParams.get('request_id')})});
+  return route.fallback();
+ });
+ await replayPage.goto('https://ppp.test/potenciales-yod/residencial.html?new=1');const replayForm=replayPage.locator('.ppp-intake');await replayForm.locator('[name=nombre_caso]').fill('Reenvío sintético');await replayForm.locator('[name=ubicacion]').fill('Ubicación sintética');await replayForm.locator('[name=inSuperficie]').fill('500');await replayForm.getByRole('button',{name:'Abrir mi plan'}).click();await replayForm.getByRole('button',{name:'Comprobar guardado',exact:true}).waitFor();
+ assert.equal(await replayForm.getByRole('button',{name:'Reintentar misma solicitud',includeHidden:true}).isVisible(),false);assert.match(await replayForm.locator('[data-intake-status]').textContent(),/ocupado/);
+ await replayForm.getByRole('button',{name:'Comprobar guardado',exact:true}).click();await replayForm.getByRole('button',{name:'Reintentar misma solicitud',exact:true}).waitFor();assert.equal(replayPosts.length,1,'receipt lookup never resubmits automatically');
+ await replayForm.getByRole('button',{name:'Reintentar misma solicitud',exact:true}).click();await replayPage.locator('.pi-board-banner').waitFor();assert.equal(replayPosts.length,2);assert.deepEqual(replayPosts[1],replayPosts[0]);assert.equal(replayBooks,1);assert.equal(replayNet.posts.length,0);await replayContext.close();console.log('native creation replay: explicit same POST, same identity/payload, one synthetic book PASS');
+ }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

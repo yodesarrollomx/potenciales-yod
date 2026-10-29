@@ -7,3 +7,4 @@
 .ppp-intake-reading main.container,.ppp-intake-reading .sticky-header,.ppp-intake-reading .ppp-hud,.ppp-intake-reading #patrimonialNative,.ppp-intake-capture .sticky-header,.ppp-intake-capture .ppp-hud,.ppp-intake-capture #escBar,.ppp-intake-capture #pppVersiones,.ppp-intake-capture .gate-agua{display:none!important}
 
 .ppp-intake-opening .ppp-hud,.ppp-intake-opening #escBar,.ppp-intake-opening #pppVersiones,.ppp-intake-opening .gate-agua{display:none!important}
+.ppp-intake [hidden]{display:none!important}.ppp-intake [data-intake-replay]{border:1px solid var(--pi-line);border-radius:9px;padding:11px 14px;color:var(--pi-ink);background:transparent}

@@ -83,15 +83,18 @@
   function nativeAdapter({get,post,type,...wait}){
     type=normalizeType(type);modelFor(type);
     const check=(response,expected)=>response?.ok===true?validateRead(response,{type,...expected}):response;
+    // Verified PPPIntake.operate serializes the same actor/request/payload under
+    // its lock: confirmed operations return their receipt; pending ones reconcile.
+    const open=async(draft,beforeSend=()=>true)=>{const {schema,model_type,nombre_caso,ubicacion,fuente,inputs,stages}=draft;return check(await boundedRequest(()=>{if(beforeSend()!==true)throw Error('contexto_cambiado');return post({tipo:'sheet-intake',tipo_desarrollo:type,request_id:draft.request_id,intake:{schema,model_type,nombre_caso,ubicacion,fuente,inputs,stages}});},wait),{request_id:draft.request_id,inputs});};
     return {
-      async open(draft){const {schema,model_type,nombre_caso,ubicacion,fuente,inputs,stages}=draft;return check(await boundedRequest(()=>post({tipo:'sheet-intake',tipo_desarrollo:type,request_id:draft.request_id,intake:{schema,model_type,nombre_caso,ubicacion,fuente,inputs,stages}}),wait),{request_id:draft.request_id,inputs});},
+      creationReplayContract:'ppp-intake-atomic-request-v1',open,replayCreation:(draft,{beforeSend}={})=>open(draft,typeof beforeSend==='function'?beforeSend:()=>false),
       async update(job){return check(await boundedRequest(()=>post({tipo:'sheet-intake',tipo_desarrollo:type,...job}),wait),{id:job.caso_id,request_id:job.request_id,inputs:job.intake.inputs});},
       async read({id,request_id}){return check(await boundedRequest(()=>get({recurso:'sheet-intake',tipo:type,...(id?{id}:{}),...(request_id?{request_id}:{})}),wait),{id,request_id});},
       async saveStages(payload,{reconcile=false}={}){return boundedRequest(()=>reconcile?get({recurso:'sheet-stages-receipt',tipo:type,caso_id:payload.caso_id,escenario_id:payload.escenario_id,request_id:payload.request_id}):post(payload),wait);}
     };
   }
   const PREWRITE_ERRORS=['invalid_request','invalid_model_type','access_denied','invalid_identity','not_intake_case','revision_required','invalid_stage_plan','invalid_intake_payload','invalid_intake_schema','model_type_mismatch','invalid_nombre_caso','invalid_ubicacion','invalid_fuente','invalid_intake_inputs','unknown_intake_field','invalid_intake_quantity','required_intake_field','use_stage_operation','invalid_initial_stage','empty_intake_update','intake_refresh_failed','revision_conflict','intake_case_operation_pending'];
-  const SAFE_ERRORS=new Set([...PREWRITE_ERRORS,'request_timeout','receipt_not_found','lock_busy','ocupado','operation_pending','request_payload_mismatch','intake_readback_mismatch','native_write_rejected','recibo_no_disponible','creacion_por_confirmar','sin_confirmacion','clave','revocado','expirado','board','admin','tipo','intake_not_installed']);
+  const SAFE_ERRORS=new Set([...PREWRITE_ERRORS,'request_timeout','receipt_not_found','lock_busy','ocupado','operation_pending','request_payload_mismatch','intake_readback_mismatch','native_write_rejected','recibo_no_disponible','creacion_por_confirmar','sin_confirmacion','clave','revocado','expirado','board','admin','tipo','intake_not_installed','creation_replay_unavailable','contexto_cambiado']);
   const safeError=value=>typeof value==='string'&&SAFE_ERRORS.has(value)?value:'sin_confirmacion';
   function diagnosticText(state){
     if(!['error','uncertain'].includes(state?.status)||typeof state.request_id!=='string'||!/^[-A-Za-z0-9_.:]{1,256}$/.test(state.request_id))return '';
@@ -99,29 +102,36 @@
     return ' Diagnóstico: '+initial+(latest!==initial?' · última consulta: '+latest:'')+' · Solicitud: '+state.request_id;
   }
   function prewriteRejected(response,request,reconcile=false){return !reconcile&&response?.ok===false&&response.persisted===false&&response.request_id===request?.request_id&&typeof request?.request_id==='string'&&PREWRITE_ERRORS.includes(response.error);}
-  function createController({adapter,onState=()=>{},requestId=()=>globalThis.crypto.randomUUID(),resumeRequest=null,...wait}){
+  function createController({adapter,onState=()=>{},requestId=()=>globalThis.crypto.randomUUID(),resumeRequest=null,canReplay=()=>false,...wait}){
     if(!adapter||typeof adapter.open!=='function')throw Error('adaptador_requerido');
-    let busy=false,destroyed=false,pending=null,completed=null,attempted=false,initialError=null;
-    function failure(status,error,request_id){const reason=safeError(error);if(!initialError)initialError=reason;onState({status,error:reason,initial_error:initialError,request_id});return{ok:false,error:reason};}
+    let busy=false,destroyed=false,pending=null,completed=null,attempted=false,initialError=null,replayAllowed=false;
+    const replayCapable=()=>{try{return adapter.creationReplayContract==='ppp-intake-atomic-request-v1'&&typeof adapter.replayCreation==='function'&&canReplay()===true;}catch{return false;}};
+    function failure(status,error,request_id){const reason=safeError(error);if(!initialError)initialError=reason;onState({status,error:reason,initial_error:initialError,request_id,can_replay:replayAllowed&&replayCapable()});return{ok:false,error:reason};}
     if(resumeRequest){const checked=validate(resumeRequest);if(!checked.ok||typeof resumeRequest.request_id!=='string'||!/^[-A-Za-z0-9_.:]{1,256}$/.test(resumeRequest.request_id))throw Error('solicitud_invalida');pending={fingerprint:JSON.stringify(checked.value),request:{...checked.value,request_id:resumeRequest.request_id}};attempted=true;}
-    async function submit(raw){
+    async function submit(raw,replaying=false){
       if(destroyed)throw Error('ficha_cerrada');
       if(busy)return {ok:false,error:'ocupado'};
       if(completed)return copy(completed);
       const checked=validate(raw);if(!checked.ok){onState({status:'invalid',errors:checked.errors});return checked;}
       const fingerprint=JSON.stringify(checked.value);
-      if(pending&&pending.fingerprint!==fingerprint)return failure('uncertain','creacion_por_confirmar',pending.request.request_id);
+      if(pending&&pending.fingerprint!==fingerprint){replayAllowed=false;return failure('uncertain','creacion_por_confirmar',pending.request.request_id);}
+      if(replaying&&(!pending||!replayAllowed||!replayCapable())){replayAllowed=false;return failure('uncertain','creation_replay_unavailable',pending?.request.request_id);}
       if(!pending){initialError=null;pending={fingerprint,request:{...checked.value,request_id:requestId()}};}
-      busy=true;onState({status:'opening',draft:copy(pending.request)});
+      replayAllowed=false;busy=true;onState({status:'opening',draft:copy(pending.request),replaying});
       try{
-        const checking=attempted;attempted=true;
+        const checking=attempted&&!replaying;attempted=true;
         if(checking&&typeof adapter.read!=='function')throw Error('recibo_no_disponible');
-        const response=await boundedRequest(()=>checking?adapter.read({request_id:pending.request.request_id}):adapter.open(copy(pending.request)),wait);
+        const response=await boundedRequest(()=>{
+          if(replaying){if(!replayCapable())throw Error('contexto_cambiado');return adapter.replayCreation(copy(pending.request),{beforeSend:replayCapable});}
+          return checking?adapter.read({request_id:pending.request.request_id}):adapter.open(copy(pending.request));
+        },wait);
         if(destroyed)return {ok:false,error:'ficha_cerrada'};
         if(response?.ok!==true){
           // Sólo un rechazo explícito SIN escritura permite corregir y generar otra solicitud.
           const request_id=pending.request.request_id;
-          if(prewriteRejected(response,pending.request,checking)){pending=null;attempted=false;}
+          // A replay refusal describes only that attempt, not the earlier write.
+          if(prewriteRejected(response,pending.request,checking||replaying)){pending=null;attempted=false;}
+          else if(checking&&response?.ok===false&&response.error==='receipt_not_found'&&response.request_id===request_id&&Object.keys(response).sort().join('|')==='error|ok|request_id'&&replayCapable())replayAllowed=true;
           return failure(pending?'uncertain':'error',response?.error,request_id);
         }
         if(response.request_id!==pending.request.request_id||!['draft','confirmed'].includes(response.status))throw Error('sin_confirmacion');
@@ -134,24 +144,26 @@
       }catch(error){if(!destroyed)return failure('uncertain',error?.message,pending?.request.request_id);return {ok:false,error:'sin_confirmacion'};}
       finally{busy=false;}
     }
-    return {submit,get pending(){return pending?copy(pending.request):null;},destroy(){destroyed=true;}};
+    return {submit:raw=>submit(raw),replay:raw=>submit(raw,true),get pending(){return pending?copy(pending.request):null;},destroy(){destroyed=true;replayAllowed=false;}};
   }
-  function mount({container,type='',value={},adapter,onOpen=()=>{},onCancel=()=>{},onState=()=>{},resumeRequest=null,existingCaseId=''}){
+  function mount({container,type='',value={},adapter,onOpen=()=>{},onCancel=()=>{},onState=()=>{},resumeRequest=null,canReplay=()=>false,existingCaseId=''}){
     if(!container||existingCaseId)return null;
     const doc=container.ownerDocument;let selected=normalizeType(type||value.model_type),destroyed=false;
     if(selected&&!own(models,selected))throw Error('tipo_invalido');
     const drafts={};let common={nombre_caso:value.nombre_caso||'',ubicacion:value.ubicacion||'',fuente:value.fuente||''};
     if(selected)drafts[selected]={...(value.inputs||{})};
     const ui=doc.createElement('section');ui.className='ppp-intake';container.append(ui);
-    const controller=createController({adapter,resumeRequest,onState:state=>{
+    const controller=createController({adapter,resumeRequest,canReplay,onState:state=>{
       if(destroyed)return;
       const note=ui.querySelector('[data-intake-status]');
       const messages={opening:'Abriendo tu plan…',uncertain:'La apertura está por confirmar. Tus datos se conservan; reintenta con la misma ficha.',error:'No se pudo abrir el plan. Tus datos se conservan.',confirmed:'Plan guardado. Abriendo su tablero…',draft:'Ficha preparada. Todavía no está guardada en Sheets.'};
       note.textContent=messages[state.status]||'';
+      if(state.replaying)note.textContent='Reenviando la misma solicitud, con los mismos datos e identificador…';
       const refresh=state.status==='error'&&['revision_conflict','intake_case_operation_pending','intake_refresh_failed'].includes(state.error);
       if(refresh)note.textContent='El libro cambió o tiene otra operación pendiente. Tu ficha se conserva; relee antes de reintentar.';
       if(state.status==='error'&&state.error==='access_denied')note.textContent='Esta sesión no tiene acceso para guardar. Vuelve a abrir el plan con una sesión autorizada.';
       note.textContent+=diagnosticText(state);
+      const replay=ui.querySelector('[data-intake-replay]');if(replay)replay.hidden=state.can_replay!==true;
       ui.querySelector('.pi-submit').textContent=state.status==='uncertain'?'Comprobar guardado':refresh?'Releer y reintentar':'Abrir mi plan →';
       ui.querySelectorAll('input,select,textarea,button').forEach(el=>el.disabled=state.status==='opening'||!!type&&el.name==='model_type');
       if(state.status==='invalid')showErrors(state.errors);
@@ -168,10 +180,11 @@
         ${model?`<div class="pi-type-description">${esc(model.description)}</div><div class="pi-fields">${model.fields.filter(f=>f.required).map(inputMarkup).join('')}</div><details class="pi-optional"><summary>Si ya lo sabes, agrega estos datos <span>Opcional</span></summary><div class="pi-fields">${model.fields.filter(f=>!f.required).map(inputMarkup).join('')}</div></details>`:''}
         <label class="pi-field pi-source"><span>Fuente o referencia <small>Opcional</small></span><textarea name="fuente" maxlength="600" rows="2" placeholder="Plano, documento o referencia de los datos">${esc(common.fuente)}</textarea><small class="pi-error" data-error="fuente"></small></label>
         <div class="pi-start"><span class="pi-stage">1</span><div><strong>El plan comienza con una etapa</strong><p>Su duración queda pendiente. Los datos que aún no captures seguirán por definir.</p></div></div>
-        <p class="pi-error" data-error="inputs"></p><p class="pi-error" data-error="caso_id"></p><div class="pi-footer"><p data-intake-status role="status" aria-live="polite"></p><button class="pi-submit" type="submit">Abrir mi plan <span aria-hidden="true">→</span></button></div></form>`;
+        <p class="pi-error" data-error="inputs"></p><p class="pi-error" data-error="caso_id"></p><div class="pi-footer"><p data-intake-status role="status" aria-live="polite"></p><button data-intake-replay type="button" hidden>Reintentar misma solicitud</button><button class="pi-submit" type="submit">Abrir mi plan <span aria-hidden="true">→</span></button></div></form>`;
       ui.querySelector('[name="model_type"]').addEventListener('change',event=>{if(type)return;remember();selected=event.target.value;render();});
       ui.querySelector('[data-intake-cancel]').addEventListener('click',()=>onCancel());
-      ui.querySelector('form').addEventListener('submit',async event=>{event.preventDefault();remember();showErrors({});const result=await controller.submit({...common,model_type:selected,inputs:drafts[selected]||{}});if(result.ok&&!destroyed)onOpen(result);});
+      const send=async replay=>{remember();showErrors({});const raw={...common,model_type:selected,inputs:drafts[selected]||{}},result=await(replay?controller.replay(raw):controller.submit(raw));if(result.ok&&!destroyed)onOpen(result);};
+      ui.querySelector('form').addEventListener('submit',event=>{event.preventDefault();void send(false);});ui.querySelector('[data-intake-replay]').addEventListener('click',()=>void send(true));
     }
     render();return {element:ui,controller,destroy(){destroyed=true;controller.destroy();ui.remove();},get value(){remember();return {...common,model_type:selected,inputs:{...(drafts[selected]||{})}};}};
   }
@@ -287,7 +300,7 @@
         if(prewriteRejected(response,value)&&['revision_conflict','intake_case_operation_pending'].includes(response.error))refreshMetadata=true;
         return response;
       },read:({request_id})=>adapter.read({id:metadataCase,request_id})}:adapter||{open:async value=>({ok:true,status:'draft',persisted:false,request_id:value.request_id})};
-      form=mount({container:host,type,value:known,adapter:formAdapter,resumeRequest:creation,onState:state=>{if(receipt||!key||openingIdentity!==getIdentity())return;try{if(state.status==='opening'&&state.draft)storage.setItem(key+':creating',JSON.stringify(state.draft));if(['confirmed','draft','error'].includes(state.status))storage.removeItem(key+':creating');}catch{}},onOpen:result=>{
+      form=mount({container:host,type,value:known,adapter:formAdapter,resumeRequest:creation,canReplay:()=>!receipt&&!disposed&&openingIdentity===getIdentity(),onState:state=>{if(receipt||!key||openingIdentity!==getIdentity())return;try{if(state.status==='opening'&&state.draft)storage.setItem(key+':creating',JSON.stringify(state.draft));if(['confirmed','draft','error'].includes(state.status))storage.removeItem(key+':creating');}catch{}},onOpen:result=>{
         if(openingIdentity!==getIdentity()){checkIdentity();return;}
         // Conservar capturas de otras áreas, pero un opcional borrado de la ficha sigue vacío.
         if(prior){const areaInputs=Object.fromEntries(Object.entries(prior.inputs).filter(([id])=>!models[type].fields.some(f=>f.id===id)));result.draft.inputs={...areaInputs,...result.draft.inputs};}start(result);
