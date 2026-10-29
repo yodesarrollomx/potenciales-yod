@@ -190,3 +190,11 @@ test('stage-managed calendar remains native read-only without changing the 21-fi
  for(const id of managed){const input=h.field(fields.find(f=>f.id===id).label+' · volumen 1');assert.equal(input.readOnly,true);h.edit(id,999);assert.equal(h.view.snapshot().volumes[0].values[id],before.volumes[0].values[id]);}
  assert.equal(h.field('Viviendas por planta · promedio · volumen 1').readOnly,false);assert.match(h.container.textContent,/Calendario calculado por etapas en Sheets/);assert.equal(api.validateFields(h.view.snapshot().fields).length,21);assert.equal(h.view.snapshotStatus().dirty,false);h.view.dispose();
 });
+
+test('factory seed preserves its native stage calendar while allowing geometry review',async()=>{
+ const ctx=seedContext(),managed=['construction_start_month','construction_duration_months','sales_start_month'];ctx.managed_volume_fields=managed;let reviewed;
+ const h=mounted(ctx,null,{mode:'seed',onReview:async request=>{reviewed=request;return{ok:true,status:'reviewed',request_id:request.request_id,template_revision:request.context.revision,volumes:request.volumes};}}),before=copy(h.view.snapshot());
+ for(const id of managed){assert.equal(h.field(fields.find(f=>f.id===id).label+' · volumen 1').readOnly,true);h.edit(id,999);assert.equal(h.view.snapshot().volumes[0].values[id],before.volumes[0].values[id]);}
+ assert.equal(h.button('2 volúmenes').disabled,true);assert.equal(h.button('Nuevo cuerpo: requiere revisar calendario').disabled,true);
+ h.edit('footprint_m2',250);assert.equal(h.view.snapshot().volumes[0].values.footprint_m2,250);assert.equal(await h.view.save(),true);for(const id of managed)assert.equal(reviewed.volumes.volumes[0].values[id],before.volumes[0].values[id]);h.view.dispose();
+});

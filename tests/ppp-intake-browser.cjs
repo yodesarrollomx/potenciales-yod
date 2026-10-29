@@ -7,13 +7,15 @@ const copy=value=>JSON.parse(JSON.stringify(value));
 (async()=>{
  const browser=await chromium.launch({headless:true,proxy:{server:'http://127.0.0.1:9'},...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE,args:['--no-sandbox','--disable-dev-shm-usage']}:{})});
  try{for(const width of [1280,390])for(const [type,oldKey] of Object.entries(keys)){
-  const context=await browser.newContext({viewport:{width,height:900}}),net=await install(context,{seed:null}),page=await context.newPage(),errors=[],writes=[],stageWrites=[],receipts=new Map();let model=null,uncertainNext=false;
+  if(process.env.PPP_INTAKE_TYPE&&process.env.PPP_INTAKE_TYPE!==type)continue;if(process.env.PPP_INTAKE_WIDTH&&Number(process.env.PPP_INTAKE_WIDTH)!==width)continue;
+  const context=await browser.newContext({viewport:{width,height:900}}),net=await install(context,{seed:null}),page=await context.newPage(),errors=[],writes=[],stageWrites=[],receiptReads=[],receipts=new Map();let model=null,uncertainNext=false,stageReceipt=null,blockedNext=false;
   page.on('pageerror',e=>errors.push(e.message));
   await context.route('**/*',async route=>{
     const request=route.request(),url=new URL(request.url());if(!/script\.google/.test(url.hostname))return route.fallback();
     const payload=request.method()==='POST'?request.postDataJSON():null;
     if(payload?.tipo==='sheet-intake'){
       writes.push(copy(payload));
+      if(blockedNext){blockedNext=false;return route.fulfill({contentType:'application/json',body:'{"ok":false,"error":"intake_case_operation_pending","persisted":false}'});}
       if(!model){model={ok:true,status:'confirmed',persisted:true,pending:true,calculated:false,model_status:'MODELO_PENDIENTE',caso_id:'intake-synthetic-'+type,revision:'r1',request_id:payload.request_id,intake:copy(payload.intake),activo:'base',escenarios:[{id:'base',nombre:'Base',activo:true,esBase:true}],capabilities:{intake:{schema:1,read:true,write:true},stages:{schema:1,read:true,write:true,max_stages:24,max_months:1200,modes:['sequential'],allocation_modes:['preserve'],initial_pending:true,assumption:'Calendario relativo desde el mes 1; resultados financieros pendientes.'}},stages_by_scenario:{}};if(['macrolotes','residencial'].includes(type))Object.assign(model.intake.inputs,{inEtapas:1,inMesesUrbEtapa:null});}
       else{assert.equal(payload.caso_id,model.caso_id);assert.equal(payload.revision_esperada,model.revision);model={...model,revision:'r'+writes.length,request_id:payload.request_id,intake:{...model.intake,...payload.intake,inputs:{...model.intake.inputs,...payload.intake.inputs}}};}
       receipts.set(payload.request_id,copy(model));if(uncertainNext){uncertainNext=false;return route.fulfill({status:503,contentType:'application/json',body:'{"ok":false,"error":"synthetic_uncertain"}'});}return route.fulfill({contentType:'application/json',body:JSON.stringify(model)});
@@ -25,9 +27,10 @@ const copy=value=>JSON.parse(JSON.stringify(value));
       model={...model,revision:'stage-r4',request_id:payload.request_id,intake:{...model.intake,stages:copy(payload.stages)},stages_by_scenario:{base:collection},stage_checks_by_scenario:{base:checks},stage_calculated_by_scenario:{base:false},capabilities:{stages:{...model.capabilities.stages,initial_pending:false}}};
       model.capabilities.intake={schema:1,read:true,write:true};if(['macrolotes','residencial'].includes(type))Object.assign(model.intake.inputs,{inEtapas:payload.stages.count,inMesesUrbEtapa:payload.stages.duration_months});
       model.stage_receipt={request_id:payload.request_id,caso_id:payload.caso_id,escenario_id:'base',base_revision:payload.revision_esperada,result_revision:model.revision,stages:collection,calculated:false,checks};
-      return route.fulfill({contentType:'application/json',body:JSON.stringify(model)});
+      stageReceipt=copy(model);return route.fulfill({status:503,contentType:'application/json',body:'{"ok":false,"error":"synthetic_stage_uncertain"}'});
     }
-    if(request.method()==='GET'&&url.searchParams.get('recurso')==='sheet-intake')return route.fulfill({contentType:'application/json',body:JSON.stringify(url.searchParams.get('request_id')?receipts.get(url.searchParams.get('request_id')):model)});
+    if(request.method()==='GET'&&url.searchParams.get('recurso')==='sheet-stages-receipt'){assert.equal(url.searchParams.get('request_id'),stageWrites[0].request_id);return route.fulfill({contentType:'application/json',body:JSON.stringify(stageReceipt)});}
+    if(request.method()==='GET'&&url.searchParams.get('recurso')==='sheet-intake'){if(url.searchParams.get('request_id'))receiptReads.push(url.searchParams.get('request_id'));return route.fulfill({contentType:'application/json',body:JSON.stringify(url.searchParams.get('request_id')?receipts.get(url.searchParams.get('request_id')):model)});}
     if(request.method()==='GET'&&url.searchParams.get('recurso')==='caso'&&model)return route.fulfill({contentType:'application/json',body:JSON.stringify({ok:true,caso:{caso_id:model.caso_id,nombre_caso:model.intake.nombre_caso,calculo_sheet:model}})});
     return route.fallback();
   });
@@ -55,8 +58,13 @@ const copy=value=>JSON.parse(JSON.stringify(value));
   await page.waitForFunction(()=>document.querySelector('[data-intake-board-status]')?.textContent.includes('r3'));
   assert.equal(writes.length,3);assert.deepEqual(writes[2].intake.inputs,{[required.id]:newValue});assert.equal(model.intake.inputs[required.id],newValue);
   const stageEditor=page.locator('#pppIntakeStages');assert.match(await stageEditor.locator('.ppp-stages-current').textContent(),/1 etapa actual/);
-  await stageEditor.getByRole('textbox',{name:'Instrucción para etapas'}).fill('Van a ser 3 etapas de 12 meses');await stageEditor.getByRole('button',{name:'Aplicar al plan',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#pppIntakeStages')?.dataset.stageState==='needs_review');
-  assert.equal(stageWrites.length,1);assert.equal(await stageEditor.locator('.ppp-stages-list li').count(),3);assert.match(await stageEditor.locator('.ppp-stages-list').textContent(),/mes 25 a 36/);assert.equal(await stageEditor.locator('.ppp-check-pending').count(),7);assert.equal(model.calculated,false);
+  await stageEditor.getByRole('textbox',{name:'Instrucción para etapas'}).fill('Van a ser 3 etapas de 12 meses');await stageEditor.getByRole('button',{name:'Aplicar al plan',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#pppIntakeStages')?.dataset.stageState==='unconfirmed');
+  assert.equal(await page.locator('#'+required.id).isDisabled(),true);assert.equal(await page.getByRole('button',{name:'Editar ficha',exact:true}).isDisabled(),true);
+  await page.locator('#'+required.id).evaluate((input,value)=>{input.value=String(value);input.dispatchEvent(new Event('input',{bubbles:true}));},required.min+5);
+  await page.waitForTimeout(800);assert.equal(writes.length,3,'uncertain stage blocks every new quantity POST');assert.equal(await page.locator('#'+required.id).inputValue(),String(newValue));
+  if(width===390){await page.reload();await page.getByRole('button',{name:'Comprobar etapas',exact:true}).waitFor({timeout:10000}).catch(async error=>{console.error({errors,cache:await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.includes(':case:')).map(k=>JSON.parse(localStorage.getItem(k)))),banner:await page.locator('.pi-board-banner').textContent()});throw error;});assert.equal(await page.locator('#'+required.id).isDisabled(),true);await page.getByRole('button',{name:'Comprobar etapas',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('[data-intake-edit]')?.disabled);}
+  else{await stageEditor.getByRole('button',{name:'Comprobar guardado',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#pppIntakeStages')?.dataset.stageState==='needs_review');}
+  assert.equal(await page.locator('#'+required.id).isDisabled(),false);assert.equal(writes.length,3);assert.equal(stageWrites.length,1);assert.equal(await stageEditor.locator('.ppp-stages-list li').count(),3);assert.match(await stageEditor.locator('.ppp-stages-list').textContent(),/mes 25 a 36/);assert.equal(await stageEditor.locator('.ppp-check-pending').count(),7);assert.equal(model.calculated,false);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'no viewport overflow');
   // Saved pending models reopen through the real existing-case pathway without running legacy finance.
   await page.reload();await page.locator('.pi-board-banner').waitFor();assert.equal(await page.locator('#'+required.id).inputValue(),String(newValue));assert.equal(writes.length,3);assert.equal(await page.locator('#pppIntakeStages .ppp-stages-list li').count(),3);assert.equal(stageWrites.length,1);
@@ -65,6 +73,12 @@ const copy=value=>JSON.parse(JSON.stringify(value));
   await page.waitForFunction(()=>document.querySelector('[data-intake-board-status]')?.textContent.includes('por confirmar'));assert.equal(writes.length,4);
   await page.reload();await page.locator('[data-intake-check]').waitFor({state:'visible'});await page.getByRole('button',{name:'Comprobar guardado',exact:true}).click();await page.waitForFunction(()=>document.querySelector('[data-intake-board-status]')?.textContent.includes('Ficha guardada en Sheets'));
   assert.equal(writes.length,4);assert.equal(await page.locator('#'+required.id).inputValue(),String(required.min+2));
+  // A definitive pre-reservation rejection has no receipt: keep newest edits and reread before retry.
+  blockedNext=true;await page.locator('#'+required.id).evaluate((input,value)=>{input.value=String(value);input.dispatchEvent(new Event('input',{bubbles:true}));},required.min+3);
+  await page.getByRole('button',{name:'Releer y reintentar',exact:true}).waitFor();assert.equal(writes.length,5);const rejectedId=writes[4].request_id;
+  await page.locator('#'+required.id).evaluate((input,value)=>{input.value=String(value);input.dispatchEvent(new Event('input',{bubbles:true}));},required.min+4);await page.waitForTimeout(800);assert.equal(writes.length,5);
+  await page.getByRole('button',{name:'Releer y reintentar',exact:true}).click();await page.waitForFunction(()=>document.querySelector('[data-intake-board-status]')?.textContent.includes('revisión r6'));
+  assert.equal(writes.length,6);assert.equal(writes[5].revision_esperada,'r4');assert.deepEqual(writes[5].intake.inputs,{[required.id]:required.min+4});assert.equal(receiptReads.includes(rejectedId),false,'never reconcile an unreserved request');
   await page.evaluate(()=>localStorage.setItem('pyod_clave_v1','sy-second-synthetic-user'));
   await page.getByText('La sesión cambió.',{exact:false}).waitFor();assert.equal(await page.locator('.ppp-intake [name=nombre_caso]').count(),0);
   assert.deepEqual(errors,[]);assert.equal(net.posts.length,0);await context.close();console.log(type+' '+width+'px: minimum→same board, native capture, blank unknowns, edit CAS/readback, reopen, session revoke PASS');

@@ -14,4 +14,18 @@ Las verificaciones comprueban las cinco entradas, apertura del tablero correcto,
 
 Esta revisión documenta el alcance y las invariantes, sin acreditar implementación ni despliegue. Las pruebas con dobles, paridad aislada con fórmulas reales, CI/Pages, versión existente de GAS y lectura final requieren evidencias distintas. No hacer POST de prueba a producción.
 
+## Comportamiento implementado
+
+Las cinco entradas nuevas abren una ficha con los datos mínimos de su tipo. Al guardarla se abre el tablero existente del mismo tipo y se registra la captura en Sheets. Los campos sin dato permanecen vacíos; el tablero no ejecuta su cálculo financiero heredado sobre valores de ejemplo. Las ediciones de áreas y demás campos admitidos guardan una revisión nueva con control de concurrencia y lectura de confirmación.
+
+La captura comienza con una etapa cuya duración aún no está definida. Texto o dictado como «3 etapas de 12 meses» prepara tres etapas consecutivas, conservando las asignaciones. La propuesta se aplica mediante el mismo panel de etapas. En una captura incompleta se guarda un calendario relativo de 36 meses; no se infieren fechas de inicio ni resultados financieros. El micrófono usa el dictado disponible en el navegador y permite revisar el texto antes de aplicar.
+
+Cada operación conserva su identificador. Si Sheets tarda o se pierde la respuesta, el tablero busca el recibo por GET sin repetir la escritura. Mientras se confirma una operación de etapas se bloquean otras ediciones del mismo caso. El navegador cancela la reconciliación al cambiar de caso o sesión.
+
+## Límite financiero de esta entrega
+
+Una ficha guardada permanece en `MODELO_PENDIENTE`, incluso si después se llenan todos sus campos. Esta entrega no contiene la migración transaccional de esa captura al programa financiero nativo. `calculated:false` y las comprobaciones financieras pendientes son deliberados; guardar datos o un calendario no acredita utilidad, caja, deuda ni reparto calculados.
+
+El programa vertical nativo completo dispone de un ejecutor de etapas separado, con fórmulas de Sheets y nueve comprobaciones. Su prueba real aislada de una a tres etapas de doce meses conservó inventario e importes. Esa prueba no acredita modelos financieros nativos de los otros cuatro tipos ni convierte automáticamente las nuevas fichas.
+
 Reversión: deshabilitar la capacidad nueva y revertir los commits de consumidor/handler, conservando datos e históricos. Volver a la versión previa de la misma implementación GAS cuando corresponda. No borrar etapas, restaurar libros completos ni alterar ACL como parte del rollback.

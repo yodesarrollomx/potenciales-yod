@@ -77,7 +77,7 @@
  async function sha256(text){const bytes=await globalThis.crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return Array.from(new Uint8Array(bytes),b=>b.toString(16).padStart(2,'0')).join('');}
  function createController({getContext,onSave,onState=()=>{},validModel,hash=sha256,uuid=()=>globalThis.crypto.randomUUID()}){
   let context=null,command='',pending=null,phase='idle',error='',lastReceipt=null,epoch=0,operation=null,disposed=false,conflictRevision=null;
-  function status(){return{phase,command,pending:!!pending,busy:!!operation,error,receipt:lastReceipt?clone(lastReceipt):null,context:context?clone(context):null};}
+  function status(){return{phase,command,pending:!!pending,pending_request_id:pending?.request_id||null,busy:!!operation,error,receipt:lastReceipt?clone(lastReceipt):null,context:context?clone(context):null};}
   const notify=()=>onState(status());
   function clear(){epoch++;context=null;command='';pending=null;phase='idle';error='';lastReceipt=null;conflictRevision=null;notify();}
   function setContext(next){
@@ -93,16 +93,39 @@
    try{
     const model=await onSave(payload,{reconcile});if(disposed||own!==epoch||!pending||pending.request_id!==payload.request_id)return false;
     const latest=getContext();if(!validContext(latest)||identity(latest)!==identity(context)){clear();return false;}
+    if(model?.ok===false&&model.persisted===false&&model.error==='intake_case_operation_pending'){pending=null;phase='blocked';error='Hay otro cambio pendiente en este libro. Esta instrucción no se aplicó; comprueba el cambio anterior y vuelve a intentarlo.';return false;}
     if(model?.ok===false&&model.stage_rejection){const rejected=await rejection(model,payload,hash);if(disposed||own!==epoch)return false;pending=null;phase=rejected.error==='revision_conflict'?'conflict':'rejected';conflictRevision=payload.revision_esperada;error=rejected.error==='revision_conflict'?'El libro cambió. Actualiza desde Sheets y revisa la instrucción; no se sobrescribió la otra edición.':'El libro confirmó que el cambio no se aplicó. Actualiza desde Sheets y revisa el calendario; tu instrucción se conserva.';return false;}
     const ack=receipt(model,payload,validModel);if(latest.revision!==model.revision||JSON.stringify(validateCollection(latest.native_collection))!==JSON.stringify(validateCollection(model.stages_by_scenario[payload.escenario_id])))throw Error('stage_view_not_updated');lastReceipt=ack;pending=null;context=clone(latest);phase=ack.status==='confirmed_superseded'?'superseded':ack.calculated?'saved':'needs_review';error='';conflictRevision=null;return true;
    }catch{if(!disposed&&own===epoch){phase='unconfirmed';error='Aún no hay confirmación. Comprobar consulta la misma solicitud; conserva tu instrucción.';}return false;}
    finally{operation=null;resolveOperation();if(!disposed){if(phase==='idle'&&validContext(context))phase=capability(context.native_capability)?.write?'ready':'unavailable';notify();}}
   }
-  return{setContext,setCommand,save,status,clear,dispose(){clear();disposed=true;}};
+  return{setContext,setCommand,save,reconcile(){return pending?save():Promise.resolve(false);},status,clear,dispose(){clear();disposed=true;}};
  }
- function mount({container,getContext,onSave,onState=()=>{},validModel,uuid,doc=globalThis.document,win=globalThis.window}){
+ const RECONCILE_DELAYS=[15000,30000,60000,60000,60000,60000];
+ function createReconciler({getState,getContext,check,schedule=setTimeout,cancel=clearTimeout}){
+  let timer=null,key=null,attempts=0,disposed=false;
+  const cancelTimer=()=>{if(timer!==null)cancel(timer);timer=null;};
+  const requestKey=s=>s?.pending&&id(s.pending_request_id)&&validContext(s.context)?identity(s.context)+'|'+s.pending_request_id:null;
+  function reset(){cancelTimer();key=null;attempts=0;}
+  function observe(s){
+   if(disposed)return;
+   const next=requestKey(s),current=getContext();
+   if(!next||!validContext(current)||identity(current)!==identity(s.context)){reset();return;}
+   if(next!==key){reset();key=next;}
+   if(s.busy||s.phase!=='unconfirmed'){cancelTimer();return;}
+   if(timer!==null||attempts>=RECONCILE_DELAYS.length)return;
+   const ownKey=key;timer=schedule(async()=>{
+    timer=null;if(disposed)return;const fresh=getState(),live=getContext();
+    if(ownKey!==key||requestKey(fresh)!==ownKey||!validContext(live)||identity(live)!==identity(fresh.context)){reset();return;}
+    if(fresh.busy||fresh.phase!=='unconfirmed')return;
+    attempts++;try{await check();}catch{}if(!disposed)observe(getState());
+   },RECONCILE_DELAYS[attempts]);
+  }
+  return{observe,reset,dispose(){disposed=true;reset();}};
+ }
+ function mount({container,getContext,onSave,onState=()=>{},validModel,uuid,doc=globalThis.document,win=globalThis.window,schedule=setTimeout,cancel=clearTimeout}){
   if(!container||!doc)throw Error('stage_container_required');
-  let recognition=null,listening=false,disposed=false;
+  let recognition=null,listening=false,disposed=false,reconciler=null;
   const make=(tag,cls,text)=>{const e=doc.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
   container.classList.add('ppp-stages');
   const heading=make('h3','','Etapas del proyecto'),intro=make('p','ppp-stages-intro','Dile al plan cómo organizar el calendario. Los cambios se guardan en el mismo libro.'),current=make('p','ppp-stages-current'),list=make('ol','ppp-stages-list');
@@ -123,10 +146,11 @@
    statusEl.textContent=s.error||messages[s.phase]||messages.unavailable;
    const currentChecks=nativeChecks(s.context)||(s.receipt&&s.receipt.revision===s.context?.revision?s.receipt.checks:null);
    if(currentChecks)for(const k of CHECKS)checks.append(make('li',currentChecks[k]?'ppp-check-ok':'ppp-check-pending',`${CHECK_LABELS[k]}: ${currentChecks[k]?'conciliado':'pendiente'}`));
-   container.dataset.stageState=s.phase;onState({phase:s.phase,dirty:!!s.command&&!s.receipt,pending:s.pending,busy:s.busy,calculated:!!currentChecks&&CHECKS.every(k=>currentChecks[k]),error:s.error});
+   container.dataset.stageState=s.phase;onState({phase:s.phase,dirty:!!s.command&&!s.receipt,pending:s.pending,busy:s.busy,calculated:!!currentChecks&&CHECKS.every(k=>currentChecks[k]),error:s.error});reconciler?.observe(s);
   }
   const controller=createController({getContext,onSave,onState:paint,validModel,uuid});
-  input.addEventListener('input',()=>controller.setCommand(input.value));form.addEventListener('submit',e=>{e.preventDefault();controller.save();});retry.addEventListener('click',()=>controller.save());
+  reconciler=createReconciler({getState:controller.status,getContext,check:controller.reconcile,schedule,cancel});
+  input.addEventListener('input',()=>controller.setCommand(input.value));form.addEventListener('submit',e=>{e.preventDefault();controller.save();});retry.addEventListener('click',()=>controller.reconcile());
   mic.addEventListener('click',()=>{
    if(!Speech||mic.disabled)return;if(listening){recognition?.stop();return;}
    const dictationContext=controller.status().context;
@@ -138,7 +162,7 @@
    }catch{statusEl.textContent='El dictado no está disponible. Escribe la instrucción para continuar.';}
   });
   const revoke=()=>{recognition?.abort?.();controller.clear();};const storage=e=>{if(e.key===null||e.key==='pyod_clave_v1')revoke();};win?.addEventListener('pagehide',revoke);win?.addEventListener('storage',storage);controller.setContext(getContext());
-  return{setContext:controller.setContext,setCommand:controller.setCommand,save:controller.save,snapshotStatus:controller.status,dispose(){disposed=true;recognition?.abort?.();controller.dispose();win?.removeEventListener('pagehide',revoke);win?.removeEventListener('storage',storage);container.replaceChildren();}};
+  return{setContext:controller.setContext,setCommand:controller.setCommand,save:controller.save,snapshotStatus:controller.status,dispose(){disposed=true;reconciler.dispose();recognition?.abort?.();controller.dispose();win?.removeEventListener('pagehide',revoke);win?.removeEventListener('storage',storage);container.replaceChildren();}};
  }
- return{MAX_STAGES,MAX_MONTHS,CHECKS,REJECTIONS,stable,rejection,capability,validateStages,validateCollection,validContext,initialPending,nativeChecks,request,receipt,parseCommand,describeProposal,createController,mount};
+ return{MAX_STAGES,MAX_MONTHS,CHECKS,REJECTIONS,RECONCILE_DELAYS,stable,rejection,capability,validateStages,validateCollection,validContext,initialPending,nativeChecks,request,receipt,parseCommand,describeProposal,createController,createReconciler,mount};
 });
