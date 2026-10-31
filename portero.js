@@ -129,9 +129,18 @@
     else if (b.classList.contains('pp-a')) ev('◉pin');
     else if (b.id === 'btnNuevo') ev('∅nuevo');
   }, true);
+  /* Fase 1 «Un cargador»: el cargador mide el primer dato, el canje y el catálogo; sus códigos cortos (≤ 40, sin espacios)
+     viajan en esta misma bitácora, junto a los eventos de la visita. La telemetría nunca puede romper la bitácora. */
+  function codigosDelCargador() {
+    try {
+      const C = window.YodCargador;
+      if (!(C && C.telemetria && typeof C.telemetria.codigos === 'function')) return '';
+      return (C.telemetria.codigos() || []).map(c => ' ' + String(c).replace(/\s+/g, '·').slice(0, 40)).join('');
+    } catch (e) { return ''; }
+  }
   function flush(fin) {
     const k = localStorage.getItem(LSC); if (!k || !buf.length || cerrado) return;
-    let txt = buf.splice(0).join(' ');
+    let txt = buf.splice(0).join(' ') + codigosDelCargador();
     if (fin) { txt += ' (' + Math.max(1, Math.round((Date.now() - t0) / 6e4)) + 'm ×' + nEv + ')'; cerrado = true; }
     const body = JSON.stringify({ k, tipo: 'bitacora', eventos: txt, nueva, request_id: (crypto.randomUUID?.() || Date.now() + '' + Math.random()) });
     nueva = 0;
@@ -295,13 +304,25 @@
       caja.appendChild(b);
     }
   }
+  /* Fase 1 «Un cargador»: con YodCargador activo el canje sale de él (se comparte con shell.js y la cabina, y su caché evita
+     esperar al Portero en cada carga); sin él, o con ?cargador=legacy, es el GET de siempre. Devuelve la forma del Portero:
+     {ok:true, rol, …} | {ok:false, error}. Qué es un rechazo lo sigue decidiendo ESTA lista, no la del cargador. */
+  function cargadorActivo() { const C = window.YodCargador; return C && C.v && !C.legacy ? C : null; }
+  function canjeDeSesion(k) {
+    const C = cargadorActivo();
+    if (!C) return pyodPide('?recurso=canje&t=' + encodeURIComponent(k));
+    return C.sesion.canjear({}).then(x => x && x.ok === true
+      ? { ok: true, token: x.token, rol: x.rol, boards: x.boards, nombre: x.nombre, correo: x.correo }
+      : { ok: false, error: x && x.error });
+  }
+  function purgarCargador() { try { const C = cargadorActivo(); if (C && typeof C.purgar === 'function') C.purgar(); } catch (e) {} }
   async function engraneAdmin() {
     const k = localStorage.getItem(LSC);
     if (!k || pagina === 'accesos') return;
     const yaValidada = k === sesionValidada;
     const peticion = ++validacionId;
     let r;
-    try { r = await pyodPide('?recurso=canje&t=' + encodeURIComponent(k)); }
+    try { r = await canjeDeSesion(k); }
     catch (e) { r = null; }
     // No aplicar respuestas anteriores a otra persona o a un cierre de sesión.
     if (peticion !== validacionId || k !== localStorage.getItem(LSC)) return;
@@ -312,6 +333,7 @@
         sesionValidada = '';
         sessionStorage.removeItem('pyod_rol');
         const admin = document.getElementById('engraneBtn'); if (admin) admin.remove();
+        purgarCargador();
         if (!SIN_GATE && !MODO_SUAVE) overlayCorreo();
       } else {
         if (yaValidada) quitarSubGates(k);
@@ -336,6 +358,18 @@
     b.onclick = () => { location.href = 'https://yodesarrollomx.github.io/potenciales-yod/accesos.html'; };
     document.body.appendChild(b);
   }
+  /* La caché del cargador pudo abrir la puerta con un canje anterior; si el refresco de fondo dice que esa sesión ya no vale,
+     se cierra igual que ante un rechazo del canje (candado, sin engrane, copias privadas fuera). */
+  function sesionRechazadaEnFondo(e) {
+    const detalle = (e && e.detail) || {}, k = localStorage.getItem(LSC);
+    if (!k || (detalle.token && detalle.token !== k)) return;
+    validacionId++; reintentosCanje = 0; sesionValidada = '';
+    try { sessionStorage.removeItem('pyod_rol'); } catch (err) {}
+    const admin = document.getElementById('engraneBtn'); if (admin) admin.remove();
+    purgarCargador();
+    if (!SIN_GATE && !MODO_SUAVE) overlayCorreo();
+  }
+  if (cargadorActivo()) addEventListener('yodcargador:sesion-rechazada', sesionRechazadaEnFondo);
   addEventListener('storage', e => {
     if (e.key !== LSC && e.key !== null) return;
     sesionValidada = ''; validacionId++;
