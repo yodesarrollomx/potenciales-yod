@@ -1059,7 +1059,19 @@
   /* ================== CAPA DE NUBE ================== */
   let toastTimer=null;
   function toast(msg,ms=3200){const t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('on'),ms)}
-  async function apiGet(params){const q=new URLSearchParams(Object.assign({k:clave,tipo:NUBE.TIPO},params)),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);
+  /* Un cargador (Fase 1): con YodCargador activo la lectura sale por su transporte (caché-primero en el catálogo, red-primero en el caso); con ?cargador=legacy,
+     o si el cargador no cargó, corre el fetch de siempre, tal cual (abajo). La lista sólo puede salir de caché en la PRIMERA lectura de la página, con la sesión
+     guardada y con conexión: tras guardar, o con una clave tecleada, va siempre a red. Los errores del camino nuevo conservan la forma del viejo (timeout,
+     http_error con httpStatus, invalid_response, TypeError de red) porque PPPCaseOpening los clasifica por su texto; el tope sigue siendo de 25 s. */
+  async function apiGet(params){const C=typeof window==='undefined'?null:window.YodCargador;
+    let cargador=!!(C&&C.v&&!C.legacy);
+    if(cargador&&params.recurso==='lista')cargador=!apiGet.lista&&navigator.onLine!==false&&clave===localStorage.getItem(LS.clave)&&(apiGet.lista=true);
+    if(cargador){let response;
+      try{response=await C.ppp.get(NUBE.ENDPOINT,Object.assign({k:clave,tipo:NUBE.TIPO},params),{recurso:params.recurso,timeoutMs:25000});}
+      catch(error){throw /abort|timeout|tiempo/i.test(String(error&&(error.name+' '+error.message)))?Error('timeout'):error instanceof TypeError?error:Object.assign(new TypeError('network'),{cause:error});}
+      if(!response.ok){const error=Error('http_error');error.httpStatus=response.status;throw error;}
+      try{return await response.json();}catch{throw Error('invalid_response');}}
+    const q=new URLSearchParams(Object.assign({k:clave,tipo:NUBE.TIPO},params)),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);
     try{const response=await fetch(NUBE.ENDPOINT+'?'+q.toString(),{signal:controller.signal,credentials:'omit',cache:'no-store'});if(!response.ok){const error=Error('http_error');error.httpStatus=response.status;throw error;}try{return await response.json();}catch{throw Error('invalid_response');}}
     catch(error){if(controller.signal.aborted)throw Error('timeout');throw error;}finally{clearTimeout(timer);}}
   function apiPost(body){body=Object.assign({k:clave,tipo_desarrollo:NUBE.TIPO},body);return fetch(NUBE.ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)}).then(r=>r.json())}
