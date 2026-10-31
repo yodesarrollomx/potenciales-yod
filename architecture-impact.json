@@ -12,6 +12,7 @@
     "SVC-AUTON-CLOUD"
   ],
   "tests": [
+    "VERSIONES/FASE0: versiones.json fija una sola etiqueta ?v= para los archivos propios y otra para los de yod-portal en todos los HTML de la raíz; node scripts/versiones.cjs --check (también dentro de tests/versiones.test.cjs y del workflow Verificar interfaz PPP) falla si un <script src> o <link rel=stylesheet> local o del marco no lleva la versión esperada. Sin cambio de runtime, ACL, backend ni fórmulas: sólo cambia la clave de caché de los recursos; la entrega en Pages y la recarga real se acreditan por separado.",
     "FICHA-5/PANEL: recorrer los cinco HTML con datos sintéticos, abrir tablero nativo y paneles en escritorio/móvil sin perder accesos, documentos ni escenarios.",
     "ETAPA-1/INTENCION-3X12: alta compatible con una etapa; caso existente conserva etapas; texto final 3 etapas de 12 meses comparte ruta con dictado/voz y no aplica negaciones ni audio provisional.",
     "COHERENCIA: comparar inventario, áreas, recursos únicos, calendario completo y flujos en fixtures y fórmulas nativas aisladas; no aceptar cálculo financiero paralelo.",

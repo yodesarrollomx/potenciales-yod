@@ -29,6 +29,9 @@ jobs:
       - name: Controles, cálculo original y sintaxis
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          node --check scripts/versiones.cjs
+          node scripts/versiones.cjs --check
+          node --test tests/versiones.test.cjs
           node --check ppp-agent-cards.js
           node --test tests/ppp-agent-cards.test.cjs
           node --check ppp-agent-bridge.js

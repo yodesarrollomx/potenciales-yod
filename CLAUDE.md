@@ -31,10 +31,13 @@ Dos cosas en un mismo repo:
   El botón de la línea 116 abre la hoja ACCESOS (`docs.google.com/spreadsheets/d/1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y`).
 - `index.html` — portal con mapa; redirige los `?open=ID` viejos al board que toca (líneas 12-14).
 - `mapa.html`, `macrolotes.html`, `mixto.html`, `unifamiliar.html`, `residencial.html`,
-  `patrimonial.html` — los motores. Todos cierran con `<script src="portero.js?v=relevo5">`.
+  `patrimonial.html` — los motores. Todos cierran con `<script src="portero.js?v=…">` (el `?v=` lo fija `versiones.json`).
 - `gas/Code.gs` — el backend. **NO está en el repo público** (`.gitignore` excluye `gas/`).
 - `gas/parches/2026-09-02-canje-cache.gs` — el parche de caché del canje, ya integrado en Code.gs.
 - `.claude/launch.json` — server local `potenciales`, puerto 8765.
+- `versiones.json` + `scripts/versiones.cjs` — una sola etiqueta `?v=` por familia: `propia` = archivos de ESTE repo (`portero.js`, `ppp-*`, `modelos.js`…); `marco` = archivos de yod-portal (`os/shell.js`, `os/shell.css`, `os/yod-acceso.js`…).
+  **Para cambiar versiones: editar `versiones.json` y correr `node scripts/versiones.cjs --aplicar`; CI falla si una etiqueta no coincide.** Nunca teclear un `?v=` a mano en los HTML.
+  Fuera de su alcance: `?v=` armados en JS (p. ej. `portero.js:15` pide `yod-acceso.js?v=1` sólo si la página no lo cargó) y las cargas de `portero.js` desde otros repos por URL absoluta.
 
 ## Arquitectura de datos
 
