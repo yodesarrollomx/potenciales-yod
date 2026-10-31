@@ -139,8 +139,11 @@
     } catch (e) { return ''; }
   }
   function flush(fin) {
-    const k = localStorage.getItem(LSC); if (!k || !buf.length || cerrado) return;
-    let txt = buf.splice(0).join(' ') + codigosDelCargador();
+    const k = localStorage.getItem(LSC); if (!k || cerrado) return;
+    /* Los códigos del cargador cuentan como contenido: un primer dato que llegó después del envío de los 5 s, en una
+       visita sin clics, se manda en el cierre en vez de perderse (O8 de Astra, Fase 1). */
+    const codigos = codigosDelCargador(); if (!buf.length && !codigos) return;
+    let txt = (buf.splice(0).join(' ') + codigos).trim();
     if (fin) { txt += ' (' + Math.max(1, Math.round((Date.now() - t0) / 6e4)) + 'm ×' + nEv + ')'; cerrado = true; }
     const body = JSON.stringify({ k, tipo: 'bitacora', eventos: txt, nueva, request_id: (crypto.randomUUID?.() || Date.now() + '' + Math.random()) });
     nueva = 0;

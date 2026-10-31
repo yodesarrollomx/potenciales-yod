@@ -558,9 +558,12 @@ test('COMPORTAMIENTO · bitácora: sin cargador queda como siempre; y la telemet
   }
   const otro = bitacora({ cargador: { api: { v: '1', telemetria: {} } } }); otro.ctx.flush(false);   // cargador sin telemetria.codigos
   assert.equal(otro.envios[0].body.eventos, '30oct·21:30·MX●');
-  // sin eventos en el búfer no se manda nada (y no se gastan los códigos)
+  // sin eventos en el búfer: si el cargador tiene códigos pendientes se mandan solos (O8 de Astra: un primer dato
+  // posterior al envío de los 5 s, en una visita sin clics, ya no se pierde); sin códigos no se manda nada
   const vacio = fakeCargador({ codigos: () => ['pd:MX:1:c'] }), v = bitacora({ cargador: vacio }); v.ctx.buf.length = 0; v.ctx.flush(false);
-  assert.equal(v.envios.length, 0); assert.equal(vacio.calls.codigos, 0);
+  assert.equal(v.envios.length, 1); assert.equal(v.envios[0].body.eventos, 'pd:MX:1:c'); assert.equal(vacio.calls.codigos, 1);
+  const nada = fakeCargador({ codigos: () => [] }), n = bitacora({ cargador: nada }); n.ctx.buf.length = 0; n.ctx.flush(false);
+  assert.equal(n.envios.length, 0);
 });
 
 test('COMPORTAMIENTO · bitácora: al cerrar la página (sendBeacon) también incluye los códigos antes del resumen (Nm ×E)', async () => {
