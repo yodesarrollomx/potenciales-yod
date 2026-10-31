@@ -1,16 +1,17 @@
 {
-  "model_revision": "2026-10-30.versiones-fase0.1",
-  "proposal_id": "CHG-VERSIONES-FASE0-001",
-  "summary": "Fase 0 (Estabilizar) de la reestructuración de YOD OS, aprobada por Dirección el 30-oct-2026 (Buzón CL-YODOS-FASE0-20261030). T-001: los siete HTML (macrolotes, mixto, residencial, unifamiliar, patrimonial, index, mapa) dejan de borrar pyod_clave_v1, la sesión compartida de todo YOD OS, ante cualquier respuesta !ok de recurso=lista; reabrirGate(motivo) muestra el gate siempre y sólo borra la llave ante un rechazo de credencial (clave, liga, expirado, revocado, sin_sesion, unauthorized, forbidden, HTTP 401/403), con el helper esRechazoDeCredencial idéntico en los siete archivos. T-002: versiones.json + scripts/versiones.cjs (--aplicar | --check) fijan una sola etiqueta ?v= para los archivos propios y otra para los de yod-portal (shell.js, shell.css, yod-acceso.js); aplicado a los 8 HTML (80 etiquetas = 20261030-fase0) y comprobado en el workflow Verificar interfaz PPP. No cambia runtime de negocio, ACL, backend ni fórmulas; portero.js no cambia de contenido. Publicación en Pages y recarga real se acreditan por separado.",
+  "model_revision": "2026-10-30.cargador-fase1.1",
+  "proposal_id": "CHG-CARGADOR-FASE1-001",
+  "summary": "Fase 1 (Un cargador) de la reestructuración de YOD OS, entrega 1, aprobada por Dirección el 30-oct-2026 (Buzón CL-YODOS-FASE1-20261030). T-103: los 8 HTML cargan https://yodesarrollomx.github.io/yod-portal/os/yod-cargador.js justo después de yod-acceso.js; con el cargador activo, apiGet de los 5 motores manda SOLO la primera lectura de recurso=lista de la página por YodCargador.ppp.get (caché-primero: se pinta lo último conocido y la red lo actualiza en fondo; tope 360 s), ppp-catalog.js lee las cinco listas de portada/mapa por el mismo transporte con su timeout literal de 60000 y repinta con yodcargador:dato, y portero.js obtiene el canje de YodCargador.sesion.canjear (un solo canje compartido con shell.js y la cabina), añade los códigos de telemetría (pd:/cj:/cat:) a la bitácora que ya manda y cierra la sesión si el refresco de fondo del cargador rechaza la credencial. Todo lo demás (caso, catálogo, modelo, recibos, guardados) sigue por fetch tal cual; con ?cargador=legacy o sin el script, nada cambia. Sin cambios de backend, hojas, fórmulas ni permisos; reabrirGate y esRechazoDeCredencial no se tocan.",
   "components": [
     "SYS-POTENCIALES",
-    "SYS-CONTROL"
+    "SYS-CONTROL",
+    "GAS-PORTERO"
   ],
   "tests": [
-    "T-001/SESION: tests/ppp-session-guard.test.cjs (22 casos): para cada HTML, reabrirGate('servidor') no borra la llave y reabrirGate('clave') sí; comprobación estática de que removeItem de la llave sólo vive en reabrirGate; contra origin/main el test falla en 19 casos (el defecto existía).",
-    "T-002/VERSIONES: tests/versiones.test.cjs (14 casos): reescritor con y sin ?v=, CDN y comentarios intactos, idempotencia; --check sobre el repo real sale con 0.",
-    "Batería completa: node --test tests/*.test.cjs tests/access-gates.cjs tests/sheets-offline.cjs = 429 pasan; git diff --check limpio; verificar-impacto contra el atlas 29ec0b0 de yod-portal: válido.",
-    "ENTREGA: pruebas locales y CI; Pages y la recarga en navegador real se acreditan por separado; sin POST de pruebas a producción."
+    "T-103/UNITARIAS: tests/ppp-cargador.test.cjs (62 casos): los 8 HTML cargan el cargador tras yod-acceso.js con la misma etiqueta; apiGet de cada motor delega con un YodCargador falso y conserva el fetch literal sin él; ppp-catalog.js usa ppp.get con timeoutMs 60000; portero.js canjea por sesion.canjear y la bitácora incluye los códigos; tests/ppp-session-guard.test.cjs (22) y tests/access-gates.cjs (14) siguen verdes.",
+    "T-103/NAVEGADOR: tests/ppp-cargador-browser.cjs (5 escenarios: portada, motor, Portero, caso, bitácora) con el atlas de yod-portal que trae el cargador; se omite si el cargador no está. ppp-browser, ppp-home, case-opening, shell y access iguales a la base.",
+    "Batería completa: node --test tests/*.test.cjs tests/access-gates.cjs tests/sheets-offline.cjs = 491 pasan; node scripts/versiones.cjs --check = 88 etiquetas; git diff --check limpio; verificar-impacto contra el atlas fijado en arquitectura.yml: válido.",
+    "ENTREGA: Pages y la recarga en navegador real se acreditan por separado (paso «Comprobar archivos publicados» de main); sin POST de pruebas a producción; la telemetría viaja dentro de la bitácora existente del Portero."
   ],
-  "rollback": "Revertir el PR completo (git revert del merge) o, por partes: T-001 revirtiendo 93bc1c2; T-002 revirtiendo bdfba57 y 47cb92d. No hay cambios de backend, hojas ni datos en este PR; las etiquetas ?v= anteriores vuelven con el revert."
+  "rollback": "Revertir el PR completo (git revert del merge). Sin tocar código: abrir cualquier tablero con ?cargador=legacy o fijar localStorage yodcg_legacy=1 devuelve el camino viejo; YodCargador.purgar() borra las cachés yodcg_*. No hay cambios de backend, hojas ni datos."
 }
