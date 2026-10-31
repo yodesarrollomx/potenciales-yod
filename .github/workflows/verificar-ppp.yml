@@ -103,6 +103,7 @@ jobs:
           node tests/patrimonial-native-browser.cjs
           node tests/patrimonial-drafts-browser.cjs
           node tests/ppp-cargador-browser.cjs
+          node tests/ppp-paridad-cargador-browser.cjs
       - name: Comprobar archivos publicados
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
