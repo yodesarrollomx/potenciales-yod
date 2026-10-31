@@ -1186,6 +1186,9 @@
     window.open('https://wa.me/'+(num?num:'')+'?text='+encodeURIComponent(linea),'_blank')
   }
   /* ================== GATE / MODALES ================== */
+  // Códigos de rechazo de credencial: portero.js:309 ∩ yod-portal/os/app.js:134 (rechazoAcceso), más «http 401/403» que ese portal ya trata como texto.
+  // Cualquier otro motivo (servidor, tiempo agotado, error de hoja…) NO autoriza borrar pyod_clave_v1: es la sesión compartida de todo YOD OS.
+  function esRechazoDeCredencial(err){return ['clave','liga','expirado','revocado','sin_sesion','unauthorized','forbidden','http 401','http 403'].includes(String(err&&err.message||err||'').trim().toLowerCase())}
   function reabrirGate(){const gate=$('gate');gate.classList.remove('off');gate.style.removeProperty('display');gate.removeAttribute('aria-hidden');$('gateErr').textContent='No se confirmó el acceso a este plan. Valida tu sesión de Google o vuelve a intentar.'}
   async function intentarEntrar(){
     const v=$('gateClave').value.trim();if(!v){$('gateErr').textContent='Escribe la clave';return}

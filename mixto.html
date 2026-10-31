@@ -952,7 +952,7 @@
   async function reviewNewProgram(){
     if(seedLoading||!clave||modoLocal||caso.caso_id)return false;cerrarOverlays();const own=++seedEpoch,credential=clave;seedLoading=true;seedReview=null;seedTemplate=null;seedEditor.suspend();$('pppSeedPanel').hidden=false;$('pppSeedCaptured').textContent='Leyendo una plantilla nativa de un cuerpo. Tus supuestos capturados se conservan.';
     try{const response=await apiGet({recurso:'sheet-volume-template'});if(own!==seedEpoch||credential!==clave||modoLocal||caso.caso_id)return false;
-      if(response?.error==='clave'){reabrirGate();return false;}
+      if(response?.error==='clave'){reabrirGate(response.error);return false;}
       const capability=window.PPPVolumesNative.capability(response.capabilities?.volumes),collection=window.PPPVolumesNative.collection(response.volumes,capability?.max_volumes||16);
       if(response.ok!==true||response.kind!=='native_factory_preview'||response.persisted!==false||typeof response.template_revision!=='string'||!response.template_revision||response.template_revision.length>256||!capability?.read||!capability.write||collection.count!==1||collection.volumes.length!==1||!response.inputs||typeof response.inputs!=='object'||Array.isArray(response.inputs))throw Error('native_template_unavailable');
       seedTemplate={template_revision:response.template_revision,volumes:collection,capability,credential,managed_volume_fields:response.capabilities?.stages?.schema===1&&response.capabilities.stages.read===true?response.capabilities.stages.managed_volume_fields||[]:[]};const captured=inputValues(),differences=Object.keys(captured).filter(id=>Object.hasOwn(response.inputs,id)&&response.inputs[id]!==captured[id]);
@@ -1312,12 +1312,12 @@
     }catch(error){
       if(!current())return;
       casePresentation('error',error.message==='no_existe'?'El proyecto no está disponible. Puedes elegir otro en Mis casos.':'No se pudo confirmar el proyecto. Reintenta sin perder tu selección.',params.id,same,()=>readSelectedCase(params));
-      if(error.message==='clave')reabrirGate();
+      if(error.message==='clave')reabrirGate(error.message);
     }
   }
   async function abrirPorId(id){if(id)return readSelectedCase({id});}
   async function abrirPorPalabra(palabra){if(palabra.trim())return readSelectedCase({palabra:palabra.trim()});}
-  async function cargarLista(){const cont=$('listaCasos');cont.innerHTML='<p class="note">Cargando…</p>';try{const r=await apiGet({recurso:'lista'});if(!r.ok){cont.innerHTML='<p class="note">Error: '+r.error+'</p>';if(r.error==='clave')reabrirGate();return}casosCache=r.casos||[];cfgBoard=r.config||cfgBoard;if(!casosCache.length){cont.innerHTML='<p class="note">Aún no hay casos guardados. Guarda el primero con el botón Guardar.</p>';return}cont.innerHTML=casosCache.map(c=>`<div class="caso-item" data-id="${c.caso_id}"><div><div class="ci-n">${esc(c.nombre_caso||c.palabra)}<span class="badge">${esc(c.estado||'—')}</span></div><div class="ci-m">palabra: ${esc(c.palabra)} · v${c.version||1} · ${fechaCorta(c.ts_actualizado)}${c.source==='test'?' · PRUEBA':''}</div></div><div class="ci-kpi">${c.utilidad!==''&&c.utilidad!==undefined?fmtM(Number(c.utilidad)):'—'}<span>utilidad · TIR ${c.tir_dev_pct!==''&&c.tir_dev_pct!==undefined?Number(c.tir_dev_pct).toFixed(1)+'%':'—'}</span></div></div>`).join('');cont.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>abrirPorId(el.dataset.id))}catch(e){cont.innerHTML='<p class="note">Sin conexión. Reintenta.</p>'}}
+  async function cargarLista(){const cont=$('listaCasos');cont.innerHTML='<p class="note">Cargando…</p>';try{const r=await apiGet({recurso:'lista'});if(!r.ok){cont.innerHTML='<p class="note">Error: '+r.error+'</p>';if(r.error==='clave')reabrirGate(r.error);return}casosCache=r.casos||[];cfgBoard=r.config||cfgBoard;if(!casosCache.length){cont.innerHTML='<p class="note">Aún no hay casos guardados. Guarda el primero con el botón Guardar.</p>';return}cont.innerHTML=casosCache.map(c=>`<div class="caso-item" data-id="${c.caso_id}"><div><div class="ci-n">${esc(c.nombre_caso||c.palabra)}<span class="badge">${esc(c.estado||'—')}</span></div><div class="ci-m">palabra: ${esc(c.palabra)} · v${c.version||1} · ${fechaCorta(c.ts_actualizado)}${c.source==='test'?' · PRUEBA':''}</div></div><div class="ci-kpi">${c.utilidad!==''&&c.utilidad!==undefined?fmtM(Number(c.utilidad)):'—'}<span>utilidad · TIR ${c.tir_dev_pct!==''&&c.tir_dev_pct!==undefined?Number(c.tir_dev_pct).toFixed(1)+'%':'—'}</span></div></div>`).join('');cont.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>abrirPorId(el.dataset.id))}catch(e){cont.innerHTML='<p class="note">Sin conexión. Reintenta.</p>'}}
   function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
   function fechaCorta(ts){const d=new Date(ts);return isNaN(d)?'':d.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'})}
   async function guardarCaso(enviarCorreo){
@@ -1345,7 +1345,7 @@
         if(creating&&['native_driver_review_required','native_variants_review_required','template_revision_conflict','native_template_unavailable','active_driver_missing','native_geometry_conflict','native_horizon_conflict','shared_allocation_requires_reconciliation','invalid_factory_inputs','native_factory_inputs_incoherent'].includes(r.error)){seedReview=null;const reason={native_driver_review_required:'Revisa el programa de la plantilla vigente antes de crear.',native_variants_review_required:'Cada variante necesita su propio programa; tus variantes se conservan.',template_revision_conflict:'La plantilla cambió: revisa la versión vigente antes de crear.',native_template_unavailable:'La plantilla no está disponible. Conservamos tus datos para reintentar.',active_driver_missing:'Completa los datos de cada cuerpo antes de crear.',native_geometry_conflict:'Las áreas o viviendas no concilian. Revisa el programa de cada cuerpo.',native_horizon_conflict:'Revisa las fechas y duraciones de cada cuerpo.',shared_allocation_requires_reconciliation:'Los recursos compartidos necesitan una asignación revisada.',invalid_factory_inputs:'Un supuesto está fuera del rango de la plantilla (por ejemplo terreno o precio). Corrígelo y vuelve a intentar.',native_factory_inputs_incoherent:'El programa no concilia con la mezcla: revisa deptos y m² por tipología, y que la planta baja tenga locales o servicios.'}[r.error];$('gSeedStatus').textContent=reason+' Tus datos se conservan y el proyecto no se creó.';toast(reason);return;}
         if(creating&&newCasePending){$('gSeedStatus').textContent='La creación está por confirmar'+(r.error?' (código: '+r.error+')':'')+'. Comprueba el proyecto por su palabra; no se enviará otra creación.';$('gSeedCheck').hidden=false;toast('Creación por confirmar: comprueba el proyecto por palabra');return;}
         if(r.error==='palabra_ocupada')toast('Esa palabra ya es de otro caso: elige otra');
-        else if(r.error==='clave'){toast('La clave del board cambió');reabrirGate()}
+        else if(r.error==='clave'){toast('La clave del board cambió');reabrirGate(r.error)}
         else toast('No se guardó: '+r.error);
         return}
       if(!r.caso_id){$('gWeb').value='';if(creating){$('gSeedStatus').textContent='La creación está por confirmar. Comprueba el proyecto por su palabra.';$('gSeedCheck').hidden=false;}toast('No se confirmó el guardado: comprueba el proyecto por su palabra');return}
@@ -1360,7 +1360,7 @@
     if(!caso.caso_id||modoLocal){toast(modoLocal?'Estado local (sin nube)':'Guarda el caso para que el estado viva en el Sheet');return}
     await postSeguimiento({tipo:'estado',caso_id:caso.caso_id,estado:nuevo,request_id:nuevoRequestId()},'Estado: '+nuevo)
   }
-  async function postSeguimiento(payload,okMsg){try{const r=await apiPost(payload);if(r.ok){toast(okMsg)}else if(r.error==='clave'){reabrirGate()}else toast('No se registró: '+r.error)}catch(e){encolar(payload);toast('Sin conexión: se registrará al reconectar')}}
+  async function postSeguimiento(payload,okMsg){try{const r=await apiPost(payload);if(r.ok){toast(okMsg)}else if(r.error==='clave'){reabrirGate(r.error)}else toast('No se registró: '+r.error)}catch(e){encolar(payload);toast('Sin conexión: se registrará al reconectar')}}
   function encolar(payload){try{let q=JSON.parse(localStorage.getItem(LS.cola)||'[]');
     // Un solo 'guardar' pendiente por caso/palabra: el último trae los inputs más frescos.
     if(payload.tipo==='guardar')q=q.filter(x=>!(x.tipo==='guardar'&&((x.caso_id&&x.caso_id===payload.caso_id)||(!x.caso_id&&!payload.caso_id&&x.palabra===payload.palabra))));
@@ -1380,7 +1380,7 @@
       // conservar lo que se encoló mientras drenábamos
       let actual;try{actual=JSON.parse(localStorage.getItem(LS.cola)||'[]')}catch(e){actual=q}
       localStorage.setItem(LS.cola,JSON.stringify(resto.concat(actual.slice(q.length))));
-      if(claveVieja)reabrirGate();
+      if(claveVieja)reabrirGate('clave');
       else if(!resto.length&&!conflicto){toast('Cambios pendientes sincronizados');pintaCaso()}
     }finally{drenando=false}}
   function whatsApp(){
@@ -1390,7 +1390,15 @@
     window.open('https://wa.me/'+(num?num:'')+'?text='+encodeURIComponent(linea),'_blank')
   }
   /* ================== GATE / MODALES / LENTES ================== */
-  function reabrirGate(){retireVolumeIdentity();localStorage.removeItem(LS.clave);clave='';$('gate').classList.remove('off');$('gateErr').textContent='La clave cambió o es incorrecta'}
+  // Códigos de rechazo de credencial: portero.js:309 ∩ yod-portal/os/app.js:134 (rechazoAcceso), más «http 401/403» que ese portal ya trata como texto.
+  // Cualquier otro motivo (servidor, tiempo agotado, error de hoja…) NO autoriza borrar pyod_clave_v1: es la sesión compartida de todo YOD OS.
+  function esRechazoDeCredencial(err){return ['clave','liga','expirado','revocado','sin_sesion','unauthorized','forbidden','http 401','http 403'].includes(String(err&&err.message||err||'').trim().toLowerCase())}
+  function reabrirGate(motivo){
+    const credencial=esRechazoDeCredencial(motivo);
+    if(credencial){retireVolumeIdentity();localStorage.removeItem(LS.clave);clave=''}
+    const gate=$('gate');gate.classList.remove('off');gate.style.removeProperty('display');gate.removeAttribute('aria-hidden');
+    $('gateErr').textContent=credencial?'La clave cambió o es incorrecta':'El tablero no pudo leer la lista ('+String(motivo&&motivo.message||motivo||'sin detalle').slice(0,80)+'). Tu sesión sigue abierta; vuelve a intentar recargando la página.'
+  }
   async function intentarEntrar(){
     const v=$('gateClave').value.trim();if(!v){$('gateErr').textContent='Escribe la clave';return}
     $('gateBtn').disabled=true;$('gateErr').textContent='';
@@ -1554,7 +1562,7 @@
   else if(clave){
     const requested=new URLSearchParams(location.search).get('open');
     if(requested){$('gate').classList.add('off');procesarOpen();}
-    apiGet({recurso:'lista'}).then(r=>{if(r.ok){casosCache=r.casos||[];cfgBoard=r.config||{};$('gate').classList.add('off');drenarCola();if(!requested)procesarOpen();}else if(!requested){reabrirGate();}}).catch(()=>{if(!requested){modoSinConexion();toast('Sin conexión: trabajando en modo local');}});
+    apiGet({recurso:'lista'}).then(r=>{if(r.ok){casosCache=r.casos||[];cfgBoard=r.config||{};$('gate').classList.add('off');drenarCola();if(!requested)procesarOpen();}else if(!requested){reabrirGate(r.error);}}).catch(()=>{if(!requested){modoSinConexion();toast('Sin conexión: trabajando en modo local');}});
   }
 })();
 </script>
