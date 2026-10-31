@@ -8,8 +8,8 @@
     "GAS-PORTERO"
   ],
   "tests": [
-    "T-204/SESIÓN: tests/ppp-session-guard.test.cjs sigue verde (un borrado literal por archivo en el camino legacy) y las pruebas nuevas del cierre por el cargador (guardia de carrera y purga) con un cargador de mentira.",
-    "T-204/PARIDAD: tests/ppp-paridad-cargador-browser.cjs en los 5 motores (mismas cifras con ?cargador=legacy y con el cargador), en el paso de navegador de Verificar interfaz PPP.",
+    "T-204/SESIÓN: tests/ppp-cierre-cargador.test.cjs (32 casos: con cargador se cierra con YodCargador.sesion.cerrar({token, motivo}) y sin removeItem; sin cargador o legacy, el borrado literal; contra main fallan 23) y tests/ppp-session-guard.test.cjs sigue verde (22, un borrado literal por archivo).",
+    "T-204/PARIDAD: tests/ppp-paridad-cargador-browser.cjs en los 5 motores (mismas cifras visibles con ?cargador=legacy y con el cargador, en primera carga y con caché caliente: macrolotes 13, unifamiliar 48, residencial 45, mixto 70, patrimonial 13 cifras), en el paso de navegador de Verificar interfaz PPP.",
     "O9: tests/ppp-cargador-browser.cjs sale con 1 en CI si falta os/yod-cargador.js en el atlas.",
     "Batería completa: node --test tests/*.test.cjs tests/access-gates.cjs tests/sheets-offline.cjs; node scripts/versiones.cjs --check; verificar-impacto contra el atlas fijado; sin POST de pruebas a producción."
   ],
