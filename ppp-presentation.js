@@ -120,7 +120,7 @@
  }
  function mount({read,transport,getIdentity,save,container,doc=document,win=window,storage}){
   const root=container||doc.createElement('section');root.className='ppp-presentations';root.setAttribute('aria-label','Presentaciones de este plan');
-  if(!container){const main=doc.querySelector('main.container');if(main)main.before(root);else doc.body.append(root);}
+  if(!container){const main=doc.querySelector('main.container');if(main)main.after(root);else doc.body.append(root);}
   const make=(tag,text,className)=>{const el=doc.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el;};
   const title=make('h2','Presentaciones'),origin=make('p','Abre una versión guardada.'),actions=make('div',undefined,'ppp-presentation-actions'),create=make('button','Mandar hacer presentación con estos números'),refresh=make('button','Consultar presentaciones'),saveButton=make('button','Guardar versión del plan'),reconcile=make('button','Comprobar encargo'),retry=make('button','Reintentar mismo encargo'),status=make('p','', 'ppp-presentation-status'),list=make('div',undefined,'ppp-presentation-list');
   create.type=refresh.type=saveButton.type=reconcile.type=retry.type='button';status.setAttribute('role','status');actions.append(create,saveButton,refresh,reconcile,retry);root.append(title,origin,actions,status,list);

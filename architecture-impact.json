@@ -18,6 +18,7 @@
     "Navegador sintético: HTML real de los cinco motores, ficha nativa pendiente → solicitud → versión privada → recarga sin regenerar; 390 vertical, 844 horizontal y 1280 escritorio.",
     "Regresión: node --test tests/*.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs; ficha/etapas/recibos originales; motor financiero idéntico; guardia de sesión y node scripts/versiones.cjs --check.",
     "Apertura Patrimonial embebida y con shell: esperar el resolver de contexto de presentaciones, delegar únicamente ese POST de lectura al transporte común y conservar la aserción de cero escrituras de modelo.",
+    "Lectura móvil: el panel de presentaciones sigue al contenido del plan; los cinco resúmenes mantienen el límite original de altura y el recorrido de ajustes/versiones/guardado. Se conserva la aserción original de tests/ppp-browser.cjs.",
     "Entrega: pruebas locales, CI, frontend publicado, resolver GAS, worker y registro se verifican por separado; sin escrituras de prueba a producción."
   ],
   "rollback": "Revertir este consumidor o deshabilitar la admisión presentation_draft_v1 en el servicio existente. Conservar casos, snapshots, solicitudes, recibos, artefactos y versiones. No borrar ni restaurar libros completos; no eliminar la sesión compartida ni aprobar/publicar presentaciones automáticamente."

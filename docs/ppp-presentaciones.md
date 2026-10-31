@@ -1,6 +1,6 @@
 # Presentaciones desde la versión del PPP
 
-El botón «Mandar hacer presentación con estos números» lee la versión visible y confirmada. Los cinco motores montan `ppp-presentation.js`; la presentación conserva su origen aunque después cambie el tablero.
+El botón «Mandar hacer presentación con estos números» lee la versión visible y confirmada. El panel está después del contenido del plan para conservar la lectura inicial de sus resúmenes. Los cinco motores montan `ppp-presentation.js`; la presentación conserva su origen aunque después cambie el tablero.
 
 ## Flujo y fuente
 
