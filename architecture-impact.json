@@ -1,5 +1,5 @@
 {
-  "model_revision": "2026-10-30.cargador-fase1.1",
+  "model_revision": "2026-10-31.cargador-fase1.2",
   "proposal_id": "CHG-CARGADOR-FASE1-001",
   "summary": "Fase 1 (Un cargador) de la reestructuración de YOD OS, entrega 1, aprobada por Dirección el 30-oct-2026 (Buzón CL-YODOS-FASE1-20261030). T-103: los 8 HTML cargan https://yodesarrollomx.github.io/yod-portal/os/yod-cargador.js justo después de yod-acceso.js; con el cargador activo, apiGet de los 5 motores manda SOLO la primera lectura de recurso=lista de la página por YodCargador.ppp.get (caché-primero: se pinta lo último conocido y la red lo actualiza en fondo; tope 360 s), ppp-catalog.js lee las cinco listas de portada/mapa por el mismo transporte con su timeout literal de 60000 y repinta con yodcargador:dato, y portero.js obtiene el canje de YodCargador.sesion.canjear (un solo canje compartido con shell.js y la cabina), añade los códigos de telemetría (pd:/cj:/cat:) a la bitácora que ya manda y cierra la sesión si el refresco de fondo del cargador rechaza la credencial. Todo lo demás (caso, catálogo, modelo, recibos, guardados) sigue por fetch tal cual; con ?cargador=legacy o sin el script, nada cambia. Sin cambios de backend, hojas, fórmulas ni permisos; reabrirGate y esRechazoDeCredencial no se tocan.",
   "components": [

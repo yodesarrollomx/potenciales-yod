@@ -25,7 +25,11 @@ async function install(context,opts={}){
   if(/script\.google/.test(u.hostname)){
    let out={ok:true};
    if(req.method()==='POST'){
-    const b=req.postDataJSON();if(!b)return route.abort();if(b.tipo==='bitacora')return route.fulfill({contentType:'application/json',body:'{"ok":true}'});transport.posts.push(b);
+    const b=req.postDataJSON();if(!b)return route.abort();if(b.tipo==='bitacora')return route.fulfill({contentType:'application/json',body:'{"ok":true}'});
+    // Read-only presentation context is a session mint, not a financial write.
+    // Dedicated presentation tests provide their own complete resolver fixture.
+    if(b.tipo==='despacho-v1'&&b.operation==='resolvePresentationContext')return route.fulfill({contentType:'application/json',body:'{"ok":false,"error":"presentation_unavailable"}'});
+    transport.posts.push(b);
     if(b.tipo==='sheet-cantidades'){
      if(transport.conflict)out={ok:false,error:'conflicto_revision'};
      else{const m=transport.model,e=m.escenarios.find(x=>x.id===b.escenario_id);Object.assign(e.inputs,b.inputs);m.estados[e.id]=compute(e.inputs);m.revision+='x';out=m;}
