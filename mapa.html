@@ -134,6 +134,9 @@
     $('chips').innerHTML=Object.entries(TIPOS).filter(([t])=>counts[t]).map(([t,T])=>`<button class="chip${filtros.has(t)?'':' off'}" data-t="${t}"><i style="background:${T.hex}"></i>${T.e} ${T.n}<span class="n">${counts[t]}</span></button>`).join('');
     document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{const t=b.dataset.t;filtros.has(t)?filtros.delete(t):filtros.add(t);pinta()});
   }
+  // Códigos de rechazo de credencial: portero.js:309 ∩ yod-portal/os/app.js:134 (rechazoAcceso), más «http 401/403» que ese portal ya trata como texto.
+  // Cualquier otro motivo (servidor, tiempo agotado, error de hoja…) NO autoriza borrar pyod_clave_v1: es la sesión compartida de todo YOD OS.
+  function esRechazoDeCredencial(err){return ['clave','liga','expirado','revocado','sin_sesion','unauthorized','forbidden','http 401','http 403'].includes(String(err&&err.message||err||'').trim().toLowerCase())}
   async function cargar(k){
     const previous=localStorage.getItem(LSK);
     const r=await fetch(ENDPOINT+'?recurso=mapa&k='+encodeURIComponent(k)).then(x=>x.json());
@@ -149,7 +152,7 @@
     $('gateBtn').disabled=false;
   }
   $('gateBtn').onclick=entrar;$('gateClave').addEventListener('keydown',e=>{if(e.key==='Enter')entrar()});
-  if(clave){cargar(clave).then(()=>{$('gate').classList.add('off');ajusta()}).catch(e=>{if(e==='clave'){localStorage.removeItem(LSK);$('gateErr').textContent='La clave cambió'}else $('gateErr').textContent='Sin conexión con el Sheet'})}
+  if(clave){cargar(clave).then(()=>{$('gate').classList.add('off');ajusta()}).catch(e=>{if(esRechazoDeCredencial(e)){localStorage.removeItem(LSK);$('gateErr').textContent='La clave cambió'}else $('gateErr').textContent='Sin conexión con el Sheet'})}
 })();
 </script>
 <script src="ppp-catalog.js?v=20261019-1"></script>

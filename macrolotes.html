@@ -1810,7 +1810,7 @@
   }
   async function abrirPorId(id){const current=intakeBoard.readGuard();try{const r=await apiGet({recurso:'caso',id});if(!current())return;if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'Ese caso ya no existe':'No se pudo abrir: '+r.error)}catch(e){if(current())toast('Sin conexión: no se pudo abrir el caso')}}
   async function abrirPorPalabra(palabra){if(!palabra.trim())return;const current=intakeBoard.readGuard();try{const r=await apiGet({recurso:'caso',palabra:palabra.trim()});if(!current())return;if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'No hay caso con esa palabra':'No se pudo abrir: '+r.error)}catch(e){if(current())toast('Sin conexión: no se pudo abrir')}}
-  async function cargarLista(){const cont=$('listaCasos');cont.innerHTML='<p class="note">Cargando…</p>';try{const r=await apiGet({recurso:'lista'});if(!r.ok){cont.innerHTML='<p class="note">Error: '+r.error+'</p>';if(r.error==='clave')reabrirGate();return}casosCache=r.casos||[];cfgBoard=r.config||cfgBoard;if(!casosCache.length){cont.innerHTML='<p class="note">Aún no hay casos de Macro Lotes. Guarda el primero.</p>';return}cont.innerHTML=casosCache.map(c=>`<div class="caso-item" data-id="${c.caso_id}"><div><div class="ci-n">${esc(c.nombre_caso||c.palabra)}<span class="badge">${esc(c.estado||'—')}</span></div><div class="ci-m">palabra: ${esc(c.palabra)} · v${c.version||1} · ${fechaCorta(c.ts_actualizado)}${c.source==='test'?' · PRUEBA':''}</div></div><div class="ci-kpi">${c.utilidad!==''&&c.utilidad!==undefined?fmtM(Number(c.utilidad)):'—'}<span>utilidad · TIR ${c.tir_dev_pct!==''&&c.tir_dev_pct!==undefined?Number(c.tir_dev_pct).toFixed(1)+'%':'—'}</span></div></div>`).join('');cont.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>abrirPorId(el.dataset.id))}catch(e){cont.innerHTML='<p class="note">Sin conexión. Reintenta.</p>'}}
+  async function cargarLista(){const cont=$('listaCasos');cont.innerHTML='<p class="note">Cargando…</p>';try{const r=await apiGet({recurso:'lista'});if(!r.ok){cont.innerHTML='<p class="note">Error: '+r.error+'</p>';if(r.error==='clave')reabrirGate(r.error);return}casosCache=r.casos||[];cfgBoard=r.config||cfgBoard;if(!casosCache.length){cont.innerHTML='<p class="note">Aún no hay casos de Macro Lotes. Guarda el primero.</p>';return}cont.innerHTML=casosCache.map(c=>`<div class="caso-item" data-id="${c.caso_id}"><div><div class="ci-n">${esc(c.nombre_caso||c.palabra)}<span class="badge">${esc(c.estado||'—')}</span></div><div class="ci-m">palabra: ${esc(c.palabra)} · v${c.version||1} · ${fechaCorta(c.ts_actualizado)}${c.source==='test'?' · PRUEBA':''}</div></div><div class="ci-kpi">${c.utilidad!==''&&c.utilidad!==undefined?fmtM(Number(c.utilidad)):'—'}<span>utilidad · TIR ${c.tir_dev_pct!==''&&c.tir_dev_pct!==undefined?Number(c.tir_dev_pct).toFixed(1)+'%':'—'}</span></div></div>`).join('');cont.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>abrirPorId(el.dataset.id))}catch(e){cont.innerHTML='<p class="note">Sin conexión. Reintenta.</p>'}}
   async function guardarCaso(enviarCorreo){
     if(intakeBoard?.blocking){toast("La ficha se conserva como captura local. El guardado requiere conectar el modelo nativo de Sheets.");return;}
     if(modoLocal){toast('Estás sin nube: entra con la clave para guardar');return}
@@ -1826,7 +1826,7 @@
       btns.forEach(b=>b.disabled=false);
       if(!r.ok){
         if(r.error==='palabra_ocupada')toast('Esa palabra ya es de otro caso: elige otra');
-        else if(r.error==='clave'){toast('La clave del board cambió');reabrirGate()}
+        else if(r.error==='clave'){toast('La clave del board cambió');reabrirGate(r.error)}
         else toast('No se guardó: '+r.error);
         return}
       if(!r.caso_id){$('gWeb').value='';toast('No se guardó: vuelve a intentar');return}
@@ -1840,7 +1840,7 @@
     if(!caso.caso_id||modoLocal){toast(modoLocal?'Estado local (sin nube)':'Guarda el caso para que el estado viva en el Sheet');return}
     await postSeguimiento({tipo:'estado',caso_id:caso.caso_id,estado:nuevo,request_id:nuevoRequestId()},'Estado: '+nuevo)
   }
-  async function postSeguimiento(payload,okMsg){try{const r=await apiPost(payload);if(r.ok){toast(okMsg)}else if(r.error==='clave'){reabrirGate()}else toast('No se registró: '+r.error)}catch(e){encolar(payload);toast('Sin conexión: se registrará al reconectar')}}
+  async function postSeguimiento(payload,okMsg){try{const r=await apiPost(payload);if(r.ok){toast(okMsg)}else if(r.error==='clave'){reabrirGate(r.error)}else toast('No se registró: '+r.error)}catch(e){encolar(payload);toast('Sin conexión: se registrará al reconectar')}}
   function encolar(payload){try{let q=JSON.parse(localStorage.getItem(LS.cola)||'[]');
     if(payload.tipo==='guardar')q=q.filter(x=>!(x.tipo==='guardar'&&((x.caso_id&&x.caso_id===payload.caso_id)||(!x.caso_id&&!payload.caso_id&&x.palabra===payload.palabra))));
     q.push(payload);localStorage.setItem(LS.cola,JSON.stringify(q));const dot=$('syncDot');dot.className='sync-dot err';dot.textContent='· pendiente de sincronizar'}catch(e){}}
@@ -1858,7 +1858,7 @@
         }catch(e){resto.push(payload)}}
       let actual;try{actual=JSON.parse(localStorage.getItem(LS.cola)||'[]')}catch(e){actual=q}
       localStorage.setItem(LS.cola,JSON.stringify(resto.concat(actual.slice(q.length))));
-      if(claveVieja)reabrirGate();
+      if(claveVieja)reabrirGate('clave');
       else if(!resto.length&&!conflicto){toast('Cambios pendientes sincronizados');pintaCaso()}
     }finally{drenando=false}}
   function whatsApp(){
@@ -1868,7 +1868,15 @@
     window.open('https://wa.me/'+(num?num:'')+'?text='+encodeURIComponent(linea),'_blank')
   }
   /* ================== GATE / MODALES ================== */
-  function reabrirGate(){localStorage.removeItem(LS.clave);clave='';$('gate').classList.remove('off');$('gateErr').textContent='La clave cambió o es incorrecta'}
+  // Códigos de rechazo de credencial: portero.js:309 ∩ yod-portal/os/app.js:134 (rechazoAcceso), más «http 401/403» que ese portal ya trata como texto.
+  // Cualquier otro motivo (servidor, tiempo agotado, error de hoja…) NO autoriza borrar pyod_clave_v1: es la sesión compartida de todo YOD OS.
+  function esRechazoDeCredencial(err){return ['clave','liga','expirado','revocado','sin_sesion','unauthorized','forbidden','http 401','http 403'].includes(String(err&&err.message||err||'').trim().toLowerCase())}
+  function reabrirGate(motivo){
+    const credencial=esRechazoDeCredencial(motivo);
+    if(credencial){localStorage.removeItem(LS.clave);clave=''}
+    const gate=$('gate');gate.classList.remove('off');gate.style.removeProperty('display');gate.removeAttribute('aria-hidden');
+    $('gateErr').textContent=credencial?'La clave cambió o es incorrecta':'El tablero no pudo leer la lista ('+String(motivo&&motivo.message||motivo||'sin detalle').slice(0,80)+'). Tu sesión sigue abierta; vuelve a intentar recargando la página.'
+  }
   async function intentarEntrar(){
     const v=$('gateClave').value.trim();if(!v){$('gateErr').textContent='Escribe la clave';return}
     $('gateBtn').disabled=true;$('gateErr').textContent='';
@@ -2009,7 +2017,7 @@
   if(intakeRequested)intakeBoard.open();
   if(!intakeRequested){cargarDraft();if(!escenarios.length)escInicial('Base');calculate();pintaCaso();}
   if(modoLocal){$('gate').classList.add('off');$('modoLocalBanner').classList.add('on')}
-  else if(clave){apiGet({recurso:'lista'}).then(r=>{if(r.ok){casosCache=r.casos||[];cfgBoard=r.config||{};$('gate').classList.add('off');drenarCola();procesarOpen()}else{reabrirGate()}}).catch(()=>{modoSinConexion();toast('Sin conexión: trabajando en modo local')})}
+  else if(clave){apiGet({recurso:'lista'}).then(r=>{if(r.ok){casosCache=r.casos||[];cfgBoard=r.config||{};$('gate').classList.add('off');drenarCola();procesarOpen()}else{reabrirGate(r.error)}}).catch(()=>{modoSinConexion();toast('Sin conexión: trabajando en modo local')})}
 })();
 </script>
 <script src="modelos.js?v=1"></script>
