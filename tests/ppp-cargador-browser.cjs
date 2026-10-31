@@ -6,6 +6,7 @@
 //  2. Motor (residencial): la lista que se abre en «Mis casos» tras arrancar NO sale de caché (un caso guardado entre tanto debe verse).
 //  3. Portero: con sesión canjeada antes, el engrane de administrador sale de inmediato aunque el canje tarde; con ?cargador=legacy espera a la red.
 //  4. Caso: un caso se lee siempre de la red; sin red no se abre ni el de otro caso ni una copia vieja (el cargador sólo atiende la primera lista).
+//  5. Bitácora: los códigos de telemetría del cargador (primer dato, canje) viajan dentro de `eventos` del POST de bitácora del Portero, cortos y sin espacios.
 // No acredita login real, el backend ni el cargador en producción. Sin escrituras de negocio.
 const {chromium,webkit}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {install}=require('./ppp-fixture.js');
@@ -129,13 +130,32 @@ async function contrato(browser,name){
  console.log('PASS '+name+': caso · un caso se lee siempre de la red; sin red no se abre ni el de otro ni una copia vieja.');
 }
 
+async function bitacora(browser,name){
+ const state=nuevoEstado(),context=await browser.newContext({viewport:{width:1280,height:900}});
+ await servidor(context,state);
+ const cuerpos=[];
+ await context.route('https://script.google.com/**',route=>{const req=route.request();
+  if(req.method()==='POST'){try{const b=JSON.parse(req.postData()||'{}');if(b.tipo==='bitacora')cuerpos.push(b);}catch{}}
+  return route.fallback();});
+ const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(PAGE+'residencial.html');
+ for(let i=0;i<150&&!cuerpos.length;i++)await sleep(100);   // el Portero manda la bitácora a los 5 s
+ assert.ok(cuerpos.length,'la bitácora salió');
+ const codigos=cuerpos.flatMap(b=>String(b.eventos).split(' ')).filter(t=>/^(pd|cj|cat):/.test(t));
+ assert.ok(codigos.some(c=>/^pd:RE:\d+:[cr]$/.test(c)),'primer dato de la página: '+codigos.join(' '));
+ assert.ok(codigos.some(c=>/^cj:RE:\d+:[cr]$/.test(c)),'canje de la sesión: '+codigos.join(' '));
+ assert.ok(codigos.every(c=>c.length<=40&&!/\s/.test(c)),'cortos y sin espacios: '+codigos.join(' '));
+ assert.deepEqual(errors,[]);await context.close();
+ console.log('PASS '+name+': bitácora · los códigos del cargador viajan en eventos ('+codigos.join(' ')+').');
+}
+
 (async()=>{
  for(const [name,engine] of Object.entries({chromium,webkit})){
   if(process.env.PPP_ENGINE&&process.env.PPP_ENGINE!==name)continue;
   const browser=await engine.launch({headless:true});
   try{
    if(fs.existsSync(path.join(assets,'leaflet.js')))await portada(browser,name);else console.log('SIN PORTADA: faltan los archivos de Leaflet en '+assets+' (PPP_MAP_ASSETS)');
-   await motor(browser,name);await portero(browser,name);await contrato(browser,name);
+   await motor(browser,name);await portero(browser,name);await contrato(browser,name);await bitacora(browser,name);
   }finally{await browser.close();}
  }
 })().catch(e=>{console.error(e);process.exitCode=1;});
