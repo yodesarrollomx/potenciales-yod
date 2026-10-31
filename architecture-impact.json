@@ -1,16 +1,27 @@
 {
-  "model_revision": "2026-10-30.versiones-fase0.1",
-  "proposal_id": "CHG-VERSIONES-FASE0-001",
-  "summary": "Fase 0 (Estabilizar) de la reestructuración de YOD OS, aprobada por Dirección el 30-oct-2026 (Buzón CL-YODOS-FASE0-20261030). T-001: los siete HTML (macrolotes, mixto, residencial, unifamiliar, patrimonial, index, mapa) dejan de borrar pyod_clave_v1, la sesión compartida de todo YOD OS, ante cualquier respuesta !ok de recurso=lista; reabrirGate(motivo) muestra el gate siempre y sólo borra la llave ante un rechazo de credencial (clave, liga, expirado, revocado, sin_sesion, unauthorized, forbidden, HTTP 401/403), con el helper esRechazoDeCredencial idéntico en los siete archivos. T-002: versiones.json + scripts/versiones.cjs (--aplicar | --check) fijan una sola etiqueta ?v= para los archivos propios y otra para los de yod-portal (shell.js, shell.css, yod-acceso.js); aplicado a los 8 HTML (80 etiquetas = 20261030-fase0) y comprobado en el workflow Verificar interfaz PPP. No cambia runtime de negocio, ACL, backend ni fórmulas; portero.js no cambia de contenido. Publicación en Pages y recarga real se acreditan por separado.",
+  "model_revision": "2026-10-31.ppp-presentaciones.1",
+  "proposal_id": "CHG-PPP-PRESENTACIONES-20261031",
+  "summary": "Presentaciones privadas desde la versión visible del PPP. Los cinco motores comparten botón, origen confirmado, encargo, consulta y versiones editoriales. El navegador envía referencias de caso/escenario/revisión; el servidor relee la fuente autorizada y resuelve el expediente. Conserva la ficha nativa pendiente y las capturas históricas sin convertir cálculos locales en fuente financiera. Los cambios sin confirmar bloquean una nueva solicitud. Reutiliza Portero y el servicio cloud existente, sin tocar fórmulas, permisos, bridge de versión defendida ni código de portero.js. Conserva la Fase 0 vigente y genera todas las etiquetas propias desde versiones.json. Backend, publicación y piloto se acreditan por separado.",
   "components": [
     "SYS-POTENCIALES",
-    "SYS-CONTROL"
+    "SYS-CONTROL",
+    "GAS-PORTERO",
+    "SHEET-PPP-MODELOS",
+    "SVC-AUTON-CLOUD",
+    "STORE-AUTON-ESTADO",
+    "SYS-INVERSION"
   ],
   "tests": [
-    "T-001/SESION: tests/ppp-session-guard.test.cjs (22 casos): para cada HTML, reabrirGate('servidor') no borra la llave y reabrirGate('clave') sí; comprobación estática de que removeItem de la llave sólo vive en reabrirGate; contra origin/main el test falla en 19 casos (el defecto existía).",
-    "T-002/VERSIONES: tests/versiones.test.cjs (14 casos): reescritor con y sin ?v=, CDN y comentarios intactos, idempotencia; --check sobre el repo real sale con 0.",
-    "Batería completa: node --test tests/*.test.cjs tests/access-gates.cjs tests/sheets-offline.cjs = 429 pasan; git diff --check limpio; verificar-impacto contra el atlas 29ec0b0 de yod-portal: válido.",
-    "ENTREGA: pruebas locales y CI; Pages y la recarga en navegador real se acreditan por separado; sin POST de pruebas a producción."
+    "PPPPresentation: cinco variantes envían exclusivamente referencias VIEWED; revisión PPP distinta de expediente; dirty/busy/lectura no confirmada impiden crear.",
+    "Recuperación: doble clic, ACK perdido, recarga, solicitud original, cambio de identidad/caso y recibo ajeno; sin segundo POST automático ni números en almacenamiento del encargo.",
+    "Transporte: mapeo autorizado Portero, fast session en memoria, origen Render validado, timeout acotado, capacidad ausente y rechazo antes/después de admisión separados.",
+    "Navegador sintético: HTML real de los cinco motores, ficha nativa pendiente → solicitud → versión privada → recarga sin regenerar; 390 vertical, 844 horizontal y 1280 escritorio.",
+    "Regresión: node --test tests/*.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs; ficha/etapas/recibos originales; motor financiero idéntico; guardia de sesión y node scripts/versiones.cjs --check.",
+    "Apertura Patrimonial embebida y con shell: esperar el resolver de contexto de presentaciones, delegar únicamente ese POST de lectura al transporte común y conservar la aserción de cero escrituras de modelo.",
+    "Lectura móvil: el panel de presentaciones sigue al contenido del plan; los cinco resúmenes mantienen el límite original de altura y el recorrido de ajustes/versiones/guardado. Se conserva la aserción original de tests/ppp-browser.cjs.",
+    "Disponibilidad real: crear y reintentar permanecen inhabilitados hasta list.capabilities.presentation_draft_v1=true; resolver ausente, servicio detenido, respuesta antigua o cambio de identidad no autorizan solicitudes. Los cinco HTML se prueban sin resolver, con capacidad false y con capacidad confirmada.",
+    "Patrimonial histórico: prof:false y editores depas/mercado vacíos equivalen a su omisión en el formato de guardado; unidades, rentas, comparables presentes y sus eliminaciones siguen detectándose como cambios pendientes.",
+    "Entrega: pruebas locales, CI, frontend publicado, resolver GAS, worker y registro se verifican por separado; sin escrituras de prueba a producción."
   ],
-  "rollback": "Revertir el PR completo (git revert del merge) o, por partes: T-001 revirtiendo 93bc1c2; T-002 revirtiendo bdfba57 y 47cb92d. No hay cambios de backend, hojas ni datos en este PR; las etiquetas ?v= anteriores vuelven con el revert."
+  "rollback": "Revertir este consumidor o deshabilitar la admisión presentation_draft_v1 en el servicio existente. Conservar casos, snapshots, solicitudes, recibos, artefactos y versiones. No borrar ni restaurar libros completos; no eliminar la sesión compartida ni aprobar/publicar presentaciones automáticamente."
 }
