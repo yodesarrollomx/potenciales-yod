@@ -298,10 +298,12 @@
   .comp-lectura{font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:14px;line-height:1.55;color:var(--text);margin:12px 2px 2px;max-width:70ch}
   .comp-lectura b{color:var(--goldc);font-style:normal}
 </style>
-<link rel="stylesheet" href="ppp-intake.css?v=20261030-fase0">
-<script src="ppp-intake.js?v=20261030-fase0"></script>
-<link rel="stylesheet" href="ppp-stages.css?v=20261030-fase0">
-<script src="ppp-stages.js?v=20261030-fase0"></script>
+<link rel="stylesheet" href="ppp-intake.css?v=20261031-presentaciones">
+<script src="ppp-intake.js?v=20261031-presentaciones"></script>
+<link rel="stylesheet" href="ppp-presentation.css?v=20261031-presentaciones">
+<script src="ppp-presentation.js?v=20261031-presentaciones"></script>
+<link rel="stylesheet" href="ppp-stages.css?v=20261031-presentaciones">
+<script src="ppp-stages.js?v=20261031-presentaciones"></script>
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -488,6 +490,8 @@
 
   const $=id=>document.getElementById(id); const controls=[...document.querySelectorAll('input[type=range]')]; let state=null;
   let intakeBoard=null;
+  let presentationSaved=null;
+  function rememberPresentationRead(value){presentationSaved=PPPPresentations.rememberLegacy(value);}
   const fmtN=n=>Math.round(n||0).toLocaleString('en-US'); const fmtM=n=>Math.abs(n||0)>=1e6?'$'+((n||0)/1e6).toFixed(2)+' M':'$'+Math.round(n||0).toLocaleString('en-US'); const fmtMoney=n=>'$'+Math.round(n||0).toLocaleString('en-US'); const pct=(n,d=1)=>Number(n||0).toFixed(d)+'%'; const fmtM2=n=>(Math.round((n||0)*10)/10).toLocaleString('en-US')+' m²'; const sM=n=>(n<0?'−':'+')+fmtM(Math.abs(n||0));
   // Prellenado oficial: Casa Alysa Altozano (libro real, jul-2026)
   const PRELLENADO={inSuperficie:193.65,inFrente:9,inFondo:22.5,inPrecioM2Terreno:5800,inNiveles:2,
@@ -982,6 +986,7 @@
     caso={caso_id:obj.caso_id||'',palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
     // Versiones del caso: si la fila trae escenarios_json se restauran; si no (casos viejos), versión única.
     if(!escDesdeJson(obj.escenarios_json))escInicial('Base');
+    if(typeof rememberPresentationRead==='function')rememberPresentationRead({caseId:caso.caso_id,revision:obj.version,scenarios:obj.escenarios_json?escenarios:[]});
     calculate();pintaCaso();cerrarOverlays();toast('Caso "'+(caso.nombre_caso||caso.palabra)+'" cargado'+(escenarios.length>1?' · '+escenarios.length+' versiones':''))
   }
   async function abrirPorId(id){const current=intakeBoard.readGuard();try{const r=await apiGet({recurso:'caso',id});if(!current())return;if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'Ese caso ya no existe':'No se pudo abrir: '+r.error)}catch(e){if(current())toast('Sin conexión: no se pudo abrir el caso')}}
@@ -1006,6 +1011,7 @@
         return}
       if(!r.caso_id){$('gWeb').value='';toast('No se guardó: vuelve a intentar');return}
       caso.caso_id=r.caso_id;caso.palabra=r.palabra||payload.palabra;caso.correo=correo;caso.nombre_caso=nombre||'Caso sin nombre';caso.notas_caso=notas;caso.version=r.version;
+      if(typeof rememberPresentationRead==='function')rememberPresentationRead({caseId:r.caso_id,revision:r.version,scenarios:payload.escenarios});
       pintaCaso();guardarDraft();cerrarOverlays();
       toast(r.emailed?'Caso guardado · correo con la palabra enviado':'Caso guardado · palabra: '+caso.palabra)
     }catch(e){btns.forEach(b=>b.disabled=false);encolar(payload);toast('Sin conexión: se guardará al reconectar')}
@@ -1090,6 +1096,13 @@
   intakeBoard=PPPIntake.mountBoard({type:'unifamiliar',controls,adapter:PPPIntake.nativeAdapter({type:'unifamiliar',get:apiGet,post:apiPost}),onStart:(draft,receipt)=>{
     state=null;escenarios=[];escActivo='';caso={caso_id:receipt?.caso_id||'',palabra:receipt?.palabra||'',correo:caso.correo,nombre_caso:draft.nombre_caso,estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'Ubicación: '+draft.ubicacion+(draft.fuente?'\nFuente: '+draft.fuente:''),version:0};pintaCaso();
   },onExit:()=>{calculate();pintaCaso();}});
+  function presentationContext(){
+    if(intakeBoard?.blocking)return intakeBoard.presentationContext();
+    return PPPPresentations.legacyContext(presentationSaved,{caseId:caso.caso_id,revision:caso.version,scenarios:escenarios,active:escActivo,inputs:inputValues(),modelType:'unifamiliar',name:caso.nombre_caso,online:!modoLocal});
+  }
+  const presentationIdentity=()=>{try{return clave&&localStorage.getItem(LS.clave)===clave?clave:'';}catch{return '';}};
+  const presentationTransport=PPPPresentations.cloudTransport({getIdentity:presentationIdentity,resolve:payload=>apiPost({tipo:'despacho-v1',operation:'resolvePresentationContext',payload})});
+  const presentations=PPPPresentations.mount({read:presentationContext,transport:presentationTransport,getIdentity:presentationIdentity,save:()=>{if(intakeBoard?.blocking){void intakeBoard.flush();intakeBoard.paint();}else $('btnGuardar').click();}});
   const intakeRequested=new URLSearchParams(location.search).get('new')==='1'&&!new URLSearchParams(location.search).get('open');
   if(intakeRequested)intakeBoard.open();
   if(!intakeRequested){cargarDraft();if(!escenarios.length)escInicial('Base');calculate();pintaCaso();}
@@ -1097,8 +1110,8 @@
   else if(clave){apiGet({recurso:'lista'}).then(r=>{if(r.ok){casosCache=r.casos||[];cfgBoard=r.config||{};$('gate').classList.add('off');drenarCola();procesarOpen()}else{reabrirGate(r.error)}}).catch(()=>{modoSinConexion();toast('Sin conexión: trabajando en modo local')})}
 })();
 </script>
-<script src="modelos.js?v=20261030-fase0"></script>
-<script src="portero.js?v=20261030-fase0"></script>
+<script src="modelos.js?v=20261031-presentaciones"></script>
+<script src="portero.js?v=20261031-presentaciones"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=20261030-fase0"></script>
 </body>
 </html>

@@ -303,10 +303,10 @@
 
 #mercadoDocumento[hidden]{display:none}#mercadoDocumento table{width:100%;border-collapse:collapse;font-size:11px}#mercadoDocumento td,#mercadoDocumento th{padding:8px;border-bottom:1px solid var(--linea);text-align:left}#mercadoDocumento h3{font-size:14px}#mercadoDocumento{overflow-wrap:anywhere}#mercadoDocumento button{margin-top:10px}
 </style>
-<link rel="stylesheet" href="ppp-ui.css?v=20261030-fase0">
-<link rel="stylesheet" href="ppp-volumes.css?v=20261030-fase0">
-<link rel="stylesheet" href="ppp-stages.css?v=20261030-fase0">
-<link rel="stylesheet" href="ppp-intake.css?v=20261030-fase0">
+<link rel="stylesheet" href="ppp-ui.css?v=20261031-presentaciones">
+<link rel="stylesheet" href="ppp-volumes.css?v=20261031-presentaciones">
+<link rel="stylesheet" href="ppp-stages.css?v=20261031-presentaciones">
+<link rel="stylesheet" href="ppp-intake.css?v=20261031-presentaciones">
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -544,13 +544,15 @@
 </div></div>
 
 <div id="toast"></div>
-<script src="ppp-ui.js?v=20261030-fase0"></script>
-<script src="ppp-case-loader.js?v=20261030-fase0"></script>
-<script src="ppp-volumes.js?v=20261030-fase0"></script>
-<script src="ppp-volumes-native.js?v=20261030-fase0"></script>
-<script src="ppp-stages.js?v=20261030-fase0"></script>
-<script src="ppp-intake.js?v=20261030-fase0"></script>
-<script src="ppp-version-bridge.js?v=20261030-fase0"></script>
+<script src="ppp-ui.js?v=20261031-presentaciones"></script>
+<script src="ppp-case-loader.js?v=20261031-presentaciones"></script>
+<script src="ppp-volumes.js?v=20261031-presentaciones"></script>
+<script src="ppp-volumes-native.js?v=20261031-presentaciones"></script>
+<script src="ppp-stages.js?v=20261031-presentaciones"></script>
+<script src="ppp-intake.js?v=20261031-presentaciones"></script>
+<link rel="stylesheet" href="ppp-presentation.css?v=20261031-presentaciones">
+<script src="ppp-presentation.js?v=20261031-presentaciones"></script>
+<script src="ppp-version-bridge.js?v=20261031-presentaciones"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -563,6 +565,8 @@
   let cfgBoard={}, casosCache=[], modoLocal=!cloudOn, restoredDraft=false, legacySavedInputs=null;
 
   const $=id=>document.getElementById(id); const controls=[...document.querySelectorAll('input[type=range]')]; let state=null,intakeBoard=null;
+  let presentationSaved=null;
+  function rememberPresentationRead(value){presentationSaved=PPPPresentations.rememberLegacy(value);}
   const fmtN=n=>Math.round(n||0).toLocaleString('en-US'); const fmtM=n=>'$'+((n||0)/1e6).toFixed(1)+' M'; const fmtMoney=n=>'$'+Math.round(n||0).toLocaleString('en-US'); const fmtK=n=>'$'+((n||0)/1000).toFixed(1)+'k'; const pct=(n,d=1)=>Number(n||0).toFixed(d)+'%'; const sM=n=>(n<0?'−':'+')+fmtM(Math.abs(n||0));
   // Prellenado oficial del caso de referencia (JSON torre-ruisenor v3 · 2026-07-09)
   const PRELLENADO={inTerreno:2500,inCOS:70,inCUS:6,inCom:250,inEfiViv:90,inM2Depto:93,inMixLoft:35,inM2Loft:60,inMix2Rec:20,inM22Rec:90,inMix3Rec:45,inM23Rec:120,inEfiCom:85,inDeptosPiso:12,inLocalesPB:5,inHabDepto:3.5,inAltPB:4.5,inAltViv:3.5,inAltMax:60,inCobSotano:100,inAltSotano:3.2,inAreaVerdePct:20,inM2Cajon:35,inM2ComCajon:40,inPreViv:58000,inDescPrev:4,inPreCom:60000,inEng:30,inObra:40,inPreventa:75,inMesesPreventa:18,inMesesEntrega:18,inPrecioCajon:320000,inCostRas:24000,inCostSot:17500,inInd:7,inImp:5,inCierreTierra:3,inLegal:2,inComision:5,inInicioObra:12,inMesesObra:36,inPIK:12,inTierraUSD:500,inTC:18.5,inVel:80,inAporteTierra:100,inEquity:10000000,inMaxDeuda:305000000,inLTC:60,inMinPreventaObra:15,inFeeDeuda:1.5,inPref:20,inResidualDueno:50,inTirObjetivo:25};
@@ -1298,6 +1302,7 @@
     Object.keys(obj).forEach(kk=>{if(/^in[A-Z]/.test(kk)&&$(kk)&&obj[kk]!==''&&isFinite(Number(obj[kk])))setControl(kk,Number(obj[kk]))});
     caso={caso_id:obj.caso_id||'',palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
     if(!escDesdeJson(obj.escenarios_json))escInicial('Base');
+    if(typeof rememberPresentationRead==='function')rememberPresentationRead({caseId:caso.caso_id,revision:obj.version,scenarios:obj.escenarios_json?escenarios:[]});
     if(!sheetModel)legacySavedInputs=inputValues();
     if(sheetModel)acceptSheetModel(sheetModel,sheetModel.activo);else calculate();pintaCaso();if(sheetModel)sheetStatus('Sheets · revisión '+sheetModel.revision.slice(0,8));cerrarOverlays();toast('Caso "'+(caso.nombre_caso||caso.palabra)+'" cargado'+(escenarios.length>1?' · '+escenarios.length+' versiones':''))
   }
@@ -1350,7 +1355,8 @@
         return}
       if(!r.caso_id){$('gWeb').value='';if(creating){$('gSeedStatus').textContent='La creación está por confirmar. Comprueba el proyecto por su palabra.';$('gSeedCheck').hidden=false;}toast('No se confirmó el guardado: comprueba el proyecto por su palabra');return}
       if(creating){const native=r.calculo_sheet,collection=native?.volumes_by_scenario?.[native.activo];if(r.request_id!==payload.request_id||!window.PPPCaseLoader.validModel(native,r.caso_id)||!window.PPPVolumesNative.equalDrivers(collection,creationSeed.volumes))throw Error('creation_readback_unconfirmed');retireSeed();volumeIdentity={case_id:r.caso_id,project_name:nombre||'',credential:clave};}
-      caso.caso_id=r.caso_id;caso.palabra=r.palabra||payload.palabra;caso.correo=correo;caso.nombre_caso=nombre||'Caso sin nombre';caso.notas_caso=notas;caso.version=r.version;if(!sheetModel)legacySavedInputs={...payload.inputs};
+      caso.caso_id=r.caso_id;caso.palabra=r.palabra||payload.palabra;caso.correo=correo;caso.nombre_caso=nombre||'Caso sin nombre';caso.notas_caso=notas;caso.version=r.version;
+      if(typeof rememberPresentationRead==='function')rememberPresentationRead({caseId:r.caso_id,revision:r.version,scenarios:payload.escenarios});if(!sheetModel)legacySavedInputs={...payload.inputs};
       if(r.calculo_sheet)acceptSheetModel(r.calculo_sheet,r.calculo_sheet.activo);pintaCaso();guardarDraft();cerrarOverlays();if(sheetModel)sheetStatus('Sheets · revisión '+sheetModel.revision.slice(0,8));
       toast(r.emailed?'Caso guardado · correo con la palabra enviado':'Caso guardado · palabra: '+caso.palabra)
     }catch(e){btns.forEach(b=>b.disabled=false);if(creating&&(saveCredential!==clave||modoLocal||caso.caso_id||creationEpoch!==seedEpoch))return;if(creating){$('gSeedStatus').textContent='La creación no está confirmada. Comprueba el proyecto por su palabra; no se reenviará automáticamente.';$('gSeedCheck').hidden=false;toast('Creación por confirmar: comprueba el proyecto por palabra');return;}if(sheetModel){sheetStatus('No se confirmó el guardado');toast('No se guardó: revisa conexión');return;}encolar(payload);toast('Sin conexión: se guardará al reconectar')}
@@ -1556,6 +1562,15 @@
     window.PPPView?.update({p:{terrain:draft.inputs.inTerreno}},{native:false,projectName:draft.nombre_caso});
     const context=$('pppContext');if(context)context.firstChild.textContent=(receipt?.persisted?'Ficha guardada en Sheets':'Ficha inicial')+' · 1 etapa · cantidades pendientes';
   },onExit:()=>{if(state){render();pintaCaso();}}});
+  function presentationContext(){
+    if(intakeBoard?.blocking)return intakeBoard.presentationContext();
+    if(caseSelection)return null;
+    if(sheetModel)return PPPPresentations.nativeContext({model:sheetModel,caseId:caso.caso_id,active:escActivo,modelType:'vertical',name:caso.nombre_caso,confirmed:!modoLocal&&!sheetFailure&&!sheetNeedsRefresh,pending:!!sheetPending||!!volumeOperation||!!stageOperation||volumeEditorState.dirty||volumeEditorState.pending,busy:sheetBusy});
+    return PPPPresentations.legacyContext(presentationSaved,{caseId:caso.caso_id,revision:caso.version,scenarios:escenarios,active:escActivo,inputs:inputValues(),modelType:'vertical',name:caso.nombre_caso,online:!modoLocal});
+  }
+  const presentationIdentity=()=>{try{return clave&&localStorage.getItem(LS.clave)===clave?clave:'';}catch{return '';}};
+  const presentationTransport=PPPPresentations.cloudTransport({getIdentity:presentationIdentity,resolve:payload=>apiPost({tipo:'despacho-v1',operation:'resolvePresentationContext',payload})});
+  const presentations=PPPPresentations.mount({read:presentationContext,transport:presentationTransport,getIdentity:presentationIdentity,save:()=>{if(intakeBoard?.blocking){void intakeBoard.flush();intakeBoard.paint();}else $('btnGuardar').click();}});
   const initialNew=new URLSearchParams(location.search).get('new')==='1'&&!new URLSearchParams(location.search).get('open');
   if(initialNew)intakeBoard.open();else{cargarDraft();if(!escenarios.length)escInicial('Base');calculate();pintaCaso();}
   if(modoLocal){$('gate').classList.add('off');$('modoLocalBanner').classList.add('on');const requested=new URLSearchParams(location.search).get('open');if(requested&&requested!==caso.caso_id)casePresentation('error','Conéctate para leer el proyecto solicitado. Los supuestos de referencia no son sus resultados.',requested);}
@@ -1567,7 +1582,7 @@
 })();
 </script>
 <!-- El selector de motores se retiró del PPP vertical por decisión de Dirección. -->
-<script src="portero.js?v=20261030-fase0"></script>
+<script src="portero.js?v=20261031-presentaciones"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=20261030-fase0"></script>
 </body>
 </html>

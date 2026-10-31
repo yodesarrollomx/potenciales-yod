@@ -322,10 +322,12 @@
     .comp-scroll{border:1px solid #ddd;overflow:visible}
   }
 </style>
-<link rel="stylesheet" href="ppp-intake.css?v=20261030-fase0">
-<script src="ppp-intake.js?v=20261030-fase0"></script>
-<link rel="stylesheet" href="ppp-stages.css?v=20261030-fase0">
-<script src="ppp-stages.js?v=20261030-fase0"></script>
+<link rel="stylesheet" href="ppp-intake.css?v=20261031-presentaciones">
+<script src="ppp-intake.js?v=20261031-presentaciones"></script>
+<link rel="stylesheet" href="ppp-presentation.css?v=20261031-presentaciones">
+<script src="ppp-presentation.js?v=20261031-presentaciones"></script>
+<link rel="stylesheet" href="ppp-stages.css?v=20261031-presentaciones">
+<script src="ppp-stages.js?v=20261031-presentaciones"></script>
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -505,9 +507,9 @@
 </div></div>
 
 <div id="toast"></div>
-<link rel="stylesheet" href="ppp-patrimonial-native.css?v=20261030-fase0">
-<script src="ppp-case-loader.js?v=20261030-fase0"></script><script src="ppp-case-opening.js?v=20261030-fase0"></script>
-<script src="ppp-version-bridge.js?v=20261030-fase0"></script><script src="ppp-agent-bridge.js?v=20261030-fase0"></script><script src="ppp-agent-cards.js?v=20261030-fase0"></script><script src="ppp-patrimonial-native.js?v=20261030-fase0"></script>
+<link rel="stylesheet" href="ppp-patrimonial-native.css?v=20261031-presentaciones">
+<script src="ppp-case-loader.js?v=20261031-presentaciones"></script><script src="ppp-case-opening.js?v=20261031-presentaciones"></script>
+<script src="ppp-version-bridge.js?v=20261031-presentaciones"></script><script src="ppp-agent-bridge.js?v=20261031-presentaciones"></script><script src="ppp-agent-cards.js?v=20261031-presentaciones"></script><script src="ppp-patrimonial-native.js?v=20261031-presentaciones"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -521,6 +523,8 @@
 
   const $=id=>document.getElementById(id); const controls=[...document.querySelectorAll('input[type=range]')]; let state=null;
   let intakeBoard=null;
+  let presentationSaved=null;
+  function rememberPresentationRead(value){presentationSaved=PPPPresentations.rememberLegacy(value);}
   const fmtN=n=>Math.round(n||0).toLocaleString('en-US'); const fmtM=n=>Math.abs(n||0)>=1e6?'$'+((n||0)/1e6).toFixed(2)+' M':'$'+Math.round(n||0).toLocaleString('en-US'); const fmtMoney=n=>'$'+Math.round(n||0).toLocaleString('en-US'); const pct=(n,d=1)=>Number(n||0).toFixed(d)+'%'; const sM=n=>(n<0?'−':'+')+fmtM(Math.abs(n||0));
   // Prellenado: Real del Arco 16 deptos (el patrimonial maduro, jun-2026)
   // Real del Arco tal cual su Excel (Drive: «Yod - Departamentos - Real del Arco - PPP Patrimonial», jun-2026).
@@ -1105,6 +1109,7 @@
     caso={caso_id:obj.caso_id||'',palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
     // Versiones del caso: si la fila trae escenarios_json se restauran; si no (casos viejos), versión única desde las columnas in*.
     if(!escDesdeJson(obj.escenarios_json))escInicial('Base');
+    if(typeof rememberPresentationRead==='function')rememberPresentationRead({caseId:caso.caso_id,revision:obj.version,scenarios:obj.escenarios_json?escenarios:[]});
     rememberLegacyVersions();calculate();pintaCaso();cerrarOverlays();toast('Caso "'+(caso.nombre_caso||caso.palabra)+'" cargado'+(escenarios.length>1?' · '+escenarios.length+' versiones':''));return true
   }
   const openingStyle=document.createElement('style');openingStyle.textContent='#pppCaseOpening [hidden]{display:none!important}body[data-ppp-opening="true"] > :not(#pppCaseOpening):not(#gate):not(#porteroGate):not(.yod-shell){visibility:hidden}body[data-ppp-opening="true"] .yod-canvas > :not(#pppCaseOpening):not(#gate):not(#porteroGate){visibility:hidden}';document.head.append(openingStyle);
@@ -1142,6 +1147,7 @@
         return}
       if(!r.caso_id){$('gWeb').value='';toast('No se guardó: vuelve a intentar');return}
       caso.caso_id=r.caso_id;caso.palabra=r.palabra||payload.palabra;caso.correo=correo;caso.nombre_caso=nombre||'Caso sin nombre';caso.notas_caso=notas;caso.version=r.version;
+      if(typeof rememberPresentationRead==='function')rememberPresentationRead({caseId:r.caso_id,revision:r.version,scenarios:payload.escenarios});
       versionBridge?.invalidate();pintaCaso();guardarDraft();cerrarOverlays();
       toast(r.emailed?'Caso guardado · correo con la palabra enviado':'Caso guardado · palabra: '+caso.palabra)
     }catch(e){btns.forEach(b=>b.disabled=false);encolar(payload);toast('Sin conexión: se guardará al reconectar')}
@@ -1236,6 +1242,15 @@
     if(nativeAdapter){nativeAdapter.destroy();nativeAdapter=null;}
     state=null;escenarios=[];escActivo='';caso={caso_id:receipt?.caso_id||'',palabra:receipt?.palabra||'',correo:caso.correo,nombre_caso:draft.nombre_caso,estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'Ubicación: '+draft.ubicacion+(draft.fuente?'\nFuente: '+draft.fuente:''),version:0};pintaCaso();
   },onExit:()=>{calculate();pintaCaso();}});
+  function presentationContext(){
+    if(intakeBoard?.blocking)return intakeBoard.presentationContext();
+    if(document.body.dataset.pppOpening==='true')return null;
+    if(nativeAdapter){const store=nativeAdapter.store;return PPPPresentations.nativeContext({model:store.model,caseId:store.id,active:store.model?.activo,modelType:'patrimonial',name:caso.nombre_caso,confirmed:store.verified&&!store.error&&!modoLocal,pending:store.dirty(),busy:store.busy||store.versionBusy});}
+    return PPPPresentations.legacyContext(presentationSaved,{caseId:caso.caso_id,revision:caso.version,scenarios:escenarios,active:escActivo,inputs:inputValues(),modelType:'patrimonial',name:caso.nombre_caso,online:!modoLocal});
+  }
+  const presentationIdentity=()=>{try{return clave&&localStorage.getItem(LS.clave)===clave?clave:'';}catch{return '';}};
+  const presentationTransport=PPPPresentations.cloudTransport({getIdentity:presentationIdentity,resolve:payload=>apiPost({tipo:'despacho-v1',operation:'resolvePresentationContext',payload})});
+  const presentations=PPPPresentations.mount({read:presentationContext,transport:presentationTransport,getIdentity:presentationIdentity,save:()=>{if(intakeBoard?.blocking){void intakeBoard.flush();intakeBoard.paint();}else $('btnGuardar').click();}});
   const intakeRequested=new URLSearchParams(location.search).get('new')==='1'&&!new URLSearchParams(location.search).get('open');
   if(intakeRequested)intakeBoard.open();
   const nativeCache=intakeRequested?null:PPPPatrimonialNative.cached(new URLSearchParams(location.search).get('open')||undefined);
@@ -1247,8 +1262,8 @@
     else apiGet({recurso:'lista'}).then(r=>{if(r.ok){casosCache=r.casos||[];cfgBoard=r.config||{};$('gate').classList.add('off');drenarCola();}else if(PPPCaseOpening.isAuthenticationError(r.error)){reabrirGate();}else{toast('El catálogo no respondió. Tu sesión se conserva; vuelve a cargar Mis casos.');}}).catch(()=>{toast('Sin conexión con el catálogo. Tu sesión y tu borrador se conservan.');});}
 })();
 </script>
-<script src="modelos.js?v=20261030-fase0"></script>
-<script src="portero.js?v=20261030-fase0"></script>
+<script src="modelos.js?v=20261031-presentaciones"></script>
+<script src="portero.js?v=20261031-presentaciones"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=20261030-fase0"></script>
 </body>
 </html>

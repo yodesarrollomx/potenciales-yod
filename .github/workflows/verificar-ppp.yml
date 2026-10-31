@@ -36,6 +36,8 @@ jobs:
           node --test tests/ppp-agent-cards.test.cjs
           node --check ppp-agent-bridge.js
           node --test tests/ppp-agent-bridge.test.cjs tests/ppp-agent-receipts.test.cjs
+          node --check ppp-presentation.js
+          node --test tests/ppp-presentation.test.cjs
           node --check ppp-intake.js
           node --check ppp-stages.js
           node --check scripts/ppp-intake-copy-plan.cjs
@@ -79,6 +81,7 @@ jobs:
         run: |
           node tests/ppp-version-bridge-browser.cjs
           node tests/ppp-navigation-browser.cjs
+          node tests/ppp-presentation-browser.cjs
           node tests/ppp-intake-browser.cjs
           node tests/ppp-stages-browser.cjs
           node tests/ppp-volumes-browser.cjs

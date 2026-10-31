@@ -9,7 +9,7 @@ const copy=x=>JSON.parse(JSON.stringify(x));
   const ids=['synthetic-case','synthetic-B'],models=Object.fromEntries(ids.map(id=>{const m=copy(fixture);m.caso_id=id;return[id,m];}));let posts=0;
   await context.route('https://script.google.com/**',async route=>{
    const req=route.request(),u=new URL(req.url());let out={ok:true};
-   if(req.method()==='POST'){const d=req.postDataJSON();if(!d)return route.abort();if(d.tipo!=='bitacora'){posts++;out={ok:false,error:'offline'};}}
+   if(req.method()==='POST'){const d=req.postDataJSON();if(!d)return route.abort();if(d.tipo==='despacho-v1'&&d.operation==='resolvePresentationContext')return route.fallback();if(d.tipo!=='bitacora'){posts++;out={ok:false,error:'offline'};}}
    else if(u.searchParams.get('recurso')==='caso'){const id=u.searchParams.get('id');out={ok:true,caso:{caso_id:id,nombre_caso:id,palabra:id,version:1,calculo_sheet:models[id]}};}
    else if(u.searchParams.get('recurso')==='sheet-model')out=models[u.searchParams.get('id')];
    else if(u.searchParams.get('recurso')==='lista')out={ok:true,casos:ids.map(id=>({caso_id:id,nombre_caso:id,palabra:id,version:1}))};
