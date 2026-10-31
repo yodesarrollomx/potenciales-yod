@@ -1,29 +1,16 @@
 {
-  "model_revision": "2026-10-29.ppp-read-validation.1",
-  "proposal_id": "CHG-PPP-FICHA-ETAPAS-20261029",
-  "summary": "Propuesta autorizada de ficha mínima común para los cinco motores PPP, apertura del tablero normal y edición conversada de etapas con datos/fórmulas nativas en Sheets y coherencia por modificación. Preserva identidad, escenarios, permisos y recibos; implementación y despliegue se acreditan por separado. Se conservan los errores tipados de apertura y la señal de cap inactivo ya integrados en main. Se agrega un planificador de QA puro para copias de captura con diario atómico y lectura de recuperación; no cambia runtime, ACL, backend ni fórmulas financieras. La ficha limita a 60 segundos las esperas y conserva la operación incierta para consultar su recibo por GET. Oculta resúmenes y versiones de otros casos durante la lectura y la captura pendiente, descarta lecturas de vistas anteriores y muestra códigos de diagnóstico conocidos. La recuperación nativa puede reenviar manualmente la misma creación con identidad, ID y payload inmutables después de un GET exacto receipt_not_found; el CORE deduplica bajo lock y nunca se reenvía automáticamente. Paso5–6 piloto: vista previa ligada a caso/versión/revisión, aclaración de orden y guardado explícito; recuperación manual del mismo cambio tras reserva previa sin lote y conciliación del lote aplicado. No inventa fechas ni repartos. El host reutiliza el ledger y la URL existente, con escritura opt-in en una copia aislada y lectura de sus 72 fórmulas; publicación y QA real se acreditan por separado.",
+  "model_revision": "2026-10-30.versiones-fase0.1",
+  "proposal_id": "CHG-VERSIONES-FASE0-001",
+  "summary": "Fase 0 (Estabilizar) de la reestructuración de YOD OS, aprobada por Dirección el 30-oct-2026 (Buzón CL-YODOS-FASE0-20261030). T-001: los siete HTML (macrolotes, mixto, residencial, unifamiliar, patrimonial, index, mapa) dejan de borrar pyod_clave_v1, la sesión compartida de todo YOD OS, ante cualquier respuesta !ok de recurso=lista; reabrirGate(motivo) muestra el gate siempre y sólo borra la llave ante un rechazo de credencial (clave, liga, expirado, revocado, sin_sesion, unauthorized, forbidden, HTTP 401/403), con el helper esRechazoDeCredencial idéntico en los siete archivos. T-002: versiones.json + scripts/versiones.cjs (--aplicar | --check) fijan una sola etiqueta ?v= para los archivos propios y otra para los de yod-portal (shell.js, shell.css, yod-acceso.js); aplicado a los 8 HTML (80 etiquetas = 20261030-fase0) y comprobado en el workflow Verificar interfaz PPP. No cambia runtime de negocio, ACL, backend ni fórmulas; portero.js no cambia de contenido. Publicación en Pages y recarga real se acreditan por separado.",
   "components": [
     "SYS-POTENCIALES",
-    "GAS-PORTERO",
-    "SHEET-PORTERO",
-    "SHEET-PPP-MODELOS",
-    "SYS-YOD-OS",
-    "SYS-DESPACHO-3D",
-    "SVC-AUTON-CLOUD"
+    "SYS-CONTROL"
   ],
   "tests": [
-    "FICHA-5/PANEL: recorrer los cinco HTML con datos sintéticos, abrir tablero nativo y paneles en escritorio/móvil sin perder accesos, documentos ni escenarios.",
-    "ETAPA-1/INTENCION-3X12: alta compatible con una etapa; caso existente conserva etapas; texto final 3 etapas de 12 meses comparte ruta con dictado/voz y no aplica negaciones ni audio provisional.",
-    "COHERENCIA: comparar inventario, áreas, recursos únicos, calendario completo y flujos en fixtures y fórmulas nativas aisladas; no aceptar cálculo financiero paralelo.",
-    "CONCURRENCIA/CONFIRMADO: permisos, revisión obsoleta, cambio de caso/usuario, duplicado, ACK perdido y recibo exacto sin repetir escrituras inciertas.",
-    "ENTREGA: pruebas locales, CI, Pages, versión existente de GAS y lectura final se registran por separado; sin POST de pruebas a producción.",
-    "Apertura Patrimonial: conservar rechazo tipado, diagnóstico y cap inactivo en las condiciones estrictas ya integradas.",
-    "PASO4-COPIAS: planificar solamente constantes de calendario y espejos permitidos; conservar 72 fórmulas; comprobar diario/preimagen, recálculo efectivo y recuperación de solo lectura. Fixtures sintéticas en CI y evidencia aislada de cinco tipos por separado.",
-    "PLAZO-60/RECIBO: creación y GET colgados liberan busy al plazo; ACK tardío no confirma; recuperación conserva request_id, no repite POST automáticamente y adaptadores sin lector no reenvían escrituras. Autosave y etapas comparten espera acotada. Reloj virtual, contratos y navegador sintético.",
-    "AISLAMIENTO-VISTA: cache previo con otro caso y versiones en los cinco HTML; durante lectura remota no se muestra el tablero anterior y una ficha pendiente no presenta su HUD ni escenarios. GET previo a la nueva ficha no reemplaza la selección. Diagnóstico conserva primer/último código conocido y request_id sin mensajes arbitrarios. Dos selecciones concurrentes A/B siempre conservan la última solicitada, cualquiera que sea el orden de llegada. El código ocupado es diagnóstico y nunca prueba ausencia de escritura.",
-    "REPLAY-MISMA-CREACION: contrato idempotente explícito del adaptador nativo; GET ok:false/receipt_not_found/ID exacto; botón manual; payload y UUID originales; identidad actual justo antes de POST. Cambios de sesión o formulario, ausencia de contrato y respuestas incompletas rechazan el reenvío. Un rechazo del replay no retira la incertidumbre original. Dos transportes del mismo ID conservan un solo libro; pending solo reconcilia.",
-    "PASO56-TEXTO: positivos, negación, decimal/rango, contradicción y comando extra; no truncar fuente; propuesta obsoleta al cambiar caso/versión/revisión/capacidad; selección de paralelo no compatible sin POST.",
-    "PASO56-RECUPERACION: mismo request y payload tras reserva durable; reanudar sólo mediante botón explícito después de evidencia exacta; retorno incierto no genera otro ID ni afirma aplicado; protección de 72 fórmulas y fallo después de lote con conciliación por GET."
+    "T-001/SESION: tests/ppp-session-guard.test.cjs (22 casos): para cada HTML, reabrirGate('servidor') no borra la llave y reabrirGate('clave') sí; comprobación estática de que removeItem de la llave sólo vive en reabrirGate; contra origin/main el test falla en 19 casos (el defecto existía).",
+    "T-002/VERSIONES: tests/versiones.test.cjs (14 casos): reescritor con y sin ?v=, CDN y comentarios intactos, idempotencia; --check sobre el repo real sale con 0.",
+    "Batería completa: node --test tests/*.test.cjs tests/access-gates.cjs tests/sheets-offline.cjs = 429 pasan; git diff --check limpio; verificar-impacto contra el atlas 29ec0b0 de yod-portal: válido.",
+    "ENTREGA: pruebas locales y CI; Pages y la recarga en navegador real se acreditan por separado; sin POST de pruebas a producción."
   ],
-  "rollback": "Deshabilitar sólo la capacidad nueva de etapas y revertir consumidores/handlers mediante commits y la versión previa de la misma implementación GAS. Conservar casos, escenarios, etapas, recibos, fórmulas, ACL e históricos; no restaurar libros completos ni borrar registros."
+  "rollback": "Revertir el PR completo (git revert del merge) o, por partes: T-001 revirtiendo 93bc1c2; T-002 revirtiendo bdfba57 y 47cb92d. No hay cambios de backend, hojas ni datos en este PR; las etiquetas ?v= anteriores vuelven con el revert."
 }

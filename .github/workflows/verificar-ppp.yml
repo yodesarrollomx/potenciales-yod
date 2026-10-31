@@ -29,6 +29,9 @@ jobs:
       - name: Controles, cálculo original y sintaxis
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          node --check scripts/versiones.cjs
+          node scripts/versiones.cjs --check
+          node --test tests/versiones.test.cjs
           node --check ppp-agent-cards.js
           node --test tests/ppp-agent-cards.test.cjs
           node --check ppp-agent-bridge.js
@@ -55,6 +58,7 @@ jobs:
           node --check ppp-macro-cards.js
           node --test tests/ppp-refresh-identity.test.cjs
           node --test tests/ppp-ui.test.cjs tests/ppp-case-loader.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs tests/patrimonial-native.test.cjs tests/ppp-version-bridge.test.cjs
+          node --test tests/ppp-session-guard.test.cjs
           git diff --check
       - name: Instalar navegadores
         run: |

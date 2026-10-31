@@ -2,14 +2,14 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=1"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=20261030-fase0"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
 <title>PPP Patrimonial / Rentas · Potenciales · YoDesarrollo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css">
-<link rel="stylesheet" href="https://yodesarrollomx.github.io/yod-portal/os/shell.css">
+<link rel="stylesheet" href="https://yodesarrollomx.github.io/yod-portal/os/shell.css?v=20261030-fase0">
 <style>
   /* ===== Fintech Editorial (oscuro) · tokens por ROL, convención de los boards YoD ===== */
   :root{--bg:#f6f3ed;--card:#ffffff;--surface:rgba(35,29,20,.04);--text:#231d14;--muted:#766f62;--suave:#8a8272;--linea:#e1dacb;--lineaf:#d8cfbb;--box:rgba(35,29,20,.04);
@@ -322,10 +322,10 @@
     .comp-scroll{border:1px solid #ddd;overflow:visible}
   }
 </style>
-<link rel="stylesheet" href="ppp-intake.css?v=20261029-cierre34">
-<script src="ppp-intake.js?v=20261029-paso56"></script>
-<link rel="stylesheet" href="ppp-stages.css?v=20261029-paso56">
-<script src="ppp-stages.js?v=20261029-paso56"></script>
+<link rel="stylesheet" href="ppp-intake.css?v=20261030-fase0">
+<script src="ppp-intake.js?v=20261030-fase0"></script>
+<link rel="stylesheet" href="ppp-stages.css?v=20261030-fase0">
+<script src="ppp-stages.js?v=20261030-fase0"></script>
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -505,9 +505,9 @@
 </div></div>
 
 <div id="toast"></div>
-<link rel="stylesheet" href="ppp-patrimonial-native.css?v=3">
-<script src="ppp-case-loader.js?v=1"></script><script src="ppp-case-opening.js?v=opening-errors1"></script>
-<script src="ppp-version-bridge.js?v=3"></script><script src="ppp-agent-bridge.js?v=inactive-cap1"></script><script src="ppp-agent-cards.js?v=inactive-cap1"></script><script src="ppp-patrimonial-native.js?v=inactive-cap1"></script>
+<link rel="stylesheet" href="ppp-patrimonial-native.css?v=20261030-fase0">
+<script src="ppp-case-loader.js?v=20261030-fase0"></script><script src="ppp-case-opening.js?v=20261030-fase0"></script>
+<script src="ppp-version-bridge.js?v=20261030-fase0"></script><script src="ppp-agent-bridge.js?v=20261030-fase0"></script><script src="ppp-agent-cards.js?v=20261030-fase0"></script><script src="ppp-patrimonial-native.js?v=20261030-fase0"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -1186,6 +1186,9 @@
     window.open('https://wa.me/'+(num?num:'')+'?text='+encodeURIComponent(linea),'_blank')
   }
   /* ================== GATE / MODALES ================== */
+  // Códigos de rechazo de credencial: portero.js:309 ∩ yod-portal/os/app.js:134 (rechazoAcceso), más «http 401/403» que ese portal ya trata como texto.
+  // Cualquier otro motivo (servidor, tiempo agotado, error de hoja…) NO autoriza borrar pyod_clave_v1: es la sesión compartida de todo YOD OS.
+  function esRechazoDeCredencial(err){return ['clave','liga','expirado','revocado','sin_sesion','unauthorized','forbidden','http 401','http 403'].includes(String(err&&err.message||err||'').trim().toLowerCase())}
   function reabrirGate(){const gate=$('gate');gate.classList.remove('off');gate.style.removeProperty('display');gate.removeAttribute('aria-hidden');$('gateErr').textContent='No se confirmó el acceso a este plan. Valida tu sesión de Google o vuelve a intentar.'}
   async function intentarEntrar(){
     const v=$('gateClave').value.trim();if(!v){$('gateErr').textContent='Escribe la clave';return}
@@ -1244,9 +1247,9 @@
     else apiGet({recurso:'lista'}).then(r=>{if(r.ok){casosCache=r.casos||[];cfgBoard=r.config||{};$('gate').classList.add('off');drenarCola();}else if(PPPCaseOpening.isAuthenticationError(r.error)){reabrirGate();}else{toast('El catálogo no respondió. Tu sesión se conserva; vuelve a cargar Mis casos.');}}).catch(()=>{toast('Sin conexión con el catálogo. Tu sesión y tu borrador se conservan.');});}
 })();
 </script>
-<script src="modelos.js?v=1"></script>
-<script src="portero.js?v=relevo9"></script>
-<script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=audit-20260930"></script>
+<script src="modelos.js?v=20261030-fase0"></script>
+<script src="portero.js?v=20261030-fase0"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=20261030-fase0"></script>
 </body>
 </html>
 
