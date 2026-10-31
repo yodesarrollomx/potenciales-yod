@@ -956,14 +956,14 @@
   /* ================== CAPA DE NUBE (idéntica al mixto) ================== */
   let toastTimer=null;
   function toast(msg,ms=3200){const t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('on'),ms)}
-  /* Un cargador (Fase 1): con YodCargador activo la lectura sale por su transporte (caché-primero en el catálogo, red-primero en el caso); con ?cargador=legacy,
-     o si el cargador no cargó, corre el fetch de siempre, tal cual. La lista sólo puede salir de caché en la PRIMERA lectura de la página, con la sesión guardada
-     y con conexión: tras guardar, o con una clave tecleada, va siempre a red para no enseñar un listado viejo. El tope de 360 s (el del lector de casos) sólo evita
-     colgarse para siempre; el tiempo que de verdad cuenta lo siguen mandando los temporizadores de cada pantalla, como antes. */
+  /* Un cargador (Fase 1): con YodCargador activo, la PRIMERA lectura de la lista de la página sale por su transporte (caché-primero: se pinta lo último conocido y la red
+     lo actualiza en fondo). Sólo esa. La lista de después de guardar, con una clave tecleada, sin conexión o sin sesión guardada, y TODO lo demás (caso, catálogo, modelo,
+     recibos…) corre el fetch de siempre, tal cual: un caso, o un umbral que entra al cálculo, no puede salir de una copia vieja ni de la caché de otro caso. Con
+     ?cargador=legacy, o si el cargador no cargó, nada cambia. El tope de 360 s (el del lector de casos) sólo evita colgarse para siempre; el tiempo que de verdad cuenta lo
+     siguen mandando los temporizadores de cada pantalla, como antes. */
   function apiGet(params){const q=new URLSearchParams(Object.assign({k:clave,tipo:NUBE.TIPO},params)),C=window.YodCargador;
-    let cargador=!!(C&&C.v&&!C.legacy);
-    if(cargador&&params.recurso==='lista')cargador=!apiGet.lista&&navigator.onLine!==false&&clave===localStorage.getItem(LS.clave)&&(apiGet.lista=true);
-    if(cargador)return C.ppp.get(NUBE.ENDPOINT,Object.fromEntries(q),{recurso:params.recurso,timeoutMs:360000}).then(r=>r.json());
+    const cargador=!!(C&&C.v&&!C.legacy)&&params.recurso==='lista'&&!apiGet.lista&&navigator.onLine!==false&&clave===localStorage.getItem(LS.clave)&&(apiGet.lista=true);
+    if(cargador)return C.ppp.get(NUBE.ENDPOINT,Object.fromEntries(q),{recurso:'lista',timeoutMs:360000}).then(r=>r.json());
     return fetch(NUBE.ENDPOINT+'?'+q.toString()).then(r=>r.json())}
   function apiPost(body){body=Object.assign({k:clave,tipo_desarrollo:NUBE.TIPO},body);return fetch(NUBE.ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)}).then(r=>r.json())}
   function nuevoRequestId(){return (crypto.randomUUID?.()||Date.now()+'-'+Math.random())}

@@ -5,7 +5,7 @@
 //     con ?cargador=legacy nada sale de caché; el botón «Actualizar» pide a red.
 //  2. Motor (residencial): la lista que se abre en «Mis casos» tras arrancar NO sale de caché (un caso guardado entre tanto debe verse).
 //  3. Portero: con sesión canjeada antes, el engrane de administrador sale de inmediato aunque el canje tarde; con ?cargador=legacy espera a la red.
-//  4. Costura con el contrato: un caso pedido por `id` nunca sale con los datos de OTRO caso cuando la red falla (la clave de caché del cargador debe distinguir `id`).
+//  4. Caso: un caso se lee siempre de la red; sin red no se abre ni el de otro caso ni una copia vieja (el cargador sólo atiende la primera lista).
 // No acredita login real, el backend ni el cargador en producción. Sin escrituras de negocio.
 const {chromium,webkit}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {install}=require('./ppp-fixture.js');
@@ -110,22 +110,23 @@ async function portero(browser,name){
 async function contrato(browser,name){
  const state=nuevoEstado(),context=await browser.newContext({viewport:{width:1280,height:900}});
  await servidor(context,state);const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto(PAGE+'residencial.html');
- await page.waitForFunction(()=>!!(window.YodCargador&&window.YodCargador.v&&window.YOD_PORTERO&&window.YOD_PORTERO.original));
- // Misma forma de llamada que usa apiGet de los motores: ppp.get(endpoint, {k,tipo,recurso:'caso',id}, {recurso, timeoutMs}).
- const pide=id=>page.evaluate(async id=>{
-  try{const r=await YodCargador.ppp.get(YOD_PORTERO.original,{k:localStorage.getItem('pyod_clave_v1'),tipo:'residencial',recurso:'caso',id},{recurso:'caso',timeoutMs:3000});
-   const j=await r.json();return {ok:true,id:j.caso&&j.caso.caso_id};}
-  catch(error){return {ok:false,error:String(error&&error.message||error)};}
- },id);
- const a=await pide('prueba-A');assert.deepEqual(a,{ok:true,id:'prueba-A'},'con red, el caso pedido es el que llega');
+ // El borrador local del motor (pyodr_draft_v1) también recordaría el último caso: se quita para medir solo lo que podría aportar la caché del cargador.
+ const sinBorrador=()=>page.evaluate(()=>{for(const k of Object.keys(localStorage))if(/draft/i.test(k))localStorage.removeItem(k);});
+ const abre=async id=>{await page.goto(PAGE+'residencial.html?open='+id);};
+ const barra=()=>page.evaluate(()=>document.getElementById('casoNombreBar').textContent);
+ await abre('prueba-A');
+ await page.waitForFunction(()=>/Caso de prueba prueba-A/.test(document.getElementById('casoNombreBar').textContent),null,{timeout:12000});
+ // Sin red, un caso distinto jamás se abre con los datos del anterior, y el mismo caso tampoco se abre desde una copia vieja: un caso se lee siempre de la red.
  state.casoFalla=true;
- const b=await pide('prueba-B');
- assert.ok(!(b.ok&&b.id==='prueba-A'),'sin red, el caso B jamás sale con los datos del caso A (la clave de caché debe incluir el id): '+JSON.stringify(b));
- const a2=await pide('prueba-A');
- assert.ok(!a2.ok||a2.id==='prueba-A','sin red, el caso A solo puede salir como A (caché de respaldo) o fallar: '+JSON.stringify(a2));
+ for(const id of ['prueba-B','prueba-A']){
+  await sinBorrador();await abre(id);
+  await page.waitForFunction(()=>/no se pudo abrir/i.test(document.getElementById('toast').textContent),null,{timeout:15000});
+  const texto=await barra();
+  assert.ok(!/prueba-A|prueba-B/.test(texto),'sin red, ?open='+id+' no abre ningún caso desde caché: '+texto);
+ }
+ assert.ok(state.calls.caso.length>=3,'cada apertura pidió el caso a la red: '+state.calls.caso.join(','));
  assert.deepEqual(errors,[]);await context.close();
- console.log('PASS '+name+': contrato · un caso por id no se mezcla con otro cuando la red falla.');
+ console.log('PASS '+name+': caso · un caso se lee siempre de la red; sin red no se abre ni el de otro ni una copia vieja.');
 }
 
 (async()=>{

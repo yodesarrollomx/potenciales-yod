@@ -7,9 +7,9 @@
  * sesion.canjear(), sesion.alCambiar(), purgar(), telemetria.codigos() }`.
  *
  * Acredita: (a) la etiqueta del cargador va justo después de yod-acceso.js, con su misma etiqueta ?v=, en los 8 HTML;
- * (b) cada motor conserva su `fetch` de hoy bajo la rama del cargador; (c) apiGet de los 5 motores: con cargador activo
- * llama a ppp.get con recurso, k y tipo; sin cargador, o legacy, hace el fetch de siempre con la URL de siempre; la lista sólo
- * sale de caché en la primera lectura y con la sesión guardada; (d) ppp-catalog.js read() usa ppp.get con timeoutMs 60000,
+ * (b) cada motor conserva su `fetch` de hoy bajo la rama del cargador; (c) apiGet de los 5 motores: con cargador activo SÓLO la
+ * primera lista de la página (con la sesión guardada y con conexión) llama a ppp.get con recurso, k y tipo; todo lo demás (caso,
+ * catálogo, modelo, recibos…), y todo sin cargador o con legacy, hace el fetch de siempre con la URL de siempre; (d) ppp-catalog.js read() usa ppp.get con timeoutMs 60000,
  * repinta con el refresco de fondo y pide a red al actualizar/reintentar; (e) portero.js canjea por sesion.canjear, decide
  * el rechazo con SU lista, cierra si el refresco de fondo rechaza, y manda los códigos de telemetría en la bitácora.
  *
@@ -84,11 +84,13 @@ const PATRIMONIAL_DE_SIEMPRE = [
 ];
 
 for (const name of MOTORES) {
-  test('ESTÁTICO · ' + name + '.html: apiGet delega en window.YodCargador.ppp.get y conserva su fetch de siempre, literal', () => {
+  test('ESTÁTICO · ' + name + '.html: apiGet delega en window.YodCargador.ppp.get sólo la primera lista y conserva su fetch de siempre, literal', () => {
     const texto = apiGetText(name);
     assert.match(texto, /window\.YodCargador/, 'rama del cargador');
     assert.match(texto, /\.ppp\.get\(NUBE\.ENDPOINT,/, 'transporte por ppp.get(ENDPOINT, …)');
-    assert.match(texto, /recurso:params\.recurso/, 'el recurso viaja en opts');
+    assert.match(texto, /params\.recurso==='lista'/, 'sólo la lista puede salir por el cargador');
+    assert.match(texto, /recurso:'lista'/, 'el recurso viaja en opts');
+    assert.doesNotMatch(texto, /recurso:params\.recurso/, 'ningún otro recurso (caso, catálogo, modelo, recibos) viaja por el cargador');
     assert.match(texto, /!C\.legacy/, 'con ?cargador=legacy corre el camino viejo');
     assert.match(texto, /fetch\(/, 'sigue existiendo el fetch');
     if (name === 'patrimonial') {
@@ -145,28 +147,39 @@ for (const name of MOTORES) {
     assert.equal(m.calls.fetch[0].url, URL_DE_HOY(GUARDADA, 'vertical', { recurso: 'lista' }));
   });
 
-  test('COMPORTAMIENTO · ' + name + ': con cargador activo apiGet llama a ppp.get con endpoint, k, tipo, recurso y tope; devuelve el json', async () => {
-    const c = fakeCargador({ get: async () => respuesta({ ok: true, caso: { caso_id: 'caso-1' } }) });
+  test('COMPORTAMIENTO · ' + name + ': con cargador activo la primera lista llama a ppp.get con endpoint, k, tipo, recurso y tope; devuelve el json', async () => {
+    const c = fakeCargador({ get: async () => respuesta({ ok: true, casos: [{ caso_id: 'caso-1' }] }) });
     const m = motor(name, { cargador: c });
-    assert.deepEqual(plain(await m.apiGet({ recurso: 'caso', id: 'caso-1' })), { ok: true, caso: { caso_id: 'caso-1' } });
+    assert.deepEqual(plain(await m.apiGet({ recurso: 'lista' })), { ok: true, casos: [{ caso_id: 'caso-1' }] });
     assert.equal(m.calls.fetch.length, 0, 'no hay fetch propio');
     assert.equal(c.calls.get.length, 1);
     const [llamada] = c.calls.get;
     assert.equal(llamada.endpoint, ENDPOINT);
-    assert.deepEqual(llamada.params, { k: GUARDADA, tipo: 'vertical', recurso: 'caso', id: 'caso-1' });
-    assert.deepEqual(llamada.opts, { recurso: 'caso', timeoutMs: tope });
-    // params del llamador mandan sobre los de la casa, igual que Object.assign de siempre (p. ej. tipo de la captura)
-    await m.apiGet({ recurso: 'sheet-intake', tipo: 'macrolotes', id: 'c2', request_id: 'r1' });
-    assert.deepEqual(c.calls.get[1].params, { k: GUARDADA, tipo: 'macrolotes', recurso: 'sheet-intake', id: 'c2', request_id: 'r1' });
-    assert.equal(c.calls.get[1].opts.recurso, 'sheet-intake');
+    assert.deepEqual(llamada.params, { k: GUARDADA, tipo: 'vertical', recurso: 'lista' });
+    assert.deepEqual(llamada.opts, { recurso: 'lista', timeoutMs: tope });
+    // params del llamador mandan sobre los de la casa, igual que Object.assign de siempre
+    const otro = fakeCargador(), n = motor(name, { cargador: otro });
+    await n.apiGet({ recurso: 'lista', tipo: 'macrolotes' });
+    assert.deepEqual(otro.calls.get[0].params, { k: GUARDADA, tipo: 'macrolotes', recurso: 'lista' });
+  });
+
+  test('COMPORTAMIENTO · ' + name + ': con cargador activo todo lo que no es la primera lista (caso, catálogo, modelo, recibos…) corre el fetch de siempre', async () => {
+    const c = fakeCargador({ get: async () => { throw Error('el cargador no debe tocarse'); } });
+    const m = motor(name, { cargador: c });
+    const pedidos = [{ recurso: 'caso', id: 'caso-1' }, { recurso: 'caso', palabra: 'ensayo' }, { recurso: 'catalogo' }, { recurso: 'sheet-model', id: 'caso-1' },
+      { recurso: 'sheet-volumes-receipt', caso_id: 'c', escenario_id: 'e', request_id: 'r' }, { recurso: 'sheet-intake', tipo: 'macrolotes', id: 'c2' }, { recurso: 'mapa' }, { recurso: 'flujo' }];
+    for (const pedido of pedidos) assert.deepEqual(plain(await m.apiGet(pedido)), { ok: true, via: 'fetch' }, JSON.stringify(pedido));
+    assert.equal(c.calls.get.length, 0, 'un caso o un umbral de cálculo no sale de la caché del cargador');
+    assert.equal(m.calls.fetch.length, pedidos.length);
+    assert.equal(m.calls.fetch[0].url, URL_DE_HOY(GUARDADA, 'vertical', { recurso: 'caso', id: 'caso-1' }));
+    assert.equal(m.calls.fetch[5].url, URL_DE_HOY(GUARDADA, 'macrolotes', { recurso: 'sheet-intake', id: 'c2' }));
   });
 
   test('COMPORTAMIENTO · ' + name + ': `clave` se lee al llamar, no al definir', async () => {
     const c = fakeCargador();
-    const m = motor(name, { cargador: c });
-    await m.apiGet({ recurso: 'caso', id: 'a' });
-    m.ctx.clave = 'sy-otra-sesion-1111'; await m.apiGet({ recurso: 'caso', id: 'a' });
-    assert.deepEqual(c.calls.get.map(x => x.params.k), [GUARDADA, 'sy-otra-sesion-1111']);
+    const m = motor(name, { cargador: c, clave: '' });   // el motor arrancó sin clave; la guardada llega después
+    m.ctx.clave = GUARDADA; await m.apiGet({ recurso: 'lista' });
+    assert.deepEqual(c.calls.get.map(x => x.params.k), [GUARDADA]);
     const legacy = motor(name, { cargador: fakeCargador({ legacy: true }) });
     legacy.ctx.clave = 'sy-otra-sesion-2222'; await legacy.apiGet({ recurso: 'caso', id: 'a' });
     assert.match(legacy.calls.fetch[0].url, /k=sy-otra-sesion-2222/);
@@ -181,8 +194,7 @@ for (const name of MOTORES) {
     assert.equal(c.calls.get.length, 1, 'las siguientes (tras guardar) no pueden devolver una lista vieja');
     assert.equal(m.calls.fetch.length, 2);
     assert.equal(m.calls.fetch[0].url, URL_DE_HOY(GUARDADA, 'vertical', { recurso: 'lista' }));
-    await m.apiGet({ recurso: 'catalogo' }); await m.apiGet({ recurso: 'caso', id: 'x' }); await m.apiGet({ recurso: 'sheet-model', id: 'x' });
-    assert.deepEqual(c.calls.get.map(x => x.opts.recurso), ['lista', 'catalogo', 'caso', 'sheet-model'], 'el resto de recursos siempre por el cargador');
+    assert.deepEqual(c.calls.get.map(x => x.opts.recurso), ['lista'], 'sólo la primera lista pasó por el cargador');
 
     // clave tecleada en el gate (distinta de la guardada): se valida contra el servidor, nunca con la caché
     const ct = fakeCargador(), tecleada = motor(name, { cargador: ct, clave: 'sy-tecleada-9999' });
@@ -205,7 +217,7 @@ for (const name of MOTORES) {
 test('COMPORTAMIENTO · patrimonial: el camino nuevo conserva los errores del viejo (timeout, http_error + httpStatus, invalid_response, TypeError)', async () => {
   const falla = async (get, esperado) => {
     const m = motor('patrimonial', { cargador: fakeCargador({ get }) });
-    await assert.rejects(() => m.apiGet({ recurso: 'caso', id: 'c' }), esperado);
+    await assert.rejects(() => m.apiGet({ recurso: 'lista' }), esperado);
   };
   await falla(async () => { throw Error('timeout'); }, error => error.message === 'timeout');
   await falla(async () => { throw Object.assign(Error('operation aborted'), { name: 'AbortError' }); }, error => error.message === 'timeout');
@@ -213,13 +225,15 @@ test('COMPORTAMIENTO · patrimonial: el camino nuevo conserva los errores del vi
   await falla(async () => { throw Error('red'); }, error => error instanceof TypeError && error.message === 'network' && error.cause.message === 'red');
   await falla(async () => respuesta({}, { ok: false, status: 503 }), error => error.message === 'http_error' && error.httpStatus === 503);
   await falla(async () => respuesta({}, { json: async () => { throw Error('PRIVADO'); } }), error => error.message === 'invalid_response');
-  // y PPPCaseOpening los clasifica igual que antes
+  // PPPCaseOpening lee el caso SIEMPRE por el camino de siempre, con el cargador activo o no: no puede abrir una copia vieja ni la de otro caso
   const { create, isAuthenticationError } = require('../ppp-case-opening.js'), { create: loaderFactory } = require('../ppp-case-loader.js');
   assert.equal(isAuthenticationError('timeout'), false);
-  const estados = [], m = motor('patrimonial', { cargador: fakeCargador({ get: async () => respuesta({}, { ok: false, status: 503 }) }) });
+  const estados = [], c = fakeCargador({ get: async () => { throw Error('el cargador no debe tocarse para un caso'); } });
+  const m = motor('patrimonial', { cargador: c, fetchImpl: async () => ({ ok: false, status: 503, json: async () => ({}) }) });
   const abrir = create({ loaderFactory, timeoutMs: 50, getCredential: () => GUARDADA, onState: s => estados.push(s), apply: () => true, read: p => m.apiGet(p), schedule: () => 1, cancel: () => {} });
   await abrir.openId('caso-1');
   assert.equal(estados.at(-1).phase, 'retrying'); assert.equal(estados.at(-1).kind, 'server'); assert.equal(estados.at(-1).http_status, 503);
+  assert.equal(c.calls.get.length, 0, 'el caso no pasó por el cargador'); assert.equal(m.calls.fetch.length, 1);
   abrir.dispose();
 });
 
