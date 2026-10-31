@@ -2,14 +2,15 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=20261030-fase0"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=20261031-fase1"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-cargador.js?v=20261031-fase1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
 <title>PPP Mixto / Depas · Potenciales · YoDesarrollo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css">
-<link rel="stylesheet" href="https://yodesarrollomx.github.io/yod-portal/os/shell.css?v=20261030-fase0">
+<link rel="stylesheet" href="https://yodesarrollomx.github.io/yod-portal/os/shell.css?v=20261031-fase1">
 <style>
   /* ===== Fintech Editorial (oscuro) · tokens por ROL, convención de los boards YoD ===== */
   :root{--bg:#f6f3ed;--card:#ffffff;--surface:rgba(35,29,20,.04);--text:#231d14;--muted:#766f62;--suave:#8a8272;--linea:#e1dacb;--lineaf:#d8cfbb;--box:rgba(35,29,20,.04);
@@ -303,10 +304,10 @@
 
 #mercadoDocumento[hidden]{display:none}#mercadoDocumento table{width:100%;border-collapse:collapse;font-size:11px}#mercadoDocumento td,#mercadoDocumento th{padding:8px;border-bottom:1px solid var(--linea);text-align:left}#mercadoDocumento h3{font-size:14px}#mercadoDocumento{overflow-wrap:anywhere}#mercadoDocumento button{margin-top:10px}
 </style>
-<link rel="stylesheet" href="ppp-ui.css?v=20261031-presentaciones-3">
-<link rel="stylesheet" href="ppp-volumes.css?v=20261031-presentaciones-3">
-<link rel="stylesheet" href="ppp-stages.css?v=20261031-presentaciones-3">
-<link rel="stylesheet" href="ppp-intake.css?v=20261031-presentaciones-3">
+<link rel="stylesheet" href="ppp-ui.css?v=20261031-fase1">
+<link rel="stylesheet" href="ppp-volumes.css?v=20261031-fase1">
+<link rel="stylesheet" href="ppp-stages.css?v=20261031-fase1">
+<link rel="stylesheet" href="ppp-intake.css?v=20261031-fase1">
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -544,15 +545,15 @@
 </div></div>
 
 <div id="toast"></div>
-<script src="ppp-ui.js?v=20261031-presentaciones-3"></script>
-<script src="ppp-case-loader.js?v=20261031-presentaciones-3"></script>
-<script src="ppp-volumes.js?v=20261031-presentaciones-3"></script>
-<script src="ppp-volumes-native.js?v=20261031-presentaciones-3"></script>
-<script src="ppp-stages.js?v=20261031-presentaciones-3"></script>
-<script src="ppp-intake.js?v=20261031-presentaciones-3"></script>
-<link rel="stylesheet" href="ppp-presentation.css?v=20261031-presentaciones-3">
-<script src="ppp-presentation.js?v=20261031-presentaciones-3"></script>
-<script src="ppp-version-bridge.js?v=20261031-presentaciones-3"></script>
+<script src="ppp-ui.js?v=20261031-fase1"></script>
+<script src="ppp-case-loader.js?v=20261031-fase1"></script>
+<script src="ppp-volumes.js?v=20261031-fase1"></script>
+<script src="ppp-volumes-native.js?v=20261031-fase1"></script>
+<script src="ppp-stages.js?v=20261031-fase1"></script>
+<script src="ppp-intake.js?v=20261031-fase1"></script>
+<link rel="stylesheet" href="ppp-presentation.css?v=20261031-fase1">
+<script src="ppp-presentation.js?v=20261031-fase1"></script>
+<script src="ppp-version-bridge.js?v=20261031-fase1"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -1241,7 +1242,15 @@
   /* ================== CAPA DE NUBE ================== */
   let toastTimer=null;
   function toast(msg,ms=3200){const t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('on'),ms)}
-  function apiGet(params){const q=new URLSearchParams(Object.assign({k:clave,tipo:NUBE.TIPO},params));return fetch(NUBE.ENDPOINT+'?'+q.toString()).then(r=>r.json())}
+  /* Un cargador (Fase 1): con YodCargador activo, la PRIMERA lectura de la lista de la página sale por su transporte (caché-primero: se pinta lo último conocido y la red
+     lo actualiza en fondo). Sólo esa. La lista de después de guardar, con una clave tecleada, sin conexión o sin sesión guardada, y TODO lo demás (caso, catálogo, modelo,
+     recibos…) corre el fetch de siempre, tal cual: un caso, o un umbral que entra al cálculo, no puede salir de una copia vieja ni de la caché de otro caso. Con
+     ?cargador=legacy, o si el cargador no cargó, nada cambia. El tope de 360 s (el del lector de casos) sólo evita colgarse para siempre; el tiempo que de verdad cuenta lo
+     siguen mandando los temporizadores de cada pantalla, como antes. */
+  function apiGet(params){const q=new URLSearchParams(Object.assign({k:clave,tipo:NUBE.TIPO},params)),C=window.YodCargador;
+    const cargador=!!(C&&C.v&&!C.legacy)&&params.recurso==='lista'&&!apiGet.lista&&navigator.onLine!==false&&clave===localStorage.getItem(LS.clave)&&(apiGet.lista=true);
+    if(cargador)return C.ppp.get(NUBE.ENDPOINT,Object.fromEntries(q),{recurso:'lista',timeoutMs:360000}).then(r=>r.json());
+    return fetch(NUBE.ENDPOINT+'?'+q.toString()).then(r=>r.json())}
   function apiPost(body){body=Object.assign({k:clave,tipo_desarrollo:NUBE.TIPO},body);return fetch(NUBE.ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)}).then(r=>r.json())}
   function nuevoRequestId(){return (crypto.randomUUID?.()||Date.now()+'-'+Math.random())}
   function guardarDraft(){if(intakeBoard?.blocking){intakeBoard.persist();return;}try{localStorage.setItem(LS.draft,JSON.stringify({inputs:inputValues(),caso,escenarios,escActivo,sheetModel,sheetPending,savedInputs:legacySavedInputs}))}catch(e){}}
@@ -1582,8 +1591,8 @@
 })();
 </script>
 <!-- El selector de motores se retiró del PPP vertical por decisión de Dirección. -->
-<script src="portero.js?v=20261031-presentaciones-3"></script>
-<script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=20261030-fase0"></script>
+<script src="portero.js?v=20261031-fase1"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=20261031-fase1"></script>
 </body>
 </html>
 

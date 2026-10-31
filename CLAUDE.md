@@ -26,7 +26,8 @@ Dos cosas en un mismo repo:
 
 ## Archivos
 
-- `portero.js` (378 líneas) — la cerradura. Canje de liga, gate, bitácora, engrane de admin y tema.
+- `portero.js` (~450 líneas) — la cerradura. Canje de liga, gate, bitácora, engrane de admin y tema. Desde la Fase 1 (30-oct-2026), si la página cargó `YodCargador` el canje sale del cargador (uno solo por página, compartido con `shell.js` y la cabina) y la bitácora lleva además los códigos de telemetría del cargador; sin él, o con `?cargador=legacy`, es el GET de siempre.
+- **El cargador compartido no vive aquí**: es `https://yodesarrollomx.github.io/yod-portal/os/yod-cargador.js` (familia `marco` de `versiones.json`), cargado en el `<head>` de los 8 HTML justo después de `yod-acceso.js`. Con él activo, la **primera** lectura de `recurso=lista` de cada motor y las listas de `ppp-catalog.js` van caché-primero («pinta lo último conocido, refresca en fondo»); `caso`, `catalogo`, modelo, recibos y guardados siguen por `fetch`. Contrato y propuesta: `CHG-CARGADOR-FASE1-001` en el atlas de yod-portal. Interruptor de reversión sin código: `?cargador=legacy` o `localStorage.yodcg_legacy='1'`.
 - `accesos.html` — board de admin: alta/revocación de usuarios y **matriz de permisos por tablero**.
   El botón de la línea 116 abre la hoja ACCESOS (`docs.google.com/spreadsheets/d/1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y`).
 - `index.html` — portal con mapa; redirige los `?open=ID` viejos al board que toca (líneas 12-14).
