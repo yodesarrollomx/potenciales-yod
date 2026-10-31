@@ -59,6 +59,7 @@ jobs:
           node --test tests/ppp-refresh-identity.test.cjs
           node --test tests/ppp-ui.test.cjs tests/ppp-case-loader.test.cjs tests/sheets-offline.cjs tests/access-gates.cjs tests/patrimonial-native.test.cjs tests/ppp-version-bridge.test.cjs
           node --test tests/ppp-session-guard.test.cjs
+          node --test tests/ppp-cargador.test.cjs
           git diff --check
       - name: Instalar navegadores
         run: |
