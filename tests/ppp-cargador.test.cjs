@@ -370,7 +370,7 @@ const corte = porteroSource.slice(porteroSource.indexOf(MARCA), porteroSource.in
 const KEY = 'pyod_clave_v1', A = 'sy-sintetica-A-000000000', B = 'sy-sintetica-B-000000000';
 
 function portero({ key = A, cargador = null, pyodPide, page = 'mixto' } = {}) {
-  const store = new Map(key ? [[KEY, key]] : []), cache = new Map(), nodes = new Map(), events = {}, timers = [];
+  const store = new Map(key ? [[KEY, key]] : []), cache = new Map(), nodes = new Map(), events = {}, listens = {}, timers = [];
   const log = { pide: 0, overlay: 0, resizes: 0, reloads: 0 };
   function node(id) {
     const classes = new Set();
@@ -385,11 +385,11 @@ function portero({ key = A, cargador = null, pyodPide, page = 'mixto' } = {}) {
     sessionStorage: { getItem: k => (cache.has(k) ? cache.get(k) : null), setItem: (k, v) => cache.set(k, v), removeItem: k => cache.delete(k) },
     document: { readyState: 'loading', getElementById: id => nodes.get(id) || null, createElement: () => node(''), body: node(''), addEventListener: () => {} },
     window: { dispatchEvent: () => { log.resizes++; }, ...(cargador ? { YodCargador: cargador.api } : {}) }, Event: function (type) { this.type = type; },
-    addEventListener: (name, fn) => { events[name] = fn; }, setTimeout: (f, ms) => { timers.push({ f, ms }); return timers.length; },
+    addEventListener: (name, fn) => { events[name] = fn; listens[name] = (listens[name] || 0) + 1; }, setTimeout: (f, ms) => { timers.push({ f, ms }); return timers.length; },
     location: { reload: () => { log.reloads++; } }, overlayCorreo: () => { log.overlay++; node('porteroGate'); },
     pyodPide: async qs => { log.pide++; log.qs = qs; return pyodPide ? pyodPide() : { ok: true, rol: 'vista' }; } };
   vm.createContext(ctx); vm.runInContext(corte, ctx);
-  return { ctx, store, cache, nodes, events, timers, log };
+  return { ctx, store, cache, nodes, events, listens, timers, log };
 }
 const abierto = h => h.nodes.get('gate').classList.contains('off');
 
@@ -478,6 +478,34 @@ test('COMPORTAMIENTO · portero: si el refresco de fondo del cargador rechaza la
   // páginas con gate propio o públicas no reciben el modal del Portero
   const suave = portero({ cargador: fakeCargador() }); suave.ctx.MODO_SUAVE = true; suave.events['yodcargador:sesion-rechazada']({ detail: { token: A } });
   assert.equal(suave.log.overlay, 0);
+});
+
+test('COMPORTAMIENTO · portero: si el cargador llega DESPUÉS de portero.js, el primer canje por él registra el oyente del rechazo, una sola vez', async () => {
+  const h = portero({ pyodPide: () => ({ ok: true, rol: 'vista' }) });            // sin cargador al cargar la página
+  assert.equal(h.events['yodcargador:sesion-rechazada'], undefined);
+  await h.ctx.engraneAdmin();                                                      // camino viejo: sigue sin oyente
+  assert.equal(h.log.pide, 1); assert.equal(h.events['yodcargador:sesion-rechazada'], undefined);
+  const c = fakeCargador({ canjear: async () => ({ ok: true, rol: 'admin', origen: 'cache', edadMs: 3600000, token: A }) });
+  h.ctx.window.YodCargador = c.api;                                                // el cargador aparece tarde
+  await h.ctx.engraneAdmin(); await h.ctx.engraneAdmin();
+  assert.equal(c.calls.canjear, 2); assert.equal(h.log.pide, 1, 'ya no hay GET propio');
+  assert.equal(typeof h.events['yodcargador:sesion-rechazada'], 'function');
+  assert.equal(h.listens['yodcargador:sesion-rechazada'], 1, 'un solo oyente aunque haya varios canjes');
+  // y lo que su caché dio por bueno se cierra igual que ante un rechazo del canje
+  h.events['yodcargador:sesion-rechazada']({ detail: { error: 'revocado', token: A } });
+  assert.equal(h.log.overlay, 1); assert.equal(h.nodes.has('engraneBtn'), false); assert.equal(c.calls.purgar, 1);
+  // con el cargador desde el inicio sigue siendo un solo oyente
+  const t = portero({ cargador: fakeCargador() }); await t.ctx.engraneAdmin(); await t.ctx.engraneAdmin();
+  assert.equal(t.listens['yodcargador:sesion-rechazada'], 1);
+  // legacy: ni oyente ni cargador
+  const l = portero({ cargador: fakeCargador({ legacy: true }), pyodPide: () => ({ ok: true, rol: 'vista' }) }); await l.ctx.engraneAdmin();
+  assert.equal(l.listens['yodcargador:sesion-rechazada'], undefined);
+});
+
+test('ESTÁTICO · portero.js: la nota de cerrar sesión describe lo que hay (reabrirGate sin guardia, YodCargador.sesion.cerrar con ella) y no toca los motores', () => {
+  assert.ok(porteroSource.includes('reabrirGate de cada motor, hoy SIN guardia de carrera'), 'la nota nombra a reabrirGate como pieza sin guardia');
+  assert.ok(porteroSource.includes('YodCargador.sesion.cerrar({token, motivo})'), 'la nota nombra el reemplazo');
+  assert.ok(!/localStorage\.removeItem\(\s*LSC\s*\)/.test(porteroSource), 'el Portero sigue sin borrar pyod_clave_v1 por un rechazo');
 });
 
 /* ---- bitácora ---- */

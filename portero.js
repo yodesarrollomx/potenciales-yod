@@ -311,6 +311,7 @@
   function canjeDeSesion(k) {
     const C = cargadorActivo();
     if (!C) return pyodPide('?recurso=canje&t=' + encodeURIComponent(k));
+    escucharRechazoDeFondo();   // si el cargador llegó después de portero.js, igual se escucha lo que su caché pudo dar por bueno
     return C.sesion.canjear({}).then(x => x && x.ok === true
       ? { ok: true, token: x.token, rol: x.rol, boards: x.boards, nombre: x.nombre, correo: x.correo }
       : { ok: false, error: x && x.error });
@@ -369,7 +370,17 @@
     purgarCargador();
     if (!SIN_GATE && !MODO_SUAVE) overlayCorreo();
   }
-  if (cargadorActivo()) addEventListener('yodcargador:sesion-rechazada', sesionRechazadaEnFondo);
+  /* Un solo oyente, y solo si el Portero usa al cargador: al cargar la página o, si el cargador llegó después, al primer canje. */
+  function escucharRechazoDeFondo() {
+    if (escucharRechazoDeFondo.hecho) return;
+    escucharRechazoDeFondo.hecho = true;
+    addEventListener('yodcargador:sesion-rechazada', sesionRechazadaEnFondo);
+  }
+  if (cargadorActivo()) escucharRechazoDeFondo();
+  /* Cerrar sesión (nota de la Fase 1, sin cambio de código): el Portero nunca borra pyod_clave_v1 por un rechazo; la borra
+     reabrirGate de cada motor, hoy SIN guardia de carrera (si otra pestaña canjeó entre tanto, se llevaría la sesión nueva).
+     reabrirGate no se toca en esta fase. Al retirar el camino viejo, esa pieza pasa a YodCargador.sesion.cerrar({token, motivo}),
+     que borra la llave solo si todavía vale el token rechazado (guardia de carrera, O-T1 de Astra). */
   addEventListener('storage', e => {
     if (e.key !== LSC && e.key !== null) return;
     sesionValidada = ''; validacionId++;
