@@ -13,6 +13,10 @@
   const count = document.getElementById('cntTodos');
   const home = !!document.querySelector('.projects-panel'), search = document.getElementById('projectSearch');
   const key = () => localStorage.getItem('pyod_clave_v1') || '';
+  const TIMEOUT = 60000;   // tope de cada lectura de lista (en ambos caminos); las pruebas de navegador lo acortan para simular una tardanza
+  // Un cargador (Fase 1): con YodCargador activo la lista sale de su transporte (caché-primero: pinta lo último y se refresca en fondo);
+  // con ?cargador=legacy, o si no cargó, corre el fetch de siempre. Una lectura FRESCA (actualizar, reintentar) va siempre a red.
+  const cargador = () => { const C = window.YodCargador; return C && C.v && !C.legacy ? C : null; };
   let credential = '', epoch = 0, states = {}, mapRows = {}, controllers = new Set();
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const projectName = c => String(c.nombre_caso || c.palabra || 'Caso guardado').split(/\s+·\s+/)[0].trim();
@@ -73,21 +77,40 @@
     list.querySelectorAll('[data-retry]').forEach(b=>b.onclick=()=>load(key(),true,b.dataset.retry));
     dispatchEvent(new Event('ppp:catalog-render'));
   }
-  async function read(type, session, generation) {
+  // Lo que se exige a una respuesta de lista; el mismo criterio para la red, la caché y los refrescos de fondo.
+  function rowsOf(data) {
+    if(data.ok!==true||!Array.isArray(data.casos)){const error=new Error('lista');error.denied=/^(clave|board|acceso|sesion|revocada|permiso)$/.test(data.error||'');throw error;}
+    // Un registro mal formado no se declara como una lista vacía.
+    if (data.casos.some(c => !c || c.caso_id === null || c.caso_id === undefined || String(c.caso_id) === '')) throw new Error('registro');
+    return data.casos;
+  }
+  async function read(type, session, generation, fresh) {
     const controller = new AbortController(); controllers.add(controller);
-    const timer = setTimeout(() => controller.abort(), 60000);
+    const timer = setTimeout(() => controller.abort(), TIMEOUT);
     try {
       const endpoint = (window.YOD_PORTERO || {}).original;
       if (!endpoint) throw new Error('endpoint');
       const query = new URLSearchParams({recurso: 'lista', tipo: type, k: session});
-      const response = await fetch(endpoint + '?' + query, {signal: controller.signal});
-      if (!response.ok) throw new Error('http');
-      const data = await response.json();
-      if(data.ok!==true||!Array.isArray(data.casos)){const error=new Error('lista');error.denied=/^(clave|board|acceso|sesion|revocada|permiso)$/.test(data.error||'');throw error;}
-      // Un registro mal formado no se declara como una lista vacía.
-      if (data.casos.some(c => !c || c.caso_id === null || c.caso_id === undefined || String(c.caso_id) === '')) throw new Error('registro');
+      const direct = async () => {
+        const response = await fetch(endpoint + '?' + query, {signal: controller.signal});
+        if (!response.ok) throw new Error('http');
+        return response.json();
+      };
+      const C = fresh ? null : cargador();
+      let data, cached = false;
+      if (C) {
+        // El tope de la pantalla manda también sobre los reintentos del cargador: se corta a TIMEOUT en total.
+        const stop = new Promise((_, reject) => controller.signal.addEventListener('abort', () => reject(new Error('timeout'))));
+        const response = await Promise.race([C.ppp.get(endpoint, {k: session, recurso: 'lista', tipo: type}, {recurso: 'lista', timeoutMs: TIMEOUT}), stop]);
+        if (!response.ok) throw new Error('http');
+        cached = !!(response.yod && response.yod.origen && response.yod.origen !== 'red');
+        data = await response.json();
+        // Una copia guardada que esta pantalla no aceptaría no manda: se vuelve a pedir a red.
+        if (cached) { try { rowsOf(data); } catch (_) { cached = false; data = await direct(); } }
+      } else data = await direct();
+      const rows = rowsOf(data);
       if (generation !== epoch || session !== credential || session !== key()) return;
-      states[type] = {status: 'ok', rows: data.casos};
+      states[type] = {status: 'ok', rows, cached};
     } catch (e) {
       if (generation !== epoch || session !== credential || session !== key()) return;
       states[type] = {status: 'error', rows: [],denied:!!e.denied||!!states[type]?.denied};
@@ -96,6 +119,16 @@
       if (generation === epoch && session === credential && session === key()) render();
     }
   }
+  // Lo pintado desde caché se actualiza cuando el cargador trae la respuesta fresca; un rechazo de acceso retira las filas viejas,
+  // cualquier otro fallo del refresco las deja como están.
+  if (cargador()) addEventListener('yodcargador:dato', e => {
+    const detail = (e && e.detail) || {}, name = String(detail.clave || '');
+    const type = detail.origen === 'red' && /lista/.test(name) ? Object.keys(tipos).find(t => name.includes(t)) : null;
+    if (!type || !credential || credential !== key() || !states[type] || states[type].status !== 'ok' || !states[type].cached) return;
+    try { states[type] = {status: 'ok', rows: rowsOf(detail.data), cached: false}; }
+    catch (error) { if (!error.denied) return; states[type] = {status: 'error', rows: [], denied: true}; }
+    render();
+  });
   function load(session, retry = false, onlyType, refresh = false) {
     if (!session) {
       epoch++; controllers.forEach(c => c.abort()); controllers.clear();
@@ -110,7 +143,7 @@
     const generation = epoch;
     const requests = Object.keys(tipos).filter(t => (!onlyType||t===onlyType)&&(refresh || !states[t] || states[t].status === 'error'));
     requests.forEach(t => states[t] = {status: 'loading', rows: [],denied:!!states[t]?.denied}); render();
-    requests.forEach(t => { void read(t, session, generation); });
+    requests.forEach(t => { void read(t, session, generation, retry || refresh); });
   }
   if(search)search.addEventListener('input',render);
   button.setAttribute('aria-expanded', String(home)); button.setAttribute('aria-controls', list.id);
