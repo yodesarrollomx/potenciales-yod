@@ -516,8 +516,8 @@ test('COMPORTAMIENTO · portero: si el cargador llega DESPUÉS de portero.js, el
   assert.equal(l.listens['yodcargador:sesion-rechazada'], undefined);
 });
 
-test('ESTÁTICO · portero.js: la nota de cerrar sesión describe lo que hay (reabrirGate sin guardia, YodCargador.sesion.cerrar con ella) y no toca los motores', () => {
-  assert.ok(porteroSource.includes('reabrirGate de cada motor, hoy SIN guardia de carrera'), 'la nota nombra a reabrirGate como pieza sin guardia');
+test('ESTÁTICO · portero.js: la nota de cerrar sesión describe lo que hay (con cargador, YodCargador.sesion.cerrar y su guardia; sin cargador, reabrirGate sin guardia) y no toca los motores', () => {
+  assert.ok(porteroSource.includes('reabrirGate de cada motor sigue SIN guardia de carrera'), 'la nota dice que el camino legacy de reabrirGate sigue sin guardia');
   assert.ok(porteroSource.includes('YodCargador.sesion.cerrar({token, motivo})'), 'la nota nombra el reemplazo');
   assert.ok(!/localStorage\.removeItem\(\s*LSC\s*\)/.test(porteroSource), 'el Portero sigue sin borrar pyod_clave_v1 por un rechazo');
 });

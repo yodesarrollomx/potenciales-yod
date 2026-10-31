@@ -2,15 +2,15 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=20261031-fase1"></script>
-<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-cargador.js?v=20261031-fase1"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=20261031-fase1-e2"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-cargador.js?v=20261031-fase1-e2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
 <title>Mapa de PPPs · Potenciales · YoDesarrollo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css">
-<link rel="stylesheet" href="https://yodesarrollomx.github.io/yod-portal/os/shell.css?v=20261031-fase1">
+<link rel="stylesheet" href="https://yodesarrollomx.github.io/yod-portal/os/shell.css?v=20261031-fase1-e2">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/leaflet-gesture-handling@1.2.2/dist/leaflet-gesture-handling.min.css">
 <style>
@@ -65,7 +65,7 @@
   }
 </style>
 <style>.leaflet-tile{filter:invert(1) hue-rotate(180deg) saturate(.55) brightness(.9) contrast(.9)}.leaflet-container{background:#17140F}</style>
-<link rel="stylesheet" href="ppp-catalog.css?v=20261031-fase1">
+<link rel="stylesheet" href="ppp-catalog.css?v=20261031-fase1-e2">
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -153,11 +153,14 @@
     $('gateBtn').disabled=false;
   }
   $('gateBtn').onclick=entrar;$('gateClave').addEventListener('keydown',e=>{if(e.key==='Enter')entrar()});
-  if(clave){cargar(clave).then(()=>{$('gate').classList.add('off');ajusta()}).catch(e=>{if(esRechazoDeCredencial(e)){localStorage.removeItem(LSK);$('gateErr').textContent='La clave cambió'}else $('gateErr').textContent='Sin conexión con el Sheet'})}
+  // Fase 1 (T-204): con el cargador activo, un rechazo de credencial en el arranque cierra la sesión con su guardia de carrera: solo se suelta la llave si sigue
+  // siendo la que viajó en el arranque (otra pestaña pudo entrar entre tanto) y se purgan las copias. Sin él, o con ?cargador=legacy, el .catch de siempre.
+  const claveDeArranque=clave;
+  if(clave){cargar(clave).then(()=>{$('gate').classList.add('off');ajusta()},e=>{if(esRechazoDeCredencial(e)&&typeof window!=='undefined'&&window.YodCargador&&window.YodCargador.v&&!window.YodCargador.legacy&&window.YodCargador.sesion&&typeof window.YodCargador.sesion.cerrar==='function'){window.YodCargador.sesion.cerrar({token:claveDeArranque,motivo:String(e&&e.message||e)});$('gateErr').textContent='La clave cambió';return}throw e}).catch(e=>{if(esRechazoDeCredencial(e)){localStorage.removeItem(LSK);$('gateErr').textContent='La clave cambió'}else $('gateErr').textContent='Sin conexión con el Sheet'})}
 })();
 </script>
-<script src="ppp-catalog.js?v=20261031-fase1"></script>
-<script src="portero.js?v=20261031-fase1"></script>
-<script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=20261031-fase1"></script>
+<script src="ppp-catalog.js?v=20261031-fase1-e2"></script>
+<script src="portero.js?v=20261031-fase1-e2"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=20261031-fase1-e2"></script>
 </body>
 </html>

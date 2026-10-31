@@ -1,6 +1,7 @@
 'use strict';
 // T-103 · Recorrido de navegador de la adopción de YodCargador (yod-portal/os/yod-cargador.js), con la red SINTÉTICA de ppp-fixture.js.
-// Necesita el cargador servido desde YOD_ATLAS_DIR/os/yod-cargador.js; si no está, se omite (el cargador es opcional para los tableros).
+// Necesita el cargador servido desde YOD_ATLAS_DIR/os/yod-cargador.js: fuera de CI, si no está, se omite (el cargador es opcional para los tableros);
+// en CI (CI=true) la prueba FALLA si falta, para que un atlas sin cargador no deje pasar en verde un recorrido que no corrió.
 //  1. Portada: 1.ª visita por red; 2.ª visita pinta la lista de caché MIENTRAS la red tarda y luego se actualiza, con un solo refresco por tipo;
 //     con ?cargador=legacy nada sale de caché; el botón «Actualizar» pide a red.
 //  2. Motor (residencial): la lista que se abre en «Mis casos» tras arrancar NO sale de caché (un caso guardado entre tanto debe verse).
@@ -11,7 +12,7 @@
 const {chromium,webkit}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {install}=require('./ppp-fixture.js');
 const atlas=process.env.YOD_ATLAS_DIR||path.resolve(__dirname,'../../yod-atlas');
-if(!fs.existsSync(path.join(atlas,'os','yod-cargador.js'))){console.log('OMITIDA: '+path.join(atlas,'os','yod-cargador.js')+' no existe; los tableros corren por el camino de siempre.');process.exit(0);}
+const cargador=path.join(atlas,'os','yod-cargador.js');if(!fs.existsSync(cargador)){if(process.env.CI==='true'){console.error('ERROR: en CI el atlas debe traer os/yod-cargador.js; no existe en '+cargador);process.exit(1);}console.log('OMITIDA: '+cargador+' no existe; los tableros corren por el camino de siempre.');process.exit(0);}
 const assets=process.env.PPP_MAP_ASSETS||'/tmp/ppp-map-assets',PAGE='https://ppp.test/potenciales-yod/';
 const rows=(tipo,n)=>Array.from({length:n},(_,i)=>({caso_id:`prueba ${tipo}/${i}`,nombre_caso:`Proyecto de prueba ${tipo} ${i+1}`,palabra:`ensayo-${i+1}`,estado:'ANÁLISIS'}));
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -142,8 +143,9 @@ async function bitacora(browser,name){
  for(let i=0;i<150&&!cuerpos.length;i++)await sleep(100);   // el Portero manda la bitácora a los 5 s
  assert.ok(cuerpos.length,'la bitácora salió');
  const codigos=cuerpos.flatMap(b=>String(b.eventos).split(' ')).filter(t=>/^(pd|cj|cat):/.test(t));
- assert.ok(codigos.some(c=>/^pd:RE:\d+:[cr]$/.test(c)),'primer dato de la página: '+codigos.join(' '));
- assert.ok(codigos.some(c=>/^cj:RE:\d+:[cr]$/.test(c)),'canje de la sesión: '+codigos.join(' '));
+ // El cargador v2 añade el dispositivo al final (`pd:RE:812:c@cros`); la v1 no lo trae: valen las dos.
+ assert.ok(codigos.some(c=>/^pd:RE:\d+:[cr](@(ios|and|cros|win|mac|lin|otro))?$/.test(c)),'primer dato de la página: '+codigos.join(' '));
+ assert.ok(codigos.some(c=>/^cj:RE:\d+:[cr](@(ios|and|cros|win|mac|lin|otro))?$/.test(c)),'canje de la sesión: '+codigos.join(' '));
  assert.ok(codigos.every(c=>c.length<=40&&!/\s/.test(c)),'cortos y sin espacios: '+codigos.join(' '));
  assert.deepEqual(errors,[]);await context.close();
  console.log('PASS '+name+': bitácora · los códigos del cargador viajan en eventos ('+codigos.join(' ')+').');

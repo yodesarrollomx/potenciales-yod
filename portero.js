@@ -380,10 +380,10 @@
     addEventListener('yodcargador:sesion-rechazada', sesionRechazadaEnFondo);
   }
   if (cargadorActivo()) escucharRechazoDeFondo();
-  /* Cerrar sesión (nota de la Fase 1, sin cambio de código): el Portero nunca borra pyod_clave_v1 por un rechazo; la borra
-     reabrirGate de cada motor, hoy SIN guardia de carrera (si otra pestaña canjeó entre tanto, se llevaría la sesión nueva).
-     reabrirGate no se toca en esta fase. Al retirar el camino viejo, esa pieza pasa a YodCargador.sesion.cerrar({token, motivo}),
-     que borra la llave solo si todavía vale el token rechazado (guardia de carrera, O-T1 de Astra). */
+  /* Cerrar sesión: el Portero nunca borra pyod_clave_v1 por un rechazo; la borra reabrirGate de cada motor (y el arranque de
+     index/mapa). Desde la entrega 2 de la Fase 1, con el cargador activo, eso pasa por YodCargador.sesion.cerrar({token, motivo}),
+     que borra la llave sólo si todavía vale el token rechazado (guardia de carrera, O-T1 de Astra) y purga las copias; sin cargador,
+     o con ?cargador=legacy, reabrirGate de cada motor sigue SIN guardia de carrera (el borrado literal de siempre). */
   addEventListener('storage', e => {
     if (e.key !== LSC && e.key !== null) return;
     sesionValidada = ''; validacionId++;

@@ -1,17 +1,17 @@
 {
-  "model_revision": "2026-10-31.cargador-fase1.2",
-  "proposal_id": "CHG-CARGADOR-FASE1-001",
-  "summary": "Fase 1 (Un cargador) de la reestructuración de YOD OS, entrega 1, aprobada por Dirección el 30-oct-2026 (Buzón CL-YODOS-FASE1-20261030). T-103: los 8 HTML cargan https://yodesarrollomx.github.io/yod-portal/os/yod-cargador.js justo después de yod-acceso.js; con el cargador activo, apiGet de los 5 motores manda SOLO la primera lectura de recurso=lista de la página por YodCargador.ppp.get (caché-primero: se pinta lo último conocido y la red lo actualiza en fondo; tope 360 s), ppp-catalog.js lee las cinco listas de portada/mapa por el mismo transporte con su timeout literal de 60000 y repinta con yodcargador:dato, y portero.js obtiene el canje de YodCargador.sesion.canjear (un solo canje compartido con shell.js y la cabina), añade los códigos de telemetría (pd:/cj:/cat:) a la bitácora que ya manda y cierra la sesión si el refresco de fondo del cargador rechaza la credencial. Todo lo demás (caso, catálogo, modelo, recibos, guardados) sigue por fetch tal cual; con ?cargador=legacy o sin el script, nada cambia. Sin cambios de backend, hojas, fórmulas ni permisos; reabrirGate y esRechazoDeCredencial no se tocan.",
+  "model_revision": "2026-10-31.cargador-fase1.3",
+  "proposal_id": "CHG-CARGADOR-FASE1-002",
+  "summary": "Fase 1 (Un cargador) de la reestructuración de YOD OS, entrega 2, aprobada por Dirección el 31-oct-2026 (Buzón CL-YODOS-FASE1-E2-20261031). T-204: al cerrar la sesión por un rechazo de credencial, reabrirGate de macrolotes, mixto, residencial y unifamiliar y el arranque de index y mapa usan YodCargador.sesion.cerrar cuando el cargador está activo (borra pyod_clave_v1 sólo si sigue siendo el token rechazado y purga las copias yodcg_*); sin cargador o con ?cargador=legacy queda el borrado literal de siempre (uno por archivo). Prueba de paridad: el mismo caso sintético da las mismas cifras con y sin cargador en los 5 motores. O9: en CI, tests/ppp-cargador-browser.cjs falla si el atlas no trae el cargador. Los 8 HTML piden el cargador v2 (familia marco). Sin cambios de backend, hojas, fórmulas ni permisos; computar(), esRechazoDeCredencial y la lista de rechazos de portero.js no se tocan.",
   "components": [
     "SYS-POTENCIALES",
     "SYS-CONTROL",
     "GAS-PORTERO"
   ],
   "tests": [
-    "T-103/UNITARIAS: tests/ppp-cargador.test.cjs (62 casos): los 8 HTML cargan el cargador tras yod-acceso.js con la misma etiqueta; apiGet de cada motor delega con un YodCargador falso y conserva el fetch literal sin él; ppp-catalog.js usa ppp.get con timeoutMs 60000; portero.js canjea por sesion.canjear y la bitácora incluye los códigos; tests/ppp-session-guard.test.cjs (22) y tests/access-gates.cjs (14) siguen verdes.",
-    "T-103/NAVEGADOR: tests/ppp-cargador-browser.cjs (5 escenarios: portada, motor, Portero, caso, bitácora) con el atlas de yod-portal que trae el cargador; se omite si el cargador no está. ppp-browser, ppp-home, case-opening, shell y access iguales a la base.",
-    "Batería completa: node --test tests/*.test.cjs tests/access-gates.cjs tests/sheets-offline.cjs = 491 pasan; node scripts/versiones.cjs --check = 88 etiquetas; git diff --check limpio; verificar-impacto contra el atlas fijado en arquitectura.yml: válido.",
-    "ENTREGA: Pages y la recarga en navegador real se acreditan por separado (paso «Comprobar archivos publicados» de main); sin POST de pruebas a producción; la telemetría viaja dentro de la bitácora existente del Portero."
+    "T-204/SESIÓN: tests/ppp-cierre-cargador.test.cjs (32 casos: con cargador se cierra con YodCargador.sesion.cerrar({token, motivo}) y sin removeItem; sin cargador o legacy, el borrado literal; contra main fallan 23) y tests/ppp-session-guard.test.cjs sigue verde (22, un borrado literal por archivo).",
+    "T-204/PARIDAD: tests/ppp-paridad-cargador-browser.cjs en los 5 motores (mismas cifras visibles con ?cargador=legacy y con el cargador, en primera carga y con caché caliente: macrolotes 13, unifamiliar 48, residencial 45, mixto 70, patrimonial 13 cifras), en el paso de navegador de Verificar interfaz PPP.",
+    "O9: tests/ppp-cargador-browser.cjs sale con 1 en CI si falta os/yod-cargador.js en el atlas.",
+    "Batería completa: node --test tests/*.test.cjs tests/access-gates.cjs tests/sheets-offline.cjs; node scripts/versiones.cjs --check; verificar-impacto contra el atlas fijado; sin POST de pruebas a producción."
   ],
-  "rollback": "Revertir el PR completo (git revert del merge). Sin tocar código: abrir cualquier tablero con ?cargador=legacy o fijar localStorage yodcg_legacy=1 devuelve el camino viejo; YodCargador.purgar() borra las cachés yodcg_*. No hay cambios de backend, hojas ni datos."
+  "rollback": "Revertir el PR (git revert -m 1 del merge). Sin tocar código: ?cargador=legacy o localStorage yodcg_legacy='1'. Sin backend, hojas ni datos."
 }
