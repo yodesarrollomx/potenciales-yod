@@ -3,37 +3,60 @@ const test=require('node:test'),assert=require('node:assert/strict'),{webcrypto}
 const p=require('../ppp-presentation.js');
 const context=(type='vertical')=>({board_case_id:'synthetic-ppp',viewed_scenario_id:'viewed',ppp_revision:'ppp-r12',model_type:type,confirmed:true,pending:false,busy:false});
 const job=(request,phase='queued')=>({ok:true,request_id:request.request_id,job_id:'job-1',phase,source:{case_id:'different-expediente',ppp_id:request.source.board_case_id,viewed_scenario_id:request.source.viewed_scenario_id,ppp_revision:request.source.ppp_revision,source_revision:'expediente-r3',snapshot_hash:'a'.repeat(64)}});
+const availableList=()=>({ok:true,jobs:[],presentations:[],capabilities:{presentation_draft_v1:true}});
+async function ready(options){const api=p.controller({...options,transport:{list:async()=>availableList(),...options.transport}});await api.refresh();return api;}
+
+test('generation requires an explicit current capability, not just a valid plan or successful history read',async()=>{
+ let calls=0,list={ok:true,jobs:[],presentations:[]};const api=p.controller({read:()=>context(),getIdentity:()=> 'actor',requestId:()=> 'request-1',transport:{list:async()=>list,create:async value=>{calls++;return job(value);}}});
+ assert.equal(api.state().availability,'unknown');assert.equal(await api.create(),false);assert.equal(calls,0);assert.equal(api.state().pending,null);
+ for(const capabilities of [undefined,{}, {presentation_draft_v1:false},{presentation_draft_v1:'true'}]){list={...list,capabilities};assert.equal(await api.refresh(),true);assert.equal(api.state().availability,'unavailable');assert.equal(await api.create(),false);assert.equal(calls,0);}
+ list={...list,capabilities:{presentation_draft_v1:true}};await api.refresh();assert.equal(api.state().availability,'available');assert.equal(await api.create(),true);assert.equal(calls,1);
+ list={ok:false,error:'service_unavailable'};assert.equal(await api.refresh(),false);assert.equal(api.state().availability,'unavailable');assert.equal(await api.create(),false);assert.equal(calls,1);
+});
+test('a missing resolver or timeout stays unavailable, and a late capability cannot authorize another case/session',async()=>{
+ for(const failure of ['unknown_operation','invalid_response','timeout']){const api=p.controller({read:()=>context(),getIdentity:()=> 'actor',transport:{list:async()=>{throw Error(failure);}}});assert.equal(await api.refresh(),false);assert.equal(api.state().availability,'unavailable');assert.equal(api.state().error,'availability_unconfirmed');}
+ for(const field of ['actor','case']){let actor='actor-1',current=context(),release;const api=p.controller({read:()=>current,getIdentity:()=>actor,transport:{list:()=>new Promise(resolve=>{release=resolve;})}});const waiting=api.refresh();await Promise.resolve();if(field==='actor')actor='actor-2';else current={...current,board_case_id:'other'};release(availableList());assert.equal(await waiting,false);assert.equal(api.state().availability,'unknown');assert.equal(await api.create(),false);}
+});
+
 test('every motor sends the exact viewed reference with no financial values',async()=>{
  for(const type of p.TYPES){let sent;const current={...context(type),defended_scenario_id:'defended',results:{profit:900},inputs:{area:55}};
-  const api=p.controller({read:()=>current,getIdentity:()=> 'actor',requestId:()=> 'request-1',transport:{create:async value=>{sent=value;return job(value);}}});assert.equal(await api.create(),true);assert.deepEqual(sent,{request_id:'request-1',source:p.sourceOf(current)});assert.equal(api.state().jobs[0].source.case_id,'different-expediente');
+  const api=await ready({read:()=>current,getIdentity:()=> 'actor',requestId:()=> 'request-1',transport:{create:async value=>{sent=value;return job(value);}}});assert.equal(await api.create(),true);assert.deepEqual(sent,{request_id:'request-1',source:p.sourceOf(current)});assert.equal(api.state().jobs[0].source.case_id,'different-expediente');
  }
 });
 test('pending model quantities are not pending saves: a confirmed capture can request its diagnostic',async()=>{
- let calls=0;const current={...context(),model_status:'MODELO_PENDIENTE',calculated:false};const api=p.controller({read:()=>current,getIdentity:()=> 'actor',requestId:()=> 'request-1',transport:{create:async value=>{calls++;return job(value);}}});assert.equal(await api.create(),true);assert.equal(calls,1);
+ let calls=0;const current={...context(),model_status:'MODELO_PENDIENTE',calculated:false};const api=await ready({read:()=>current,getIdentity:()=> 'actor',requestId:()=> 'request-1',transport:{create:async value=>{calls++;return job(value);}}});assert.equal(await api.create(),true);assert.equal(calls,1);
  for(const patch of [{pending:true},{busy:true},{confirmed:false}]){Object.assign(current,{pending:false,busy:false,confirmed:true},patch);assert.equal(await api.create(),false);}assert.equal(calls,1);
 });
 test('legacy capture compares saved versions and live quantities without computing or activating another scenario',()=>{
  const scenarios=[{id:'viewed',nombre:'Visible',inputs:{inArea:10}},{id:'defended',nombre:'Defendida',inputs:{inArea:20}}],saved=p.rememberLegacy({caseId:'synthetic-ppp',revision:7,scenarios});
  const options={caseId:'synthetic-ppp',revision:7,scenarios,active:'viewed',inputs:{inArea:10},modelType:'macrolotes'};const c=p.legacyContext(saved,options);assert.equal(c.ppp_revision,'7');assert.equal(c.viewed_scenario_id,'viewed');assert.equal(c.pending,false);assert.equal(p.legacyContext(saved,{...options,inputs:{inArea:11}}).pending,true);assert.equal(p.legacyContext(saved,{...options,caseId:'another'}),null);assert.equal(p.legacyContext(null,options),null);
 });
+test('patrimonial optional empty editors match the saved representation without hiding effective detail edits',()=>{
+ const base={id:'viewed',nombre:'Visible',inputs:{inArea:10}},saved=p.rememberLegacy({caseId:'synthetic-ppp',revision:7,scenarios:[base]});
+ const current={...base,prof:false,depas:[],mercado:[]},options={caseId:'synthetic-ppp',revision:7,scenarios:[current],active:'viewed',inputs:{inArea:10},modelType:'patrimonial'};
+ assert.equal(p.legacyContext(saved,options).pending,false,'opening empty optional editors does not invent a change');
+ for(const extra of [{prof:true},{depas:[{m2:40,renta:0}]},{mercado:[{fuente:'Comparable',m2:40,renta:0}]}])assert.equal(p.legacyContext(saved,{...options,scenarios:[{...current,...extra}]}).pending,true);
+ const detailed={...base,prof:true,depas:[{m2:40,renta:0}],mercado:[{fuente:'Comparable',m2:40,renta:0}]},confirmed=p.rememberLegacy({caseId:'synthetic-ppp',revision:7,scenarios:[detailed]});
+ assert.equal(p.legacyContext(confirmed,{...options,scenarios:[detailed]}).pending,false);assert.equal(p.legacyContext(confirmed,{...options,scenarios:[{...detailed,mercado:[]}]}).pending,true,'removing saved comparables remains a real edit');
+});
 test('double click, lost ACK, reload and exact status recovery keep one request',async()=>{
  const memory=new Map(),storage=p.pendingStore({cryptoImpl:webcrypto,storage:{getItem:k=>memory.get(k),setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)}});let calls=0;
- const options={read:()=>context(),getIdentity:()=> 'private-session',requestId:()=> 'request-original',storage,transport:{create:async()=>{calls++;throw Error('timeout');},status:async value=>job(value),list:async()=>({ok:true,jobs:[],presentations:[]})}};
- const first=p.controller(options);await Promise.all([first.create(),first.create()]);assert.equal(calls,1);assert.equal(memory.size,1);assert.doesNotMatch([...memory.keys()].join(),/private-session/);assert.doesNotMatch([...memory.values()].join(),/private-session/);
- const reloaded=p.controller({...options,requestId:()=> 'wrong-new-id'});assert.equal(await reloaded.create(),false);assert.equal(calls,1);assert.equal(await reloaded.reconcile(),true);assert.equal(reloaded.state().pending,null);assert.equal(memory.size,0);
+ const options={read:()=>context(),getIdentity:()=> 'private-session',requestId:()=> 'request-original',storage,transport:{create:async()=>{calls++;throw Error('timeout');},status:async value=>job(value),list:async()=>availableList()}};
+ const first=await ready(options);await Promise.all([first.create(),first.create()]);assert.equal(calls,1);assert.equal(memory.size,1);assert.doesNotMatch([...memory.keys()].join(),/private-session/);assert.doesNotMatch([...memory.values()].join(),/private-session/);
+ const reloaded=await ready({...options,requestId:()=> 'wrong-new-id'});assert.equal(await reloaded.create(),false);assert.equal(calls,1);assert.equal(await reloaded.reconcile(),true);assert.equal(reloaded.state().pending,null);assert.equal(memory.size,0);
 });
 test('another session or case cannot receive a late private result',async()=>{
- for(const field of ['actor','case']){let actor='actor-1',current=context(),finish;const api=p.controller({read:()=>current,getIdentity:()=>actor,requestId:()=> 'request-1',transport:{create:value=>new Promise(resolve=>{finish=()=>resolve(job(value));})}});const waiting=api.create();await Promise.resolve();if(field==='actor')actor='actor-2';else current={...current,board_case_id:'other'};finish();assert.equal(await waiting,false);assert.deepEqual(api.state().jobs,[]);}
+ for(const field of ['actor','case']){let actor='actor-1',current=context(),finish;const api=await ready({read:()=>current,getIdentity:()=>actor,requestId:()=> 'request-1',transport:{create:value=>new Promise(resolve=>{finish=()=>resolve(job(value));})}});const waiting=api.create();await Promise.resolve();if(field==='actor')actor='actor-2';else current={...current,board_case_id:'other'};finish();assert.equal(await waiting,false);assert.deepEqual(api.state().jobs,[]);}
 });
 test('manual retry requires exact missing-receipt proof and preserves the same payload',async()=>{
- const sent=[];let proof=null;const api=p.controller({read:()=>context(),getIdentity:()=> 'actor',requestId:()=> 'original-request',transport:{create:async value=>{sent.push(structuredClone(value));if(sent.length===1)throw Error('timeout');return job(value);},status:async()=>proof}});
+ const sent=[];let proof=null;const api=await ready({read:()=>context(),getIdentity:()=> 'actor',requestId:()=> 'original-request',transport:{create:async value=>{sent.push(structuredClone(value));if(sent.length===1)throw Error('timeout');return job(value);},status:async()=>proof}});
  assert.equal(await api.create({presentation_id:'PRS-existing',base_presentation_version_id:'PV-existing'}),false);assert.equal(await api.retry(),false);assert.equal(sent.length,1);
  proof={ok:false,accepted:false,error:'request_not_found',request_id:'other',source:p.sourceOf(context()),retry_contract:'presentation-idempotent-v1'};assert.equal(await api.reconcile(),false);assert.equal(api.state().retryAllowed,false);
  proof.request_id='original-request';assert.equal(await api.reconcile(),true);assert.equal(api.state().retryAllowed,true);assert.equal(sent.length,1);assert.equal(await api.retry(),true);assert.deepEqual(sent[1],sent[0]);assert.equal(api.state().pending,null);
 });
 test('a pre-admission refusal cannot retire a different or unbound request',async()=>{
- for(const request_id of [undefined,'other']){const api=p.controller({read:()=>context(),getIdentity:()=> 'actor',requestId:()=> 'original-request',transport:{create:async()=>({ok:false,accepted:false,error:'service_unavailable',request_id})}});assert.equal(await api.create(),false);assert.equal(api.state().pending.request_id,'original-request');}
- const api=p.controller({read:()=>context(),getIdentity:()=> 'actor',requestId:()=> 'original-request',transport:{create:async value=>({ok:false,accepted:false,error:'service_unavailable',request_id:value.request_id})}});await api.create();assert.equal(api.state().pending,null);
+ for(const request_id of [undefined,'other']){const api=await ready({read:()=>context(),getIdentity:()=> 'actor',requestId:()=> 'original-request',transport:{create:async()=>({ok:false,accepted:false,error:'service_unavailable',request_id})}});assert.equal(await api.create(),false);assert.equal(api.state().pending.request_id,'original-request');}
+ const api=await ready({read:()=>context(),getIdentity:()=> 'actor',requestId:()=> 'original-request',transport:{create:async value=>({ok:false,accepted:false,error:'service_unavailable',request_id:value.request_id})}});await api.create();assert.equal(api.state().pending,null);
 });
 test('receipt must match source, request and independent editorial version',()=>{
  const request={request_id:'request-1',source:p.sourceOf(context())};for(const mutate of [v=>v.request_id='foreign',v=>v.source.viewed_scenario_id='defended',v=>v.source.ppp_revision='expediente-r3',v=>v.source.ppp_id='other']){const value=job(request);mutate(value);assert.throws(()=>p.validateJob(value,request.source,request.request_id));}

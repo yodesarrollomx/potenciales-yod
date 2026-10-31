@@ -14,8 +14,8 @@
   // Compatibilidad: los enlaces viejos ?open=ID (correos ya enviados) eran del board mixto.
   (function(){var q=new URLSearchParams(location.search);var id=q.get('open');if(id){var t=q.get('t')||'mixto';var pag={mixto:'mixto.html',vertical:'mixto.html',macrolotes:'macrolotes.html'}[t]||'mixto.html';location.replace(pag+'?open='+encodeURIComponent(id))}})();
 </script>
-<link rel="stylesheet" href="ppp-home.css?v=20261031-presentaciones-2">
-<link rel="stylesheet" href="ppp-catalog.css?v=20261031-presentaciones-2">
+<link rel="stylesheet" href="ppp-home.css?v=20261031-presentaciones-3">
+<link rel="stylesheet" href="ppp-catalog.css?v=20261031-presentaciones-3">
 </head>
 <body>
 <header id="pppHomeHeader">
@@ -143,8 +143,8 @@
   if(clave){cargar(clave).then(()=>{$('mapGate').classList.add('off');ajusta()}).catch(e=>{if(esRechazoDeCredencial(e)){localStorage.removeItem(LSK);$('mgErr').textContent='La clave cambió'}})}
 })();
 </script>
-<script src="ppp-catalog.js?v=20261031-presentaciones-2"></script>
-<script src="portero.js?v=20261031-presentaciones-2"></script>
+<script src="ppp-catalog.js?v=20261031-presentaciones-3"></script>
+<script src="portero.js?v=20261031-presentaciones-3"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=20261030-fase0"></script>
 </body>
 </html>

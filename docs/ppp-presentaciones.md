@@ -2,6 +2,8 @@
 
 El botón «Mandar hacer presentación con estos números» lee la versión visible y confirmada. El panel está después del contenido del plan para conservar la lectura inicial de sus resúmenes. Los cinco motores montan `ppp-presentation.js`; la presentación conserva su origen aunque después cambie el tablero.
 
+La acción comienza inhabilitada y sólo se habilita cuando el servicio confirma `capabilities.presentation_draft_v1: true` al consultar el historial del plan. Un resolver ausente, servicio deshabilitado o respuesta sin esa capacidad deja la acción inhabilitada con una explicación y permite volver a consultar. Publicar este consumidor por sí solo no habilita generación.
+
 ## Flujo y fuente
 
 1. `presentationContext()` obtiene sólo identidad del PPP, escenario visible, revisión y estado de guardado. Las fichas iniciales nativas usan el recibo leído por `PPPIntake`; los modelos vertical y patrimonial usan sus stores nativos. Las capturas históricas requieren una lectura o un guardado confirmado y comparación con las cantidades actuales.
@@ -19,7 +21,7 @@ Una ficha confirmada con `MODELO_PENDIENTE` puede encargar un diagnóstico. Sus 
 - Origen solicitado: `{board_case_id, viewed_scenario_id, ppp_revision, model_type}`.
 - Resolver: `{ok, case_id, board_case_id, endpoint, token, expires_at}`; token sólo en memoria y `expires_at` en milisegundos.
 - Trabajo: `{ok, request_id, job_id, phase, source, presentation_id?, presentation_version_id?}`. El origen confirma `ppp_id`, escenario y revisión solicitados.
-- Listado: `{ok, jobs, presentations}`; cada versión incluye identidad de presentación y contenido, número editorial, título, fecha y origen.
+- Listado: `{ok, jobs, presentations, capabilities: {presentation_draft_v1: boolean}}`; cada versión incluye identidad de presentación y contenido, número editorial, título, fecha y origen. La capacidad debe ser el booleano `true`; no se infiere de un historial válido o de un token.
 
 El servidor valida de nuevo identidad y ámbito. Los controles del navegador no conceden autorización. Se retiran resultados privados al cambiar la sesión o recibir un rechazo de acceso; no se borra `pyod_clave_v1`.
 

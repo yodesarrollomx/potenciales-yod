@@ -8,7 +8,7 @@
  const stable=value=>JSON.stringify(sort(value));
  function sort(value){if(Array.isArray(value))return value.map(sort);if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(k=>[k,sort(value[k])]));return value;}
  const PHASES={confirmation_pending:'Guardado por confirmar',waiting_capacity:'En espera del agente',queued:'En cola',reading:'Leyendo el plan',formulating:'Armando el guion',drawing:'Dibujando',reviewing:'Revisando',registering:'Guardado por confirmar',ready_for_review:'Versión lista para revisar',awaiting_data:'Datos pendientes',failed:'No se completó',stopped:'Detenido'};
- const ERRORS={service_unavailable:'La generación de presentaciones todavía no está habilitada en el servicio.',unsupported_source:'No se pudo confirmar la lectura de esta versión del plan.',case_unavailable:'Este plan todavía no tiene un expediente habilitado para preparar presentaciones.',pending_changes:'Guarda y confirma los cambios del plan antes de preparar la presentación.',reading_unconfirmed:'Abre una versión guardada y confirma su lectura.',session_changed:'La sesión cambió. Vuelve a abrir el plan con tu sesión actual.',unauthorized:'Tu sesión no tiene acceso a esta presentación.',forbidden:'Tu sesión no tiene acceso a esta presentación.',revision_conflict:'Cambió la revisión del plan. Relee la versión antes de solicitar la presentación.',source_revision_conflict:'Cambió la revisión del plan. Relee la versión antes de solicitar la presentación.',presentation_unavailable:'La generación de presentaciones todavía no está disponible para este plan.',presentation_not_enabled:'La generación de presentaciones todavía no está habilitada.',mapping_required:'Falta confirmar la relación de este plan con su expediente.',case_busy:'El agente tiene otro trabajo pendiente en este expediente. El encargo anterior se conserva.',invalid_response:'No se pudo confirmar la respuesta del servicio.',timeout:'La respuesta tardó demasiado. Consulta el mismo encargo antes de volver a solicitarlo.',unavailable:'No se pudo confirmar el encargo. Consulta su estado antes de solicitar otro.',request_id_reused:'Esta solicitud ya corresponde a otro encargo.',context_changed:'Cambiaste de plan o de versión. El encargo conserva su origen; consulta su estado desde ese plan.'};
+ const ERRORS={availability_unconfirmed:'No se pudo comprobar si este plan puede generar presentaciones. Vuelve a consultar.',service_unavailable:'La generación de presentaciones todavía no está habilitada en el servicio.',unsupported_source:'No se pudo confirmar la lectura de esta versión del plan.',case_unavailable:'Este plan todavía no tiene un expediente habilitado para preparar presentaciones.',pending_changes:'Guarda y confirma los cambios del plan antes de preparar la presentación.',reading_unconfirmed:'Abre una versión guardada y confirma su lectura.',session_changed:'La sesión cambió. Vuelve a abrir el plan con tu sesión actual.',unauthorized:'Tu sesión no tiene acceso a esta presentación.',forbidden:'Tu sesión no tiene acceso a esta presentación.',revision_conflict:'Cambió la revisión del plan. Relee la versión antes de solicitar la presentación.',source_revision_conflict:'Cambió la revisión del plan. Relee la versión antes de solicitar la presentación.',presentation_unavailable:'La generación de presentaciones todavía no está disponible para este plan.',presentation_not_enabled:'La generación de presentaciones todavía no está habilitada.',mapping_required:'Falta confirmar la relación de este plan con su expediente.',case_busy:'El agente tiene otro trabajo pendiente en este expediente. El encargo anterior se conserva.',invalid_response:'No se pudo confirmar la respuesta del servicio.',timeout:'La respuesta tardó demasiado. Consulta el mismo encargo antes de volver a solicitarlo.',unavailable:'No se pudo confirmar el encargo. Consulta su estado antes de solicitar otro.',request_id_reused:'Esta solicitud ya corresponde a otro encargo.',context_changed:'Cambiaste de plan o de versión. El encargo conserva su origen; consulta su estado desde ese plan.'};
  function errorCode(error){const code=error?.code||error?.message;return Object.hasOwn(ERRORS,code)?code:'unavailable';}
  function sourceOf(context){
   if(!context||!id(context.board_case_id)||!id(context.viewed_scenario_id)||typeof context.ppp_revision!=='string'||!context.ppp_revision||context.ppp_revision.length>256||!TYPES.includes(context.model_type))throw Error('reading_unconfirmed');
@@ -16,7 +16,12 @@
  }
  function assertReady(context){const source=sourceOf(context);if(context.pending||context.busy)throw Error('pending_changes');if(context.confirmed!==true)throw Error('reading_unconfirmed');return source;}
  function sameSource(a,b){try{return stable(sourceOf(a))===stable(sourceOf(b));}catch{return false;}}
- function normalizeLegacy(scenarios){return scenarios.map(({activo,...v})=>v);}
+ function normalizeLegacy(scenarios,modelType){return scenarios.map(({activo,...v})=>{
+  // Patrimonial renders optional empty editors that its existing save format
+  // omits. Compare those empty representations equally, preserving real edits.
+  if(modelType==='patrimonial'){if(v.prof===false)delete v.prof;for(const key of ['depas','mercado'])if(Array.isArray(v[key])&&!v[key].length)delete v[key];}
+  return v;
+ });}
  function rememberLegacy({caseId,revision,scenarios}){
   if(!id(caseId)||!revision||!Array.isArray(scenarios)||!scenarios.length)return null;
   return {caseId,revision:String(revision),scenarios:clone(normalizeLegacy(scenarios))};
@@ -25,7 +30,7 @@
   if(!saved||saved.caseId!==caseId||saved.revision!==String(revision))return null;
   const viewed=scenarios.find(v=>v.id===active),canonical=saved.scenarios.find(v=>v.id===active);if(!viewed||!canonical)return null;
   const current=normalizeLegacy(scenarios).map(v=>v.id===active?{...v,inputs:clone(inputs),...extras}:v);
-  return {board_case_id:caseId,viewed_scenario_id:active,ppp_revision:saved.revision,model_type:modelType,name:name||'',scenario_name:viewed.nombre||active,confirmed:online,pending:stable(current)!==stable(saved.scenarios),busy:false};
+  return {board_case_id:caseId,viewed_scenario_id:active,ppp_revision:saved.revision,model_type:modelType,name:name||'',scenario_name:viewed.nombre||active,confirmed:online,pending:stable(normalizeLegacy(current,modelType))!==stable(normalizeLegacy(saved.scenarios,modelType)),busy:false};
  }
  function nativeContext({model,caseId,active,modelType,name,confirmed,pending=false,busy=false}){
   if(!model||model.caso_id!==caseId||!Array.isArray(model.escenarios))return null;
@@ -57,16 +62,16 @@
   return {async read(identity,scope){const value=JSON.parse(storage.getItem(await key(identity,scope))||'null');if(!value)return null;if(!id(value.request_id)||sourceOf(value.source).board_case_id!==scope)throw Error('invalid_response');return value;},async write(identity,scope,value){const k=await key(identity,scope);if(value)storage.setItem(k,JSON.stringify(value));else storage.removeItem(k);}};
  }
  function controller({read,transport,getIdentity,requestId=()=>globalThis.crypto.randomUUID(),changed=()=>{},storage=null}){
-  let identity=getIdentity(),scope='',epoch=0,busy=false,error='',pending=null,retryAllowed=false,jobs=[],presentations=[],disposed=false;
+  let identity=getIdentity(),scope='',epoch=0,busy=false,error='',pending=null,retryAllowed=false,availability='unknown',jobs=[],presentations=[],disposed=false;
   function context(){const current=read();let key='';try{key=sourceOf(current).board_case_id;}catch{}
-   const next=getIdentity();if(next!==identity||key!==scope){identity=next;scope=key;epoch++;pending=null;retryAllowed=false;jobs=[];presentations=[];error='';busy=false;transport.forget?.();}return next?current:null;
+   const next=getIdentity();if(next!==identity||key!==scope){identity=next;scope=key;epoch++;pending=null;retryAllowed=false;availability='unknown';jobs=[];presentations=[];error='';busy=false;transport.forget?.();}return next?current:null;
   }
-  const state=()=>({context:context(),busy,error,pending:pending?clone(pending):null,retryAllowed,jobs:clone(jobs),presentations:clone(presentations)});
+  const state=()=>({context:context(),busy,error,pending:pending?clone(pending):null,retryAllowed,availability,jobs:clone(jobs),presentations:clone(presentations)});
   function notify(){if(!disposed)changed(state());}
   function current(owner,generation){context();return !disposed&&identity===owner&&epoch===generation;}
   async function persist(owner,value){if(storage)await storage.write(owner,scope,value);}
   async function run(action){context();if(disposed||busy)return false;const owner=identity,generation=epoch;if(!owner){error='unauthorized';notify();return false;}busy=true;error='';notify();
-   try{if(storage&&!pending&&scope){const restored=await storage.read(owner,scope);if(!current(owner,generation))return false;pending=restored;}return await action(owner,generation);}catch(e){if(current(owner,generation)){error=errorCode(e);if(['unauthorized','forbidden','session_changed'].includes(error)){jobs=[];presentations=[];transport.forget?.();}}return false;}finally{if(current(owner,generation)){busy=false;notify();}}
+   try{if(storage&&!pending&&scope){const restored=await storage.read(owner,scope);if(!current(owner,generation))return false;pending=restored;}return await action(owner,generation);}catch(e){if(current(owner,generation)){error=errorCode(e);if(['availability_unconfirmed','service_unavailable','presentation_unavailable','presentation_not_enabled','case_unavailable','mapping_required','unauthorized','forbidden','session_changed'].includes(error))availability='unavailable';if(['unauthorized','forbidden','session_changed'].includes(error)){jobs=[];presentations=[];transport.forget?.();}}return false;}finally{if(current(owner,generation)){busy=false;notify();}}
   }
   async function submit(payload,owner,generation){
    retryAllowed=false;const value=await transport.create(payload);
@@ -75,18 +80,19 @@
    const job=validateJob(value,payload.source,payload.request_id);jobs=[job,...jobs.filter(j=>j.job_id!==job.job_id)];pending=null;retryAllowed=false;await persist(owner,null);return true;
   }
   async function create(options={}){return run(async(owner,generation)=>{
-   const source=assertReady(read());if(pending)throw Error('unavailable');
+   const source=assertReady(read());if(pending)throw Error('unavailable');if(availability!=='available')throw Error('presentation_unavailable');
    const payload={request_id:requestId(),source};
    if(options.presentation_id){if(!id(options.presentation_id)||!id(options.base_presentation_version_id))throw Error('invalid_response');payload.presentation_id=options.presentation_id;payload.base_presentation_version_id=options.base_presentation_version_id;}
    pending=clone(payload);await persist(owner,pending);if(!current(owner,generation))return false;notify();
    return submit(payload,owner,generation);
   });}
   async function refresh(){return run(async(owner,generation)=>{
-   const source=sourceOf(read()),value=await transport.list({source});
+   availability='unknown';try{const source=sourceOf(read()),value=await transport.list({source});
    if(!current(owner,generation))return false;if(value?.ok===false)throw Error(value.error||'unavailable');
-   const list=validateList(value,source.board_case_id);jobs=list.jobs;presentations=list.presentations;
+   const list=validateList(value,source.board_case_id);jobs=list.jobs;presentations=list.presentations;availability=value.capabilities?.presentation_draft_v1===true?'available':'unavailable';if(availability==='unavailable')error='presentation_unavailable';
    if(pending){const receipt=jobs.find(job=>job.request_id===pending.request_id);if(receipt){validateJob(receipt,pending.source,pending.request_id);pending=null;retryAllowed=false;await persist(owner,null);}}
    return true;
+   }catch(e){const code=errorCode(e);throw Error(['unavailable','invalid_response','timeout'].includes(code)?'availability_unconfirmed':code);}
   });}
   async function reconcile(){return run(async(owner,generation)=>{
    if(!pending)return false;const expected=clone(pending),value=await transport.status({request_id:expected.request_id,source:expected.source});
@@ -94,7 +100,7 @@
    if(value?.ok===false){if(value.error==='request_not_found'&&value.accepted===false&&value.request_id===expected.request_id&&value.retry_contract==='presentation-idempotent-v1'&&sameSource(value.source,expected.source)){retryAllowed=true;return true;}throw Error(value.error||'unavailable');}
    const job=validateJob(value,expected.source,expected.request_id);jobs=[job,...jobs.filter(j=>j.job_id!==job.job_id)];pending=null;retryAllowed=false;await persist(owner,null);return true;
   });}
-  async function retry(){return run(async(owner,generation)=>{if(!pending||!retryAllowed)throw Error('unavailable');const source=assertReady(read());if(!sameSource(source,pending.source))throw Error('context_changed');return submit(clone(pending),owner,generation);});}
+  async function retry(){return run(async(owner,generation)=>{if(!pending||!retryAllowed)throw Error('unavailable');const source=assertReady(read());if(!sameSource(source,pending.source))throw Error('context_changed');if(availability!=='available')throw Error('presentation_unavailable');return submit(clone(pending),owner,generation);});}
   return {state,create,refresh,reconcile,retry,dispose(){disposed=true;epoch++;jobs=[];presentations=[];pending=null;retryAllowed=false;transport.dispose?.();}};
  }
  function cloudTransport({resolve,getIdentity,fetchImpl=(...args)=>globalThis.fetch(...args),now=()=>Date.now(),timeoutMs=45000}){
@@ -127,11 +133,11 @@
   let last='',lastScope='',lastRefresh=0;
   function paint(s){const c=s.context;let valid=false;try{sourceOf(c);valid=true;}catch{}
    origin.textContent=valid?'Con los números de '+(c.scenario_name||c.viewed_scenario_id)+' · revisión '+c.ppp_revision:'Abre una versión guardada para preparar su presentación.';
-   create.disabled=!valid||!c.confirmed||!!c.pending||!!c.busy||s.busy||!!s.pending;
+   create.disabled=!valid||!c.confirmed||!!c.pending||!!c.busy||s.busy||!!s.pending||s.availability!=='available';
    saveButton.hidden=!valid||!c.pending||typeof save!=='function';saveButton.disabled=s.busy||!!c?.busy;
-   refresh.disabled=!valid||s.busy;reconcile.hidden=!s.pending;reconcile.disabled=s.busy;retry.hidden=!s.retryAllowed;retry.disabled=s.busy||!valid||!c.confirmed||!!c.pending||!!c.busy||!sameSource(c,s.pending?.source);
-   status.textContent=s.error?ERRORS[s.error]:s.pending?'Encargo por confirmar. Conservamos su solicitud; comprueba el mismo encargo.':s.busy?'Consultando el servicio…':valid&&c.pending?ERRORS.pending_changes:valid&&!c.confirmed?ERRORS.reading_unconfirmed:'';
-   const signature=stable([s.jobs,s.presentations,c?.ppp_revision,c?.viewed_scenario_id]);if(signature===last)return;last=signature;list.replaceChildren();
+   refresh.disabled=!valid||s.busy;reconcile.hidden=!s.pending;reconcile.disabled=s.busy;retry.hidden=!s.retryAllowed;retry.disabled=s.busy||!valid||!c.confirmed||!!c.pending||!!c.busy||s.availability!=='available'||!sameSource(c,s.pending?.source);
+   status.textContent=s.error?ERRORS[s.error]:s.pending?'Encargo por confirmar. Conservamos su solicitud; comprueba el mismo encargo.':s.busy?'Consultando el servicio…':valid&&c.pending?ERRORS.pending_changes:valid&&!c.confirmed?ERRORS.reading_unconfirmed:valid&&s.availability==='unknown'?'Comprobando disponibilidad de presentaciones…':valid&&s.availability==='unavailable'?ERRORS.presentation_unavailable:'';
+   const signature=stable([s.jobs,s.presentations,c?.ppp_revision,c?.viewed_scenario_id,create.disabled]);if(signature===last)return;last=signature;list.replaceChildren();
    for(const job of s.jobs){if(s.presentations.some(p=>p.presentation_version_id===job.presentation_version_id))continue;const card=make('article');card.append(make('strong',PHASES[job.phase]),make('p','Origen: '+job.source.viewed_scenario_id+' · revisión '+job.source.ppp_revision));if(job.presentation_version_id){const link=make('a','Abrir y revisar');link.href=presentationURL(job.presentation_id,job.presentation_version_id);card.append(link);}list.append(card);}
    for(const p of s.presentations){const card=make('article');card.append(make('strong',p.title+' · V'+p.version_number),make('p','PPP '+(p.source.scenario_name||p.source.viewed_scenario_id)+' · revisión '+p.source.ppp_revision+' · '+new Date(p.created_at).toLocaleDateString('es-MX')));
     if(valid&&(p.source.ppp_revision!==c.ppp_revision||p.source.viewed_scenario_id!==c.viewed_scenario_id))card.append(make('p','Conserva una versión de origen distinta a la que estás viendo.','ppp-presentation-previous'));
