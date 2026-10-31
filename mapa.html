@@ -153,7 +153,10 @@
     $('gateBtn').disabled=false;
   }
   $('gateBtn').onclick=entrar;$('gateClave').addEventListener('keydown',e=>{if(e.key==='Enter')entrar()});
-  if(clave){cargar(clave).then(()=>{$('gate').classList.add('off');ajusta()}).catch(e=>{if(esRechazoDeCredencial(e)){localStorage.removeItem(LSK);$('gateErr').textContent='La clave cambió'}else $('gateErr').textContent='Sin conexión con el Sheet'})}
+  // Fase 1 (T-204): con el cargador activo, un rechazo de credencial en el arranque cierra la sesión con su guardia de carrera: solo se suelta la llave si sigue
+  // siendo la que viajó en el arranque (otra pestaña pudo entrar entre tanto) y se purgan las copias. Sin él, o con ?cargador=legacy, el .catch de siempre.
+  const claveDeArranque=clave;
+  if(clave){cargar(clave).then(()=>{$('gate').classList.add('off');ajusta()},e=>{if(esRechazoDeCredencial(e)&&typeof window!=='undefined'&&window.YodCargador&&window.YodCargador.v&&!window.YodCargador.legacy&&window.YodCargador.sesion&&typeof window.YodCargador.sesion.cerrar==='function'){window.YodCargador.sesion.cerrar({token:claveDeArranque,motivo:String(e&&e.message||e)});$('gateErr').textContent='La clave cambió';return}throw e}).catch(e=>{if(esRechazoDeCredencial(e)){localStorage.removeItem(LSK);$('gateErr').textContent='La clave cambió'}else $('gateErr').textContent='Sin conexión con el Sheet'})}
 })();
 </script>
 <script src="ppp-catalog.js?v=20261031-fase1"></script>

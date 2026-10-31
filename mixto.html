@@ -1410,7 +1410,10 @@
   function esRechazoDeCredencial(err){return ['clave','liga','expirado','revocado','sin_sesion','unauthorized','forbidden','http 401','http 403'].includes(String(err&&err.message||err||'').trim().toLowerCase())}
   function reabrirGate(motivo){
     const credencial=esRechazoDeCredencial(motivo);
-    if(credencial){retireVolumeIdentity();localStorage.removeItem(LS.clave);clave=''}
+    // Fase 1 (T-204): con el cargador activo la sesión rechazada se cierra con su guardia de carrera (solo se suelta la llave si sigue siendo el token rechazado,
+    // y se purgan las copias); sin él, o con ?cargador=legacy, el borrado de siempre.
+    if(credencial&&typeof window!=='undefined'&&window.YodCargador&&window.YodCargador.v&&!window.YodCargador.legacy&&window.YodCargador.sesion&&typeof window.YodCargador.sesion.cerrar==='function'){retireVolumeIdentity();window.YodCargador.sesion.cerrar({token:clave,motivo:String(motivo&&motivo.message||motivo)});clave=''}
+    else if(credencial){retireVolumeIdentity();localStorage.removeItem(LS.clave);clave=''}
     const gate=$('gate');gate.classList.remove('off');gate.style.removeProperty('display');gate.removeAttribute('aria-hidden');
     $('gateErr').textContent=credencial?'La clave cambió o es incorrecta':'El tablero no pudo leer la lista ('+String(motivo&&motivo.message||motivo||'sin detalle').slice(0,80)+'). Tu sesión sigue abierta; vuelve a intentar recargando la página.'
   }
