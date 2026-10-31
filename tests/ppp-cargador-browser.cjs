@@ -11,7 +11,7 @@
 const {chromium,webkit}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {install}=require('./ppp-fixture.js');
 const atlas=process.env.YOD_ATLAS_DIR||path.resolve(__dirname,'../../yod-atlas');
-if(!fs.existsSync(path.join(atlas,'os','yod-cargador.js'))){console.log('OMITIDA: '+path.join(atlas,'os','yod-cargador.js')+' no existe; los tableros corren por el camino de siempre.');process.exit(0);}
+const cargador=path.join(atlas,'os','yod-cargador.js');if(!fs.existsSync(cargador)){if(process.env.CI==='true'){console.error('ERROR: en CI el atlas debe traer os/yod-cargador.js; no existe en '+cargador);process.exit(1);}console.log('OMITIDA: '+cargador+' no existe; los tableros corren por el camino de siempre.');process.exit(0);}
 const assets=process.env.PPP_MAP_ASSETS||'/tmp/ppp-map-assets',PAGE='https://ppp.test/potenciales-yod/';
 const rows=(tipo,n)=>Array.from({length:n},(_,i)=>({caso_id:`prueba ${tipo}/${i}`,nombre_caso:`Proyecto de prueba ${tipo} ${i+1}`,palabra:`ensayo-${i+1}`,estado:'ANÁLISIS'}));
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
