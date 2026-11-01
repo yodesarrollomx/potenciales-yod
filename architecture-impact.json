@@ -1,17 +1,15 @@
 {
-  "model_revision": "2026-10-31.cargador-fase1.3",
-  "proposal_id": "CHG-CARGADOR-FASE1-002",
-  "summary": "Fase 1 (Un cargador) de la reestructuración de YOD OS, entrega 2, aprobada por Dirección el 31-oct-2026 (Buzón CL-YODOS-FASE1-E2-20261031). T-204: al cerrar la sesión por un rechazo de credencial, reabrirGate de macrolotes, mixto, residencial y unifamiliar y el arranque de index y mapa usan YodCargador.sesion.cerrar cuando el cargador está activo (borra pyod_clave_v1 sólo si sigue siendo el token rechazado y purga las copias yodcg_*); sin cargador o con ?cargador=legacy queda el borrado literal de siempre (uno por archivo). Prueba de paridad: el mismo caso sintético da las mismas cifras con y sin cargador en los 5 motores. O9: en CI, tests/ppp-cargador-browser.cjs falla si el atlas no trae el cargador. Los 8 HTML piden el cargador v2 (familia marco). Sin cambios de backend, hojas, fórmulas ni permisos; computar(), esRechazoDeCredencial y la lista de rechazos de portero.js no se tocan.",
+  "model_revision": "2026-11-01.mercado-menu.1",
+  "proposal_id": "CHG-MERCADO-MENU-20261101",
+  "summary": "Tercera tabla de códigos: accesos.html agrega MH (Mercado Hermosillo) a CODES y SYS-MERCADO a TABLEROS, en paridad con os/access-policy.js de yod-portal (CHG-MERCADO-MENU-20261101). La matriz sólo decide si el tablero aparece en el menú; la página no tiene backend ni datos privados. Atlas fijado al commit a3e8e24 de yod-portal.",
   "components": [
     "SYS-POTENCIALES",
-    "SYS-CONTROL",
-    "GAS-PORTERO"
+    "SYS-CONTROL"
   ],
   "tests": [
-    "T-204/SESIÓN: tests/ppp-cierre-cargador.test.cjs (32 casos: con cargador se cierra con YodCargador.sesion.cerrar({token, motivo}) y sin removeItem; sin cargador o legacy, el borrado literal; contra main fallan 23) y tests/ppp-session-guard.test.cjs sigue verde (22, un borrado literal por archivo).",
-    "T-204/PARIDAD: tests/ppp-paridad-cargador-browser.cjs en los 5 motores (mismas cifras visibles con ?cargador=legacy y con el cargador, en primera carga y con caché caliente: macrolotes 13, unifamiliar 48, residencial 45, mixto 70, patrimonial 13 cifras), en el paso de navegador de Verificar interfaz PPP.",
-    "O9: tests/ppp-cargador-browser.cjs sale con 1 en CI si falta os/yod-cargador.js en el atlas.",
-    "Batería completa: node --test tests/*.test.cjs tests/access-gates.cjs tests/sheets-offline.cjs; node scripts/versiones.cjs --check; verificar-impacto contra el atlas fijado; sin POST de pruebas a producción."
+    "node --test tests/access-gates.cjs tests/accesos-admin-session.test.cjs",
+    "git diff --check",
+    "yod-portal: node verify-accesos.cjs contra main de este repo tras el merge"
   ],
-  "rollback": "Revertir el PR (git revert -m 1 del merge). Sin tocar código: ?cargador=legacy o localStorage yodcg_legacy='1'. Sin backend, hojas ni datos."
+  "rollback": "Revertir el commit; sin cambios de backend, hojas ni permisos de usuarios (nadie tiene MH hasta que Dirección lo palomee)."
 }

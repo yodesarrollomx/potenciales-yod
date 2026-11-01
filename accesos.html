@@ -241,9 +241,9 @@
     $('ligaWa').onclick=()=>{const msg='Tu acceso a YOD OS (válido 90 días):\n'+ligaActual;window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank','noopener')};
   })();
 
-  // Los 8 tableros de YOD OS (mismo orden que la barra lateral). Palomear
+  // Los tableros de YOD OS (mismo orden que la barra lateral; MH = Mercado Hermosillo, 1-nov-2026). Palomear
   // un tablero = esa persona puede verlo. '*' = ve todos.
-  const CODES=[['*','Todo'],['PT','Potenciales'],['CO','Codesarrollos'],['RM','Miramar'],['TA','Operación'],['FL','Flujo'],['IN','Interiores'],['IV','Inversion.'],['MK','Métricas'],['OB','Obra'],['DP','Despacho']];
+  const CODES=[['*','Todo'],['PT','Potenciales'],['MH','Mercado'],['CO','Codesarrollos'],['RM','Miramar'],['TA','Operación'],['FL','Flujo'],['IN','Interiores'],['IV','Inversion.'],['MK','Métricas'],['OB','Obra'],['DP','Despacho']];
   // El número de la leyenda ("ve los N") se cuenta de este arreglo, no se
   // escribe a mano: la última vez que se hizo a mano se quedó en "8" con 11 códigos ya vivos.
   (function(){const t=$('totalTb');if(t)t.textContent=String(CODES.length-1)})();
@@ -254,7 +254,7 @@
   function tieneCode(b,c){if(b==='*')return true;return b.toUpperCase().split(/[,|; ]+/).indexOf(c)>-1}
   /* AC-5 (26-sep): «al marcar un código se ve qué verá esta persona». Misma regla que YOD OS
      (os/access-policy.js · canOpen), así lo que dice aquí es lo que el menú le va a mostrar. */
-  const TABLEROS=[['SYS-DESPACHO','Despacho'],['SYS-POTENCIALES','PPP'],['SYS-TRACK','Codesarrollos'],['SYS-MIRAMAR','Miramar'],
+  const TABLEROS=[['SYS-DESPACHO','Despacho'],['SYS-POTENCIALES','PPP'],['SYS-MERCADO','Mercado Hmo'],['SYS-TRACK','Codesarrollos'],['SYS-MIRAMAR','Miramar'],
     ['SYS-TAREAS','MOAC'],['SYS-FLUJO','Flujo'],['SYS-INTERIORES','Interiores'],['SYS-INVERSION','Codesarrolladores'],
     ['SYS-MARKETING','Embudo'],['SYS-OBRA','Obra'],['SYS-CONTROL','Control Maestro']];
   function vera(boards,rol){const P=window.YodAccessPolicy;if(!P)return '';
