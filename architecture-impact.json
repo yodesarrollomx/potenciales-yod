@@ -1,15 +1,15 @@
 {
-  "model_revision": "2026-11-01.mercado-menu.1",
-  "proposal_id": "CHG-MERCADO-MENU-20261101",
-  "summary": "Tercera tabla de códigos: accesos.html agrega MH (Mercado Hermosillo) a CODES y SYS-MERCADO a TABLEROS, en paridad con os/access-policy.js de yod-portal (CHG-MERCADO-MENU-20261101). La matriz sólo decide si el tablero aparece en el menú; la página no tiene backend ni datos privados. Atlas fijado al commit a3e8e24 de yod-portal.",
+  "model_revision": "2026-11-01.mercado-f2.2",
+  "proposal_id": "CHG-MERCADO-ANCLAS-20261101",
+  "summary": "La portada de Planes de potencial (index.html) agrega un bloque destacado «Mercado Hermosillo 2020–2030» con liga al tablero de yod-portal, debajo del expediente Distrito Abasto, con la clase existente .featured-ppp. Sólo HTML; sin CSS/JS nuevos, sin versiones, sin datos privados. Atlas fijado a bd5139e de yod-portal (propuesta CHG-MERCADO-ANCLAS-20261101).",
   "components": [
-    "SYS-POTENCIALES",
-    "SYS-CONTROL"
+    "SYS-POTENCIALES"
   ],
   "tests": [
-    "node --test tests/access-gates.cjs tests/accesos-admin-session.test.cjs",
+    "node --test tests/ppp-distrito-abasto.test.cjs",
     "git diff --check",
-    "yod-portal: node verify-accesos.cjs contra main de este repo tras el merge"
+    "verificar-impacto contra el atlas bd5139ebf2f16ffd78739af6089c40a69facdf25",
+    "Render real (Playwright) de index.html con el bloque visible a 390 y 1440 px"
   ],
-  "rollback": "Revertir el commit; sin cambios de backend, hojas ni permisos de usuarios (nadie tiene MH hasta que Dirección lo palomee)."
+  "rollback": "Revertir el commit; sin cambios de backend, hojas ni permisos."
 }
