@@ -1,9 +1,9 @@
 {
  "id": "G-20261112-0037",
  "fecha": "12-nov 00:37",
- "creado": "2026-11-12T00:38:55-07:00",
- "pr": 0,
- "liga": "https://github.com/yodesarrollomx/potenciales-yod/compare/main...grafo-borrador?expand=1&title=%F0%9F%95%B8%EF%B8%8F%20Grafo%20G-20261112-0037%20%C2%B7%20borrador%20%28fusionar%20%3D%20aprobar%29",
+ "creado": "2026-11-12T00:46:48-07:00",
+ "pr": 64,
+ "liga": "https://github.com/yodesarrollomx/potenciales-yod/pull/64",
  "rama": "grafo-borrador",
  "antes": "G-20261111-2354",
  "piezas": 3211,
