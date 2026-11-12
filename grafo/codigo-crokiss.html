@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Código · crokiss · YOD OS en Graphify</title>
+<script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
+        integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"
+        crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #0f0f1a; --panel: #1a1a2e; --border: #2a2a4e; --input-border: #3a3a5e;
+    --text: #e0e0e0; --text-2: #aaa; --text-3: #ccc; --muted: #555; --count: #666;
+    --neighbor-border: #333; --node-label: #ffffff;
+  }
+  [data-theme="light"] {
+    --bg: #ffffff; --panel: #f8f9fa; --border: #d9dee5; --input-border: #c3cad4;
+    --text: #222222; --text-2: #666666; --text-3: #333333; --muted: #888888; --count: #777777;
+    --neighbor-border: #ccc; --node-label: #222222;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  #graph { flex: 1; }
+  #sidebar { width: 280px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  #search-wrap { padding: 12px; border-bottom: 1px solid var(--border); }
+  #search { width: 100%; background: var(--bg); border: 1px solid var(--input-border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+  #search:focus { border-color: #4E79A7; }
+  #search-results { max-height: 140px; overflow-y: auto; padding: 4px 12px; border-bottom: 1px solid var(--border); display: none; }
+  .search-item { padding: 4px 6px; cursor: pointer; border-radius: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-item:hover { background: var(--border); }
+  #info-panel { padding: 14px; border-bottom: 1px solid var(--border); min-height: 140px; }
+  #info-panel h3 { font-size: 13px; color: var(--text-2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #info-content { font-size: 13px; color: var(--text-3); line-height: 1.6; }
+  #info-content .field { margin-bottom: 5px; }
+  #info-content .field b { color: var(--text); }
+  #info-content .empty { color: var(--muted); font-style: italic; }
+  .neighbor-link { display: block; padding: 2px 6px; margin: 2px 0; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--neighbor-border); }
+  .neighbor-link:hover { background: var(--border); }
+  #neighbors-list { max-height: 160px; overflow-y: auto; margin-top: 4px; }
+  #legend-wrap { flex: 1; overflow-y: auto; padding: 12px; }
+  #legend-wrap h3 { font-size: 13px; color: var(--text-2); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
+  .legend-item:hover { background: var(--border); padding-left: 4px; }
+  .legend-item.dimmed { opacity: 0.35; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-count { color: var(--count); font-size: 11px; }
+  #stats { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  #legend-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 4px 0; }
+  #legend-controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-2); user-select: none; }
+  #legend-controls label:hover { color: var(--text); }
+  .legend-cb, #select-all-cb { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid var(--input-border); border-radius: 3px; background: var(--bg); cursor: pointer; position: relative; flex-shrink: 0; }
+  .legend-cb:checked, #select-all-cb:checked { background: #4E79A7; border-color: #4E79A7; }
+  .legend-cb:checked::after, #select-all-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  #select-all-cb:indeterminate { background: #4E79A7; border-color: #4E79A7; }
+  #select-all-cb:indeterminate::after { content: ''; position: absolute; left: 2px; top: 5px; width: 8px; height: 2px; background: #fff; border: none; transform: none; }
+  #theme-wrap { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  #theme-wrap button { flex: 1; background: var(--bg); color: var(--text-2); border: 1px solid var(--input-border); border-radius: 4px; padding: 3px 0; font-size: 11px; cursor: pointer; }
+  #theme-wrap button:hover { color: var(--text); }
+  #theme-wrap button[aria-pressed="true"] { background: #4E79A7; border-color: #4E79A7; color: #fff; }
+</style>
+<script id="graphify-theme-init">
+// Apply the saved theme before first paint (#3894). No saved choice keeps the
+// historical dark look; "system" follows prefers-color-scheme.
+(function () {
+  var pref = null;
+  try { pref = localStorage.getItem('graphify-theme'); } catch (e) {}
+  var t = pref === 'light' ? 'light'
+    : pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light'
+    : window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<style id="yod-capa">
+  #graph { position: relative; }
+  #yod-barra { position: fixed; top: 8px; left: 8px; right: 296px; z-index: 5; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+  #yod-barra button, #yod-barra a, #yod-barra select { pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; font: 500 12px system-ui, -apple-system, sans-serif; text-decoration: none;
+    color: var(--text); background: var(--panel); border: 1px solid var(--input-border); border-radius: 999px; padding: 5px 10px; min-height: 30px; cursor: pointer; }
+  #yod-barra button[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+  #yod-barra select { max-width: 150px; appearance: auto; }
+  #yod-barra i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  #yod-barra .yod-fuerte { font-weight: 650; }
+  #yod-barra .yod-c { display: none; }
+  .neighbor-link { white-space: normal !important; overflow-wrap: anywhere; line-height: 1.35; padding: 5px 6px !important; }
+  #neighbors-list { max-height: 260px !important; }
+  #info-content .field { overflow-wrap: anywhere; }
+  #info-content a { color: #4E79A7; }
+  [data-theme="dark"] #info-content a { color: #8FB8E8; }
+  .yod-tipo { color: var(--text-2); font-size: 12px; }
+  .yod-ev { color: var(--text-2); font-size: 11.5px; }
+  .yod-alerta { color: #C8102E; } [data-theme="dark"] .yod-alerta { color: #FF7B8A; }
+  .yod-entrar { display: block; margin: 8px 0; padding: 9px 11px; border-radius: 8px; background: #4E79A7; color: #fff !important; font-weight: 600; text-decoration: none; font-size: 13px; }
+  .yod-abrir { display: inline-block; margin: 2px 0 6px; font-size: 12px; }
+  .yod-lista { margin: 6px 0; font-size: 12px; } .yod-lista summary { cursor: pointer; color: var(--text-2); padding: 3px 0; }
+  .yod-lista div { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 0; } .yod-lista span { border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font: 11.5px ui-monospace, Menlo, monospace; }
+  .yod-tb { font-size: 12px; line-height: 1.7; }
+  #yod-simbolos { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 3px 10px; }
+  #yod-simbolos b { font-weight: 400; }
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    #graph { flex: 1 1 auto; min-height: 54vh; }
+    #sidebar { display: block; width: auto; max-height: 46vh; overflow-y: auto; border-left: 0; border-top: 1px solid var(--border); }
+    #theme-wrap { display: none; }
+    #info-panel { min-height: 0; }
+    #legend-wrap { overflow: visible; }
+    #yod-barra { right: 8px; gap: 4px; }
+    #yod-barra button, #yod-barra a, #yod-barra select { font-size: 11px; padding: 4px 8px; min-height: 28px; }
+    #yod-barra .yod-l { display: none; } #yod-barra .yod-c { display: inline; }
+    #yod-barra select { max-width: 112px; }
+    #yod-barra a.yod-fuerte { max-width: 150px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: inline-block; line-height: 20px; }
+  }
+</style>
+<script id="yod-datos">window.YOD = {"id":"codigo-crokiss","titulo":"Código · crokiss","sub":"Repositorio yodesarrollomx/crokiss (publico, YOD OS), versión 7a7a557. Cada fila es una carpeta; cada nodo, un archivo. Toca un archivo para ver sus funciones.","padre":["tablero-aurum.html","Tablero · AURUM"],"nodos":{"crokiss::plan_editor":{"x":555,"y":72,"nombre":"plan-editor.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(raíz) · Código","lbl":"plan-editor.js","ev":"crokiss/plan-editor.js · 1629 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/plan-editor.js","lt":"Funciones y símbolos (118)","lista":["el()  · L11","defaultGeom()  · L25","nid()  · L44","PlanEditor()  · L47","manija()  · L78","normalize()  · L89","load()  · L125","save()  · L132","pushSnapshot()  · L136","pushHistory()  · L141","confirmaHistoria()  · L144","clearHistory()  · L147","undo()  · L148","redoAct()  · L154","reset()  · L160","bounds()  · L171","wallBlocks()  · L184","footprintArea()  · L201","clientToM()  · L215","currentVB()  · L224","clampVB()  · L225","applyVB()  · L231","zoomTo()  · L239","zoomCenter()  · L248","onWheel()  · L249","startPan()  · L257","onPanMove()  · L266","endPan()  · L272","render()  · L284","renderNow()  · L289","ensureSvg()  · L647","ptrDist()  · L665","ptrMid()  · L666","userAt()  · L667","cancelaDrag()  · L669","startPinch()  · L687","movePinch()  · L694","endPinch()  · L702","onAnyMove()  · L703","onAnyUp()  · L704","onDown()  · L705","find()  · L815","coordFija()  · L826","vanoEnMuro()  · L827","vanosDe()  · L833","muroDe()  · L838","trasladaVano()  · L841","clampVano()  · L854","clampVanosDe()  · L874","placeFurniture()  · L876","placeOnWall()  · L890","onMove()  · L915","onUp()  · L1022","isTyping()  · L1070","onKey()  · L1074","onKeyUp()  · L1116","flipHinge()  · L1121","flipSwing()  · L1122","borraElemento()  · L1125","delSel()  · L1141","listaDe()  · L1154","clonaConOffset()  · L1163","inserta()  · L1178","duplicateSel()  · L1186","copiarSel()  · L1195","pegarBuffer()  · L1202","rotateSel()  · L1212","widen()  · L1215","cierraCota()  · L1227","abreCota()  · L1231","… y 48 más"],"tb":[["tablero-aurum.html","Tablero · AURUM"]]},"crokiss::crokiss_cloud":{"x":721,"y":72,"nombre":"crokiss-cloud.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(raíz) · Código","lbl":"crokiss-cloud.js","ev":"crokiss/crokiss-cloud.js · 789 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/crokiss-cloud.js","lt":"Funciones y símbolos (53)","lista":["show()  · L53","hide()  · L54","toast()  · L55","num()  · L56","esc()  · L57","geomStr()  · L58","msgError()  · L79","tooBig()  · L82","evLee()  · L98","evGuarda()  · L99","track()  · L101","evEnvia()  · L113","evBeacon()  · L130","claveSugerida()  · L144","sugiereClave()  · L148","copiaAMano()  · L153","capturaPNG()  · L166","fin()  · L168","contactURL()  · L183","relTime()  · L187","setStatus()  · L197","loadIdent()  · L210","saveIdent()  · L221","sesionViva()  · L234","actualizaSesionUI()  · L236","cerrarSesion()  · L240","clientId()  · L249","parse()  · L256","post()  · L257","get()  · L264","postCreds()  · L276","scheduleSync()  · L285","doSync()  · L292","retry()  · L315","poll()  · L317","beacon()  · L327","buildLotGeom()  · L337","dibujaLote()  · L354","startTerrain()  · L378","submitSave()  · L393","submitBorrar()  · L443","submitOpen()  · L463","renderSelect()  · L484","openProject()  · L494","elementCount()  · L536","ensureNudge()  · L543","quitar()  · L557","maybeNudge()  · L567","showSuccess()  · L584","fresh()  · L634","wire()  · L636","modoCompartir()  · L709","boot()  · L740"],"tb":[["tablero-aurum.html","Tablero · AURUM"]]},"crokiss::plan_sheet":{"x":887,"y":72,"nombre":"plan-sheet.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(raíz) · Código","lbl":"plan-sheet.js","ev":"crokiss/plan-sheet.js · 455 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/plan-sheet.js","lt":"Funciones y símbolos (22)","lista":["esc()  · L39","el()  · L40","txt()  · L45","planSVG()  · L57","vano()  · L66","cota()  · L120","huella()  · L133","marcoDoble()  · L141","escalaGrafica()  · L145","envolverSVG()  · L155","fachadasDe()  · L161","cajetin()  · L170","campo()  · L180","buildPage1()  · L232","buildPage2()  · L283","escalaPara()  · L299","buildPages()  · L356","ensureStyle()  · L365","open()  · L392","rerender()  · L415","close()  · L436","onEsc()  · L441"],"tb":[["tablero-aurum.html","Tablero · AURUM"]]},"crokiss::plan_elev_editor":{"x":555,"y":156,"nombre":"plan-elev-editor.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(raíz) · Código","lbl":"\nplan-elev-editor.js","ev":"crokiss/plan-elev-editor.js · 282 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/plan-elev-editor.js","lt":"Funciones y símbolos (17)","lista":["esc()  · L22","clamp()  · L24","num()  · L25","ensureStyle()  · L32","geom()  · L74","elev()  · L75","findVano()  · L85","renderTabs()  · L92","renderView()  · L106","campoNum()  · L138","renderSide()  · L143","patchElev()  · L179","patchVano()  · L199","refresh()  · L220","close()  · L223","onEsc()  · L228","open()  · L233"],"tb":[["tablero-aurum.html","Tablero · AURUM"]]},"crokiss::plan_elev":{"x":721,"y":156,"nombre":"plan-elev.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(raíz) · Código","lbl":"plan-elev.js","ev":"crokiss/plan-elev.js · 396 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/plan-elev.js","lt":"Funciones y símbolos (12)","lista":["el()  · L47","txt()  · L52","clase()  · L59","sweep()  · L74","project()  · L102","facade()  · L114","cerrarSilueta()  · L214","clipVano()  · L228","marcaOverride()  · L247","dim()  · L356","allFacades()  · L387","frontFacade()  · L391"],"tb":[["tablero-aurum.html","Tablero · AURUM"]]},"crokiss::plan_render":{"x":887,"y":156,"nombre":"plan-render.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(raíz) · Código","lbl":"plan-render.js","ev":"crokiss/plan-render.js · 610 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/plan-render.js","lt":"Funciones y símbolos (8)","lista":["el()  · L72","_wallBlocks()  · L80","renderPlan()  · L92","bed()  · L306","clthr()  · L315","dimText()  · L438","dimH()  · L440","dimV()  · L455"],"tb":[["tablero-aurum.html","Tablero · AURUM"]]},"crokiss::plan_furniture":{"x":555,"y":240,"nombre":"plan-furniture.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(raíz) · Código","lbl":"plan-furniture.js","ev":"crokiss/plan-furniture.js · 182 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/plan-furniture.js","lt":"Funciones y símbolos (3)","lista":["el()  · L10","rrect()  · L42","draw()  · L47"],"tb":[["tablero-aurum.html","Tablero · AURUM"]]},"crokiss::index_html_inline":{"x":333,"y":72,"nombre":"index.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"(raíz) · Páginas","lbl":"index.html","ev":"crokiss/index.html · 1121 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/index.html","lt":"Funciones y símbolos (14)","lista":["ed  · L829","wr  · L850","wv  · L850","pedirEtiqueta  · L870","apply()  · L920","setTool()  · L930","panBtn  · L946","palette  · L994","toast()  · L998","cerrar()  · L1031","visible()  · L1061","firstVisible()  · L1062","abrirGuia()  · L1085","cerrarGuia()  · L1091"],"tb":[["tablero-aurum.html","Tablero · AURUM"]]},"f:crokiss:aviso-privacidad.html":{"x":333,"y":156,"nombre":"aviso-privacidad.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"(raíz) · Páginas","lbl":"aviso-privacidad.h\ntml","ev":"crokiss/aviso-privacidad.html · 85 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/aviso-privacidad.html","tb":[["tablero-aurum.html","Tablero · AURUM"]]},"crokiss::code_gs":{"x":1109,"y":72,"nombre":"Code.gs","forma":"diamond","tam":8,"color":"#FFBE7D","tipo":"Archivo de Apps Script","celda":"(raíz) · Apps Script","lbl":"Code.gs","ev":"crokiss/Code.gs · 928 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/Code.gs","lt":"Funciones y símbolos (42)","lista":["_sha256Hex()  · L111","_hashClave()  · L120","_claveOkFields()  · L126","_claveOk()  · L131","_claveOkArr()  · L134","_migraFila()  · L141","_ensureHeader()  · L152","doGet()  · L168","_abrirPlan()  · L193","doPost()  · L234","_autorizado()  · L337","_guardarFila()  · L347","_borraTodo()  · L446","_registraEventos()  · L486","_hojaEventos()  · L514","_eventoServidor()  · L522","_sheet()  · L531","_meta()  · L542","_rowByPlanId()  · L575","_readGeom()  · L593","_colIndex()  · L599","_rowObj()  · L602","_orderRow()  · L605","_listByCredentials()  · L608","_newId()  · L622","_validEmail()  · L623","_esc()  · L624","_safeCell()  · L626","_ckey()  · L630","_canEmail()  · L643","_rateOk()  · L657","_json()  · L667","_claveEnviable()  · L673","_planoConContenido()  · L678","_nombreLimpio()  · L686","_sendPlanEmail()  · L690","_avisaLeadNuevo()  · L760","podarHistorial()  · L800","healthPing()  · L841","setup()  · L868","migrateHashes()  · L874","instalarTriggers()  · L905"],"tb":[["tablero-aurum.html","Tablero · AURUM"]]},"f:crokiss:CLAUDE.md":{"x":1553,"y":72,"nombre":"CLAUDE.md","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"(raíz) · Documentos y datos","lbl":"CLAUDE.md","ev":"crokiss/CLAUDE.md · 171 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/CLAUDE.md"},"f:crokiss:AGENTS.md":{"x":1719,"y":72,"nombre":"AGENTS.md","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"(raíz) · Documentos y datos","lbl":"AGENTS.md","ev":"crokiss/AGENTS.md · 25 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/AGENTS.md"},"f:crokiss:OPERACION.md":{"x":1553,"y":156,"nombre":"OPERACION.md","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"(raíz) · Documentos y datos","lbl":"OPERACION.md","ev":"crokiss/OPERACION.md · 61 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/OPERACION.md"},"f:crokiss:manifest.json":{"x":1719,"y":156,"nombre":"manifest.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"(raíz) · Documentos y datos","lbl":"manifest.json","ev":"crokiss/manifest.json · 21 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/manifest.json"},"gas:AKfycbxFtuOv":{"x":111,"y":72,"nombre":"Guardado de planos CroKiss · AKfycbxFtuOv…","forma":"diamond","tam":10,"color":"#FFBE7D","tipo":"Despliegue de Apps Script","celda":"(raíz) · Lo que toca fuera","lbl":"Guardado de planos\nCroKiss ·\nAKfycbxFtuOv…","estado":"Visto en el código","nota":"Despliegue /exec de Apps Script. Aquí sólo va su prefijo; el identificador completo está en el archivo y línea de cada referencia.","ev":"apps-script/despliegues","tb":[["tablero-aurum.html","Tablero · AURUM"]]},"crokiss::pruebas_harness":{"x":555,"y":384,"nombre":"harness.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"pruebas/ · Código","lbl":"harness.js","ev":"crokiss/pruebas/harness.js · 817 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/pruebas/harness.js","lt":"Funciones y símbolos (8)","lista":["path  · L18","fs  · L19","{ JSDOM, VirtualConsole, requestInterceptor }  · L20","RAIZ  · L22","ok()  · L26","grupo()  · L30","servirLocal  · L40","main()  · L57"],"tb":[["tablero-aurum.html","Tablero · AURUM"]]},"crokiss::pruebas_backend":{"x":721,"y":384,"nombre":"backend.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"pruebas/ · Código","lbl":"backend.js","ev":"crokiss/pruebas/backend.js · 908 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/pruebas/backend.js","lt":"Funciones y símbolos (22)","lista":["fs  · L17","path  · L18","vm  · L19","crypto  · L20","RAIZ  · L22","ok()  · L25","grupo()  · L29","H_VIEJO  · L33","H_NUEVO  · L38","hojaFalsa()  · L46","hashConSal()  · L123","entorno()  · L127","resp()  · L199","post()  · L200","hashDe()  · L203","GEOM_REAL  · L209","GEOM_VACIO  · L217","filaVieja()  · L220","filaMigrada()  · L223","mk2()  · L628","releaseLock()  · L732","waitLock()  · L732"],"tb":[["tablero-aurum.html","Tablero · AURUM"]]},"crokiss::github_workflows_arquitectura":{"x":1331,"y":528,"nombre":"Arquitectura YOD","forma":"hexagon","tam":9,"color":"#86BCB6","tipo":"Flujo de GitHub","celda":".github/ · Flujos y pruebas","lbl":"Arquitectura YOD","nota":"a mano · al hacer push · en cada PR","ev":"crokiss/.github/workflows/arquitectura.yml · 97 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/.github/workflows/arquitectura.yml","lt":"Funciones y símbolos (44)","lista":["name  · L1","on  · L3","pull_request  · L4","push  · L5","branches  · L6","workflow_dispatch  · L7","inputs  · L8","base_sha  · L9","description  · L10","required  · L11","type  · L12","head_sha  · L13","description  · L14","required  · L15","type  · L16","permissions  · L18","contents  · L19","jobs  · L21","impacto  · L22","name  · L23","runs-on  · L24","steps  · L25","name  · L26","env  · L27","BASE_INPUT  · L28","HEAD_INPUT  · L29","EVENT_SHA  · L30","run  · L31","uses  · L39","with  · L40","fetch-depth  · L41","persist-credentials  · L42","ref  · L43","repository  · L47","path  · L49","sparse-checkout-cone-mode  · L51","sparse-checkout  · L52","node-version  · L57","id  · L59","EVENT_NAME  · L61","PR_BASE  · L62","PUSH_BASE  · L63","BASE_SHA  · L92","HEAD_SHA  · L93"],"tb":[["tablero-aurum.html","Tablero · AURUM"]]},"f:crokiss:docs/HISTORIA-2026-07.md":{"x":1553,"y":672,"nombre":"HISTORIA-2026-07.md","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"docs/ · Documentos y datos","lbl":"\nHISTORIA-2026-07.md","ev":"crokiss/docs/HISTORIA-2026-07.md · 316 líneas","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/docs/HISTORIA-2026-07.md"},"f:crokiss:assets/og.png":{"x":1553,"y":816,"nombre":"og.png","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo","celda":"assets/ · Documentos y datos","lbl":"og.png","ev":"crokiss/assets/og.png","url":"https://github.com/yodesarrollomx/crokiss/blob/7a7a5572d1/assets/og.png"}},"flechas":{"crokiss::index_html_inline>crokiss::plan_editor":{"f":"viva","r":"carga el script","ev":"crokiss/index.html L817"},"crokiss::crokiss_cloud>gas:AKfycbxFtuOv":{"f":"viva","r":"llama al Apps Script","ev":"crokiss/crokiss-cloud.js L14"},"crokiss::index_html_inline>crokiss::crokiss_cloud":{"f":"viva","r":"carga el script","ev":"crokiss/index.html L821"},"crokiss::code_gs>crokiss::index_html_inline":{"f":"viva","r":"enlaza a","ev":"crokiss/Code.gs L46"},"crokiss::index_html_inline>crokiss::plan_elev":{"f":"viva","r":"carga el script","ev":"crokiss/index.html L819"},"crokiss::index_html_inline>crokiss::plan_render":{"f":"viva","r":"carga el script","ev":"crokiss/index.html L815"},"crokiss::index_html_inline>crokiss::plan_furniture":{"f":"viva","r":"carga el script","ev":"crokiss/index.html L816"},"crokiss::index_html_inline>crokiss::plan_sheet":{"f":"viva","r":"carga el script","ev":"crokiss/index.html L818"},"crokiss::index_html_inline>crokiss::plan_elev_editor":{"f":"viva","r":"carga el script","ev":"crokiss/index.html L820"},"crokiss::index_html_inline>f:crokiss:assets/og.png":{"f":"viva","r":"enlaza a","ev":"crokiss/index.html L20"},"crokiss::pruebas_harness>crokiss::index_html_inline":{"f":"viva","r":"enlaza a","ev":"crokiss/pruebas/harness.js L38"},"crokiss::github_workflows_arquitectura>crokiss::pruebas_backend":{"f":"viva","r":"ejecuta","ev":"crokiss/.github/workflows/arquitectura.yml"},"crokiss::plan_editor>crokiss::plan_elev_editor":{"f":"viva","r":"se llaman (7)","ev":"grafo de código de Graphify"},"crokiss::plan_elev_editor>crokiss::plan_sheet":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"}},"familias":{"viva":{"corto":"Visto","nombre":"Visto en código u hoja","color":"#5B6470","ancho":1.3,"opacidad":0.75,"punteada":false},"inferida":{"corto":"Atlas","nombre":"Del atlas o deducido","color":"#9AA1AB","ancho":1.0,"opacidad":0.6,"punteada":false},"propuesta":{"corto":"Propuesta","nombre":"Propuesta","color":"#C99A12","ancho":1.6,"opacidad":0.9,"punteada":[7,5]},"hueco":{"corto":"Falta","nombre":"Falta o hallazgo","color":"#C8102E","ancho":1.7,"opacidad":0.9,"punteada":[3,5]}},"usadas":["viva"],"rejilla":{"cols":[{"x":0,"w":222,"nombre":"Lo que toca fuera"},{"x":222,"w":222,"nombre":"Páginas"},{"x":444,"w":554,"nombre":"Código"},{"x":998,"w":222,"nombre":"Apps Script"},{"x":1220,"w":222,"nombre":"Flujos y pruebas"},{"x":1442,"w":388,"nombre":"Documentos y datos"}],"filas":[{"y":0,"h":312,"nombre":"(raíz)"},{"y":312,"h":144,"nombre":"pruebas/"},{"y":456,"h":144,"nombre":".github/"},{"y":600,"h":144,"nombre":"docs/"},{"y":744,"h":144,"nombre":"assets/"}]},"eje_x":"Tipo de archivo","eje_y":"Carpeta","estado":"https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/grafo-datos/estado.json","simbolos":[["■","#59A14F","Tablero o página"],["▭","#F1CE63","Pantalla propuesta"],["◆","#F28E2B","Motor"],["⬢","#79706E","Repositorio o código"],["▲","#4E79A7","Libro"],["▼","#A0CBE8","Pestaña"],["●","#B07AA1","Quién"],["★","#EDC948","Propuesta"],["★","#E15759","Hallazgo o clave"]],"pie":"20 nodos · 14 flechas · Código · crokiss · Graphify 0.9.106"};</script>
+</head>
+<body>
+<div id="graph"></div>
+<div id="sidebar">
+  <div id="theme-wrap" role="group" aria-label="Theme">
+    <button type="button" data-theme-choice="light">Claro</button>
+    <button type="button" data-theme-choice="dark">Oscuro</button>
+    <button type="button" data-theme-choice="system">Sistema</button>
+  </div>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Buscar…" autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div id="info-panel">
+    <h3>Detalle</h3>
+    <div id="info-content"><span class="empty">Toca un nodo para ver su detalle</span></div>
+  </div>
+  <div id="legend-wrap">
+    <h3>Grupos</h3>
+    <div id="legend-controls">
+      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">Todos</label>
+    </div>
+    <div id="legend"></div>
+  </div>
+  <div id="stats">20 nodes &middot; 14 edges &middot; 9 communities</div>
+</div>
+<script>
+const RAW_NODES = [{"id": "crokiss::plan_editor", "label": "plan-editor.js", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "plan-editor.js", "community": 0, "community_name": "(ra\u00edz) \u00b7 C\u00f3digo", "source_file": "crokiss/plan-editor.js \u00b7 1629 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "crokiss::crokiss_cloud", "label": "crokiss-cloud.js", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "crokiss-cloud.js", "community": 0, "community_name": "(ra\u00edz) \u00b7 C\u00f3digo", "source_file": "crokiss/crokiss-cloud.js \u00b7 789 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "crokiss::plan_sheet", "label": "plan-sheet.js", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "plan-sheet.js", "community": 0, "community_name": "(ra\u00edz) \u00b7 C\u00f3digo", "source_file": "crokiss/plan-sheet.js \u00b7 455 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "crokiss::plan_elev_editor", "label": "plan-elev-editor.js", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 19.0, "font": {"size": 12, "color": "#ffffff"}, "title": "plan-elev-editor.js", "community": 0, "community_name": "(ra\u00edz) \u00b7 C\u00f3digo", "source_file": "crokiss/plan-elev-editor.js \u00b7 282 l\u00edneas", "file_type": "code", "degree": 3}, {"id": "crokiss::plan_elev", "label": "plan-elev.js", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.0, "font": {"size": 0, "color": "#ffffff"}, "title": "plan-elev.js", "community": 0, "community_name": "(ra\u00edz) \u00b7 C\u00f3digo", "source_file": "crokiss/plan-elev.js \u00b7 396 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "crokiss::plan_render", "label": "plan-render.js", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.0, "font": {"size": 0, "color": "#ffffff"}, "title": "plan-render.js", "community": 0, "community_name": "(ra\u00edz) \u00b7 C\u00f3digo", "source_file": "crokiss/plan-render.js \u00b7 610 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "crokiss::plan_furniture", "label": "plan-furniture.js", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.0, "font": {"size": 0, "color": "#ffffff"}, "title": "plan-furniture.js", "community": 0, "community_name": "(ra\u00edz) \u00b7 C\u00f3digo", "source_file": "crokiss/plan-furniture.js \u00b7 182 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "crokiss::index_html_inline", "label": "index.html", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "index.html", "community": 1, "community_name": "(ra\u00edz) \u00b7 P\u00e1ginas", "source_file": "crokiss/index.html \u00b7 1121 l\u00edneas", "file_type": "code", "degree": 10}, {"id": "f:crokiss:aviso-privacidad.html", "label": "aviso-privacidad.html", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "aviso-privacidad.html", "community": 1, "community_name": "(ra\u00edz) \u00b7 P\u00e1ginas", "source_file": "crokiss/aviso-privacidad.html \u00b7 85 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "crokiss::code_gs", "label": "Code.gs", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 13.0, "font": {"size": 0, "color": "#ffffff"}, "title": "Code.gs", "community": 2, "community_name": "(ra\u00edz) \u00b7 Apps Script", "source_file": "crokiss/Code.gs \u00b7 928 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "f:crokiss:CLAUDE.md", "label": "CLAUDE.md", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "CLAUDE.md", "community": 3, "community_name": "(ra\u00edz) \u00b7 Documentos y datos", "source_file": "crokiss/CLAUDE.md \u00b7 171 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:crokiss:AGENTS.md", "label": "AGENTS.md", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "AGENTS.md", "community": 3, "community_name": "(ra\u00edz) \u00b7 Documentos y datos", "source_file": "crokiss/AGENTS.md \u00b7 25 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:crokiss:OPERACION.md", "label": "OPERACION.md", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "OPERACION.md", "community": 3, "community_name": "(ra\u00edz) \u00b7 Documentos y datos", "source_file": "crokiss/OPERACION.md \u00b7 61 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:crokiss:manifest.json", "label": "manifest.json", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "manifest.json", "community": 3, "community_name": "(ra\u00edz) \u00b7 Documentos y datos", "source_file": "crokiss/manifest.json \u00b7 21 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "gas:AKfycbxFtuOv", "label": "Guardado de planos CroKiss \u00b7 AKfycbxFtuOv\u2026", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 13.0, "font": {"size": 0, "color": "#ffffff"}, "title": "Guardado de planos CroKiss \u00b7 AKfycbxFtuOv\u2026", "community": 4, "community_name": "(ra\u00edz) \u00b7 Lo que toca fuera", "source_file": "apps-script/despliegues", "file_type": "code", "degree": 1}, {"id": "crokiss::pruebas_harness", "label": "harness.js", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 13.0, "font": {"size": 0, "color": "#ffffff"}, "title": "harness.js", "community": 5, "community_name": "pruebas/ \u00b7 C\u00f3digo", "source_file": "crokiss/pruebas/harness.js \u00b7 817 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "crokiss::pruebas_backend", "label": "backend.js", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 13.0, "font": {"size": 0, "color": "#ffffff"}, "title": "backend.js", "community": 5, "community_name": "pruebas/ \u00b7 C\u00f3digo", "source_file": "crokiss/pruebas/backend.js \u00b7 908 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "crokiss::github_workflows_arquitectura", "label": "Arquitectura YOD", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 13.0, "font": {"size": 0, "color": "#ffffff"}, "title": "Arquitectura YOD", "community": 6, "community_name": ".github/ \u00b7 Flujos y pruebas", "source_file": "crokiss/.github/workflows/arquitectura.yml \u00b7 97 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "f:crokiss:docs/HISTORIA-2026-07.md", "label": "HISTORIA-2026-07.md", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "HISTORIA-2026-07.md", "community": 7, "community_name": "docs/ \u00b7 Documentos y datos", "source_file": "crokiss/docs/HISTORIA-2026-07.md \u00b7 316 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:crokiss:assets/og.png", "label": "og.png", "color": {"background": "#9C755F", "border": "#9C755F", "highlight": {"background": "#ffffff", "border": "#9C755F"}}, "size": 13.0, "font": {"size": 0, "color": "#ffffff"}, "title": "og.png", "community": 8, "community_name": "assets/ \u00b7 Documentos y datos", "source_file": "crokiss/assets/og.png", "file_type": "document", "degree": 1}];
+const RAW_EDGES = [{"from": "crokiss::index_html_inline", "to": "crokiss::plan_editor", "label": "carga el script", "title": "carga el script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "crokiss::plan_editor", "to": "crokiss::plan_elev_editor", "label": "se llaman (7)", "title": "se llaman (7) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "crokiss::crokiss_cloud", "to": "gas:AKfycbxFtuOv", "label": "llama al Apps Script", "title": "llama al Apps Script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "crokiss::index_html_inline", "to": "crokiss::crokiss_cloud", "label": "carga el script", "title": "carga el script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "crokiss::index_html_inline", "to": "crokiss::plan_sheet", "label": "carga el script", "title": "carga el script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "crokiss::plan_elev_editor", "to": "crokiss::plan_sheet", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "crokiss::index_html_inline", "to": "crokiss::plan_elev_editor", "label": "carga el script", "title": "carga el script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "crokiss::index_html_inline", "to": "crokiss::plan_elev", "label": "carga el script", "title": "carga el script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "crokiss::index_html_inline", "to": "crokiss::plan_render", "label": "carga el script", "title": "carga el script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "crokiss::index_html_inline", "to": "crokiss::plan_furniture", "label": "carga el script", "title": "carga el script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "crokiss::code_gs", "to": "crokiss::index_html_inline", "label": "enlaza a", "title": "enlaza a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "crokiss::index_html_inline", "to": "f:crokiss:assets/og.png", "label": "enlaza a", "title": "enlaza a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "crokiss::pruebas_harness", "to": "crokiss::index_html_inline", "label": "enlaza a", "title": "enlaza a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "crokiss::github_workflows_arquitectura", "to": "crokiss::pruebas_backend", "label": "ejecuta", "title": "ejecuta [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}];
+const LEGEND = [{"cid": 0, "color": "#4E79A7", "label": "(ra\u00edz) \u00b7 C\u00f3digo", "count": 7}, {"cid": 1, "color": "#F28E2B", "label": "(ra\u00edz) \u00b7 P\u00e1ginas", "count": 2}, {"cid": 2, "color": "#E15759", "label": "(ra\u00edz) \u00b7 Apps Script", "count": 1}, {"cid": 3, "color": "#76B7B2", "label": "(ra\u00edz) \u00b7 Documentos y datos", "count": 4}, {"cid": 4, "color": "#59A14F", "label": "(ra\u00edz) \u00b7 Lo que toca fuera", "count": 1}, {"cid": 5, "color": "#EDC948", "label": "pruebas/ \u00b7 C\u00f3digo", "count": 2}, {"cid": 6, "color": "#B07AA1", "label": ".github/ \u00b7 Flujos y pruebas", "count": 1}, {"cid": 7, "color": "#FF9DA7", "label": "docs/ \u00b7 Documentos y datos", "count": 1}, {"cid": 8, "color": "#9C755F", "label": "assets/ \u00b7 Documentos y datos", "count": 1}];
+
+// HTML-escape helper — prevents XSS when injecting graph data into innerHTML
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Build vis datasets
+const nodesDS = new vis.DataSet(RAW_NODES.map((n, i) => ({
+  id: n.id, label: n.label, color: n.color, size: n.size,
+  font: n.font, title: n.title,
+  // Fermat/golden-angle spiral seed positions (#3699): spreading nodes out
+  // before physics runs keeps avoidOverlap from computing near-zero-distance
+  // repulsion that blows the BarnesHut recursion into a stack overflow on large
+  // graphs. `i` is the map index — physics still settles small graphs identically.
+  x: 30 * Math.sqrt(i) * Math.cos(i * 2.4),
+  y: 30 * Math.sqrt(i) * Math.sin(i * 2.4),
+  community: n.community, community_name: n.community_name,
+  source_file: n.source_file, file_type: n.file_type, degree: n.degree,
+  member_count: n.member_count,
+})));
+
+const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({
+  id: i, from: e.from, to: e.to,
+  label: '',
+  title: e.title,
+  dashes: e.dashes,
+  width: e.width,
+  color: e.color,
+  arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+})));
+
+const container = document.getElementById('graph');
+const network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, {
+  physics: {
+    enabled: false,
+    solver: 'forceAtlas2Based',
+    forceAtlas2Based: {
+      gravitationalConstant: -60,
+      centralGravity: 0.005,
+      springLength: 120,
+      springConstant: 0.08,
+      damping: 0.4,
+      avoidOverlap: 0.8,
+    },
+    stabilization: { iterations: 200, fit: true },
+  },
+  interaction: {
+    hover: true,
+    tooltipDelay: 100,
+    hideEdgesOnDrag: true,
+    navigationButtons: false,
+    keyboard: false,
+  },
+  nodes: { shape: 'dot', borderWidth: 1.5 },
+  edges: { smooth: { type: 'continuous', roundness: 0.2 }, selectionWidth: 3 },
+});
+
+// Theme toggle (#3894): Light / Dark / System, persisted in localStorage.
+const THEME_KEY = 'graphify-theme';
+const themeMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+let themeLabelColor = '#ffffff';  // matches the per-node font color set in Python
+function themePref() {
+  let p = null;
+  try { p = localStorage.getItem(THEME_KEY); } catch (e) {}
+  return (p === 'light' || p === 'dark' || p === 'system') ? p : null;
+}
+function applyTheme(pref) {
+  const t = pref === 'light' ? 'light' : (pref === 'system' && themeMQ && themeMQ.matches) ? 'light' : 'dark';
+  const root = document.documentElement;
+  if (!root) return;
+  root.setAttribute('data-theme', t);
+  document.querySelectorAll('[data-theme-choice]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.themeChoice === (pref || 'system')));
+  });
+  const labelColor = getComputedStyle(root).getPropertyValue('--node-label').trim();
+  if (labelColor && labelColor !== themeLabelColor) {
+    themeLabelColor = labelColor;
+    nodesDS.update(nodesDS.get().map(n => ({ id: n.id, font: Object.assign({}, n.font, { color: labelColor }) })));
+  }
+}
+document.querySelectorAll('[data-theme-choice]').forEach(b => {
+  b.addEventListener('click', () => {
+    const pref = b.dataset.themeChoice;
+    try { localStorage.setItem(THEME_KEY, pref); } catch (e) {}
+    applyTheme(pref);
+  });
+});
+if (themeMQ) {
+  const onSchemeChange = () => { if (themePref() === 'system') applyTheme('system'); };
+  if (themeMQ.addEventListener) themeMQ.addEventListener('change', onSchemeChange);
+  else if (themeMQ.addListener) themeMQ.addListener(onSchemeChange);
+}
+applyTheme(themePref() || 'system');
+
+
+// ── YOD: acomodo fijo en cuadrante sobre el visor de Graphify. Los nodos y las flechas son los que exportó Graphify. ──
+(function () {
+  const Y = window.YOD;
+  // Cuando la portada enseña un borrador, trae la lámina como texto: los enlaces a otras láminas se le piden a ella.
+  const SUELTA = location.protocol === 'about:';
+  const yodIr = h => { const m = String(h).match(/^([A-Za-z0-9._-]+)\.html(?:#(.*))?$/);
+    if (SUELTA && m) { try { parent.postMessage({ yod: 2, ir: m[1], nodo: m[2] ? decodeURIComponent(m[2]) : '' }, '*'); } catch (e) {} } else location.href = h; };
+  if (SUELTA) document.addEventListener('click', e => { const a = e.target && e.target.closest ? e.target.closest('a[href]') : null; if (!a || a.target === '_blank') return;
+    const h = a.getAttribute('href') || ''; if (/^[A-Za-z0-9._-]+\.html(#.*)?$/.test(h)) { e.preventDefault(); yodIr(h); } }, true);
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const esc2 = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const fuente = p => p.forma === 'box'
+    ? { size: 13, color: '#1d1d1f', face: 'system-ui, -apple-system, sans-serif', multi: 'html', align: 'left', bold: { color: '#111111', size: 14, face: 'system-ui, -apple-system, sans-serif' } }
+    : { size: 14, color: css('--node-label') || '#222', face: 'system-ui, -apple-system, sans-serif', strokeWidth: 3, strokeColor: css('--bg') || '#fff' };
+  const estiloNodo = (n, apagado) => {
+    const p = Y.nodos[n.id] || {};
+    const o = { id: n.id, x: p.x, y: p.y, label: p.lbl, shape: p.forma, size: p.tam, opacity: apagado ? 0.14 : 1, title: undefined,
+      color: { background: p.color, border: p.al ? '#C8102E' : (p.bc || p.color), highlight: { background: p.color, border: '#111' }, hover: { background: p.color, border: '#111' } },
+      borderWidth: p.al ? 2.6 : (p.bc ? 2.4 : 1), borderWidthSelected: 3.5, font: fuente(p) };
+    if (p.forma === 'box') { o.widthConstraint = { minimum: p.caja, maximum: p.caja }; o.margin = 9; o.shapeProperties = { borderRadius: 7 }; }
+    return o;
+  };
+  const ocultas = new Set();
+  let foco = null;
+  const recto = RAW_EDGES.length > 380;
+  const det = r => Y.flechas[r.from + '>' + r.to] || Y.flechas[r.to + '>' + r.from] || {};
+  const estiloArista = e => {
+    const r = RAW_EDGES[e.id], fl = det(r), f = Y.familias[fl.f] || Y.familias.inferida;
+    const con = !foco || foco.aristas.has(e.id);
+    return { id: e.id, hidden: ocultas.has(fl.f || 'inferida'), width: con && foco ? f.ancho + 1.3 : f.ancho, title: undefined,
+             color: { color: f.color, opacity: con ? f.opacidad : 0.05, highlight: f.color, hover: f.color },
+             dashes: f.punteada, arrows: { to: { enabled: true, scaleFactor: 0.55 } }, smooth: recto ? false : { type: 'curvedCW', roundness: 0.12 } };
+  };
+  const pintar = () => {
+    nodesDS.update(nodesDS.get().map(n => estiloNodo(n, foco && !foco.nodos.has(n.id))));
+    edgesDS.update(edgesDS.get().map(estiloArista));
+  };
+  pintar();
+  network.setOptions({ physics: { enabled: false }, nodes: { labelHighlightBold: false, scaling: { label: { drawThreshold: 5, maxVisible: 44 } } },
+                       interaction: { hover: true, tooltipDelay: 150, zoomSpeed: 0.8, hideEdgesOnDrag: RAW_EDGES.length > 250, hideEdgesOnZoom: RAW_EDGES.length > 600 } });
+  new MutationObserver(() => setTimeout(pintar, 30)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  const enfocar = id => { foco = { nodos: new Set([id, ...network.getConnectedNodes(id)]), aristas: new Set(network.getConnectedEdges(id)) }; pintar(); };
+  network.on('selectNode', p => enfocar(p.nodes[0]));
+  network.on('deselectNode', () => { foco = null; pintar(); });
+
+  // barra: subir, familias de flecha y «Ver todo»
+  const barra = document.createElement('div');
+  barra.id = 'yod-barra';
+  barra.innerHTML = (Y.padre ? `<a class="yod-fuerte" href="${Y.padre[0]}">↑ ${esc2(Y.padre[1])}</a>` : '') +
+    Object.entries(Y.familias).filter(([k]) => Y.usadas.includes(k)).map(([k, f]) =>
+      `<button type="button" data-fam="${k}" aria-pressed="true" title="${f.nombre}"><i style="background:${f.color}"></i><span class="yod-l">${f.nombre}</span><span class="yod-c">${f.corto}</span></button>`).join('') +
+    '<button type="button" id="yod-todo" class="yod-fuerte">Ver todo</button>';
+  document.body.appendChild(barra);
+  barra.addEventListener('click', ev => {
+    const b = ev.target.closest('button'); if (!b) return;
+    if (b.id === 'yod-todo') { foco = null; network.unselectAll(); pintar(); ajustar(true); inicio(); return; }
+    const k = b.dataset.fam; if (ocultas.has(k)) ocultas.delete(k); else ocultas.add(k);
+    b.setAttribute('aria-pressed', String(!ocultas.has(k))); pintar();
+  });
+
+  // rejilla del cuadrante: los títulos crecen al alejarse para que siempre se lean
+  const g = Y.rejilla, W = g.cols.reduce((s, c) => s + c.w, 0), Ht = g.filas.reduce((s, f) => s + f.h, 0);
+  const MS = Math.max(70, Math.min(150, Ht * 0.07));
+  const letra = (ctx, t) => { ctx.font = '600 ' + t + 'px system-ui, -apple-system, sans-serif'; };
+  network.on('beforeDrawing', ctx => {
+    const sc = network.getScale() || 1;
+    const linea = css('--border') || '#ccc', texto = css('--text-2') || '#666', fondo = css('--panel') || '#f6f6f6';
+    ctx.save();
+    g.filas.forEach((f, i) => { if (i % 2 === 0) { ctx.fillStyle = fondo; ctx.globalAlpha = 0.6; ctx.fillRect(0, f.y, W, f.h); } });
+    ctx.globalAlpha = 1; ctx.strokeStyle = linea; ctx.lineWidth = 1.5 / Math.min(1, sc * 1.6);
+    g.cols.forEach(c => { ctx.beginPath(); ctx.moveTo(c.x, -MS); ctx.lineTo(c.x, Ht); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(W, -MS); ctx.lineTo(W, Ht); ctx.stroke();
+    g.filas.forEach(f => { ctx.beginPath(); ctx.moveTo(0, f.y); ctx.lineTo(W, f.y); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(0, Ht); ctx.lineTo(W, Ht); ctx.stroke();
+    ctx.fillStyle = texto; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'center';
+    g.cols.forEach(c => {
+      let t = Math.max(20, Math.min(15 / sc, MS * 0.62)); letra(ctx, t);
+      while (t > 11 && ctx.measureText(c.nombre).width > c.w - 14) { t -= 1; letra(ctx, t); }
+      if (ctx.measureText(c.nombre).width > c.w - 14) { const p = c.nombre.split(' '), m = Math.ceil(p.length / 2); ctx.fillText(p.slice(0, m).join(' '), c.x + c.w / 2, -t - 14); ctx.fillText(p.slice(m).join(' '), c.x + c.w / 2, -10); }
+      else ctx.fillText(c.nombre, c.x + c.w / 2, -12);
+    });
+    ctx.textAlign = 'left';
+    g.filas.forEach(f => {
+      let t = Math.max(17, Math.min(14 / sc, f.h * 0.4)); letra(ctx, t);
+      while (t > 12 && ctx.measureText(f.nombre).width > W - 20) { t -= 2; letra(ctx, t); }
+      ctx.globalAlpha = t > 30 ? 0.42 : 0.8; ctx.fillText(f.nombre, 9, f.y + t + 5);
+    });
+    ctx.globalAlpha = 1; ctx.restore();
+  });
+  const marco = (x0, y0, x1, y1, animar) => {
+    const el = document.getElementById('graph'), w = el.clientWidth, h = el.clientHeight;
+    const arriba = (document.getElementById('yod-barra') || { offsetHeight: 0 }).offsetHeight + 12;
+    const s = Math.max(0.04, Math.min((w - 10) / (x1 - x0), (h - arriba - 8) / (y1 - y0), 1.5));
+    network.moveTo({ position: { x: (x0 + x1) / 2, y: (y0 + y1) / 2 - arriba / 2 / s }, scale: s, animation: animar ? { duration: 350, easingFunction: 'easeInOutQuad' } : false });
+  };
+  const ajustar = animar => marco(-14, -MS - 6, W + 14, Ht + 12, animar);
+  const aFila = f => { const el = document.getElementById('graph'), r = el.clientWidth / Math.max(200, el.clientHeight - 60); marco(-10, f.y - 10, Math.min(W + 10, Math.max(540, (f.h + 20) * r)) - 10, f.y + f.h + 10, true); };
+  const aCol = c => { const el = document.getElementById('graph'), r = Math.max(200, el.clientHeight - 60) / el.clientWidth; marco(c.x - 12, -MS, c.x + c.w + 12, Math.min(Ht + 10, Math.max(420, (c.w + 24) * r) - MS), true); };
+  let tocado = false;
+  const cont = document.getElementById('graph');
+  ['pointerdown', 'wheel', 'touchstart'].forEach(ev => cont.addEventListener(ev, () => { tocado = true; }, { passive: true }));
+  network.once('afterDrawing', () => { if (!foco) ajustar(false); });
+  [60, 250, 700, 1500].forEach(ms => setTimeout(() => { if (!foco && !tocado) ajustar(false); }, ms));
+  window.addEventListener('resize', () => setTimeout(() => { if (!foco) ajustar(false); }, 80));
+  const ir = document.createElement('select'); ir.id = 'yod-ir'; ir.setAttribute('aria-label', 'Acercar a una fila o columna');
+  ir.innerHTML = '<option value="">Acercar a…</option><optgroup label="Filas">' + g.filas.map((f, i) => `<option value="f${i}">${esc2(f.nombre)}</option>`).join('') +
+    '</optgroup><optgroup label="Columnas">' + g.cols.map((c, i) => `<option value="c${i}">${esc2(c.nombre)}</option>`).join('') + '</optgroup>';
+  barra.insertBefore(ir, barra.querySelector('button'));
+  ir.addEventListener('change', () => { const v = ir.value; if (!v) return; tocado = true; if (v[0] === 'f') aFila(g.filas[+v.slice(1)]); else aCol(g.cols[+v.slice(1)]); ir.value = ''; });
+
+  // panel de detalle
+  const enlace = (t, id) => t[0] ? `<a href="${t[0]}#${encodeURIComponent(id)}">${esc2(t[1])}</a>` : esc2(t[1]);
+  window.showInfo = function (nodeId) {
+    const p = Y.nodos[nodeId]; if (!p) return;
+    const eds = network.getConnectedEdges(nodeId);
+    const vecinos = eds.map(eid => {
+      const r = RAW_EDGES[eid], otro = r.from === nodeId ? r.to : r.from, fl = det(r), q = Y.nodos[otro] || {};
+      return `<span class="neighbor-link" style="border-left-color:${esc2((Y.familias[fl.f] || {}).color || '#888')}" data-nid="${esc2(otro)}">${r.from === nodeId ? '→' : '←'} ${esc2(q.nombre || otro)} <i style="opacity:.72">· ${esc2(fl.r || '')}</i></span>`;
+    }).join('');
+    let h = `<div class="field"><b>${esc2(p.nombre)}</b></div><div class="field yod-tipo">${esc2(p.tipo)}${p.estado ? ' · ' + esc2(p.estado) : ''}</div>`;
+    if (p.dentro) h += `<a class="yod-entrar" href="${p.dentro[0]}">Entrar a ${esc2(p.dentro[1])} →</a>`;
+    if (p.nota) h += `<div class="field">${esc2(p.nota)}</div>`;
+    if (p.err) h += p.err.map(x => `<div class="field yod-alerta"><b>${x.tipo === 'cambio' ? 'Cambió' : 'Error'}</b> · ${esc2(x.msg)}${x.desde ? ' · desde ' + esc2(String(x.desde).slice(0, 10)) : ''}${x.url ? ` · <a href="${esc2(x.url)}" target="_blank" rel="noopener" style="color:inherit">ver</a>` : ''}</div>`).join('');
+    if (p.al) h += p.al.map(a => `<div class="field yod-alerta"><b>Hallazgo</b> · <a href="hallazgos.html#${encodeURIComponent(a[0])}" style="color:inherit">${esc2(a[1])}</a></div>`).join('');
+    if (p.lista) h += `<details class="yod-lista"${p.lista.length <= 24 ? ' open' : ''}><summary>${esc2(p.lt)}</summary><div>${p.lista.map(x => `<span>${esc2(x)}</span>`).join('')}</div></details>`;
+    if (p.ev) h += `<div class="field yod-ev">Evidencia: ${esc2(p.ev)}</div>`;
+    if (p.url) h += `<a class="yod-abrir" href="${esc2(p.url)}" target="_blank" rel="noopener">Abrir la fuente ↗</a>`;
+    if (p.tb && p.tb.length) h += `<div class="field yod-tb">También aparece en: ${p.tb.map(t => enlace(t, nodeId)).join(' · ')}</div>`;
+    h += `<div class="field yod-ev">Celda: ${esc2(p.celda)}</div>`;
+    if (eds.length) h += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Conexiones (${eds.length})</div><div id="neighbors-list">${vecinos}</div>`;
+    document.getElementById('info-content').innerHTML = h;
+  };
+  window.focusNode = function (id) {
+    const p = Y.nodos[id] || {}, el = document.getElementById('graph');
+    const s = p.forma === 'box' ? Math.min(1, (el.clientWidth - 24) / ((p.caja || 300) + 40)) : Math.min(0.9, Math.max(0.6, el.clientWidth / 520));
+    network.focus(id, { scale: s, animation: true }); network.selectNodes([id]); showInfo(id); enfocar(id);
+  };
+  const inicio = () => { const c = document.getElementById('info-content');
+    if (c) c.innerHTML = `<div class="field"><b>${esc2(Y.titulo)}</b></div><div class="field">${esc2(Y.sub)}</div><div class="field yod-ev">Toca un nodo para ver qué es, de dónde le llega y a dónde va. Con «Acercar a…» saltas a una fila o a una columna.</div>`; };
+  inicio();
+  network.on('click', p => {
+    if (p.nodes.length) return;
+    if (p.edges.length) {
+      const r = RAW_EDGES[p.edges[0]], fl = det(r), a = Y.nodos[r.from] || {}, b = Y.nodos[r.to] || {};
+      document.getElementById('info-content').innerHTML = `<div class="field"><b>${esc2(a.nombre)} → ${esc2(b.nombre)}</b></div><div class="field">${esc2(fl.r || '')}</div>` +
+        `<div class="field yod-tipo">${esc2((Y.familias[fl.f] || {}).nombre || '')}</div>` + (fl.nota ? `<div class="field">${esc2(fl.nota)}</div>` : '') +
+        (fl.ev ? `<div class="field yod-ev">Evidencia: ${esc2(fl.ev)}</div>` : '') +
+        `<span class="neighbor-link" data-nid="${esc2(r.from)}">← ${esc2(a.nombre)}</span><span class="neighbor-link" data-nid="${esc2(r.to)}">→ ${esc2(b.nombre)}</span>`;
+      return;
+    }
+    const c = p.pointer.canvas;
+    if (c.y < 0 && c.y > -MS - 30) { const col = g.cols.find(k => c.x >= k.x && c.x <= k.x + k.w); if (col) { aCol(col); return; } }
+    inicio();
+  });
+  network.on('doubleClick', p => { const d = p.nodes.length && Y.nodos[p.nodes[0]] && Y.nodos[p.nodes[0]].dentro; if (d) yodIr(d[0]); });
+
+  // textos del visor en español
+  const tx = (sel, t) => { const el = document.querySelector(sel); if (el) el.textContent = t; };
+  tx('#info-panel h3', 'Detalle'); tx('#legend-wrap h3', 'Celdas de esta lámina');
+  const inp = document.getElementById('search'); if (inp) inp.placeholder = 'Buscar en esta lámina…';
+  const lbl = document.querySelector('#legend-controls label'); if (lbl) lbl.lastChild.textContent = 'Todas';
+  document.querySelectorAll('[data-theme-choice]').forEach(b => { b.textContent = { light: 'Claro', dark: 'Oscuro', system: 'Sistema' }[b.dataset.themeChoice] || b.textContent; });
+  const st = document.getElementById('stats'); if (st) st.textContent = Y.pie;
+  const sim = document.createElement('div'); sim.id = 'yod-simbolos';
+  sim.innerHTML = Y.simbolos.map(s => `<b><span style="color:${s[1]}">${s[0]}</span> ${esc2(s[2])}</b>`).join('');
+  if (st && st.parentNode) st.parentNode.insertBefore(sim, st);
+
+  // errores en vivo: estado.json lo escribe cada hora el flujo «Grafo · estado» del repositorio
+  fetch(Y.estado || 'estado.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(E => {
+    if (!E || !E.errores) return; let n = 0;
+    E.errores.forEach(x => (x.nodos || []).forEach(id => { const p = Y.nodos[id]; if (!p) return; (p.err = p.err || []).push(x); if (x.tipo !== 'cambio') { p.al = p.al || []; p.bc = '#C8102E'; } else if (!p.bc) p.bc = '#C99A12'; n++; }));
+    if (n) { pintar(); const st2 = document.getElementById('stats'); if (st2) st2.textContent = Y.pie + ' · estado del ' + (E.generado || '').slice(0, 16).replace('T', ' ') + ' UTC'; }
+  }).catch(() => {});
+  // llegar con un nodo señalado en la liga, y avisar a la portada qué lámina es
+  const abrir = () => { let id = ''; try { id = window.YOD_FOCO || decodeURIComponent(location.hash.slice(1)); } catch (e) {} if (Y.nodos[id]) focusNode(id); };
+  if (window.YOD_FOCO || location.hash.length > 1) setTimeout(abrir, 280);
+  window.addEventListener('hashchange', abrir);
+  try { if (window.parent && window.parent !== window) window.parent.postMessage({ yod: 1, id: Y.id }, '*'); } catch (e) {}
+})();
+
+network.once('stabilizationIterationsDone', () => {
+  network.setOptions({ physics: { enabled: false } });
+});
+
+function showInfo(nodeId) {
+  const n = nodesDS.get(nodeId);
+  if (!n) return;
+  const neighborIds = network.getConnectedNodes(nodeId);
+  const neighborItems = neighborIds.map(nid => {
+    const nb = nodesDS.get(nid);
+    const color = nb ? nb.color.background : '#555';
+    return `<span class="neighbor-link" style="border-left-color:${esc(color)}" data-nid="${esc(nid)}">${esc(nb ? nb.label : nid)}</span>`;
+  }).join('');
+  const isMetaNode = !n.file_type && !n.source_file;
+  let html = `<div class="field"><b>${esc(n.label)}</b></div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Type: ${esc(n.file_type || 'unknown')}</div>`;
+  }
+  html += `<div class="field">Community: ${esc(n.community_name || '')}</div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Source: ${esc(n.source_file || '-')}</div>`;
+  } else if (n.member_count !== undefined && n.member_count !== null) {
+    html += `<div class="field">Members: ${esc(n.member_count)}</div>`;
+  }
+  html += `<div class="field">Degree: ${n.degree}</div>`;
+  if (neighborIds.length) {
+    html += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Neighbors (${neighborIds.length})</div><div id="neighbors-list">${neighborItems}</div>`;
+  }
+  document.getElementById('info-content').innerHTML = html;
+}
+
+function focusNode(nodeId) {
+  network.focus(nodeId, { scale: 1.4, animation: true });
+  network.selectNodes([nodeId]);
+  showInfo(nodeId);
+}
+
+// Neighbor links use a data attribute + one delegated listener rather than an
+// inline onclick. A node id/label sourced from a document or a scraped URL
+// (graphify add) can contain a double-quote; dropping the stringified id
+// unescaped into a quoted onclick both broke every link and allowed a hostile
+// source to inject an event handler into the local report (stored XSS, #1838).
+// esc() on data-nid keeps the value inside the attribute; the listener reads it
+// back verbatim. Bound to document so it survives the innerHTML rebuild that
+// recreates #neighbors-list on each showInfo().
+document.addEventListener('click', e => {
+  const el = e.target.closest('.neighbor-link');
+  if (el && el.dataset.nid !== undefined) focusNode(el.dataset.nid);
+});
+
+// Sidebar tooltips reuse vis-network's .vis-tooltip style and 100ms tooltipDelay.
+// Names get one only when CSS ellipsis truncates them (the full text is still in
+// the DOM); counts always get one, to say what the number is. Text is set with
+// textContent only (labels are untrusted). Delegated on document so rows rebuilt
+// later (search results, showInfo()) are covered.
+const sidebarTip = document.createElement('div');
+sidebarTip.className = 'vis-tooltip';
+sidebarTip.style.cssText = 'white-space: normal; max-width: 360px; overflow-wrap: break-word;';
+document.body.appendChild(sidebarTip);
+let sidebarTipTimer = null;
+let sidebarTipEl = null;    // element whose text the tooltip shows
+let sidebarTipZone = null;  // element the pointer must leave to hide it
+function hideSidebarTip() {
+  clearTimeout(sidebarTipTimer);
+  sidebarTip.style.visibility = 'hidden';
+  sidebarTip.textContent = '';
+  sidebarTipEl = sidebarTipZone = null;
+}
+document.addEventListener('mouseover', e => {
+  const zone = e.target.closest && e.target.closest('.legend-count, .legend-item, .search-item, .neighbor-link');
+  // Anywhere on a legend row except its count (dot, checkbox, gaps, padding)
+  // stands for the row's name, so moving within the row never re-triggers it.
+  const el = zone && zone.classList.contains('legend-item') ? zone.querySelector('.legend-label') : zone;
+  if (!el || el === sidebarTipEl) return;
+  hideSidebarTip();
+  const isCount = el.classList.contains('legend-count');
+  if (!isCount && el.scrollWidth <= el.clientWidth) return;
+  const text = isCount ? `${el.textContent} ${el.textContent === '1' ? 'nodo' : 'nodos'}` : el.textContent;
+  sidebarTipEl = el;
+  sidebarTipZone = zone;
+  const x = e.clientX, y = e.clientY;
+  sidebarTipTimer = setTimeout(() => {
+    sidebarTip.textContent = text;
+    sidebarTip.style.left = sidebarTip.style.top = '0px';  // measure at full max-width
+    sidebarTip.style.visibility = 'visible';
+    const w = sidebarTip.offsetWidth, h = sidebarTip.offsetHeight;
+    sidebarTip.style.left = Math.max(4, Math.min(x + 12, window.innerWidth - w - 4)) + 'px';
+    sidebarTip.style.top = (y + 16 + h > window.innerHeight ? Math.max(4, y - h - 8) : y + 16) + 'px';
+  }, 100);
+});
+document.addEventListener('mouseout', e => {
+  if (sidebarTipZone && !sidebarTipZone.contains(e.relatedTarget)) hideSidebarTip();
+});
+// A click rebuilds or hides the row (showInfo(), search pick) without a mouseout.
+document.addEventListener('mousedown', hideSidebarTip);
+
+// Track hovered node — hover detection is more reliable than click params
+let hoveredNodeId = null;
+network.on('hoverNode', params => {
+  hoveredNodeId = params.node;
+  container.style.cursor = 'pointer';
+});
+network.on('blurNode', () => {
+  hoveredNodeId = null;
+  container.style.cursor = 'default';
+});
+container.addEventListener('click', () => {
+  if (hoveredNodeId !== null) {
+    showInfo(hoveredNodeId);
+    network.selectNodes([hoveredNodeId]);
+  }
+});
+network.on('click', params => {
+  if (params.nodes.length > 0) {
+    showInfo(params.nodes[0]);
+  } else if (hoveredNodeId === null) {
+    document.getElementById('info-content').innerHTML = '<span class="empty">Toca un nodo para ver su detalle</span>';
+  }
+});
+
+const searchInput = document.getElementById('search');
+const searchResults = document.getElementById('search-results');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  searchResults.innerHTML = '';
+  if (!q) { searchResults.style.display = 'none'; return; }
+  const matches = RAW_NODES.filter(n => n.label.toLowerCase().includes(q)).slice(0, 20);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.style.display = 'block';
+  matches.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'search-item';
+    el.textContent = n.label;
+    el.style.borderLeft = `3px solid ${n.color.background}`;
+    el.style.paddingLeft = '8px';
+    el.onclick = () => {
+      network.focus(n.id, { scale: 1.5, animation: true });
+      network.selectNodes([n.id]);
+      showInfo(n.id);
+      searchResults.style.display = 'none';
+      searchInput.value = '';
+    };
+    searchResults.appendChild(el);
+  });
+});
+document.addEventListener('click', e => {
+  if (!searchResults.contains(e.target) && e.target !== searchInput)
+    searchResults.style.display = 'none';
+});
+
+const hiddenCommunities = new Set();
+
+const selectAllCb = document.getElementById('select-all-cb');
+
+function updateSelectAllState() {
+  const total = LEGEND.length;
+  const hidden = hiddenCommunities.size;
+  selectAllCb.checked = hidden === 0;
+  selectAllCb.indeterminate = hidden > 0 && hidden < total;
+}
+
+function toggleAllCommunities(hide) {
+  document.querySelectorAll('.legend-item').forEach(item => {
+    hide ? item.classList.add('dimmed') : item.classList.remove('dimmed');
+  });
+  document.querySelectorAll('.legend-cb').forEach(cb => {
+    cb.checked = !hide;
+  });
+  LEGEND.forEach(c => {
+    if (hide) hiddenCommunities.add(c.cid); else hiddenCommunities.delete(c.cid);
+  });
+  const updates = RAW_NODES.map(n => ({ id: n.id, hidden: hide }));
+  nodesDS.update(updates);
+  updateSelectAllState();
+}
+
+const legendEl = document.getElementById('legend');
+LEGEND.forEach(c => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.className = 'legend-cb';
+  cb.checked = true;
+  cb.addEventListener('change', (e) => {
+    e.stopPropagation();
+    if (cb.checked) {
+      hiddenCommunities.delete(c.cid);
+      item.classList.remove('dimmed');
+    } else {
+      hiddenCommunities.add(c.cid);
+      item.classList.add('dimmed');
+    }
+    const updates = RAW_NODES
+      .filter(n => n.community === c.cid)
+      .map(n => ({ id: n.id, hidden: !cb.checked }));
+    nodesDS.update(updates);
+    updateSelectAllState();
+  });
+  item.innerHTML = `<div class="legend-dot" style="background:${c.color}"></div>
+    <span class="legend-label">${c.label}</span>
+    <span class="legend-count">${c.count}</span>`;
+  item.prepend(cb);
+  item.onclick = (e) => {
+    if (e.target === cb) return;
+    cb.checked = !cb.checked;
+    cb.dispatchEvent(new Event('change'));
+  };
+  legendEl.appendChild(item);
+});
+</script>
+<script>
+// Render hyperedges as shaded regions
+const hyperedges = [];
+// afterDrawing passes ctx already transformed to network coordinate space.
+// Draw node positions raw — no manual pan/zoom/DPR math needed.
+
+// Andrew's monotone chain. Returns the hull in counter-clockwise order, which
+// is what the perimeter must be traced in. Collinear and duplicate points
+// collapse to the extremes, so degenerate member sets render as a segment
+// rather than a zero-area crossed path.
+function convexHull(pts) {
+    const p = pts.slice().sort((a, b) => (a.x - b.x) || (a.y - b.y));
+    if (p.length < 3) return p;
+    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const build = seq => {
+        const out = [];
+        for (const q of seq) {
+            while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+            out.push(q);
+        }
+        out.pop();
+        return out;
+    };
+    const hull = build(p).concat(build(p.slice().reverse()));
+    return hull.length >= 3 ? hull : p;
+}
+network.on('afterDrawing', function(ctx) {
+    hyperedges.forEach(h => {
+        // Legend toggles only set `hidden` on nodes; getPositions() still
+        // returns them, so skip hidden members or their hull lingers.
+        const positions = h.nodes
+            .filter(nid => { const n = nodesDS.get(nid); return n && n.hidden !== true; })
+            .map(nid => network.getPositions([nid])[nid])
+            .filter(p => p !== undefined);
+        if (positions.length < 2) return;
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#6366f1';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Centroid and expanded hull in network coordinates.
+        // The perimeter must follow hull order, not h.nodes order: tracing the
+        // raw member order self-intersects whenever the layout does not happen
+        // to place members in angular order, filling as crossed wedges.
+        const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length;
+        const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length;
+        const hull = convexHull(positions);
+        const expanded = hull.map(p => ({
+            x: cx + (p.x - cx) * 1.15,
+            y: cy + (p.y - cy) * 1.15
+        }));
+        ctx.moveTo(expanded[0].x, expanded[0].y);
+        expanded.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+        // Label
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#4f46e5';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(h.label, cx, cy - 5);
+        ctx.restore();
+    });
+});
+</script>
+</body>
+</html>

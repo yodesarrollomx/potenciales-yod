@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pantalla · Control · Accesos · YOD OS en Graphify</title>
+<script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
+        integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"
+        crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #0f0f1a; --panel: #1a1a2e; --border: #2a2a4e; --input-border: #3a3a5e;
+    --text: #e0e0e0; --text-2: #aaa; --text-3: #ccc; --muted: #555; --count: #666;
+    --neighbor-border: #333; --node-label: #ffffff;
+  }
+  [data-theme="light"] {
+    --bg: #ffffff; --panel: #f8f9fa; --border: #d9dee5; --input-border: #c3cad4;
+    --text: #222222; --text-2: #666666; --text-3: #333333; --muted: #888888; --count: #777777;
+    --neighbor-border: #ccc; --node-label: #222222;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  #graph { flex: 1; }
+  #sidebar { width: 280px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  #search-wrap { padding: 12px; border-bottom: 1px solid var(--border); }
+  #search { width: 100%; background: var(--bg); border: 1px solid var(--input-border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+  #search:focus { border-color: #4E79A7; }
+  #search-results { max-height: 140px; overflow-y: auto; padding: 4px 12px; border-bottom: 1px solid var(--border); display: none; }
+  .search-item { padding: 4px 6px; cursor: pointer; border-radius: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-item:hover { background: var(--border); }
+  #info-panel { padding: 14px; border-bottom: 1px solid var(--border); min-height: 140px; }
+  #info-panel h3 { font-size: 13px; color: var(--text-2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #info-content { font-size: 13px; color: var(--text-3); line-height: 1.6; }
+  #info-content .field { margin-bottom: 5px; }
+  #info-content .field b { color: var(--text); }
+  #info-content .empty { color: var(--muted); font-style: italic; }
+  .neighbor-link { display: block; padding: 2px 6px; margin: 2px 0; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--neighbor-border); }
+  .neighbor-link:hover { background: var(--border); }
+  #neighbors-list { max-height: 160px; overflow-y: auto; margin-top: 4px; }
+  #legend-wrap { flex: 1; overflow-y: auto; padding: 12px; }
+  #legend-wrap h3 { font-size: 13px; color: var(--text-2); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
+  .legend-item:hover { background: var(--border); padding-left: 4px; }
+  .legend-item.dimmed { opacity: 0.35; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-count { color: var(--count); font-size: 11px; }
+  #stats { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  #legend-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 4px 0; }
+  #legend-controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-2); user-select: none; }
+  #legend-controls label:hover { color: var(--text); }
+  .legend-cb, #select-all-cb { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid var(--input-border); border-radius: 3px; background: var(--bg); cursor: pointer; position: relative; flex-shrink: 0; }
+  .legend-cb:checked, #select-all-cb:checked { background: #4E79A7; border-color: #4E79A7; }
+  .legend-cb:checked::after, #select-all-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  #select-all-cb:indeterminate { background: #4E79A7; border-color: #4E79A7; }
+  #select-all-cb:indeterminate::after { content: ''; position: absolute; left: 2px; top: 5px; width: 8px; height: 2px; background: #fff; border: none; transform: none; }
+  #theme-wrap { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  #theme-wrap button { flex: 1; background: var(--bg); color: var(--text-2); border: 1px solid var(--input-border); border-radius: 4px; padding: 3px 0; font-size: 11px; cursor: pointer; }
+  #theme-wrap button:hover { color: var(--text); }
+  #theme-wrap button[aria-pressed="true"] { background: #4E79A7; border-color: #4E79A7; color: #fff; }
+</style>
+<script id="graphify-theme-init">
+// Apply the saved theme before first paint (#3894). No saved choice keeps the
+// historical dark look; "system" follows prefers-color-scheme.
+(function () {
+  var pref = null;
+  try { pref = localStorage.getItem('graphify-theme'); } catch (e) {}
+  var t = pref === 'light' ? 'light'
+    : pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light'
+    : window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<style id="yod-capa">
+  #graph { position: relative; }
+  #yod-barra { position: fixed; top: 8px; left: 8px; right: 296px; z-index: 5; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+  #yod-barra button, #yod-barra a, #yod-barra select { pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; font: 500 12px system-ui, -apple-system, sans-serif; text-decoration: none;
+    color: var(--text); background: var(--panel); border: 1px solid var(--input-border); border-radius: 999px; padding: 5px 10px; min-height: 30px; cursor: pointer; }
+  #yod-barra button[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+  #yod-barra select { max-width: 150px; appearance: auto; }
+  #yod-barra i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  #yod-barra .yod-fuerte { font-weight: 650; }
+  #yod-barra .yod-c { display: none; }
+  .neighbor-link { white-space: normal !important; overflow-wrap: anywhere; line-height: 1.35; padding: 5px 6px !important; }
+  #neighbors-list { max-height: 260px !important; }
+  #info-content .field { overflow-wrap: anywhere; }
+  #info-content a { color: #4E79A7; }
+  [data-theme="dark"] #info-content a { color: #8FB8E8; }
+  .yod-tipo { color: var(--text-2); font-size: 12px; }
+  .yod-ev { color: var(--text-2); font-size: 11.5px; }
+  .yod-alerta { color: #C8102E; } [data-theme="dark"] .yod-alerta { color: #FF7B8A; }
+  .yod-entrar { display: block; margin: 8px 0; padding: 9px 11px; border-radius: 8px; background: #4E79A7; color: #fff !important; font-weight: 600; text-decoration: none; font-size: 13px; }
+  .yod-abrir { display: inline-block; margin: 2px 0 6px; font-size: 12px; }
+  .yod-lista { margin: 6px 0; font-size: 12px; } .yod-lista summary { cursor: pointer; color: var(--text-2); padding: 3px 0; }
+  .yod-lista div { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 0; } .yod-lista span { border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font: 11.5px ui-monospace, Menlo, monospace; }
+  .yod-tb { font-size: 12px; line-height: 1.7; }
+  #yod-simbolos { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 3px 10px; }
+  #yod-simbolos b { font-weight: 400; }
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    #graph { flex: 1 1 auto; min-height: 54vh; }
+    #sidebar { display: block; width: auto; max-height: 46vh; overflow-y: auto; border-left: 0; border-top: 1px solid var(--border); }
+    #theme-wrap { display: none; }
+    #info-panel { min-height: 0; }
+    #legend-wrap { overflow: visible; }
+    #yod-barra { right: 8px; gap: 4px; }
+    #yod-barra button, #yod-barra a, #yod-barra select { font-size: 11px; padding: 4px 8px; min-height: 28px; }
+    #yod-barra .yod-l { display: none; } #yod-barra .yod-c { display: inline; }
+    #yod-barra select { max-width: 112px; }
+    #yod-barra a.yod-fuerte { max-width: 150px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: inline-block; line-height: 20px; }
+  }
+</style>
+<script id="yod-datos">window.YOD = {"id":"pantalla-control","titulo":"Pantalla · Control · Accesos","sub":"«¿Quién entra, con qué rol y a qué proyectos?» Las cajas amarillas son las zonas, de arriba a abajo como se verían. Cada flecha dice de qué dato sale: gris si ya se lee, punteada si existe y falta conectarlo, roja si hoy no existe.","padre":["tablero-control.html","Tablero · Control, cabina y Portero"],"nodos":{"PAN-control":{"x":414,"y":68,"nombre":"Pantalla · Control · Accesos","forma":"box","tam":0,"color":"#F1CE63","tipo":"Pantalla propuesta","celda":"La pantalla · La pantalla, de arriba a abajo","lbl":"<b>Pantalla · Control · Accesos<\/b>\n¿Quién entra, con qué rol y a qué proyectos?","caja":330,"estado":"Propuesta de este análisis","nota":"¿Quién entra, con qué rol y a qué proyectos?","ev":"propuesta del 11-nov-2026","lt":"Quién ve qué","lista":["Sólo Dirección administra","Cada responsable ve los accesos de su proyecto"],"tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["personas.html","Personas y puertas"],["plan.html","Plan por tablero"],["organizacion.html","Organización propuesta"]]},"SYS-CONTROL":{"x":1708,"y":68,"nombre":"Control Maestro","forma":"square","tam":15,"color":"#59A14F","tipo":"Tablero de hoy","celda":"La pantalla · Hoy lo muestra","lbl":"Control Maestro","estado":"Vivo · leído el 11-nov","nota":"Administrar catálogo y registro de proyectos Hoy se ve: Acceso por código de tablero. En el código hay tres roles: admin, dirección y broker.","ev":"yod-portal/docs/arquitectura/modelo.json","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/os/catalogo.js#L26","dentro":["tablero-control.html","Tablero · Control, cabina y Portero"],"tb":[["mapa.html","Mapa general"],["plan.html","Plan por tablero"],["organizacion.html","Organización propuesta"],["propuestas.html","Propuestas del atlas"]]},"yod-portal::obra_html_inline":{"x":1880,"y":68,"nombre":"obra.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"La pantalla · Hoy lo muestra","lbl":"obra.html","ev":"yod-portal/obra.html · 988 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/obra.html","lt":"Funciones y símbolos (43)","lista":["cargadorActivo()  · L301","pedir()  · L302","mandar()  · L319","colaLee()  · L330","colaGuarda()  · L331","pintarColaLocal()  · L332","mandarOGuardar()  · L339","drenarCola()  · L348","canjearDirecto()  · L361","intenta()  · L362","llaveGuardada()  · L372","canjear()  · L373","sesion()  · L385","mensajeGate()  · L392","entrar()  · L400","primerDato()  · L410","abrir()  · L411","cargar()  · L414","personas()  · L416","cadenaFirmas()  · L420","rolDe()  · L432","personaDeSesion()  · L435","pintarEstado()  · L445","pintarCaptura()  · L487","enviar()  · L510","meToca()  · L535","fechaAvance()  · L543","pintarCola()  · L544","pintarBandeja()  · L552","mover()  · L610","pintar()  · L629","opcionesCausa()  · L663","pintarSemana()  · L671","avisoSem()  · L763","comprometer()  · L768","cerrarAct()  · L785","cargarProd()  · L804","pintarProduccion()  · L806","levantarFreno()  · L888","cerrarFreno()  · L906","liberarColado()  · L919","tabDeHash()  · L949","arrancar()  · L964"],"tb":[["tablero-obra.html","Tablero · Obra en vivo"],["pantalla-cartera-proyectos.html","Pantalla · Cartera · Proyectos"],["pantalla-obra.html","Pantalla · Obra · Avance"],["codigo-yod-portal.html","Código · yod-portal"]]},"potenciales-yod::accesos_html_inline":{"x":2052,"y":68,"nombre":"accesos.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"La pantalla · Hoy lo muestra","lbl":"accesos.html","ev":"potenciales-yod/accesos.html · 517 líneas","url":"https://github.com/yodesarrollomx/potenciales-yod/blob/18d7d99b1a/accesos.html","lt":"Funciones y símbolos (20)","lista":["cargarGrafo()  · L195","mostrarGrafo()  · L202","limpiarVista()  · L214","observarSesion()  · L233","vigente()  · L242","leer()  · L246","post()  · L255","toast()  · L271","setBusy()  · L272","abrirLiga()  · L278","cerrarLiga()  · L284","boardsDe()  · L303","tieneCode()  · L304","vera()  · L310","renderMatriz()  · L316","cargar()  · L357","probarSesionSalud()  · L421","esperarAdminYcargar()  · L436","actualizarBotonAlta()  · L454","iniciar()  · L488"],"tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["libro-yod-os-control-maestro.html","Libro · YOD OS · Control Maestro"],["libro-yod-potenciales.html","Libro · YOD - POTENCIALES"],["codigo-potenciales-yod.html","Código · potenciales-yod"]]},"yod-portal::track_codesarrollos_html_inline":{"x":1708,"y":172,"nombre":"track-codesarrollos.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"La pantalla · Hoy lo muestra","lbl":"track-codesarrollo\ns.html","ev":"yod-portal/track-codesarrollos.html · 139 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/track-codesarrollos.html","lt":"Funciones y símbolos (2)","lista":["inicia()  · L80","pedir()  · L112"],"tb":[["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["pantalla-cartera-proyectos.html","Pantalla · Cartera · Proyectos"],["pantalla-obra.html","Pantalla · Obra · Avance"],["codigo-yod-portal.html","Código · yod-portal"]]},"mas:pantalla-control:hoy:p":{"x":1880,"y":172,"nombre":"+9 páginas más","forma":"dot","tam":9,"color":"#8A8F98","tipo":"Grupo","celda":"La pantalla · Hoy lo muestra","lbl":"+9 páginas más","lt":"Incluye","lista":["index.html","microfono.html","track-alysa.html","track-maria.html","index.html","revisar.html","index.html","rescate.html","oficina-cobertura.html"],"dentro":["tablero-control.html","Tablero · Control, cabina y Portero"]},"MENU-control":{"x":736,"y":68,"nombre":"Menú · Control","forma":"star","tam":13,"color":"#EDC948","tipo":"Menú por pregunta","celda":"La pantalla · De qué pestaña o pieza sale","lbl":"Menú · Control","estado":"Propuesta de este análisis","nota":"¿Quién entra y a qué?","ev":"propuesta del 11-nov-2026","tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["organizacion.html","Organización propuesta"]]},"ZON-control-1":{"x":414,"y":308,"nombre":"Personas y puertas","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"1 · La pantalla, de arriba a abajo","lbl":"<b>1 · Personas y puertas<\/b>\nCada persona con su rol, sus proyectos y su último acceso.","caja":330,"bc":"#C99A12","estado":"El dato existe, falta conectarlo","nota":"Cada persona con su rol, sus proyectos y su último acceso. De dónde sale: Hoy hay dos tablas de accesos: la del Portero y la del Control Maestro.","ev":"propuesta del 11-nov-2026","tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["libro-yod-os-control-maestro.html","Libro · YOD OS · Control Maestro"],["libro-yod-potenciales.html","Libro · YOD - POTENCIALES"]]},"P-EQUIPO":{"x":103,"y":308,"nombre":"Equipo interno","forma":"dot","tam":15,"color":"#B07AA1","tipo":"Quién","celda":"1 · Quién entra","lbl":"Equipo interno","estado":"Vivo · leído el 11-nov","nota":"un proyecto, un proyecto, un proyecto, un proyecto.","ev":"memoria-de-conversaciones","tb":[["mapa.html","Mapa general"],["tablero-despacho.html","Tablero · El Despacho"],["tablero-moac.html","Tablero · MOAC"],["tablero-flujo.html","Tablero · Flujo"],["tablero-embudo.html","Tablero · Embudo y Sala"],["tablero-obra.html","Tablero · Obra en vivo"],["tablero-control.html","Tablero · Control, cabina y Portero"],["pantalla-hoy.html","Pantalla · Hoy"],["","y 6 más"]]},"tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Roles":{"x":736,"y":308,"nombre":"Roles · Control Maestro","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"1 · De qué pestaña o pieza sale","lbl":"Roles · Control\nMaestro","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD OS · Control Maestro»","url":"https://docs.google.com/spreadsheets/d/1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk/edit","lt":"Columnas (fila 1, leída el 11-nov)","lista":["role_id","rol","descripción","alcance","puede_leer","puede_escribir","puede_administrar","estado"],"tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["libro-yod-os-control-maestro.html","Libro · YOD OS · Control Maestro"]]},"tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Accesos":{"x":908,"y":308,"nombre":"Accesos · Control Maestro","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"1 · De qué pestaña o pieza sale","lbl":"Accesos · Control\nMaestro","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD OS · Control Maestro»","url":"https://docs.google.com/spreadsheets/d/1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk/edit","lt":"Columnas (fila 1, leída el 11-nov)","lista":["access_id","correo","person_id","role_id","recurso","puede_leer","puede_escribir","estado","vigente_desde","vigente_hasta","notas"],"tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["libro-yod-os-control-maestro.html","Libro · YOD OS · Control Maestro"]]},"tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:ACCESOS":{"x":1080,"y":308,"nombre":"ACCESOS · Potenciales","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"1 · De qué pestaña o pieza sale","lbl":"ACCESOS ·\nPotenciales","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD - POTENCIALES»","url":"https://docs.google.com/spreadsheets/d/1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y/edit","lt":"Columnas (fila 1, leída el 11-nov)","lista":["correo","nombre","boards","rol","estado","vence","notas","ts_alta"],"al":[["HAL-07","El permiso es por tablero, no por proyecto"]],"tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["libro-yod-potenciales.html","Libro · YOD - POTENCIALES"],["hallazgos.html","Hallazgos"],["codigo-sala-edicion.html","Código · sala-edicion"]]},"tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:SESIONES":{"x":736,"y":412,"nombre":"SESIONES · Potenciales","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"1 · De qué pestaña o pieza sale","lbl":"SESIONES ·\nPotenciales","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD - POTENCIALES»","url":"https://docs.google.com/spreadsheets/d/1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y/edit","tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["libro-yod-potenciales.html","Libro · YOD - POTENCIALES"],["codigo-sala-edicion.html","Código · sala-edicion"]]},"hoja:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk":{"x":1308,"y":308,"nombre":"YOD OS · Control Maestro","forma":"triangle","tam":14,"color":"#4E79A7","tipo":"Libro de Google Sheets","celda":"1 · En qué libro vive","lbl":"YOD OS · Control\nMaestro","estado":"Vivo · leído el 11-nov","nota":"La lee el código de: potenciales-yod, yod-portal.","ev":"Google Sheets","url":"https://docs.google.com/spreadsheets/d/1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk/edit","dentro":["libro-yod-os-control-maestro.html","Libro · YOD OS · Control Maestro"],"tb":[["mapa.html","Mapa general"],["tablero-despacho.html","Tablero · El Despacho"],["tablero-ppp.html","Tablero · PPP"],["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["tablero-control.html","Tablero · Control, cabina y Portero"],["pantalla-hoy.html","Pantalla · Hoy"],["pantalla-cartera-ppp.html","Pantalla · Cartera · PPP"],["pantalla-cartera-proyectos.html","Pantalla · Cartera · Proyectos"],["","y 4 más"]]},"hoja:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y":{"x":1480,"y":308,"nombre":"YOD - POTENCIALES","forma":"triangle","tam":14,"color":"#4E79A7","tipo":"Libro de Google Sheets","celda":"1 · En qué libro vive","lbl":"YOD - POTENCIALES","estado":"Vivo · leído el 11-nov","nota":"La lee el código de: potenciales-yod, sala-edicion, yod-agent-cloud.","ev":"Google Sheets","url":"https://docs.google.com/spreadsheets/d/1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y/edit","dentro":["libro-yod-potenciales.html","Libro · YOD - POTENCIALES"],"tb":[["mapa.html","Mapa general"],["tablero-ppp.html","Tablero · PPP"],["tablero-mercado.html","Tablero · Mercado Hermosillo"],["tablero-brokers.html","Tablero · Masterbrokers"],["tablero-embudo.html","Tablero · Embudo y Sala"],["pantalla-cartera-ppp.html","Pantalla · Cartera · PPP"],["pantalla-mercado.html","Pantalla · Mercado"],["pantalla-cartera-proyectos.html","Pantalla · Cartera · Proyectos"],["","y 6 más"]]},"ZON-control-2":{"x":414,"y":548,"nombre":"Alta en un paso","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"2 · La pantalla, de arriba a abajo","lbl":"<b>2 · Alta en un paso<\/b>\nCorreo, rol y proyectos; el sistema manda la liga.","caja":330,"bc":"#C99A12","estado":"El dato existe, falta conectarlo","nota":"Correo, rol y proyectos; el sistema manda la liga. De dónde sale: Ligas y accesos del Portero; falta el permiso por proyecto.","ev":"propuesta del 11-nov-2026","tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["libro-yod-potenciales.html","Libro · YOD - POTENCIALES"]]},"P-DIRECCION":{"x":103,"y":548,"nombre":"Dirección","forma":"dot","tam":15,"color":"#B07AA1","tipo":"Quién","celda":"2 · Quién entra","lbl":"Dirección","estado":"Vivo · leído el 11-nov","nota":"un proyecto como Master Developer.","ev":"memoria-de-conversaciones","tb":[["mapa.html","Mapa general"],["tablero-despacho.html","Tablero · El Despacho"],["tablero-ppp.html","Tablero · PPP"],["tablero-mercado.html","Tablero · Mercado Hermosillo"],["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["tablero-moac.html","Tablero · MOAC"],["tablero-flujo.html","Tablero · Flujo"],["tablero-aurum.html","Tablero · AURUM"],["","y 16 más"]]},"tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:LIGAS":{"x":736,"y":548,"nombre":"LIGAS · Potenciales","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"2 · De qué pestaña o pieza sale","lbl":"LIGAS ·\nPotenciales","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD - POTENCIALES»","url":"https://docs.google.com/spreadsheets/d/1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y/edit","lt":"Columnas (fila 1, leída el 11-nov)","lista":["liga","correo","creado","expira","usada"],"tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["libro-yod-potenciales.html","Libro · YOD - POTENCIALES"]]},"ZON-control-3":{"x":414,"y":684,"nombre":"Proyectos y su folio","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"3 · La pantalla, de arriba a abajo","lbl":"<b>3 · Proyectos y su folio<\/b>\nEl catálogo único: folio, etapa, responsable, libro y carpeta de cada proyecto.","caja":330,"bc":"#2E7D32","estado":"El dato existe y ya se lee","nota":"El catálogo único: folio, etapa, responsable, libro y carpeta de cada proyecto. De dónde sale: Pestaña Proyectos del Control Maestro.","ev":"propuesta del 11-nov-2026","tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["libro-yod-os-control-maestro.html","Libro · YOD OS · Control Maestro"]]},"KEY-PROJECT":{"x":736,"y":684,"nombre":"project_id · folio PRJ-…","forma":"star","tam":16,"color":"#E15759","tipo":"Clave de proyecto","celda":"3 · De qué pestaña o pieza sale","lbl":"project_id · folio\nPRJ-…","estado":"Vivo · leído el 11-nov","nota":"Es la única clave que ya vive en el Control Maestro, en el catálogo de la cabina (os/proyectos.js), en la app de obra y en el módulo del comprador, que guarda folio y unidad. Es la candidata natural a folio único. Ejemplo: PRJ-ALYSA, PRJ-RUISENOR.","ev":"google-sheets (encabezados)","al":[["HAL-28","La obra y el comprador ya usan el folio"]],"tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["libro-yod-os-control-maestro.html","Libro · YOD OS · Control Maestro"],["libro-yod-potenciales.html","Libro · YOD - POTENCIALES"],["folio.html","Folio · una clave por proyecto"],["hallazgos.html","Hallazgos"],["organizacion.html","Organización propuesta"],["codigo-yod-portal.html","Código · yod-portal"],["codigo-yod-portal-os.html","Código · yod-portal · os/"]]},"tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Proyectos":{"x":908,"y":684,"nombre":"Proyectos · Control Maestro","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"3 · De qué pestaña o pieza sale","lbl":"Proyectos ·\nControl Maestro","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD OS · Control Maestro»","url":"https://docs.google.com/spreadsheets/d/1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk/edit","lt":"Columnas (fila 1, leída el 11-nov)","lista":["project_id","proyecto","código","ubicación","tipo","etapa_actual","estado","responsable_id","sheet_url","drive_folder_url","actualizado","notas","admision","admision_desde","admision_fuente"],"tb":[["tablero-despacho.html","Tablero · El Despacho"],["tablero-ppp.html","Tablero · PPP"],["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["tablero-control.html","Tablero · Control, cabina y Portero"],["pantalla-hoy.html","Pantalla · Hoy"],["pantalla-cartera-ppp.html","Pantalla · Cartera · PPP"],["pantalla-cartera-proyectos.html","Pantalla · Cartera · Proyectos"],["libro-yod-os-control-maestro.html","Libro · YOD OS · Control Maestro"],["","y 1 más"]]},"ZON-control-4":{"x":414,"y":820,"nombre":"Salud del sistema","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"4 · La pantalla, de arriba a abajo","lbl":"<b>4 · Salud del sistema<\/b>\nTableros que responden, motores sin código en Git y relojes que fallaron.","caja":330,"bc":"#C99A12","estado":"El dato existe, falta conectarlo","nota":"Tableros que responden, motores sin código en Git y relojes que fallaron. De dónde sale: Sistemas del Control Maestro y los flujos de GitHub.","ev":"propuesta del 11-nov-2026","tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["libro-yod-os-control-maestro.html","Libro · YOD OS · Control Maestro"]]},"tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Sistemas":{"x":736,"y":820,"nombre":"Sistemas · Control Maestro","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"4 · De qué pestaña o pieza sale","lbl":"Sistemas · Control\nMaestro","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD OS · Control Maestro»","url":"https://docs.google.com/spreadsheets/d/1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk/edit","lt":"Columnas (fila 1, leída el 11-nov)","lista":["system_id","sistema","función","url","repositorio","fuente_datos","estado","sensibilidad","responsable_id","última_revisión","notas"],"tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["libro-yod-os-control-maestro.html","Libro · YOD OS · Control Maestro"]]},"EXT-ACTIONS":{"x":908,"y":820,"nombre":"GitHub Actions","forma":"dot","tam":10,"color":"#FF9DA7","tipo":"Servicio externo","celda":"4 · De qué pestaña o pieza sale","lbl":"GitHub Actions","estado":"Propuesto en el atlas","nota":"Dependencia externa de procesos YOD OS","ev":"yod-portal/docs/arquitectura/modelo.json","al":[["HAL-05","Hay 23 relojes corriendo"]],"tb":[["tablero-despacho.html","Tablero · El Despacho"],["tablero-ppp.html","Tablero · PPP"],["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["tablero-moac.html","Tablero · MOAC"],["tablero-flujo.html","Tablero · Flujo"],["tablero-aurum.html","Tablero · AURUM"],["tablero-brokers.html","Tablero · Masterbrokers"],["tablero-embudo.html","Tablero · Embudo y Sala"],["","y 5 más"]]},"ZON-control-5":{"x":414,"y":956,"nombre":"Quién entró y qué vio","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"5 · La pantalla, de arriba a abajo","lbl":"<b>5 · Quién entró y qué vio<\/b>\nBitácora de accesos por persona.","caja":330,"bc":"#C99A12","estado":"El dato existe, falta conectarlo","nota":"Bitácora de accesos por persona. De dónde sale: Sesiones y bitácora del Portero.","ev":"propuesta del 11-nov-2026","tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["libro-yod-potenciales.html","Libro · YOD - POTENCIALES"]]},"tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:BITACORA":{"x":736,"y":956,"nombre":"BITACORA · Potenciales","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"5 · De qué pestaña o pieza sale","lbl":"BITACORA ·\nPotenciales","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD - POTENCIALES»","url":"https://docs.google.com/spreadsheets/d/1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y/edit","tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["libro-yod-potenciales.html","Libro · YOD - POTENCIALES"],["codigo-sala-edicion.html","Código · sala-edicion"]]},"ZON-control-6":{"x":414,"y":1092,"nombre":"Cambios en espera","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"6 · La pantalla, de arriba a abajo","lbl":"<b>6 · Cambios en espera<\/b>\nLas propuestas del atlas que esperan tu sí, no o después.","caja":330,"bc":"#2E7D32","estado":"El dato existe y ya se lee","nota":"Las propuestas del atlas que esperan tu sí, no o después. De dónde sale: Atlas del portal.","ev":"propuesta del 11-nov-2026","tb":[["tablero-control.html","Tablero · Control, cabina y Portero"]]},"PROP-E":{"x":736,"y":1092,"nombre":"E · Folio común de proyecto y datos conciliados","forma":"star","tam":11,"color":"#F1CE63","tipo":"Propuesta del atlas","celda":"6 · De qué pestaña o pieza sale","lbl":"E · Folio común de\nproyecto y datos\nconciliados","estado":"Propuesto en el atlas","nota":"Identidad de proyecto se deriva parcialmente de nombres y alias → Evitar duplicados y conocer resultado de cada proyecto Decisión: pendiente · esfuerzo L.","ev":"yod-portal/docs/arquitectura/modelo.json","al":[["HAL-03","Doce mejoras esperan tu decisión"]],"tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["hallazgos.html","Hallazgos"],["propuestas.html","Propuestas del atlas"]]},"PROP-F":{"x":908,"y":1092,"nombre":"F · Margen por proyecto y compromisos","forma":"star","tam":11,"color":"#F1CE63","tipo":"Propuesta del atlas","celda":"6 · De qué pestaña o pieza sale","lbl":"F · Margen por\nproyecto y\ncompromisos","estado":"Propuesto en el atlas","nota":"Caja por bolsa no demuestra rentabilidad y obligaciones por partida → Detectar desviaciones antes de perder margen Decisión: pendiente · esfuerzo L.","ev":"yod-portal/docs/arquitectura/modelo.json","tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["propuestas.html","Propuestas del atlas"]]},"PROP-I":{"x":1080,"y":1092,"nombre":"I · Calendario único de cobros y aportaciones","forma":"star","tam":11,"color":"#F1CE63","tipo":"Propuesta del atlas","celda":"6 · De qué pestaña o pieza sale","lbl":"I · Calendario\núnico de cobros y\naportaciones","estado":"Propuesto en el atlas","nota":"Cobros y aportaciones viven en contratos diferentes → Cobrar antes sin duplicar registros Decisión: pendiente · esfuerzo L.","ev":"yod-portal/docs/arquitectura/modelo.json","tb":[["tablero-control.html","Tablero · Control, cabina y Portero"],["propuestas.html","Propuestas del atlas"]]},"OUT-control-1":{"x":414,"y":1228,"nombre":"El libro del Control Maestro abierto como si fuera tablero: se administra desde esta pantalla","forma":"box","tam":0,"color":"#DAD5CE","tipo":"Sale de la pantalla","celda":"Sale · La pantalla, de arriba a abajo","lbl":"El libro del Control Maestro abierto como si fuera tablero: se administra desde esta pantalla","caja":330,"estado":"Propuesta de este análisis","nota":"Sale de la pantalla: El libro del Control Maestro abierto como si fuera tablero: se administra desde esta pantalla","ev":"propuesta del 11-nov-2026"}},"flechas":{"ZON-control-2>tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:LIGAS":{"f":"propuesta","r":"sale de","nota":"Ligas y accesos del Portero; falta el permiso por proyecto"},"ZON-control-2>tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:ACCESOS":{"f":"propuesta","r":"sale de","nota":"Ligas y accesos del Portero; falta el permiso por proyecto"},"SYS-CONTROL>EXT-ACTIONS":{"f":"viva","r":"Pruebas programadas y evidencia de ejecución","ev":"yod-portal/docs/arquitectura/modelo.json"},"PROP-E>SYS-CONTROL":{"f":"propuesta","r":"mejora","ev":"yod-portal/docs/arquitectura/modelo.json"},"SYS-CONTROL>yod-portal::obra_html_inline":{"f":"viva","r":"se implementa en","ev":"yod-portal/docs/arquitectura/modelo.json"},"SYS-CONTROL>yod-portal::track_codesarrollos_html_inline":{"f":"viva","r":"se implementa en","ev":"yod-portal/docs/arquitectura/modelo.json"},"SYS-CONTROL>potenciales-yod::accesos_html_inline":{"f":"viva","r":"se implementa en","ev":"yod-portal/docs/arquitectura/modelo.json"},"SYS-CONTROL>PAN-control":{"f":"propuesta","r":"se convierte en"},"SYS-CONTROL>MENU-control":{"f":"propuesta","r":"se agrupa en"},"ZON-control-6>PROP-E":{"f":"viva","r":"sale de","nota":"Atlas del portal"},"ZON-control-6>PROP-F":{"f":"viva","r":"sale de","nota":"Atlas del portal"},"P-EQUIPO>PAN-control":{"f":"propuesta","r":"entra a","nota":"cada responsable ve los accesos de su proyecto"},"P-DIRECCION>PAN-control":{"f":"propuesta","r":"entra a","nota":"administra"},"ZON-control-4>tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Sistemas":{"f":"propuesta","r":"sale de","nota":"Sistemas del Control Maestro y los flujos de GitHub"},"ZON-control-4>EXT-ACTIONS":{"f":"propuesta","r":"sale de","nota":"Sistemas del Control Maestro y los flujos de GitHub"},"potenciales-yod::accesos_html_inline>hoja:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y":{"f":"viva","r":"referencia la hoja","ev":"potenciales-yod/accesos.html L124"},"potenciales-yod::accesos_html_inline>hoja:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk":{"f":"viva","r":"referencia la hoja","ev":"potenciales-yod/accesos.html L125"},"ZON-control-5>tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:SESIONES":{"f":"propuesta","r":"sale de","nota":"Sesiones y bitácora del Portero"},"ZON-control-5>tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:BITACORA":{"f":"propuesta","r":"sale de","nota":"Sesiones y bitácora del Portero"},"hoja:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk>tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Roles":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk"},"ZON-control-1>tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Roles":{"f":"propuesta","r":"sale de","nota":"Hoy hay dos tablas de accesos: la del Portero y la del Control Maestro"},"ZON-control-6>PROP-I":{"f":"viva","r":"sale de","nota":"Atlas del portal"},"hoja:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y>tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:LIGAS":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y"},"hoja:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y>tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:BITACORA":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y"},"hoja:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y>tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:SESIONES":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y"},"hoja:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y>tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:ACCESOS":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y"},"hoja:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk>tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Accesos":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk"},"ZON-control-1>tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Accesos":{"f":"propuesta","r":"sale de","nota":"Hoy hay dos tablas de accesos: la del Portero y la del Control Maestro"},"ZON-control-1>tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:ACCESOS":{"f":"propuesta","r":"sale de","nota":"Hoy hay dos tablas de accesos: la del Portero y la del Control Maestro"},"tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Proyectos>KEY-PROJECT":{"f":"viva","r":"lleva la clave","ev":"google-sheets/1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk Proyectos!project_id"},"ZON-control-3>KEY-PROJECT":{"f":"viva","r":"sale de","nota":"Pestaña Proyectos del Control Maestro"},"hoja:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk>tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Sistemas":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk"},"hoja:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk>tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Proyectos":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk"},"ZON-control-3>tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Proyectos":{"f":"viva","r":"sale de","nota":"Pestaña Proyectos del Control Maestro"},"ZON-control-1>tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:SESIONES":{"f":"propuesta","r":"sale de","nota":"Hoy hay dos tablas de accesos: la del Portero y la del Control Maestro"}},"familias":{"viva":{"corto":"Visto","nombre":"Visto en código u hoja","color":"#5B6470","ancho":1.3,"opacidad":0.75,"punteada":false},"inferida":{"corto":"Atlas","nombre":"Del atlas o deducido","color":"#9AA1AB","ancho":1.0,"opacidad":0.6,"punteada":false},"propuesta":{"corto":"Propuesta","nombre":"Propuesta","color":"#C99A12","ancho":1.6,"opacidad":0.9,"punteada":[7,5]},"hueco":{"corto":"Falta","nombre":"Falta o hallazgo","color":"#C8102E","ancho":1.7,"opacidad":0.9,"punteada":[3,5]}},"usadas":["viva","propuesta"],"rejilla":{"cols":[{"x":0,"w":206,"nombre":"Quién entra"},{"x":206,"w":416,"nombre":"La pantalla, de arriba a abajo"},{"x":622,"w":572,"nombre":"De qué pestaña o pieza sale"},{"x":1194,"w":400,"nombre":"En qué libro vive"},{"x":1594,"w":572,"nombre":"Hoy lo muestra"}],"filas":[{"y":0,"h":240,"nombre":"La pantalla"},{"y":240,"h":240,"nombre":"1"},{"y":480,"h":136,"nombre":"2"},{"y":616,"h":136,"nombre":"3"},{"y":752,"h":136,"nombre":"4"},{"y":888,"h":136,"nombre":"5"},{"y":1024,"h":136,"nombre":"6"},{"y":1160,"h":136,"nombre":"Sale"}]},"eje_x":"De quien la abre al dato que la alimenta","eje_y":"Orden de las zonas en la pantalla","estado":"https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/grafo-datos/estado.json","simbolos":[["■","#59A14F","Tablero o página"],["▭","#F1CE63","Pantalla propuesta"],["◆","#F28E2B","Motor"],["⬢","#79706E","Repositorio o código"],["▲","#4E79A7","Libro"],["▼","#A0CBE8","Pestaña"],["●","#B07AA1","Quién"],["★","#EDC948","Propuesta"],["★","#E15759","Hallazgo o clave"]],"pie":"31 nodos · 35 flechas · Pantalla · Control · Accesos · Graphify 0.9.106"};</script>
+</head>
+<body>
+<div id="graph"></div>
+<div id="sidebar">
+  <div id="theme-wrap" role="group" aria-label="Theme">
+    <button type="button" data-theme-choice="light">Claro</button>
+    <button type="button" data-theme-choice="dark">Oscuro</button>
+    <button type="button" data-theme-choice="system">Sistema</button>
+  </div>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Buscar…" autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div id="info-panel">
+    <h3>Detalle</h3>
+    <div id="info-content"><span class="empty">Toca un nodo para ver su detalle</span></div>
+  </div>
+  <div id="legend-wrap">
+    <h3>Grupos</h3>
+    <div id="legend-controls">
+      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">Todos</label>
+    </div>
+    <div id="legend"></div>
+  </div>
+  <div id="stats">31 nodes &middot; 35 edges &middot; 19 communities</div>
+</div>
+<script>
+const RAW_NODES = [{"id": "PAN-control", "label": "Pantalla \u00b7 Control \u00b7 Accesos", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 22.9, "font": {"size": 12, "color": "#ffffff"}, "title": "Pantalla \u00b7 Control \u00b7 Accesos", "community": 0, "community_name": "La pantalla \u00b7 La pantalla, de arriba a abajo", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 3}, {"id": "SYS-CONTROL", "label": "Control Maestro", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Control Maestro", "community": 1, "community_name": "La pantalla \u00b7 Hoy lo muestra", "source_file": "yod-portal/docs/arquitectura/modelo.json", "file_type": "concept", "degree": 7}, {"id": "yod-portal::obra_html_inline", "label": "obra.html", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 14.3, "font": {"size": 0, "color": "#ffffff"}, "title": "obra.html", "community": 1, "community_name": "La pantalla \u00b7 Hoy lo muestra", "source_file": "yod-portal/obra.html \u00b7 988 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "potenciales-yod::accesos_html_inline", "label": "accesos.html", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 22.9, "font": {"size": 12, "color": "#ffffff"}, "title": "accesos.html", "community": 1, "community_name": "La pantalla \u00b7 Hoy lo muestra", "source_file": "potenciales-yod/accesos.html \u00b7 517 l\u00edneas", "file_type": "code", "degree": 3}, {"id": "yod-portal::track_codesarrollos_html_inline", "label": "track-codesarrollos.html", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 14.3, "font": {"size": 0, "color": "#ffffff"}, "title": "track-codesarrollos.html", "community": 1, "community_name": "La pantalla \u00b7 Hoy lo muestra", "source_file": "yod-portal/track-codesarrollos.html \u00b7 139 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "mas:pantalla-control:hoy:p", "label": "+9 p\u00e1ginas m\u00e1s", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "+9 p\u00e1ginas m\u00e1s", "community": 1, "community_name": "La pantalla \u00b7 Hoy lo muestra", "source_file": "", "file_type": "concept", "degree": 0}, {"id": "MENU-control", "label": "Men\u00fa \u00b7 Control", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 14.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Men\u00fa \u00b7 Control", "community": 2, "community_name": "La pantalla \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 1}, {"id": "ZON-control-1", "label": "Personas y puertas", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 27.1, "font": {"size": 12, "color": "#ffffff"}, "title": "Personas y puertas", "community": 3, "community_name": "1 \u00b7 La pantalla, de arriba a abajo", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 4}, {"id": "P-EQUIPO", "label": "Equipo interno", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 14.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Equipo interno", "community": 4, "community_name": "1 \u00b7 Qui\u00e9n entra", "source_file": "memoria-de-conversaciones", "file_type": "concept", "degree": 1}, {"id": "tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Roles", "label": "Roles \u00b7 Control Maestro", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 18.6, "font": {"size": 12, "color": "#ffffff"}, "title": "Roles \u00b7 Control Maestro", "community": 5, "community_name": "1 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "source_file": "Libro \u00abYOD OS \u00b7 Control Maestro\u00bb", "file_type": "document", "degree": 2}, {"id": "tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Accesos", "label": "Accesos \u00b7 Control Maestro", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 18.6, "font": {"size": 12, "color": "#ffffff"}, "title": "Accesos \u00b7 Control Maestro", "community": 5, "community_name": "1 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "source_file": "Libro \u00abYOD OS \u00b7 Control Maestro\u00bb", "file_type": "document", "degree": 2}, {"id": "tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:ACCESOS", "label": "ACCESOS \u00b7 Potenciales", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 22.9, "font": {"size": 12, "color": "#ffffff"}, "title": "ACCESOS \u00b7 Potenciales", "community": 5, "community_name": "1 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "source_file": "Libro \u00abYOD - POTENCIALES\u00bb", "file_type": "document", "degree": 3}, {"id": "tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:SESIONES", "label": "SESIONES \u00b7 Potenciales", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 22.9, "font": {"size": 12, "color": "#ffffff"}, "title": "SESIONES \u00b7 Potenciales", "community": 5, "community_name": "1 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "source_file": "Libro \u00abYOD - POTENCIALES\u00bb", "file_type": "document", "degree": 3}, {"id": "hoja:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk", "label": "YOD OS \u00b7 Control Maestro", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 31.4, "font": {"size": 12, "color": "#ffffff"}, "title": "YOD OS \u00b7 Control Maestro", "community": 6, "community_name": "1 \u00b7 En qu\u00e9 libro vive", "source_file": "Google Sheets", "file_type": "document", "degree": 5}, {"id": "hoja:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y", "label": "YOD - POTENCIALES", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 31.4, "font": {"size": 12, "color": "#ffffff"}, "title": "YOD - POTENCIALES", "community": 6, "community_name": "1 \u00b7 En qu\u00e9 libro vive", "source_file": "Google Sheets", "file_type": "document", "degree": 5}, {"id": "ZON-control-2", "label": "Alta en un paso", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 18.6, "font": {"size": 12, "color": "#ffffff"}, "title": "Alta en un paso", "community": 7, "community_name": "2 \u00b7 La pantalla, de arriba a abajo", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 2}, {"id": "P-DIRECCION", "label": "Direcci\u00f3n", "color": {"background": "#9C755F", "border": "#9C755F", "highlight": {"background": "#ffffff", "border": "#9C755F"}}, "size": 14.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Direcci\u00f3n", "community": 8, "community_name": "2 \u00b7 Qui\u00e9n entra", "source_file": "memoria-de-conversaciones", "file_type": "concept", "degree": 1}, {"id": "tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:LIGAS", "label": "LIGAS \u00b7 Potenciales", "color": {"background": "#BAB0AC", "border": "#BAB0AC", "highlight": {"background": "#ffffff", "border": "#BAB0AC"}}, "size": 18.6, "font": {"size": 12, "color": "#ffffff"}, "title": "LIGAS \u00b7 Potenciales", "community": 9, "community_name": "2 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "source_file": "Libro \u00abYOD - POTENCIALES\u00bb", "file_type": "document", "degree": 2}, {"id": "ZON-control-3", "label": "Proyectos y su folio", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 18.6, "font": {"size": 12, "color": "#ffffff"}, "title": "Proyectos y su folio", "community": 10, "community_name": "3 \u00b7 La pantalla, de arriba a abajo", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 2}, {"id": "KEY-PROJECT", "label": "project_id \u00b7 folio PRJ-\u2026", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 18.6, "font": {"size": 12, "color": "#ffffff"}, "title": "project_id \u00b7 folio PRJ-\u2026", "community": 11, "community_name": "3 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "source_file": "google-sheets (encabezados)", "file_type": "concept", "degree": 2}, {"id": "tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Proyectos", "label": "Proyectos \u00b7 Control Maestro", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 22.9, "font": {"size": 12, "color": "#ffffff"}, "title": "Proyectos \u00b7 Control Maestro", "community": 11, "community_name": "3 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "source_file": "Libro \u00abYOD OS \u00b7 Control Maestro\u00bb", "file_type": "document", "degree": 3}, {"id": "ZON-control-4", "label": "Salud del sistema", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 18.6, "font": {"size": 12, "color": "#ffffff"}, "title": "Salud del sistema", "community": 12, "community_name": "4 \u00b7 La pantalla, de arriba a abajo", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 2}, {"id": "tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Sistemas", "label": "Sistemas \u00b7 Control Maestro", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 18.6, "font": {"size": 12, "color": "#ffffff"}, "title": "Sistemas \u00b7 Control Maestro", "community": 13, "community_name": "4 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "source_file": "Libro \u00abYOD OS \u00b7 Control Maestro\u00bb", "file_type": "document", "degree": 2}, {"id": "EXT-ACTIONS", "label": "GitHub Actions", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 18.6, "font": {"size": 12, "color": "#ffffff"}, "title": "GitHub Actions", "community": 13, "community_name": "4 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "source_file": "yod-portal/docs/arquitectura/modelo.json", "file_type": "concept", "degree": 2}, {"id": "ZON-control-5", "label": "Qui\u00e9n entr\u00f3 y qu\u00e9 vio", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 18.6, "font": {"size": 12, "color": "#ffffff"}, "title": "Qui\u00e9n entr\u00f3 y qu\u00e9 vio", "community": 14, "community_name": "5 \u00b7 La pantalla, de arriba a abajo", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 2}, {"id": "tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:BITACORA", "label": "BITACORA \u00b7 Potenciales", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 18.6, "font": {"size": 12, "color": "#ffffff"}, "title": "BITACORA \u00b7 Potenciales", "community": 15, "community_name": "5 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "source_file": "Libro \u00abYOD - POTENCIALES\u00bb", "file_type": "document", "degree": 2}, {"id": "ZON-control-6", "label": "Cambios en espera", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 22.9, "font": {"size": 12, "color": "#ffffff"}, "title": "Cambios en espera", "community": 16, "community_name": "6 \u00b7 La pantalla, de arriba a abajo", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 3}, {"id": "PROP-E", "label": "E \u00b7 Folio com\u00fan de proyecto y datos conciliados", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 18.6, "font": {"size": 12, "color": "#ffffff"}, "title": "E \u00b7 Folio com\u00fan de proyecto y datos conciliados", "community": 17, "community_name": "6 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "source_file": "yod-portal/docs/arquitectura/modelo.json", "file_type": "concept", "degree": 2}, {"id": "PROP-F", "label": "F \u00b7 Margen por proyecto y compromisos", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 14.3, "font": {"size": 0, "color": "#ffffff"}, "title": "F \u00b7 Margen por proyecto y compromisos", "community": 17, "community_name": "6 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "source_file": "yod-portal/docs/arquitectura/modelo.json", "file_type": "concept", "degree": 1}, {"id": "PROP-I", "label": "I \u00b7 Calendario \u00fanico de cobros y aportaciones", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 14.3, "font": {"size": 0, "color": "#ffffff"}, "title": "I \u00b7 Calendario \u00fanico de cobros y aportaciones", "community": 17, "community_name": "6 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "source_file": "yod-portal/docs/arquitectura/modelo.json", "file_type": "concept", "degree": 1}, {"id": "OUT-control-1", "label": "El libro del Control Maestro abierto como si fuera tablero: se administra desde esta pantalla", "color": {"background": "#9C755F", "border": "#9C755F", "highlight": {"background": "#ffffff", "border": "#9C755F"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "El libro del Control Maestro abierto como si fuera tablero: se administra desde esta pantalla", "community": 18, "community_name": "Sale \u00b7 La pantalla, de arriba a abajo", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 0}];
+const RAW_EDGES = [{"from": "SYS-CONTROL", "to": "PAN-control", "label": "se convierte en", "title": "se convierte en [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "P-EQUIPO", "to": "PAN-control", "label": "entra a", "title": "entra a [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "P-DIRECCION", "to": "PAN-control", "label": "entra a", "title": "entra a [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "SYS-CONTROL", "to": "EXT-ACTIONS", "label": "Pruebas programadas y evidencia de ejecuci\u00f3n", "title": "Pruebas programadas y evidencia de ejecuci\u00f3n [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "PROP-E", "to": "SYS-CONTROL", "label": "mejora", "title": "mejora [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "SYS-CONTROL", "to": "yod-portal::obra_html_inline", "label": "se implementa en", "title": "se implementa en [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "SYS-CONTROL", "to": "yod-portal::track_codesarrollos_html_inline", "label": "se implementa en", "title": "se implementa en [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "SYS-CONTROL", "to": "potenciales-yod::accesos_html_inline", "label": "se implementa en", "title": "se implementa en [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "SYS-CONTROL", "to": "MENU-control", "label": "se agrupa en", "title": "se agrupa en [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "potenciales-yod::accesos_html_inline", "to": "hoja:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y", "label": "referencia la hoja", "title": "referencia la hoja [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "potenciales-yod::accesos_html_inline", "to": "hoja:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk", "label": "referencia la hoja", "title": "referencia la hoja [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "ZON-control-1", "to": "tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Roles", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-control-1", "to": "tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Accesos", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-control-1", "to": "tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:ACCESOS", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-control-1", "to": "tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:SESIONES", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "hoja:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk", "to": "tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Roles", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk", "to": "tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Accesos", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "ZON-control-2", "to": "tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:ACCESOS", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "hoja:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y", "to": "tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:ACCESOS", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "ZON-control-5", "to": "tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:SESIONES", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "hoja:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y", "to": "tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:SESIONES", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk", "to": "tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Sistemas", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk", "to": "tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Proyectos", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y", "to": "tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:LIGAS", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y", "to": "tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:BITACORA", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "ZON-control-2", "to": "tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:LIGAS", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-control-3", "to": "KEY-PROJECT", "label": "sale de", "title": "sale de [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "ZON-control-3", "to": "tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Proyectos", "label": "sale de", "title": "sale de [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Proyectos", "to": "KEY-PROJECT", "label": "lleva la clave", "title": "lleva la clave [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "ZON-control-4", "to": "tab:1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk:Sistemas", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-control-4", "to": "EXT-ACTIONS", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-control-5", "to": "tab:1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y:BITACORA", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-control-6", "to": "PROP-E", "label": "sale de", "title": "sale de [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "ZON-control-6", "to": "PROP-F", "label": "sale de", "title": "sale de [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "ZON-control-6", "to": "PROP-I", "label": "sale de", "title": "sale de [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}];
+const LEGEND = [{"cid": 0, "color": "#4E79A7", "label": "La pantalla \u00b7 La pantalla, de arriba a abajo", "count": 1}, {"cid": 1, "color": "#F28E2B", "label": "La pantalla \u00b7 Hoy lo muestra", "count": 5}, {"cid": 2, "color": "#E15759", "label": "La pantalla \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "count": 1}, {"cid": 3, "color": "#76B7B2", "label": "1 \u00b7 La pantalla, de arriba a abajo", "count": 1}, {"cid": 4, "color": "#59A14F", "label": "1 \u00b7 Qui\u00e9n entra", "count": 1}, {"cid": 5, "color": "#EDC948", "label": "1 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "count": 4}, {"cid": 6, "color": "#B07AA1", "label": "1 \u00b7 En qu\u00e9 libro vive", "count": 2}, {"cid": 7, "color": "#FF9DA7", "label": "2 \u00b7 La pantalla, de arriba a abajo", "count": 1}, {"cid": 8, "color": "#9C755F", "label": "2 \u00b7 Qui\u00e9n entra", "count": 1}, {"cid": 9, "color": "#BAB0AC", "label": "2 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "count": 1}, {"cid": 10, "color": "#4E79A7", "label": "3 \u00b7 La pantalla, de arriba a abajo", "count": 1}, {"cid": 11, "color": "#F28E2B", "label": "3 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "count": 2}, {"cid": 12, "color": "#E15759", "label": "4 \u00b7 La pantalla, de arriba a abajo", "count": 1}, {"cid": 13, "color": "#76B7B2", "label": "4 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "count": 2}, {"cid": 14, "color": "#59A14F", "label": "5 \u00b7 La pantalla, de arriba a abajo", "count": 1}, {"cid": 15, "color": "#EDC948", "label": "5 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "count": 1}, {"cid": 16, "color": "#B07AA1", "label": "6 \u00b7 La pantalla, de arriba a abajo", "count": 1}, {"cid": 17, "color": "#FF9DA7", "label": "6 \u00b7 De qu\u00e9 pesta\u00f1a o pieza sale", "count": 3}, {"cid": 18, "color": "#9C755F", "label": "Sale \u00b7 La pantalla, de arriba a abajo", "count": 1}];
+
+// HTML-escape helper — prevents XSS when injecting graph data into innerHTML
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Build vis datasets
+const nodesDS = new vis.DataSet(RAW_NODES.map((n, i) => ({
+  id: n.id, label: n.label, color: n.color, size: n.size,
+  font: n.font, title: n.title,
+  // Fermat/golden-angle spiral seed positions (#3699): spreading nodes out
+  // before physics runs keeps avoidOverlap from computing near-zero-distance
+  // repulsion that blows the BarnesHut recursion into a stack overflow on large
+  // graphs. `i` is the map index — physics still settles small graphs identically.
+  x: 30 * Math.sqrt(i) * Math.cos(i * 2.4),
+  y: 30 * Math.sqrt(i) * Math.sin(i * 2.4),
+  community: n.community, community_name: n.community_name,
+  source_file: n.source_file, file_type: n.file_type, degree: n.degree,
+  member_count: n.member_count,
+})));
+
+const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({
+  id: i, from: e.from, to: e.to,
+  label: '',
+  title: e.title,
+  dashes: e.dashes,
+  width: e.width,
+  color: e.color,
+  arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+})));
+
+const container = document.getElementById('graph');
+const network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, {
+  physics: {
+    enabled: false,
+    solver: 'forceAtlas2Based',
+    forceAtlas2Based: {
+      gravitationalConstant: -60,
+      centralGravity: 0.005,
+      springLength: 120,
+      springConstant: 0.08,
+      damping: 0.4,
+      avoidOverlap: 0.8,
+    },
+    stabilization: { iterations: 200, fit: true },
+  },
+  interaction: {
+    hover: true,
+    tooltipDelay: 100,
+    hideEdgesOnDrag: true,
+    navigationButtons: false,
+    keyboard: false,
+  },
+  nodes: { shape: 'dot', borderWidth: 1.5 },
+  edges: { smooth: { type: 'continuous', roundness: 0.2 }, selectionWidth: 3 },
+});
+
+// Theme toggle (#3894): Light / Dark / System, persisted in localStorage.
+const THEME_KEY = 'graphify-theme';
+const themeMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+let themeLabelColor = '#ffffff';  // matches the per-node font color set in Python
+function themePref() {
+  let p = null;
+  try { p = localStorage.getItem(THEME_KEY); } catch (e) {}
+  return (p === 'light' || p === 'dark' || p === 'system') ? p : null;
+}
+function applyTheme(pref) {
+  const t = pref === 'light' ? 'light' : (pref === 'system' && themeMQ && themeMQ.matches) ? 'light' : 'dark';
+  const root = document.documentElement;
+  if (!root) return;
+  root.setAttribute('data-theme', t);
+  document.querySelectorAll('[data-theme-choice]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.themeChoice === (pref || 'system')));
+  });
+  const labelColor = getComputedStyle(root).getPropertyValue('--node-label').trim();
+  if (labelColor && labelColor !== themeLabelColor) {
+    themeLabelColor = labelColor;
+    nodesDS.update(nodesDS.get().map(n => ({ id: n.id, font: Object.assign({}, n.font, { color: labelColor }) })));
+  }
+}
+document.querySelectorAll('[data-theme-choice]').forEach(b => {
+  b.addEventListener('click', () => {
+    const pref = b.dataset.themeChoice;
+    try { localStorage.setItem(THEME_KEY, pref); } catch (e) {}
+    applyTheme(pref);
+  });
+});
+if (themeMQ) {
+  const onSchemeChange = () => { if (themePref() === 'system') applyTheme('system'); };
+  if (themeMQ.addEventListener) themeMQ.addEventListener('change', onSchemeChange);
+  else if (themeMQ.addListener) themeMQ.addListener(onSchemeChange);
+}
+applyTheme(themePref() || 'system');
+
+
+// ── YOD: acomodo fijo en cuadrante sobre el visor de Graphify. Los nodos y las flechas son los que exportó Graphify. ──
+(function () {
+  const Y = window.YOD;
+  // Cuando la portada enseña un borrador, trae la lámina como texto: los enlaces a otras láminas se le piden a ella.
+  const SUELTA = location.protocol === 'about:';
+  const yodIr = h => { const m = String(h).match(/^([A-Za-z0-9._-]+)\.html(?:#(.*))?$/);
+    if (SUELTA && m) { try { parent.postMessage({ yod: 2, ir: m[1], nodo: m[2] ? decodeURIComponent(m[2]) : '' }, '*'); } catch (e) {} } else location.href = h; };
+  if (SUELTA) document.addEventListener('click', e => { const a = e.target && e.target.closest ? e.target.closest('a[href]') : null; if (!a || a.target === '_blank') return;
+    const h = a.getAttribute('href') || ''; if (/^[A-Za-z0-9._-]+\.html(#.*)?$/.test(h)) { e.preventDefault(); yodIr(h); } }, true);
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const esc2 = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const fuente = p => p.forma === 'box'
+    ? { size: 13, color: '#1d1d1f', face: 'system-ui, -apple-system, sans-serif', multi: 'html', align: 'left', bold: { color: '#111111', size: 14, face: 'system-ui, -apple-system, sans-serif' } }
+    : { size: 14, color: css('--node-label') || '#222', face: 'system-ui, -apple-system, sans-serif', strokeWidth: 3, strokeColor: css('--bg') || '#fff' };
+  const estiloNodo = (n, apagado) => {
+    const p = Y.nodos[n.id] || {};
+    const o = { id: n.id, x: p.x, y: p.y, label: p.lbl, shape: p.forma, size: p.tam, opacity: apagado ? 0.14 : 1, title: undefined,
+      color: { background: p.color, border: p.al ? '#C8102E' : (p.bc || p.color), highlight: { background: p.color, border: '#111' }, hover: { background: p.color, border: '#111' } },
+      borderWidth: p.al ? 2.6 : (p.bc ? 2.4 : 1), borderWidthSelected: 3.5, font: fuente(p) };
+    if (p.forma === 'box') { o.widthConstraint = { minimum: p.caja, maximum: p.caja }; o.margin = 9; o.shapeProperties = { borderRadius: 7 }; }
+    return o;
+  };
+  const ocultas = new Set();
+  let foco = null;
+  const recto = RAW_EDGES.length > 380;
+  const det = r => Y.flechas[r.from + '>' + r.to] || Y.flechas[r.to + '>' + r.from] || {};
+  const estiloArista = e => {
+    const r = RAW_EDGES[e.id], fl = det(r), f = Y.familias[fl.f] || Y.familias.inferida;
+    const con = !foco || foco.aristas.has(e.id);
+    return { id: e.id, hidden: ocultas.has(fl.f || 'inferida'), width: con && foco ? f.ancho + 1.3 : f.ancho, title: undefined,
+             color: { color: f.color, opacity: con ? f.opacidad : 0.05, highlight: f.color, hover: f.color },
+             dashes: f.punteada, arrows: { to: { enabled: true, scaleFactor: 0.55 } }, smooth: recto ? false : { type: 'curvedCW', roundness: 0.12 } };
+  };
+  const pintar = () => {
+    nodesDS.update(nodesDS.get().map(n => estiloNodo(n, foco && !foco.nodos.has(n.id))));
+    edgesDS.update(edgesDS.get().map(estiloArista));
+  };
+  pintar();
+  network.setOptions({ physics: { enabled: false }, nodes: { labelHighlightBold: false, scaling: { label: { drawThreshold: 5, maxVisible: 44 } } },
+                       interaction: { hover: true, tooltipDelay: 150, zoomSpeed: 0.8, hideEdgesOnDrag: RAW_EDGES.length > 250, hideEdgesOnZoom: RAW_EDGES.length > 600 } });
+  new MutationObserver(() => setTimeout(pintar, 30)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  const enfocar = id => { foco = { nodos: new Set([id, ...network.getConnectedNodes(id)]), aristas: new Set(network.getConnectedEdges(id)) }; pintar(); };
+  network.on('selectNode', p => enfocar(p.nodes[0]));
+  network.on('deselectNode', () => { foco = null; pintar(); });
+
+  // barra: subir, familias de flecha y «Ver todo»
+  const barra = document.createElement('div');
+  barra.id = 'yod-barra';
+  barra.innerHTML = (Y.padre ? `<a class="yod-fuerte" href="${Y.padre[0]}">↑ ${esc2(Y.padre[1])}</a>` : '') +
+    Object.entries(Y.familias).filter(([k]) => Y.usadas.includes(k)).map(([k, f]) =>
+      `<button type="button" data-fam="${k}" aria-pressed="true" title="${f.nombre}"><i style="background:${f.color}"></i><span class="yod-l">${f.nombre}</span><span class="yod-c">${f.corto}</span></button>`).join('') +
+    '<button type="button" id="yod-todo" class="yod-fuerte">Ver todo</button>';
+  document.body.appendChild(barra);
+  barra.addEventListener('click', ev => {
+    const b = ev.target.closest('button'); if (!b) return;
+    if (b.id === 'yod-todo') { foco = null; network.unselectAll(); pintar(); ajustar(true); inicio(); return; }
+    const k = b.dataset.fam; if (ocultas.has(k)) ocultas.delete(k); else ocultas.add(k);
+    b.setAttribute('aria-pressed', String(!ocultas.has(k))); pintar();
+  });
+
+  // rejilla del cuadrante: los títulos crecen al alejarse para que siempre se lean
+  const g = Y.rejilla, W = g.cols.reduce((s, c) => s + c.w, 0), Ht = g.filas.reduce((s, f) => s + f.h, 0);
+  const MS = Math.max(70, Math.min(150, Ht * 0.07));
+  const letra = (ctx, t) => { ctx.font = '600 ' + t + 'px system-ui, -apple-system, sans-serif'; };
+  network.on('beforeDrawing', ctx => {
+    const sc = network.getScale() || 1;
+    const linea = css('--border') || '#ccc', texto = css('--text-2') || '#666', fondo = css('--panel') || '#f6f6f6';
+    ctx.save();
+    g.filas.forEach((f, i) => { if (i % 2 === 0) { ctx.fillStyle = fondo; ctx.globalAlpha = 0.6; ctx.fillRect(0, f.y, W, f.h); } });
+    ctx.globalAlpha = 1; ctx.strokeStyle = linea; ctx.lineWidth = 1.5 / Math.min(1, sc * 1.6);
+    g.cols.forEach(c => { ctx.beginPath(); ctx.moveTo(c.x, -MS); ctx.lineTo(c.x, Ht); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(W, -MS); ctx.lineTo(W, Ht); ctx.stroke();
+    g.filas.forEach(f => { ctx.beginPath(); ctx.moveTo(0, f.y); ctx.lineTo(W, f.y); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(0, Ht); ctx.lineTo(W, Ht); ctx.stroke();
+    ctx.fillStyle = texto; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'center';
+    g.cols.forEach(c => {
+      let t = Math.max(20, Math.min(15 / sc, MS * 0.62)); letra(ctx, t);
+      while (t > 11 && ctx.measureText(c.nombre).width > c.w - 14) { t -= 1; letra(ctx, t); }
+      if (ctx.measureText(c.nombre).width > c.w - 14) { const p = c.nombre.split(' '), m = Math.ceil(p.length / 2); ctx.fillText(p.slice(0, m).join(' '), c.x + c.w / 2, -t - 14); ctx.fillText(p.slice(m).join(' '), c.x + c.w / 2, -10); }
+      else ctx.fillText(c.nombre, c.x + c.w / 2, -12);
+    });
+    ctx.textAlign = 'left';
+    g.filas.forEach(f => {
+      let t = Math.max(17, Math.min(14 / sc, f.h * 0.4)); letra(ctx, t);
+      while (t > 12 && ctx.measureText(f.nombre).width > W - 20) { t -= 2; letra(ctx, t); }
+      ctx.globalAlpha = t > 30 ? 0.42 : 0.8; ctx.fillText(f.nombre, 9, f.y + t + 5);
+    });
+    ctx.globalAlpha = 1; ctx.restore();
+  });
+  const marco = (x0, y0, x1, y1, animar) => {
+    const el = document.getElementById('graph'), w = el.clientWidth, h = el.clientHeight;
+    const arriba = (document.getElementById('yod-barra') || { offsetHeight: 0 }).offsetHeight + 12;
+    const s = Math.max(0.04, Math.min((w - 10) / (x1 - x0), (h - arriba - 8) / (y1 - y0), 1.5));
+    network.moveTo({ position: { x: (x0 + x1) / 2, y: (y0 + y1) / 2 - arriba / 2 / s }, scale: s, animation: animar ? { duration: 350, easingFunction: 'easeInOutQuad' } : false });
+  };
+  const ajustar = animar => marco(-14, -MS - 6, W + 14, Ht + 12, animar);
+  const aFila = f => { const el = document.getElementById('graph'), r = el.clientWidth / Math.max(200, el.clientHeight - 60); marco(-10, f.y - 10, Math.min(W + 10, Math.max(540, (f.h + 20) * r)) - 10, f.y + f.h + 10, true); };
+  const aCol = c => { const el = document.getElementById('graph'), r = Math.max(200, el.clientHeight - 60) / el.clientWidth; marco(c.x - 12, -MS, c.x + c.w + 12, Math.min(Ht + 10, Math.max(420, (c.w + 24) * r) - MS), true); };
+  let tocado = false;
+  const cont = document.getElementById('graph');
+  ['pointerdown', 'wheel', 'touchstart'].forEach(ev => cont.addEventListener(ev, () => { tocado = true; }, { passive: true }));
+  network.once('afterDrawing', () => { if (!foco) ajustar(false); });
+  [60, 250, 700, 1500].forEach(ms => setTimeout(() => { if (!foco && !tocado) ajustar(false); }, ms));
+  window.addEventListener('resize', () => setTimeout(() => { if (!foco) ajustar(false); }, 80));
+  const ir = document.createElement('select'); ir.id = 'yod-ir'; ir.setAttribute('aria-label', 'Acercar a una fila o columna');
+  ir.innerHTML = '<option value="">Acercar a…</option><optgroup label="Filas">' + g.filas.map((f, i) => `<option value="f${i}">${esc2(f.nombre)}</option>`).join('') +
+    '</optgroup><optgroup label="Columnas">' + g.cols.map((c, i) => `<option value="c${i}">${esc2(c.nombre)}</option>`).join('') + '</optgroup>';
+  barra.insertBefore(ir, barra.querySelector('button'));
+  ir.addEventListener('change', () => { const v = ir.value; if (!v) return; tocado = true; if (v[0] === 'f') aFila(g.filas[+v.slice(1)]); else aCol(g.cols[+v.slice(1)]); ir.value = ''; });
+
+  // panel de detalle
+  const enlace = (t, id) => t[0] ? `<a href="${t[0]}#${encodeURIComponent(id)}">${esc2(t[1])}</a>` : esc2(t[1]);
+  window.showInfo = function (nodeId) {
+    const p = Y.nodos[nodeId]; if (!p) return;
+    const eds = network.getConnectedEdges(nodeId);
+    const vecinos = eds.map(eid => {
+      const r = RAW_EDGES[eid], otro = r.from === nodeId ? r.to : r.from, fl = det(r), q = Y.nodos[otro] || {};
+      return `<span class="neighbor-link" style="border-left-color:${esc2((Y.familias[fl.f] || {}).color || '#888')}" data-nid="${esc2(otro)}">${r.from === nodeId ? '→' : '←'} ${esc2(q.nombre || otro)} <i style="opacity:.72">· ${esc2(fl.r || '')}</i></span>`;
+    }).join('');
+    let h = `<div class="field"><b>${esc2(p.nombre)}</b></div><div class="field yod-tipo">${esc2(p.tipo)}${p.estado ? ' · ' + esc2(p.estado) : ''}</div>`;
+    if (p.dentro) h += `<a class="yod-entrar" href="${p.dentro[0]}">Entrar a ${esc2(p.dentro[1])} →</a>`;
+    if (p.nota) h += `<div class="field">${esc2(p.nota)}</div>`;
+    if (p.err) h += p.err.map(x => `<div class="field yod-alerta"><b>${x.tipo === 'cambio' ? 'Cambió' : 'Error'}</b> · ${esc2(x.msg)}${x.desde ? ' · desde ' + esc2(String(x.desde).slice(0, 10)) : ''}${x.url ? ` · <a href="${esc2(x.url)}" target="_blank" rel="noopener" style="color:inherit">ver</a>` : ''}</div>`).join('');
+    if (p.al) h += p.al.map(a => `<div class="field yod-alerta"><b>Hallazgo</b> · <a href="hallazgos.html#${encodeURIComponent(a[0])}" style="color:inherit">${esc2(a[1])}</a></div>`).join('');
+    if (p.lista) h += `<details class="yod-lista"${p.lista.length <= 24 ? ' open' : ''}><summary>${esc2(p.lt)}</summary><div>${p.lista.map(x => `<span>${esc2(x)}</span>`).join('')}</div></details>`;
+    if (p.ev) h += `<div class="field yod-ev">Evidencia: ${esc2(p.ev)}</div>`;
+    if (p.url) h += `<a class="yod-abrir" href="${esc2(p.url)}" target="_blank" rel="noopener">Abrir la fuente ↗</a>`;
+    if (p.tb && p.tb.length) h += `<div class="field yod-tb">También aparece en: ${p.tb.map(t => enlace(t, nodeId)).join(' · ')}</div>`;
+    h += `<div class="field yod-ev">Celda: ${esc2(p.celda)}</div>`;
+    if (eds.length) h += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Conexiones (${eds.length})</div><div id="neighbors-list">${vecinos}</div>`;
+    document.getElementById('info-content').innerHTML = h;
+  };
+  window.focusNode = function (id) {
+    const p = Y.nodos[id] || {}, el = document.getElementById('graph');
+    const s = p.forma === 'box' ? Math.min(1, (el.clientWidth - 24) / ((p.caja || 300) + 40)) : Math.min(0.9, Math.max(0.6, el.clientWidth / 520));
+    network.focus(id, { scale: s, animation: true }); network.selectNodes([id]); showInfo(id); enfocar(id);
+  };
+  const inicio = () => { const c = document.getElementById('info-content');
+    if (c) c.innerHTML = `<div class="field"><b>${esc2(Y.titulo)}</b></div><div class="field">${esc2(Y.sub)}</div><div class="field yod-ev">Toca un nodo para ver qué es, de dónde le llega y a dónde va. Con «Acercar a…» saltas a una fila o a una columna.</div>`; };
+  inicio();
+  network.on('click', p => {
+    if (p.nodes.length) return;
+    if (p.edges.length) {
+      const r = RAW_EDGES[p.edges[0]], fl = det(r), a = Y.nodos[r.from] || {}, b = Y.nodos[r.to] || {};
+      document.getElementById('info-content').innerHTML = `<div class="field"><b>${esc2(a.nombre)} → ${esc2(b.nombre)}</b></div><div class="field">${esc2(fl.r || '')}</div>` +
+        `<div class="field yod-tipo">${esc2((Y.familias[fl.f] || {}).nombre || '')}</div>` + (fl.nota ? `<div class="field">${esc2(fl.nota)}</div>` : '') +
+        (fl.ev ? `<div class="field yod-ev">Evidencia: ${esc2(fl.ev)}</div>` : '') +
+        `<span class="neighbor-link" data-nid="${esc2(r.from)}">← ${esc2(a.nombre)}</span><span class="neighbor-link" data-nid="${esc2(r.to)}">→ ${esc2(b.nombre)}</span>`;
+      return;
+    }
+    const c = p.pointer.canvas;
+    if (c.y < 0 && c.y > -MS - 30) { const col = g.cols.find(k => c.x >= k.x && c.x <= k.x + k.w); if (col) { aCol(col); return; } }
+    inicio();
+  });
+  network.on('doubleClick', p => { const d = p.nodes.length && Y.nodos[p.nodes[0]] && Y.nodos[p.nodes[0]].dentro; if (d) yodIr(d[0]); });
+
+  // textos del visor en español
+  const tx = (sel, t) => { const el = document.querySelector(sel); if (el) el.textContent = t; };
+  tx('#info-panel h3', 'Detalle'); tx('#legend-wrap h3', 'Celdas de esta lámina');
+  const inp = document.getElementById('search'); if (inp) inp.placeholder = 'Buscar en esta lámina…';
+  const lbl = document.querySelector('#legend-controls label'); if (lbl) lbl.lastChild.textContent = 'Todas';
+  document.querySelectorAll('[data-theme-choice]').forEach(b => { b.textContent = { light: 'Claro', dark: 'Oscuro', system: 'Sistema' }[b.dataset.themeChoice] || b.textContent; });
+  const st = document.getElementById('stats'); if (st) st.textContent = Y.pie;
+  const sim = document.createElement('div'); sim.id = 'yod-simbolos';
+  sim.innerHTML = Y.simbolos.map(s => `<b><span style="color:${s[1]}">${s[0]}</span> ${esc2(s[2])}</b>`).join('');
+  if (st && st.parentNode) st.parentNode.insertBefore(sim, st);
+
+  // errores en vivo: estado.json lo escribe cada hora el flujo «Grafo · estado» del repositorio
+  fetch(Y.estado || 'estado.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(E => {
+    if (!E || !E.errores) return; let n = 0;
+    E.errores.forEach(x => (x.nodos || []).forEach(id => { const p = Y.nodos[id]; if (!p) return; (p.err = p.err || []).push(x); if (x.tipo !== 'cambio') { p.al = p.al || []; p.bc = '#C8102E'; } else if (!p.bc) p.bc = '#C99A12'; n++; }));
+    if (n) { pintar(); const st2 = document.getElementById('stats'); if (st2) st2.textContent = Y.pie + ' · estado del ' + (E.generado || '').slice(0, 16).replace('T', ' ') + ' UTC'; }
+  }).catch(() => {});
+  // llegar con un nodo señalado en la liga, y avisar a la portada qué lámina es
+  const abrir = () => { let id = ''; try { id = window.YOD_FOCO || decodeURIComponent(location.hash.slice(1)); } catch (e) {} if (Y.nodos[id]) focusNode(id); };
+  if (window.YOD_FOCO || location.hash.length > 1) setTimeout(abrir, 280);
+  window.addEventListener('hashchange', abrir);
+  try { if (window.parent && window.parent !== window) window.parent.postMessage({ yod: 1, id: Y.id }, '*'); } catch (e) {}
+})();
+
+network.once('stabilizationIterationsDone', () => {
+  network.setOptions({ physics: { enabled: false } });
+});
+
+function showInfo(nodeId) {
+  const n = nodesDS.get(nodeId);
+  if (!n) return;
+  const neighborIds = network.getConnectedNodes(nodeId);
+  const neighborItems = neighborIds.map(nid => {
+    const nb = nodesDS.get(nid);
+    const color = nb ? nb.color.background : '#555';
+    return `<span class="neighbor-link" style="border-left-color:${esc(color)}" data-nid="${esc(nid)}">${esc(nb ? nb.label : nid)}</span>`;
+  }).join('');
+  const isMetaNode = !n.file_type && !n.source_file;
+  let html = `<div class="field"><b>${esc(n.label)}</b></div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Type: ${esc(n.file_type || 'unknown')}</div>`;
+  }
+  html += `<div class="field">Community: ${esc(n.community_name || '')}</div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Source: ${esc(n.source_file || '-')}</div>`;
+  } else if (n.member_count !== undefined && n.member_count !== null) {
+    html += `<div class="field">Members: ${esc(n.member_count)}</div>`;
+  }
+  html += `<div class="field">Degree: ${n.degree}</div>`;
+  if (neighborIds.length) {
+    html += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Neighbors (${neighborIds.length})</div><div id="neighbors-list">${neighborItems}</div>`;
+  }
+  document.getElementById('info-content').innerHTML = html;
+}
+
+function focusNode(nodeId) {
+  network.focus(nodeId, { scale: 1.4, animation: true });
+  network.selectNodes([nodeId]);
+  showInfo(nodeId);
+}
+
+// Neighbor links use a data attribute + one delegated listener rather than an
+// inline onclick. A node id/label sourced from a document or a scraped URL
+// (graphify add) can contain a double-quote; dropping the stringified id
+// unescaped into a quoted onclick both broke every link and allowed a hostile
+// source to inject an event handler into the local report (stored XSS, #1838).
+// esc() on data-nid keeps the value inside the attribute; the listener reads it
+// back verbatim. Bound to document so it survives the innerHTML rebuild that
+// recreates #neighbors-list on each showInfo().
+document.addEventListener('click', e => {
+  const el = e.target.closest('.neighbor-link');
+  if (el && el.dataset.nid !== undefined) focusNode(el.dataset.nid);
+});
+
+// Sidebar tooltips reuse vis-network's .vis-tooltip style and 100ms tooltipDelay.
+// Names get one only when CSS ellipsis truncates them (the full text is still in
+// the DOM); counts always get one, to say what the number is. Text is set with
+// textContent only (labels are untrusted). Delegated on document so rows rebuilt
+// later (search results, showInfo()) are covered.
+const sidebarTip = document.createElement('div');
+sidebarTip.className = 'vis-tooltip';
+sidebarTip.style.cssText = 'white-space: normal; max-width: 360px; overflow-wrap: break-word;';
+document.body.appendChild(sidebarTip);
+let sidebarTipTimer = null;
+let sidebarTipEl = null;    // element whose text the tooltip shows
+let sidebarTipZone = null;  // element the pointer must leave to hide it
+function hideSidebarTip() {
+  clearTimeout(sidebarTipTimer);
+  sidebarTip.style.visibility = 'hidden';
+  sidebarTip.textContent = '';
+  sidebarTipEl = sidebarTipZone = null;
+}
+document.addEventListener('mouseover', e => {
+  const zone = e.target.closest && e.target.closest('.legend-count, .legend-item, .search-item, .neighbor-link');
+  // Anywhere on a legend row except its count (dot, checkbox, gaps, padding)
+  // stands for the row's name, so moving within the row never re-triggers it.
+  const el = zone && zone.classList.contains('legend-item') ? zone.querySelector('.legend-label') : zone;
+  if (!el || el === sidebarTipEl) return;
+  hideSidebarTip();
+  const isCount = el.classList.contains('legend-count');
+  if (!isCount && el.scrollWidth <= el.clientWidth) return;
+  const text = isCount ? `${el.textContent} ${el.textContent === '1' ? 'nodo' : 'nodos'}` : el.textContent;
+  sidebarTipEl = el;
+  sidebarTipZone = zone;
+  const x = e.clientX, y = e.clientY;
+  sidebarTipTimer = setTimeout(() => {
+    sidebarTip.textContent = text;
+    sidebarTip.style.left = sidebarTip.style.top = '0px';  // measure at full max-width
+    sidebarTip.style.visibility = 'visible';
+    const w = sidebarTip.offsetWidth, h = sidebarTip.offsetHeight;
+    sidebarTip.style.left = Math.max(4, Math.min(x + 12, window.innerWidth - w - 4)) + 'px';
+    sidebarTip.style.top = (y + 16 + h > window.innerHeight ? Math.max(4, y - h - 8) : y + 16) + 'px';
+  }, 100);
+});
+document.addEventListener('mouseout', e => {
+  if (sidebarTipZone && !sidebarTipZone.contains(e.relatedTarget)) hideSidebarTip();
+});
+// A click rebuilds or hides the row (showInfo(), search pick) without a mouseout.
+document.addEventListener('mousedown', hideSidebarTip);
+
+// Track hovered node — hover detection is more reliable than click params
+let hoveredNodeId = null;
+network.on('hoverNode', params => {
+  hoveredNodeId = params.node;
+  container.style.cursor = 'pointer';
+});
+network.on('blurNode', () => {
+  hoveredNodeId = null;
+  container.style.cursor = 'default';
+});
+container.addEventListener('click', () => {
+  if (hoveredNodeId !== null) {
+    showInfo(hoveredNodeId);
+    network.selectNodes([hoveredNodeId]);
+  }
+});
+network.on('click', params => {
+  if (params.nodes.length > 0) {
+    showInfo(params.nodes[0]);
+  } else if (hoveredNodeId === null) {
+    document.getElementById('info-content').innerHTML = '<span class="empty">Toca un nodo para ver su detalle</span>';
+  }
+});
+
+const searchInput = document.getElementById('search');
+const searchResults = document.getElementById('search-results');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  searchResults.innerHTML = '';
+  if (!q) { searchResults.style.display = 'none'; return; }
+  const matches = RAW_NODES.filter(n => n.label.toLowerCase().includes(q)).slice(0, 20);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.style.display = 'block';
+  matches.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'search-item';
+    el.textContent = n.label;
+    el.style.borderLeft = `3px solid ${n.color.background}`;
+    el.style.paddingLeft = '8px';
+    el.onclick = () => {
+      network.focus(n.id, { scale: 1.5, animation: true });
+      network.selectNodes([n.id]);
+      showInfo(n.id);
+      searchResults.style.display = 'none';
+      searchInput.value = '';
+    };
+    searchResults.appendChild(el);
+  });
+});
+document.addEventListener('click', e => {
+  if (!searchResults.contains(e.target) && e.target !== searchInput)
+    searchResults.style.display = 'none';
+});
+
+const hiddenCommunities = new Set();
+
+const selectAllCb = document.getElementById('select-all-cb');
+
+function updateSelectAllState() {
+  const total = LEGEND.length;
+  const hidden = hiddenCommunities.size;
+  selectAllCb.checked = hidden === 0;
+  selectAllCb.indeterminate = hidden > 0 && hidden < total;
+}
+
+function toggleAllCommunities(hide) {
+  document.querySelectorAll('.legend-item').forEach(item => {
+    hide ? item.classList.add('dimmed') : item.classList.remove('dimmed');
+  });
+  document.querySelectorAll('.legend-cb').forEach(cb => {
+    cb.checked = !hide;
+  });
+  LEGEND.forEach(c => {
+    if (hide) hiddenCommunities.add(c.cid); else hiddenCommunities.delete(c.cid);
+  });
+  const updates = RAW_NODES.map(n => ({ id: n.id, hidden: hide }));
+  nodesDS.update(updates);
+  updateSelectAllState();
+}
+
+const legendEl = document.getElementById('legend');
+LEGEND.forEach(c => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.className = 'legend-cb';
+  cb.checked = true;
+  cb.addEventListener('change', (e) => {
+    e.stopPropagation();
+    if (cb.checked) {
+      hiddenCommunities.delete(c.cid);
+      item.classList.remove('dimmed');
+    } else {
+      hiddenCommunities.add(c.cid);
+      item.classList.add('dimmed');
+    }
+    const updates = RAW_NODES
+      .filter(n => n.community === c.cid)
+      .map(n => ({ id: n.id, hidden: !cb.checked }));
+    nodesDS.update(updates);
+    updateSelectAllState();
+  });
+  item.innerHTML = `<div class="legend-dot" style="background:${c.color}"></div>
+    <span class="legend-label">${c.label}</span>
+    <span class="legend-count">${c.count}</span>`;
+  item.prepend(cb);
+  item.onclick = (e) => {
+    if (e.target === cb) return;
+    cb.checked = !cb.checked;
+    cb.dispatchEvent(new Event('change'));
+  };
+  legendEl.appendChild(item);
+});
+</script>
+<script>
+// Render hyperedges as shaded regions
+const hyperedges = [];
+// afterDrawing passes ctx already transformed to network coordinate space.
+// Draw node positions raw — no manual pan/zoom/DPR math needed.
+
+// Andrew's monotone chain. Returns the hull in counter-clockwise order, which
+// is what the perimeter must be traced in. Collinear and duplicate points
+// collapse to the extremes, so degenerate member sets render as a segment
+// rather than a zero-area crossed path.
+function convexHull(pts) {
+    const p = pts.slice().sort((a, b) => (a.x - b.x) || (a.y - b.y));
+    if (p.length < 3) return p;
+    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const build = seq => {
+        const out = [];
+        for (const q of seq) {
+            while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+            out.push(q);
+        }
+        out.pop();
+        return out;
+    };
+    const hull = build(p).concat(build(p.slice().reverse()));
+    return hull.length >= 3 ? hull : p;
+}
+network.on('afterDrawing', function(ctx) {
+    hyperedges.forEach(h => {
+        // Legend toggles only set `hidden` on nodes; getPositions() still
+        // returns them, so skip hidden members or their hull lingers.
+        const positions = h.nodes
+            .filter(nid => { const n = nodesDS.get(nid); return n && n.hidden !== true; })
+            .map(nid => network.getPositions([nid])[nid])
+            .filter(p => p !== undefined);
+        if (positions.length < 2) return;
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#6366f1';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Centroid and expanded hull in network coordinates.
+        // The perimeter must follow hull order, not h.nodes order: tracing the
+        // raw member order self-intersects whenever the layout does not happen
+        // to place members in angular order, filling as crossed wedges.
+        const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length;
+        const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length;
+        const hull = convexHull(positions);
+        const expanded = hull.map(p => ({
+            x: cx + (p.x - cx) * 1.15,
+            y: cy + (p.y - cy) * 1.15
+        }));
+        ctx.moveTo(expanded[0].x, expanded[0].y);
+        expanded.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+        // Label
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#4f46e5';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(h.label, cx, cy - 5);
+        ctx.restore();
+    });
+});
+</script>
+</body>
+</html>

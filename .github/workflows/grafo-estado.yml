@@ -1,0 +1,38 @@
+name: Grafo · estado
+# Cada hora revisa flujos, chinches, cambios y páginas de los repositorios del grafo (sólo lectura) y deja el
+# resultado en la rama de datos `grafo-datos`: la principal está protegida y no se escribe en ella.
+# También corre en cuanto se aprueba un grafo (cambia grafo/versiones.json en la principal), para no esperar a la hora.
+on:
+  schedule:
+    - cron: '17 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'grafo/versiones.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+  issues: write
+concurrency:
+  group: grafo-datos
+  cancel-in-progress: false
+jobs:
+  estado:
+    name: Revisar errores y cambios (sólo lectura)
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Traer la rama de datos
+        run: bash scripts/grafo-rama-datos.sh traer
+      - name: Leer flujos, chinches, cambios y páginas
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/grafo-estado.cjs --chinches --salida "$RUNNER_TEMP/grafo-datos"
+      - name: Guardar estado y registro
+        run: |
+          bash scripts/grafo-rama-datos.sh guardar 'Grafo: estado del sistema'

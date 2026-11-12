@@ -2,3 +2,7 @@ gas/
 .DS_Store
 mockup.html
 .gas-backups/
+
+# Python
+__pycache__/
+*.pyc

@@ -1,19 +1,20 @@
 {
-  "model_revision": "2026-11-11.ppp-cadena.1",
-  "proposal_id": "CHG-PPP-CADENA-20261111",
-  "summary": "Diagrama en cadena arriba del Plan de Potencial vertical (mixto.html): pieza común nueva ppp-cadena.js + ppp-cadena.css, sólo presentación, que dibuja en cuatro eslabones (Se vende → Entra y sale → En el banco y prestado → Lo que queda) el mismo estado que el tablero ya confirmó; no calcula, no usa red ni almacenamiento. Ganchos: una llamada al final de render() en mixto.html, PPPView.reveal en ppp-ui.js (muestra un control sin enfocarlo) y una línea en ppp-intake.js que vacía el diagrama al capturar un plan nuevo. Los botones del diagrama son las versiones existentes del caso (escCambiar). Criterio móvil de las pruebas restablecido por tener el diagrama arriba. Etiqueta propia 20261111-cadena: accesos.html y las demás páginas sólo cambian su etiqueta. Atlas fijado en el commit de la propuesta CHG-PPP-CADENA-20261111 de yod-portal. Sin backend, hojas, permisos ni datos de casos.",
+  "model_revision": "2026-11-11.grafo-accesos.3",
+  "proposal_id": "CHG-GRAFO-ACCESOS-20261111",
+  "summary": "accesos.html agrega al final la sección «Grafo del sistema» (sólo admin) con sus controles. El motor del grafo vive en grafo-motor/ (base pública, generador determinista de láminas, refresco desde los repositorios públicos y el atlas). «Rehacer grafo» abre un pedido; el flujo «Grafo · rehacer» comprueba el permiso de quien lo pide, rehace, pide a OpenAI y a Claude a la vez la explicación del cambio (sólo si hay claves como secretos del flujo) y deja el resultado como borrador en la rama grafo-borrador con su PR: fusionarlo es aprobar. «Grafo · estado» revisa cada hora flujos, chinches, cambios y páginas (sólo lectura), escribe en la rama de datos grafo-datos y abre una chinche por cada falla. El grafo publicado es la versión completa que eligió Dirección (identificadores y pestañas de hojas y el plan propuesto); nunca lleva repositorios privados, clientes externos, hallazgos de seguridad, nombres de personas ni de tratos, correos, claves ni identificadores completos de /exec. Cada grafo aprobado publica el contrato del plan y las recetas por audiencia que leen las presentaciones. Sin cambios en portero.js, backend, hojas ni permisos; ningún flujo escribe en la rama principal.",
   "components": [
     "SYS-POTENCIALES",
     "SYS-CONTROL"
   ],
   "tests": [
-    "node --check ppp-cadena.js && node --test tests/ppp-cadena.test.cjs (7 pruebas: cuadre contra el motor en 11 variantes y 400 combinaciones al azar; sin red, almacenamiento ni motor)",
-    "node tests/ppp-cadena-browser.cjs (Chromium y WebKit, transporte sintético: montaje, acordeón y cuadrícula, versiones, cadena con «antes», edición viva, ligas, modelo nativo, 320/390/430/1280 px, tema oscuro, cero escrituras)",
-    "node --test tests/ppp-ui.test.cjs (motor byte a byte igual al de referencia) y las demás pruebas de nodo del flujo «Verificar interfaz PPP»",
-    "Recorridos de navegador existentes del flujo «Verificar interfaz PPP», con el criterio móvil restablecido en tests/ppp-browser.cjs y tests/ppp-terrain-browser.cjs",
-    "node scripts/versiones.cjs --check",
-    "verificar-impacto contra el atlas fijado en .github/workflows/arquitectura.yml",
-    "git diff --check"
+    "python -m unittest discover -s grafo-motor/pruebas -p 'prueba_*.py' (recetas contra el contrato del plan, carrera de las dos IA con servidores locales, refresco sobre un repositorio sintético, versiones, registro de impacto del borrador, avisos con y sin PR, láminas deterministas).",
+    "Prueba «LoPublicado» del motor: la base publicada no trae correos, claves, folios de tratos, repositorios privados, hallazgos de seguridad ni identificadores completos de /exec.",
+    "node --test tests/grafo-estado.test.cjs tests/grafo-control.test.cjs (vigilante con API de mentira, puesta al día del aviso de borrador, controles pintados y escapados, sin claves).",
+    "node --test tests/access-gates.cjs tests/accesos-admin-session.test.cjs; node scripts/versiones.cjs --check; git diff --check.",
+    "Rama de datos con dos flujos escribiendo a la vez contra un remoto local: se conservan las líneas de ambos.",
+    "Borrador simulado contra un remoto local: verificar-impacto del atlas fijado lo da por válido y sus láminas son las que genera su base.",
+    "node tests/grafo-accesos-browser.cjs (en «Verificar acceso PPP»): Accesos con sesión de admin sintética en 1280 y 390 px, con y sin borrador, vista previa sin publicar, pedido de rehacer y apagado sin sesión; sin escrituras ni errores de JavaScript.",
+    "Trabajo «ensayo» de «Grafo · rehacer» en este PR. Pendiente de comprobar en producción tras fusionar: pedido → flujo → borrador, primera corrida de «Grafo · estado» y publicación de Pages."
   ],
-  "rollback": "Revertir el PR: se quita el diagrama (archivos nuevos, ganchos y fuente) y vuelve el criterio móvil original de las pruebas. Sin backend, hojas, casos ni sesiones que restaurar."
+  "rollback": "Revertir el merge, desactivar los flujos «Grafo · rehacer» y «Grafo · estado» y borrar las ramas grafo-datos y grafo-borrador. grafo/ y grafo-motor/ son archivos estáticos sin efecto en el Portero."
 }

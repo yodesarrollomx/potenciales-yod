@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Código · sala-edicion · nube/ · YOD OS en Graphify</title>
+<script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
+        integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"
+        crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #0f0f1a; --panel: #1a1a2e; --border: #2a2a4e; --input-border: #3a3a5e;
+    --text: #e0e0e0; --text-2: #aaa; --text-3: #ccc; --muted: #555; --count: #666;
+    --neighbor-border: #333; --node-label: #ffffff;
+  }
+  [data-theme="light"] {
+    --bg: #ffffff; --panel: #f8f9fa; --border: #d9dee5; --input-border: #c3cad4;
+    --text: #222222; --text-2: #666666; --text-3: #333333; --muted: #888888; --count: #777777;
+    --neighbor-border: #ccc; --node-label: #222222;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  #graph { flex: 1; }
+  #sidebar { width: 280px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  #search-wrap { padding: 12px; border-bottom: 1px solid var(--border); }
+  #search { width: 100%; background: var(--bg); border: 1px solid var(--input-border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+  #search:focus { border-color: #4E79A7; }
+  #search-results { max-height: 140px; overflow-y: auto; padding: 4px 12px; border-bottom: 1px solid var(--border); display: none; }
+  .search-item { padding: 4px 6px; cursor: pointer; border-radius: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-item:hover { background: var(--border); }
+  #info-panel { padding: 14px; border-bottom: 1px solid var(--border); min-height: 140px; }
+  #info-panel h3 { font-size: 13px; color: var(--text-2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #info-content { font-size: 13px; color: var(--text-3); line-height: 1.6; }
+  #info-content .field { margin-bottom: 5px; }
+  #info-content .field b { color: var(--text); }
+  #info-content .empty { color: var(--muted); font-style: italic; }
+  .neighbor-link { display: block; padding: 2px 6px; margin: 2px 0; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--neighbor-border); }
+  .neighbor-link:hover { background: var(--border); }
+  #neighbors-list { max-height: 160px; overflow-y: auto; margin-top: 4px; }
+  #legend-wrap { flex: 1; overflow-y: auto; padding: 12px; }
+  #legend-wrap h3 { font-size: 13px; color: var(--text-2); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
+  .legend-item:hover { background: var(--border); padding-left: 4px; }
+  .legend-item.dimmed { opacity: 0.35; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-count { color: var(--count); font-size: 11px; }
+  #stats { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  #legend-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 4px 0; }
+  #legend-controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-2); user-select: none; }
+  #legend-controls label:hover { color: var(--text); }
+  .legend-cb, #select-all-cb { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid var(--input-border); border-radius: 3px; background: var(--bg); cursor: pointer; position: relative; flex-shrink: 0; }
+  .legend-cb:checked, #select-all-cb:checked { background: #4E79A7; border-color: #4E79A7; }
+  .legend-cb:checked::after, #select-all-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  #select-all-cb:indeterminate { background: #4E79A7; border-color: #4E79A7; }
+  #select-all-cb:indeterminate::after { content: ''; position: absolute; left: 2px; top: 5px; width: 8px; height: 2px; background: #fff; border: none; transform: none; }
+  #theme-wrap { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  #theme-wrap button { flex: 1; background: var(--bg); color: var(--text-2); border: 1px solid var(--input-border); border-radius: 4px; padding: 3px 0; font-size: 11px; cursor: pointer; }
+  #theme-wrap button:hover { color: var(--text); }
+  #theme-wrap button[aria-pressed="true"] { background: #4E79A7; border-color: #4E79A7; color: #fff; }
+</style>
+<script id="graphify-theme-init">
+// Apply the saved theme before first paint (#3894). No saved choice keeps the
+// historical dark look; "system" follows prefers-color-scheme.
+(function () {
+  var pref = null;
+  try { pref = localStorage.getItem('graphify-theme'); } catch (e) {}
+  var t = pref === 'light' ? 'light'
+    : pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light'
+    : window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<style id="yod-capa">
+  #graph { position: relative; }
+  #yod-barra { position: fixed; top: 8px; left: 8px; right: 296px; z-index: 5; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+  #yod-barra button, #yod-barra a, #yod-barra select { pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; font: 500 12px system-ui, -apple-system, sans-serif; text-decoration: none;
+    color: var(--text); background: var(--panel); border: 1px solid var(--input-border); border-radius: 999px; padding: 5px 10px; min-height: 30px; cursor: pointer; }
+  #yod-barra button[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+  #yod-barra select { max-width: 150px; appearance: auto; }
+  #yod-barra i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  #yod-barra .yod-fuerte { font-weight: 650; }
+  #yod-barra .yod-c { display: none; }
+  .neighbor-link { white-space: normal !important; overflow-wrap: anywhere; line-height: 1.35; padding: 5px 6px !important; }
+  #neighbors-list { max-height: 260px !important; }
+  #info-content .field { overflow-wrap: anywhere; }
+  #info-content a { color: #4E79A7; }
+  [data-theme="dark"] #info-content a { color: #8FB8E8; }
+  .yod-tipo { color: var(--text-2); font-size: 12px; }
+  .yod-ev { color: var(--text-2); font-size: 11.5px; }
+  .yod-alerta { color: #C8102E; } [data-theme="dark"] .yod-alerta { color: #FF7B8A; }
+  .yod-entrar { display: block; margin: 8px 0; padding: 9px 11px; border-radius: 8px; background: #4E79A7; color: #fff !important; font-weight: 600; text-decoration: none; font-size: 13px; }
+  .yod-abrir { display: inline-block; margin: 2px 0 6px; font-size: 12px; }
+  .yod-lista { margin: 6px 0; font-size: 12px; } .yod-lista summary { cursor: pointer; color: var(--text-2); padding: 3px 0; }
+  .yod-lista div { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 0; } .yod-lista span { border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font: 11.5px ui-monospace, Menlo, monospace; }
+  .yod-tb { font-size: 12px; line-height: 1.7; }
+  #yod-simbolos { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 3px 10px; }
+  #yod-simbolos b { font-weight: 400; }
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    #graph { flex: 1 1 auto; min-height: 54vh; }
+    #sidebar { display: block; width: auto; max-height: 46vh; overflow-y: auto; border-left: 0; border-top: 1px solid var(--border); }
+    #theme-wrap { display: none; }
+    #info-panel { min-height: 0; }
+    #legend-wrap { overflow: visible; }
+    #yod-barra { right: 8px; gap: 4px; }
+    #yod-barra button, #yod-barra a, #yod-barra select { font-size: 11px; padding: 4px 8px; min-height: 28px; }
+    #yod-barra .yod-l { display: none; } #yod-barra .yod-c { display: inline; }
+    #yod-barra select { max-width: 112px; }
+    #yod-barra a.yod-fuerte { max-width: 150px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: inline-block; line-height: 20px; }
+  }
+</style>
+<script id="yod-datos">window.YOD = {"id":"codigo-sala-edicion-nube","titulo":"Código · sala-edicion · nube/","sub":"Carpeta nube/ del repositorio sala-edicion.","padre":["codigo-sala-edicion.html","Código · sala-edicion"],"nodos":{"sala-edicion::nube_sala_cliente":{"x":333,"y":72,"nombre":"sala_cliente.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"sala_cliente.py","ev":"sala-edicion/nube/sala_cliente.py · 393 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/sala_cliente.py","lt":"Funciones y símbolos (22)","lista":["metadatos_publicos()  · L63","SalaError  · L81",".__init__()  · L83","_TextoRespuesta  · L89",".__new__()  · L90","_exec_url()  · L96","_clave()  · L103","redactar()  · L123","avisar()  · L134","enmascarar_en_actions()  · L139","_leer_json()  · L151","_curl()  · L175","_urllib()  · L201","_pedir()  · L209","_validar_lectura()  · L254","_leer_sheet()  · L267","get()  · L296","sonda_get()  · L315","post()  · L336","slug_seguro()  · L354","hoy_hermosillo()  · L369","hora_hermosillo()  · L377"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"],["codigo-sala-edicion.html","Código · sala-edicion"]]},"sala-edicion::nube_snapshots_online":{"x":499,"y":72,"nombre":"snapshots_online.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"\nsnapshots_online.py","ev":"sala-edicion/nube/snapshots_online.py · 1360 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/snapshots_online.py","lt":"Funciones y símbolos (63)","lista":["OnlineError  · L59","canonical()  · L63","digest()  · L68","allowed()  · L72","validate_file()  · L84","encode_archive()  · L101","decode_archive()  · L140","receipt_matches()  · L196","receipt_differences()  · L203","NoRedirect  · L220",".redirect_request()  · L221","GitHub  · L225",".__init__()  · L226",".request()  · L229",".asset()  · L264",".upload()  · L290","Snapshots  · L324",".__init__()  · L325",".git()  · L345",".head()  · L352",".main()  · L358",".state()  · L361",".save()  · L368",".output()  · L371","._lock_info()  · L381",".acquire()  · L398",".assert_lease()  · L459",".release()  · L467",".releases()  · L496",".latest()  · L509",".validate_release()  · L525",".archive()  · L538",".download()  · L552","._reader_ready()  · L590","handle_starttag()  · L595","._parse_media()  · L609",".assert_media_reader_published()  · L622",".media_manifest()  · L663",".anonymous_media()  · L669","parsed_url()  · L671","._assert_media_origin()  · L707","._media_cache()  · L719","fetch()  · L724",".hydrate_media()  · L739","._prepare_media()  · L768","checkpoint()  · L790",".fingerprint()  · L808",".apply()  · L819",".bootstrap()  · L836",".prepare()  · L857","existing()  · L903",".dispatch_publish()  · L958","matching_runs()  · L967",".stage()  · L1010",".site_files()  · L1048",".build_site()  · L1080",".plan_hash_for_receipt()  · L1097",".media_hash_for_receipt()  · L1105",".verify_receipt()  · L1113",".confirm()  · L1152",".publish_raw()  · L1180",".file_is_published()  · L1279","cli()  · L1323"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"],["relojes.html","Relojes · lo que corre solo"],["codigo-sala-edicion.html","Código · sala-edicion"]]},"sala-edicion::nube_sala_v4":{"x":665,"y":72,"nombre":"sala_v4.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"sala_v4.py","ev":"sala-edicion/nube/sala_v4.py · 1428 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/sala_v4.py","lt":"Funciones y símbolos (79)","lista":["V4Error  · L77","hoy()  · L81","ahora()  · L86","entero()  · L90","separar()  · L99","leer()  · L116","guardar()  · L123","regla()  · L138","semilla()  · L146","al_canon()  · L150","universo_de()  · L163","slug()  · L189","textos()  · L194","exigir_sin_veto()  · L205","reparto()  · L212","lugares_de()  · L217","objetos_de()  · L221","utileria()  · L228","llave_canon()  · L237","id_drive()  · L244","registro_canon()  · L254","referencia_de()  · L260","por_pintar()  · L275","elenco()  · L285","tomas_de()  · L294","validar_serie()  · L298","prompt_toma()  · L337","inspiracion()  · L431","candados_texto()  · L442","vertice_siguiente()  · L461","temporada_pendiente()  · L468","mundo_texto()  · L478","renglones()  · L480","plan_texto()  · L492","conocidos()  · L512","_lista()  · L532","armar_serie()  · L538","elemento()  · L551","pensador()  · L625","semillero()  · L633","descripcion_ficha()  · L691","huella()  · L705","necesarios()  · L709","agrega()  · L715","a_jpeg()  · L733","_archivo_ficha()  · L750","origen_imagen()  · L755","quien_es_quien()  · L765","piloto_de()  · L802","retrato_pendiente()  · L807","retratos_pendientes()  · L829","sacar_retratos()  · L840","fichas()  · L863","gastado_fichas()  · L967","gastado_hoy()  · L973","ultima()  · L978","marca_de()  · L983","en_pie()  · L990","pendiente()  · L995","_ffmpeg()  · L1010","cuadro()  · L1016","_tiene_audio()  · L1022","unir()  · L1028","candidatas()  · L1051","nombre_de()  · L1058","esperan_imagen()  · L1062","preparar_episodio()  · L1070","producir_episodio()  · L1099","entradas()  · L1107","productor()  · L1155","… y 9 más"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"],["codigo-sala-edicion.html","Código · sala-edicion"]]},"sala-edicion::nube_sala_drive":{"x":831,"y":72,"nombre":"sala_drive.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"sala_drive.py","ev":"sala-edicion/nube/sala_drive.py · 302 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/sala_drive.py","lt":"Funciones y símbolos (13)","lista":["DriveError  · L45","_credenciales()  · L50","_token()  · L83","_peticion()  · L101","buscar_hijo()  · L136","asegurar_carpeta()  · L155","ruta_carpetas()  · L168","subir()  · L177","listar()  · L205","subir_documento()  · L227","mover()  · L249","bajar()  · L258","borrar()  · L268"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"],["codigo-sala-edicion.html","Código · sala-edicion"]]},"sala-edicion::nube_sala_mesa":{"x":333,"y":156,"nombre":"sala_mesa.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"sala_mesa.py","ev":"sala-edicion/nube/sala_mesa.py · 965 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/sala_mesa.py","lt":"Funciones y símbolos (34)","lista":["_leer()  · L53","fecha_de()  · L60","tiras_por_pieza()  · L68","publicadas()  · L85","vetadas()  · L94","fechas_montada()  · L103","contexto_produccion()  · L112","decision_del_sheet()  · L119","continuacion_visual()  · L132","abiertas()  · L139","portada()  · L190","guardia()  · L197","validar_nuevas_tomas()  · L210","tomas_presentables()  · L237","referencia()  · L249","contexto_visual()  · L258","producir_tomas()  · L265","preparar()  · L275","hidratar_tiras_activas()  · L375","remoto()  · L380","tiras_vigentes()  · L449","referencias_aprobadas()  · L467","piezas_por_prioridad()  · L472","priority()  · L475","ancestros_de()  · L494","conteos_seleccion()  · L515","seleccion_publica()  · L536","cantidad()  · L538","guardar_estado_mesa()  · L547","main()  · L574","_snapshot_publicado()  · L836","_existe_en_commit_publicado()  · L849","montar()  · L866","montar_desde_commit()  · L900"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"],["codigo-sala-edicion.html","Código · sala-edicion"]]},"sala-edicion::nube_sala_produccion":{"x":499,"y":156,"nombre":"sala_produccion.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"sala_produccion.py","ev":"sala-edicion/nube/sala_produccion.py · 399 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/sala_produccion.py","lt":"Funciones y símbolos (15)","lista":["contrato_invalido()  · L25","fecha_valida()  · L29","sello_valido()  · L36","id_valido()  · L43","validar_historica()  · L47","leer_tira()  · L138","validar_dia()  · L148","fechas_fuente()  · L162","cargar()  · L181","cargar_legacy()  · L220","resolver_tira()  · L263","resolver_guion()  · L330","guion_faltante()  · L370","es_video()  · L383","peticiones_abiertas()  · L389"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"],["codigo-sala-edicion.html","Código · sala-edicion"]]},"sala-edicion::nube_sala_consejo":{"x":665,"y":156,"nombre":"sala_consejo.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"sala_consejo.py","ev":"sala-edicion/nube/sala_consejo.py · 1127 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/sala_consejo.py","lt":"Funciones y símbolos (56)","lista":["ConsejoError  · L90","_clave_consejo()  · L96","_leer_como_consejo()  · L103","_escribir_como_consejo()  · L111","enviar_decision()  · L115","registrar()  · L126","_regla()  · L140","leer_reglas()  · L145","leer_candados()  · L151","_n_items()  · L170","cartas_pendientes()  · L177","_bajar()  · L206","_url_imagen()  · L218","_jpg_b64()  · L231","_tira()  · L238","_ruta()  · L265","laminas_de_carta()  · L269","tomas_de()  · L277","toma_de_portada()  · L281","sellar_tomas()  · L293","_id_drive()  · L329","_ffmpeg()  · L334","_duracion()  · L341","_oido()  · L350","material()  · L389","_post()  · L442","_json_de()  · L456","_hermes()  · L468","motores_pedidos()  · L481","motores_disponibles()  · L485","proveedor_de()  · L494","modelo_de()  · L498","llamar()  · L505","_mime()  · L565","_especialista()  · L575","_candados_texto()  · L588","_pedido()  · L598","juzgar()  · L619","uno()  · L622","veredicto()  · L653","_resumen()  · L680","firmar()  · L684","_llamadas_hoy()  · L723","corrida()  · L732","_entero()  · L811","nube_encendida()  · L818","_opciones()  · L822","sello_de_carta()  · L827","carta_para_expediente()  · L842","_guardar_expediente()  · L897","_salida_para_el_jurado()  · L913","expediente()  · L928","leer_veredictos()  · L969","votos_validos()  · L990","aplicar()  · L1015","marcador()  · L1077"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"],["relojes.html","Relojes · lo que corre solo"],["codigo-sala-edicion.html","Código · sala-edicion"]]},"sala-edicion::nube_sala_ejecutor":{"x":831,"y":156,"nombre":"sala_ejecutor.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"sala_ejecutor.py","ev":"sala-edicion/nube/sala_ejecutor.py · 505 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/sala_ejecutor.py","lt":"Funciones y símbolos (8)","lista":["etapas_habilitadas()  · L49","duracion_de()  · L56","subir_producto()  · L68","_leer_tira()  · L100","ejecutar_uno()  · L108","atorados()  · L278","main()  · L287","reservar()  · L454"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"]]},"sala-edicion::nube_sala_salida":{"x":333,"y":240,"nombre":"sala_salida.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"sala_salida.py","ev":"sala-edicion/nube/sala_salida.py · 761 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/sala_salida.py","lt":"Funciones y símbolos (42)","lista":["SalidaError  · L73","_regla()  · L79","_lista()  · L87","_entero()  · L91","activa()  · L98","video_en_pausa()  · L102","formato_de_salida()  · L107","_sin_acentos()  · L121","limpiar()  · L126","revisar_texto()  · L133","_liga()  · L171","componer()  · L178","_fecha_de()  · L189","leer_tira()  · L200","piezas_vigentes()  · L218","_original()  · L241","laminas_aprobadas()  · L250","sello_de_pieza()  · L282","_es_publicada()  · L288","_publicadas_del_repo()  · L300","filas_publicada()  · L314","estado_de_piezas()  · L323","resumen()  · L371","_bajar()  · L380","medios()  · L392","url_de()  · L405","proyeccion_de_la_mesa()  · L410","traer_imagen()  · L420","leer_expedientes()  · L440","receta()  · L448","leer_mesa()  · L459","para_el_jurado()  · L468","lista()  · L486","leer_paquetes()  · L500","_nombre_drive()  · L530","carpeta_del_paquete()  · L538","documento()  · L557","construir()  · L581","_hito()  · L619","expediente_con_paquete()  · L627","doblar_publicadas()  · L645","empacar()  · L694"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"],["relojes.html","Relojes · lo que corre solo"]]},"sala-edicion::nube_auditar_fallos":{"x":499,"y":240,"nombre":"auditar_fallos.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"auditar_fallos.py","ev":"sala-edicion/nube/auditar_fallos.py · 311 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/auditar_fallos.py","lt":"Funciones y símbolos (25)","lista":["AuditoriaError  · L31","ReadOnlyGitHub  · L35",".__init__()  · L37",".repo()  · L41",".request()  · L44",".asset()  · L49",".upload()  · L53","evidencia()  · L57","vetado()  · L65","firmas_no()  · L70","laminas()  · L75","descriptor()  · L84","descriptor_coherente()  · L88","evaluar()  · L93","block()  · L120","resumen_publico()  · L197","verificar_medio()  · L205","fresh()  · L216","fuentes()  · L221","digest_lecturas()  · L229","confirmar_snapshot()  · L232","guardar_privado()  · L256","main()  · L264","prohibida()  · L269","snapshot_check()  · L276"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"]]},"sala-edicion::nube_contenido_reglas":{"x":665,"y":240,"nombre":"contenido_reglas.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"\ncontenido_reglas.py","ev":"sala-edicion/nube/contenido_reglas.py · 82 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/contenido_reglas.py","lt":"Funciones y símbolos (7)","lista":["ContenidoVetado  · L16","normalizar()  · L20","ubicaciones()  · L25","prohibidas()  · L37","instruccion()  · L43","revisar()  · L51","exigir()  · L78"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"]]},"sala-edicion::nube_reanudar_cortes_metadatos":{"x":831,"y":240,"nombre":"reanudar_cortes_metadatos.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"reanudar_cortes_me\ntadatos.py","ev":"sala-edicion/nube/reanudar_cortes_metadatos.py · 266 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/reanudar_cortes_metadatos.py","lt":"Funciones y símbolos (11)","lista":["validate_manifest()  · L30","gas_read_only()  · L46","forbidden()  · L48","read_queue()  · L57","read_code_sha()  · L63","prepare_manifest()  · L74","immutable_effective()  · L99","check_target()  · L104","ensure_voice_match()  · L123","transition()  · L137","main()  · L157"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"]]},"sala-edicion::nube_verificar":{"x":333,"y":324,"nombre":"verificar.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"verificar.py","ev":"sala-edicion/nube/verificar.py · 415 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/verificar.py","lt":"Funciones y símbolos (18)","lista":["falla()  · L26","nota()  · L30","prueba_sello()  · L36","prueba_sin_claves()  · L49","prueba_workflows_no_filtran()  · L77","prueba_logs_publicos_limpios()  · L97","prueba_workflows_no_deciden()  · L119","literal()  · L128","prueba_workflows_no_despliegan_gas()  · L201","prueba_json_parsean()  · L216","prueba_manifiesto_completo()  · L228","prueba_peticiones_bien_formadas()  · L248","prueba_tiras_sanas()  · L272","prueba_drive_logica()  · L302","prueba_identidad_pasa_por_catalogo()  · L315","prueba_contenido_ubicaciones()  · L349","prueba_nube_no_escribe_ordenes()  · L372","main()  · L389"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"],["relojes.html","Relojes · lo que corre solo"]]},"sala-edicion::nube_entregar_cortes":{"x":499,"y":324,"nombre":"entregar_cortes.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"entregar_cortes.py","ev":"sala-edicion/nube/entregar_cortes.py · 187 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/entregar_cortes.py","lt":"Funciones y símbolos (10)","lista":["EntregaError  · L22","exigir()  · L26","preparar()  · L31","comprobar_medio()  · L62","coincidencia()  · L75","fuente()  · L84","contexto()  · L90","guardar_fila()  · L101","entregar()  · L109","main()  · L158"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"]]},"mas:codigo-sala-edicion-nube:codigo:(esta carpeta)":{"x":665,"y":324,"nombre":"+56 archivos más","forma":"dot","tam":9,"color":"#8A8F98","tipo":"Grupo","celda":"(esta carpeta) · Código","lbl":"+56 archivos más","lt":"Incluye","lista":["imagen_api_broker.mjs","salud_canario.py","medios_publicos.py","medios_reconexion.py","plan_agregados.py","recuperar_escena_cpu.py","sala_productor.py","comparacion_online.py","sala_catalogo.py","cierre_online.py","conciliar_medios.py","publicar_git.py","sala_chinches.py","sala_montador.py","sala_recibos.py","banco_escenas.py","sala_adaptativa.py","sala_arranque.py","sala_guion.py","sonda_medios_publicos.py","prueba_online.py","revision_diaria.py","correo_estado.py","piloto_omni.py","video_revision.py","comprobar_accesos.py","limpiar_log.py","mantenimiento_queued.py","preservar_medios.py","pruebas_drive_offline.py","sala_motores.py","corregir_metadatos_editoriales.py","probar_llaves.py","probar_persistencia.py","sala_puntajes.py","activar_regla_contenido.py","diagnosticar_instalacion.py","medir_lectura_sala.py","revision_video.py","revisiones_presentacion.py","sala_cambios.py","sala_compositor.py","sala_maquinas.py","sala_relevo.py","comprobar_veto_gas.py","probar_snapshots.py","sala_despertar.py","sala_vigencia.py","cola_identidad.py","sala_publicaciones.py","sellar_sala.py","sembrar_reglas_nube.py","sonda.py","cola_salud.py","modal_ltx.py","parche_contenido_gas.py"]},"f:sala-edicion:nube/README.md":{"x":1053,"y":72,"nombre":"README.md","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"(esta carpeta) · Documentos y datos","lbl":"README.md","ev":"sala-edicion/nube/README.md · 183 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/README.md","tb":[["codigo-sala-edicion.html","Código · sala-edicion"]]},"f:sala-edicion:nube/imagen_cpu_requirements.txt":{"x":1053,"y":156,"nombre":"imagen_cpu_requirements.txt","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"(esta carpeta) · Documentos y datos","lbl":"imagen_cpu_require\nments.txt","ev":"sala-edicion/nube/imagen_cpu_requirements.txt · 6 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/imagen_cpu_requirements.txt","tb":[["codigo-sala-edicion.html","Código · sala-edicion"]]},"sala-edicion::nube_motores_comun":{"x":333,"y":468,"nombre":"_comun.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"motores/ · Código","lbl":"_comun.py","ev":"sala-edicion/nube/motores/_comun.py · 104 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/motores/_comun.py","lt":"Funciones y símbolos (5)","lista":["MotorError  · L11",".__init__()  · L16","lamina_de()  · L23","toma_elegida()  · L74","traer_imagen()  · L81"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"],["codigo-sala-edicion.html","Código · sala-edicion"]]},"sala-edicion::nube_motores_init":{"x":499,"y":468,"nombre":"__init__.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"motores/ · Código","lbl":"__init__.py","ev":"sala-edicion/nube/motores/__init__.py · 6 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/motores/__init__.py","tb":[["tablero-embudo.html","Tablero · Embudo y Sala"]]},"sala-edicion::nube_motores_imagen":{"x":665,"y":468,"nombre":"imagen.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"motores/ · Código","lbl":"imagen.py","ev":"sala-edicion/nube/motores/imagen.py · 284 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/motores/imagen.py","lt":"Funciones y símbolos (19)","lista":["CupoImagen  · L25","ServicioImagen  · L29","RechazoImagen  · L33",".__init__()  · L35","ReciboNoConfirmado  · L41","cloudflare_flux2()  · L47","gemini_pro()  · L74","modelo_de()  · L77","_pedir()  · L86","openai_broker()  · L101","cloudflare()  · L140","gemini()  · L158","pollinations()  · L180","hf()  · L212","cpu()  · L225","hidream_demo()  · L230","hidream_o1()  · L235","preparar_receta()  · L248","generar()  · L258"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"]]},"sala-edicion::nube_motores_cerebro":{"x":831,"y":468,"nombre":"cerebro.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"motores/ · Código","lbl":"cerebro.py","ev":"sala-edicion/nube/motores/cerebro.py · 287 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/motores/cerebro.py","lt":"Funciones y símbolos (12)","lista":["_regla()  · L36","_post_json()  · L41","_gemini()  · L61","_pagadas_hoy()  · L94","_openai()  · L104","receta()  · L125","_json_de()  · L166","edita_texto()  · L177","validar_texto_nuevo()  · L189","_trazar()  · L196","lamina()  · L203","fotografia_guion()  · L237"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"]]},"sala-edicion::nube_motores_escena_parallax":{"x":333,"y":552,"nombre":"escena_parallax.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"motores/ · Código","lbl":"escena_parallax.py","ev":"sala-edicion/nube/motores/escena_parallax.py · 202 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/motores/escena_parallax.py","lt":"Funciones y símbolos (8)","lista":["_segundos()  · L38","_modelo()  · L45","profundidad()  · L61","capa_texto()  · L90","cuadros()  · L120","animar()  · L150","producir_con_evidencia()  · L188","producir()  · L200"]},"sala-edicion::nube_motores_escena_omni":{"x":499,"y":552,"nombre":"escena_omni.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"motores/ · Código","lbl":"escena_omni.py","ev":"sala-edicion/nube/motores/escena_omni.py · 172 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/motores/escena_omni.py","lt":"Funciones y símbolos (10)","lista":["duracion()  · L48","peticion()  · L53","generar()  · L77","llamar()  · L84","limpio()  · L89","_videos()  · L118","extraer_video()  · L129","_bajar()  · L138","_terminar()  · L142","producir()  · L154"]},"sala-edicion::nube_motores_escena_wan_hf":{"x":665,"y":552,"nombre":"escena_wan_hf.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"motores/ · Código","lbl":"escena_wan_hf.py","ev":"sala-edicion/nube/motores/escena_wan_hf.py · 124 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/motores/escena_wan_hf.py","lt":"Funciones y símbolos (7)","lista":["_spaces()  · L40","_segundos()  · L45","_cliente()  · L52","_es_cuota()  · L61","_animar()  · L66","_asentar()  · L79","producir()  · L92"]},"sala-edicion::nube_motores_voz_kokoro":{"x":831,"y":552,"nombre":"voz_kokoro.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"motores/ · Código","lbl":"voz_kokoro.py","ev":"sala-edicion/nube/motores/voz_kokoro.py · 114 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/motores/voz_kokoro.py","lt":"Funciones y símbolos (3)","lista":["_instancia()  · L43","_escribir_wav()  · L62","producir()  · L75"]},"sala-edicion::nube_motores_politica_imagen":{"x":333,"y":636,"nombre":"politica_imagen.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"motores/ · Código","lbl":"politica_imagen.py","ev":"sala-edicion/nube/motores/politica_imagen.py · 64 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/motores/politica_imagen.py","lt":"Funciones y símbolos (6)","lista":["ruta()  · L16","fuente_retirada()  · L19","vetada()  · L22","requiere_reemplazo()  · L27","depurar_tira()  · L35","para_revision()  · L60"]},"sala-edicion::nube_motores_prospecto":{"x":499,"y":636,"nombre":"prospecto.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"motores/ · Código","lbl":"prospecto.py","ev":"sala-edicion/nube/motores/prospecto.py · 58 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/motores/prospecto.py","lt":"Funciones y símbolos (2)","lista":["_receta_base()  · L21","producir()  · L36"]},"sala-edicion::nube_motores_voz_gemini":{"x":665,"y":636,"nombre":"voz_gemini.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"motores/ · Código","lbl":"voz_gemini.py","ev":"sala-edicion/nube/motores/voz_gemini.py · 131 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/motores/voz_gemini.py","lt":"Funciones y símbolos (5)","lista":["_clave()  · L33","_pedir()  · L40","_decodificar_pcm()  · L70","_escribir_wav()  · L87","producir()  · L97"]},"sala-edicion::nube_motores_escena_camara":{"x":831,"y":636,"nombre":"escena_camara.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"motores/ · Código","lbl":"escena_camara.py","ev":"sala-edicion/nube/motores/escena_camara.py · 66 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/motores/escena_camara.py","lt":"Funciones y símbolos (4)","lista":["_segundos()  · L25","filtro()  · L32","animar()  · L44","producir()  · L57"]},"sala-edicion::nube_motores_escena_modal":{"x":333,"y":720,"nombre":"escena_modal.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"motores/ · Código","lbl":"escena_modal.py","ev":"sala-edicion/nube/motores/escena_modal.py · 106 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/motores/escena_modal.py","lt":"Funciones y símbolos (4)","lista":["disponible()  · L31","_segundos()  · L35","animar()  · L42","producir()  · L97"]},"sala-edicion::nube_motores_estrategia":{"x":499,"y":720,"nombre":"estrategia.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"motores/ · Código","lbl":"estrategia.py","ev":"sala-edicion/nube/motores/estrategia.py · 45 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/motores/estrategia.py","lt":"Funciones y símbolos (1)","lista":["con_estrategia()  · L42"]},"mas:codigo-sala-edicion-nube:codigo:motores/":{"x":665,"y":720,"nombre":"+4 archivos más","forma":"dot","tam":9,"color":"#8A8F98","tipo":"Grupo","celda":"motores/ · Código","lbl":"+4 archivos más","lt":"Incluye","lista":["imagen_hidream.py","imagen_hidream_o1.py","escena_codigo.py","imagen_cpu.py"]},"sala-edicion::nube_hermes_instalar_roast_room":{"x":333,"y":864,"nombre":"instalar_roast_room.sh","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"hermes/ · Código","lbl":"instalar_roast_roo\nm.sh","ev":"sala-edicion/nube/hermes/instalar_roast_room.sh · 109 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/hermes/instalar_roast_room.sh","lt":"Funciones y símbolos (3)","lista":["instalar_roast_room.sh script  · L1","valor()  · L37","llave_nueva()  · L53"]},"sala-edicion::nube_hermes_roast_room":{"x":499,"y":864,"nombre":"roast_room.sh","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"hermes/ · Código","lbl":"roast_room.sh","ev":"sala-edicion/nube/hermes/roast_room.sh · 39 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/nube/hermes/roast_room.sh","lt":"Funciones y símbolos (1)","lista":["roast_room.sh script  · L1"]},"gas:AKfycbx61UWs":{"x":111,"y":864,"nombre":"Sala de Edición · AKfycbx61UWs…","forma":"diamond","tam":10,"color":"#FFBE7D","tipo":"Despliegue de Apps Script","celda":"hermes/ · Lo que toca fuera","lbl":"Sala de Edición ·\nAKfycbx61UWs…","estado":"Visto en el código","nota":"Despliegue /exec de Apps Script. Aquí sólo va su prefijo; el identificador completo está en el archivo y línea de cada referencia.","ev":"apps-script/despliegues","tb":[["tablero-embudo.html","Tablero · Embudo y Sala"],["codigo-yodesarrollo-board.html","Código · yodesarrollo-board"],["codigo-yodesarrollo-board-presentacion.html","Código · yodesarrollo-board · presentacion/"],["codigo-sala-edicion.html","Código · sala-edicion"],["codigo-yod-portal.html","Código · yod-portal"],["codigo-yod-portal-os.html","Código · yod-portal · os/"]]}},"flechas":{"sala-edicion::nube_hermes_instalar_roast_room>gas:AKfycbx61UWs":{"f":"viva","r":"llama al Apps Script","ev":"sala-edicion/nube/hermes/instalar_roast_room.sh L26"},"sala-edicion::nube_sala_drive>sala-edicion::nube_sala_ejecutor":{"f":"viva","r":"se llaman (5)","ev":"grafo de código de Graphify"},"sala-edicion::nube_sala_mesa>sala-edicion::nube_snapshots_online":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"sala-edicion::nube_auditar_fallos>sala-edicion::nube_snapshots_online":{"f":"viva","r":"se llaman (16)","ev":"grafo de código de Graphify"},"sala-edicion::nube_reanudar_cortes_metadatos>sala-edicion::nube_snapshots_online":{"f":"viva","r":"se llaman (11)","ev":"grafo de código de Graphify"},"sala-edicion::nube_contenido_reglas>sala-edicion::nube_sala_v4":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_contenido_reglas>sala-edicion::nube_motores_cerebro":{"f":"viva","r":"se llaman (8)","ev":"grafo de código de Graphify"},"sala-edicion::nube_contenido_reglas>sala-edicion::nube_motores_imagen":{"f":"viva","r":"se llaman (5)","ev":"grafo de código de Graphify"},"sala-edicion::nube_contenido_reglas>sala-edicion::nube_sala_cliente":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"sala-edicion::nube_contenido_reglas>sala-edicion::nube_sala_ejecutor":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"sala-edicion::nube_contenido_reglas>sala-edicion::nube_sala_mesa":{"f":"viva","r":"se llaman (20)","ev":"grafo de código de Graphify"},"sala-edicion::nube_sala_cliente>sala-edicion::nube_sala_mesa":{"f":"viva","r":"se llaman (19)","ev":"grafo de código de Graphify"},"sala-edicion::nube_sala_cliente>sala-edicion::nube_sala_produccion":{"f":"viva","r":"se llaman (7)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_comun>sala-edicion::nube_motores_imagen":{"f":"viva","r":"se llaman (14)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_cerebro>sala-edicion::nube_motores_comun":{"f":"viva","r":"se llaman (8)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_comun>sala-edicion::nube_motores_escena_camara":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_comun>sala-edicion::nube_motores_escena_modal":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_comun>sala-edicion::nube_motores_escena_omni":{"f":"viva","r":"se llaman (6)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_comun>sala-edicion::nube_motores_escena_parallax":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_comun>sala-edicion::nube_motores_escena_wan_hf":{"f":"viva","r":"se llaman (6)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_comun>sala-edicion::nube_motores_voz_gemini":{"f":"viva","r":"se llaman (5)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_comun>sala-edicion::nube_motores_voz_kokoro":{"f":"viva","r":"se llaman (3)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_comun>sala-edicion::nube_sala_ejecutor":{"f":"viva","r":"se llaman (6)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_comun>sala-edicion::nube_sala_mesa":{"f":"viva","r":"se llaman (5)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_comun>sala-edicion::nube_sala_v4":{"f":"viva","r":"se llaman (12)","ev":"grafo de código de Graphify"},"sala-edicion::nube_entregar_cortes>sala-edicion::nube_snapshots_online":{"f":"viva","r":"se llaman (5)","ev":"grafo de código de Graphify"},"sala-edicion::nube_entregar_cortes>sala-edicion::nube_sala_produccion":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"sala-edicion::nube_contenido_reglas>sala-edicion::nube_entregar_cortes":{"f":"viva","r":"se llaman (3)","ev":"grafo de código de Graphify"},"sala-edicion::nube_entregar_cortes>sala-edicion::nube_sala_drive":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_entregar_cortes>sala-edicion::nube_sala_cliente":{"f":"viva","r":"se llaman (6)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_comun>sala-edicion::nube_sala_produccion":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_reanudar_cortes_metadatos>sala-edicion::nube_sala_produccion":{"f":"viva","r":"se llaman (3)","ev":"grafo de código de Graphify"},"sala-edicion::nube_contenido_reglas>sala-edicion::nube_reanudar_cortes_metadatos":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_comun>sala-edicion::nube_reanudar_cortes_metadatos":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_reanudar_cortes_metadatos>sala-edicion::nube_sala_cliente":{"f":"viva","r":"se llaman (3)","ev":"grafo de código de Graphify"},"sala-edicion::nube_reanudar_cortes_metadatos>sala-edicion::nube_sala_drive":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::nube_auditar_fallos>sala-edicion::nube_reanudar_cortes_metadatos":{"f":"viva","r":"se llaman (6)","ev":"grafo de código de Graphify"},"sala-edicion::nube_auditar_fallos>sala-edicion::nube_sala_drive":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"sala-edicion::nube_auditar_fallos>sala-edicion::nube_sala_produccion":{"f":"viva","r":"se llaman (3)","ev":"grafo de código de Graphify"},"sala-edicion::nube_sala_mesa>sala-edicion::nube_sala_produccion":{"f":"viva","r":"se llaman (5)","ev":"grafo de código de Graphify"},"sala-edicion::nube_sala_produccion>sala-edicion::nube_sala_salida":{"f":"viva","r":"se llaman (3)","ev":"grafo de código de Graphify"},"sala-edicion::nube_sala_cliente>sala-edicion::nube_sala_v4":{"f":"viva","r":"se llaman (16)","ev":"grafo de código de Graphify"},"sala-edicion::nube_sala_cliente>sala-edicion::nube_sala_drive":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_escena_omni>sala-edicion::nube_sala_cliente":{"f":"viva","r":"se llaman (3)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_escena_omni>sala-edicion::nube_sala_v4":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_cerebro>sala-edicion::nube_sala_cliente":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_escena_modal>sala-edicion::nube_sala_cliente":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_escena_wan_hf>sala-edicion::nube_sala_cliente":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_imagen>sala-edicion::nube_sala_cliente":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_voz_gemini>sala-edicion::nube_sala_cliente":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_sala_cliente>sala-edicion::nube_sala_consejo":{"f":"viva","r":"se llaman (33)","ev":"grafo de código de Graphify"},"sala-edicion::nube_sala_cliente>sala-edicion::nube_sala_ejecutor":{"f":"viva","r":"se llaman (10)","ev":"grafo de código de Graphify"},"sala-edicion::nube_sala_cliente>sala-edicion::nube_sala_salida":{"f":"viva","r":"se llaman (12)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_cerebro>sala-edicion::nube_sala_v4":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_estrategia>sala-edicion::nube_sala_v4":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_comun>sala-edicion::nube_motores_prospecto":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_cerebro>sala-edicion::nube_motores_prospecto":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_imagen>sala-edicion::nube_motores_prospecto":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_prospecto>sala-edicion::nube_sala_cliente":{"f":"viva","r":"se llaman (3)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_prospecto>sala-edicion::nube_sala_ejecutor":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_escena_camara>sala-edicion::nube_sala_cliente":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_escena_parallax>sala-edicion::nube_sala_cliente":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_voz_kokoro>sala-edicion::nube_sala_cliente":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_comun>sala-edicion::nube_motores_politica_imagen":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_escena_camara>sala-edicion::nube_sala_ejecutor":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_escena_modal>sala-edicion::nube_motores_escena_parallax":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_escena_modal>sala-edicion::nube_sala_ejecutor":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_escena_omni>sala-edicion::nube_motores_escena_wan_hf":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_escena_parallax>sala-edicion::nube_sala_ejecutor":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_escena_wan_hf>sala-edicion::nube_sala_ejecutor":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::nube_sala_ejecutor>sala-edicion::nube_sala_mesa":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_contenido_reglas>sala-edicion::nube_motores_estrategia":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_auditar_fallos>sala-edicion::nube_contenido_reglas":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_cerebro>sala-edicion::nube_sala_mesa":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_cerebro>sala-edicion::nube_motores_estrategia":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"sala-edicion::nube_contenido_reglas>sala-edicion::nube_sala_salida":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_imagen>sala-edicion::nube_motores_politica_imagen":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_imagen>sala-edicion::nube_sala_mesa":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_politica_imagen>sala-edicion::nube_sala_mesa":{"f":"viva","r":"se llaman (7)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_politica_imagen>sala-edicion::nube_sala_produccion":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"sala-edicion::nube_sala_mesa>sala-edicion::nube_sala_salida":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::nube_sala_mesa>sala-edicion::nube_verificar":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::nube_sala_ejecutor>sala-edicion::nube_sala_produccion":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"sala-edicion::nube_motores_imagen>sala-edicion::nube_sala_v4":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::nube_auditar_fallos>sala-edicion::nube_sala_cliente":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"}},"familias":{"viva":{"corto":"Visto","nombre":"Visto en código u hoja","color":"#5B6470","ancho":1.3,"opacidad":0.75,"punteada":false},"inferida":{"corto":"Atlas","nombre":"Del atlas o deducido","color":"#9AA1AB","ancho":1.0,"opacidad":0.6,"punteada":false},"propuesta":{"corto":"Propuesta","nombre":"Propuesta","color":"#C99A12","ancho":1.6,"opacidad":0.9,"punteada":[7,5]},"hueco":{"corto":"Falta","nombre":"Falta o hallazgo","color":"#C8102E","ancho":1.7,"opacidad":0.9,"punteada":[3,5]}},"usadas":["viva"],"rejilla":{"cols":[{"x":0,"w":222,"nombre":"Lo que toca fuera"},{"x":222,"w":720,"nombre":"Código"},{"x":942,"w":222,"nombre":"Documentos y datos"}],"filas":[{"y":0,"h":396,"nombre":"(esta carpeta)"},{"y":396,"h":396,"nombre":"motores/"},{"y":792,"h":144,"nombre":"hermes/"}]},"eje_x":"Tipo de archivo","eje_y":"Carpeta","estado":"https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/grafo-datos/estado.json","simbolos":[["■","#59A14F","Tablero o página"],["▭","#F1CE63","Pantalla propuesta"],["◆","#F28E2B","Motor"],["⬢","#79706E","Repositorio o código"],["▲","#4E79A7","Libro"],["▼","#A0CBE8","Pestaña"],["●","#B07AA1","Quién"],["★","#EDC948","Propuesta"],["★","#E15759","Hallazgo o clave"]],"pie":"35 nodos · 85 flechas · Código · sala-edicion · nube/ · Graphify 0.9.106"};</script>
+</head>
+<body>
+<div id="graph"></div>
+<div id="sidebar">
+  <div id="theme-wrap" role="group" aria-label="Theme">
+    <button type="button" data-theme-choice="light">Claro</button>
+    <button type="button" data-theme-choice="dark">Oscuro</button>
+    <button type="button" data-theme-choice="system">Sistema</button>
+  </div>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Buscar…" autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div id="info-panel">
+    <h3>Detalle</h3>
+    <div id="info-content"><span class="empty">Toca un nodo para ver su detalle</span></div>
+  </div>
+  <div id="legend-wrap">
+    <h3>Grupos</h3>
+    <div id="legend-controls">
+      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">Todos</label>
+    </div>
+    <div id="legend"></div>
+  </div>
+  <div id="stats">35 nodes &middot; 85 edges &middot; 5 communities</div>
+</div>
+<script>
+const RAW_NODES = [{"id": "sala-edicion::nube_sala_cliente", "label": "sala_cliente.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "sala_cliente.py", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/sala_cliente.py \u00b7 393 l\u00edneas", "file_type": "code", "degree": 21}, {"id": "sala-edicion::nube_snapshots_online", "label": "snapshots_online.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 15.7, "font": {"size": 12, "color": "#ffffff"}, "title": "snapshots_online.py", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/snapshots_online.py \u00b7 1360 l\u00edneas", "file_type": "code", "degree": 4}, {"id": "sala-edicion::nube_sala_v4", "label": "sala_v4.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 20.0, "font": {"size": 12, "color": "#ffffff"}, "title": "sala_v4.py", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/sala_v4.py \u00b7 1428 l\u00edneas", "file_type": "code", "degree": 7}, {"id": "sala-edicion::nube_sala_drive", "label": "sala_drive.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 17.1, "font": {"size": 12, "color": "#ffffff"}, "title": "sala_drive.py", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/sala_drive.py \u00b7 302 l\u00edneas", "file_type": "code", "degree": 5}, {"id": "sala-edicion::nube_sala_mesa", "label": "sala_mesa.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 25.7, "font": {"size": 12, "color": "#ffffff"}, "title": "sala_mesa.py", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/sala_mesa.py \u00b7 965 l\u00edneas", "file_type": "code", "degree": 11}, {"id": "sala-edicion::nube_sala_produccion", "label": "sala_produccion.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 22.9, "font": {"size": 12, "color": "#ffffff"}, "title": "sala_produccion.py", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/sala_produccion.py \u00b7 399 l\u00edneas", "file_type": "code", "degree": 9}, {"id": "sala-edicion::nube_sala_consejo", "label": "sala_consejo.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.4, "font": {"size": 0, "color": "#ffffff"}, "title": "sala_consejo.py", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/sala_consejo.py \u00b7 1127 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "sala-edicion::nube_sala_ejecutor", "label": "sala_ejecutor.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 25.7, "font": {"size": 12, "color": "#ffffff"}, "title": "sala_ejecutor.py", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/sala_ejecutor.py \u00b7 505 l\u00edneas", "file_type": "code", "degree": 11}, {"id": "sala-edicion::nube_sala_salida", "label": "sala_salida.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 15.7, "font": {"size": 12, "color": "#ffffff"}, "title": "sala_salida.py", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/sala_salida.py \u00b7 761 l\u00edneas", "file_type": "code", "degree": 4}, {"id": "sala-edicion::nube_auditar_fallos", "label": "auditar_fallos.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 18.6, "font": {"size": 12, "color": "#ffffff"}, "title": "auditar_fallos.py", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/auditar_fallos.py \u00b7 311 l\u00edneas", "file_type": "code", "degree": 6}, {"id": "sala-edicion::nube_contenido_reglas", "label": "contenido_reglas.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 25.7, "font": {"size": 12, "color": "#ffffff"}, "title": "contenido_reglas.py", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/contenido_reglas.py \u00b7 82 l\u00edneas", "file_type": "code", "degree": 11}, {"id": "sala-edicion::nube_reanudar_cortes_metadatos", "label": "reanudar_cortes_metadatos.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 20.0, "font": {"size": 12, "color": "#ffffff"}, "title": "reanudar_cortes_metadatos.py", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/reanudar_cortes_metadatos.py \u00b7 266 l\u00edneas", "file_type": "code", "degree": 7}, {"id": "sala-edicion::nube_verificar", "label": "verificar.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.4, "font": {"size": 0, "color": "#ffffff"}, "title": "verificar.py", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/verificar.py \u00b7 415 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "sala-edicion::nube_entregar_cortes", "label": "entregar_cortes.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 17.1, "font": {"size": 12, "color": "#ffffff"}, "title": "entregar_cortes.py", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/entregar_cortes.py \u00b7 187 l\u00edneas", "file_type": "code", "degree": 5}, {"id": "mas:codigo-sala-edicion-nube:codigo:(esta carpeta)", "label": "+56 archivos m\u00e1s", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "+56 archivos m\u00e1s", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "", "file_type": "concept", "degree": 0}, {"id": "f:sala-edicion:nube/README.md", "label": "README.md", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "README.md", "community": 1, "community_name": "(esta carpeta) \u00b7 Documentos y datos", "source_file": "sala-edicion/nube/README.md \u00b7 183 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:sala-edicion:nube/imagen_cpu_requirements.txt", "label": "imagen_cpu_requirements.txt", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "imagen_cpu_requirements.txt", "community": 1, "community_name": "(esta carpeta) \u00b7 Documentos y datos", "source_file": "sala-edicion/nube/imagen_cpu_requirements.txt \u00b7 6 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "sala-edicion::nube_motores_comun", "label": "_comun.py", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 32.9, "font": {"size": 12, "color": "#ffffff"}, "title": "_comun.py", "community": 2, "community_name": "motores/ \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/motores/_comun.py \u00b7 104 l\u00edneas", "file_type": "code", "degree": 16}, {"id": "sala-edicion::nube_motores_init", "label": "__init__.py", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "__init__.py", "community": 2, "community_name": "motores/ \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/motores/__init__.py \u00b7 6 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "sala-edicion::nube_motores_imagen", "label": "imagen.py", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 20.0, "font": {"size": 12, "color": "#ffffff"}, "title": "imagen.py", "community": 2, "community_name": "motores/ \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/motores/imagen.py \u00b7 284 l\u00edneas", "file_type": "code", "degree": 7}, {"id": "sala-edicion::nube_motores_cerebro", "label": "cerebro.py", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 20.0, "font": {"size": 12, "color": "#ffffff"}, "title": "cerebro.py", "community": 2, "community_name": "motores/ \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/motores/cerebro.py \u00b7 287 l\u00edneas", "file_type": "code", "degree": 7}, {"id": "sala-edicion::nube_motores_escena_parallax", "label": "escena_parallax.py", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 15.7, "font": {"size": 12, "color": "#ffffff"}, "title": "escena_parallax.py", "community": 2, "community_name": "motores/ \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/motores/escena_parallax.py \u00b7 202 l\u00edneas", "file_type": "code", "degree": 4}, {"id": "sala-edicion::nube_motores_escena_omni", "label": "escena_omni.py", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 15.7, "font": {"size": 12, "color": "#ffffff"}, "title": "escena_omni.py", "community": 2, "community_name": "motores/ \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/motores/escena_omni.py \u00b7 172 l\u00edneas", "file_type": "code", "degree": 4}, {"id": "sala-edicion::nube_motores_escena_wan_hf", "label": "escena_wan_hf.py", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 15.7, "font": {"size": 12, "color": "#ffffff"}, "title": "escena_wan_hf.py", "community": 2, "community_name": "motores/ \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/motores/escena_wan_hf.py \u00b7 124 l\u00edneas", "file_type": "code", "degree": 4}, {"id": "sala-edicion::nube_motores_voz_kokoro", "label": "voz_kokoro.py", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 12.9, "font": {"size": 0, "color": "#ffffff"}, "title": "voz_kokoro.py", "community": 2, "community_name": "motores/ \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/motores/voz_kokoro.py \u00b7 114 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "sala-edicion::nube_motores_politica_imagen", "label": "politica_imagen.py", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 15.7, "font": {"size": 12, "color": "#ffffff"}, "title": "politica_imagen.py", "community": 2, "community_name": "motores/ \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/motores/politica_imagen.py \u00b7 64 l\u00edneas", "file_type": "code", "degree": 4}, {"id": "sala-edicion::nube_motores_prospecto", "label": "prospecto.py", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 17.1, "font": {"size": 12, "color": "#ffffff"}, "title": "prospecto.py", "community": 2, "community_name": "motores/ \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/motores/prospecto.py \u00b7 58 l\u00edneas", "file_type": "code", "degree": 5}, {"id": "sala-edicion::nube_motores_voz_gemini", "label": "voz_gemini.py", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 12.9, "font": {"size": 0, "color": "#ffffff"}, "title": "voz_gemini.py", "community": 2, "community_name": "motores/ \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/motores/voz_gemini.py \u00b7 131 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "sala-edicion::nube_motores_escena_camara", "label": "escena_camara.py", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 14.3, "font": {"size": 0, "color": "#ffffff"}, "title": "escena_camara.py", "community": 2, "community_name": "motores/ \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/motores/escena_camara.py \u00b7 66 l\u00edneas", "file_type": "code", "degree": 3}, {"id": "sala-edicion::nube_motores_escena_modal", "label": "escena_modal.py", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 15.7, "font": {"size": 12, "color": "#ffffff"}, "title": "escena_modal.py", "community": 2, "community_name": "motores/ \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/motores/escena_modal.py \u00b7 106 l\u00edneas", "file_type": "code", "degree": 4}, {"id": "sala-edicion::nube_motores_estrategia", "label": "estrategia.py", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 14.3, "font": {"size": 0, "color": "#ffffff"}, "title": "estrategia.py", "community": 2, "community_name": "motores/ \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/motores/estrategia.py \u00b7 45 l\u00edneas", "file_type": "code", "degree": 3}, {"id": "mas:codigo-sala-edicion-nube:codigo:motores/", "label": "+4 archivos m\u00e1s", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "+4 archivos m\u00e1s", "community": 2, "community_name": "motores/ \u00b7 C\u00f3digo", "source_file": "", "file_type": "concept", "degree": 0}, {"id": "sala-edicion::nube_hermes_instalar_roast_room", "label": "instalar_roast_room.sh", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 11.4, "font": {"size": 0, "color": "#ffffff"}, "title": "instalar_roast_room.sh", "community": 3, "community_name": "hermes/ \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/hermes/instalar_roast_room.sh \u00b7 109 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "sala-edicion::nube_hermes_roast_room", "label": "roast_room.sh", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "roast_room.sh", "community": 3, "community_name": "hermes/ \u00b7 C\u00f3digo", "source_file": "sala-edicion/nube/hermes/roast_room.sh \u00b7 39 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "gas:AKfycbx61UWs", "label": "Sala de Edici\u00f3n \u00b7 AKfycbx61UWs\u2026", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 11.4, "font": {"size": 0, "color": "#ffffff"}, "title": "Sala de Edici\u00f3n \u00b7 AKfycbx61UWs\u2026", "community": 4, "community_name": "hermes/ \u00b7 Lo que toca fuera", "source_file": "apps-script/despliegues", "file_type": "code", "degree": 1}];
+const RAW_EDGES = [{"from": "sala-edicion::nube_contenido_reglas", "to": "sala-edicion::nube_sala_cliente", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_sala_cliente", "to": "sala-edicion::nube_sala_mesa", "label": "se llaman (19)", "title": "se llaman (19) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_sala_cliente", "to": "sala-edicion::nube_sala_produccion", "label": "se llaman (7)", "title": "se llaman (7) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_entregar_cortes", "to": "sala-edicion::nube_sala_cliente", "label": "se llaman (6)", "title": "se llaman (6) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_reanudar_cortes_metadatos", "to": "sala-edicion::nube_sala_cliente", "label": "se llaman (3)", "title": "se llaman (3) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_sala_cliente", "to": "sala-edicion::nube_sala_v4", "label": "se llaman (16)", "title": "se llaman (16) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_sala_cliente", "to": "sala-edicion::nube_sala_drive", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_escena_omni", "to": "sala-edicion::nube_sala_cliente", "label": "se llaman (3)", "title": "se llaman (3) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_cerebro", "to": "sala-edicion::nube_sala_cliente", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_escena_modal", "to": "sala-edicion::nube_sala_cliente", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_escena_wan_hf", "to": "sala-edicion::nube_sala_cliente", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_imagen", "to": "sala-edicion::nube_sala_cliente", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_voz_gemini", "to": "sala-edicion::nube_sala_cliente", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_sala_cliente", "to": "sala-edicion::nube_sala_consejo", "label": "se llaman (33)", "title": "se llaman (33) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_sala_cliente", "to": "sala-edicion::nube_sala_ejecutor", "label": "se llaman (10)", "title": "se llaman (10) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_sala_cliente", "to": "sala-edicion::nube_sala_salida", "label": "se llaman (12)", "title": "se llaman (12) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_prospecto", "to": "sala-edicion::nube_sala_cliente", "label": "se llaman (3)", "title": "se llaman (3) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_escena_camara", "to": "sala-edicion::nube_sala_cliente", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_escena_parallax", "to": "sala-edicion::nube_sala_cliente", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_voz_kokoro", "to": "sala-edicion::nube_sala_cliente", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_auditar_fallos", "to": "sala-edicion::nube_sala_cliente", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_sala_mesa", "to": "sala-edicion::nube_snapshots_online", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_auditar_fallos", "to": "sala-edicion::nube_snapshots_online", "label": "se llaman (16)", "title": "se llaman (16) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_reanudar_cortes_metadatos", "to": "sala-edicion::nube_snapshots_online", "label": "se llaman (11)", "title": "se llaman (11) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_entregar_cortes", "to": "sala-edicion::nube_snapshots_online", "label": "se llaman (5)", "title": "se llaman (5) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_contenido_reglas", "to": "sala-edicion::nube_sala_v4", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_comun", "to": "sala-edicion::nube_sala_v4", "label": "se llaman (12)", "title": "se llaman (12) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_escena_omni", "to": "sala-edicion::nube_sala_v4", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_cerebro", "to": "sala-edicion::nube_sala_v4", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_estrategia", "to": "sala-edicion::nube_sala_v4", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_imagen", "to": "sala-edicion::nube_sala_v4", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_sala_drive", "to": "sala-edicion::nube_sala_ejecutor", "label": "se llaman (5)", "title": "se llaman (5) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_entregar_cortes", "to": "sala-edicion::nube_sala_drive", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_reanudar_cortes_metadatos", "to": "sala-edicion::nube_sala_drive", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_auditar_fallos", "to": "sala-edicion::nube_sala_drive", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_contenido_reglas", "to": "sala-edicion::nube_sala_mesa", "label": "se llaman (20)", "title": "se llaman (20) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_comun", "to": "sala-edicion::nube_sala_mesa", "label": "se llaman (5)", "title": "se llaman (5) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_sala_mesa", "to": "sala-edicion::nube_sala_produccion", "label": "se llaman (5)", "title": "se llaman (5) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_sala_ejecutor", "to": "sala-edicion::nube_sala_mesa", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_cerebro", "to": "sala-edicion::nube_sala_mesa", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_imagen", "to": "sala-edicion::nube_sala_mesa", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_politica_imagen", "to": "sala-edicion::nube_sala_mesa", "label": "se llaman (7)", "title": "se llaman (7) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_sala_mesa", "to": "sala-edicion::nube_sala_salida", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_sala_mesa", "to": "sala-edicion::nube_verificar", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_entregar_cortes", "to": "sala-edicion::nube_sala_produccion", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_comun", "to": "sala-edicion::nube_sala_produccion", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_reanudar_cortes_metadatos", "to": "sala-edicion::nube_sala_produccion", "label": "se llaman (3)", "title": "se llaman (3) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_auditar_fallos", "to": "sala-edicion::nube_sala_produccion", "label": "se llaman (3)", "title": "se llaman (3) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_sala_produccion", "to": "sala-edicion::nube_sala_salida", "label": "se llaman (3)", "title": "se llaman (3) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_politica_imagen", "to": "sala-edicion::nube_sala_produccion", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_sala_ejecutor", "to": "sala-edicion::nube_sala_produccion", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_contenido_reglas", "to": "sala-edicion::nube_sala_ejecutor", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_comun", "to": "sala-edicion::nube_sala_ejecutor", "label": "se llaman (6)", "title": "se llaman (6) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_prospecto", "to": "sala-edicion::nube_sala_ejecutor", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_escena_camara", "to": "sala-edicion::nube_sala_ejecutor", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_escena_modal", "to": "sala-edicion::nube_sala_ejecutor", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_escena_parallax", "to": "sala-edicion::nube_sala_ejecutor", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_escena_wan_hf", "to": "sala-edicion::nube_sala_ejecutor", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_contenido_reglas", "to": "sala-edicion::nube_sala_salida", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_auditar_fallos", "to": "sala-edicion::nube_reanudar_cortes_metadatos", "label": "se llaman (6)", "title": "se llaman (6) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_auditar_fallos", "to": "sala-edicion::nube_contenido_reglas", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_contenido_reglas", "to": "sala-edicion::nube_motores_cerebro", "label": "se llaman (8)", "title": "se llaman (8) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_contenido_reglas", "to": "sala-edicion::nube_motores_imagen", "label": "se llaman (5)", "title": "se llaman (5) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_contenido_reglas", "to": "sala-edicion::nube_entregar_cortes", "label": "se llaman (3)", "title": "se llaman (3) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_contenido_reglas", "to": "sala-edicion::nube_reanudar_cortes_metadatos", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_contenido_reglas", "to": "sala-edicion::nube_motores_estrategia", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_comun", "to": "sala-edicion::nube_reanudar_cortes_metadatos", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_comun", "to": "sala-edicion::nube_motores_imagen", "label": "se llaman (14)", "title": "se llaman (14) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_cerebro", "to": "sala-edicion::nube_motores_comun", "label": "se llaman (8)", "title": "se llaman (8) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_comun", "to": "sala-edicion::nube_motores_escena_camara", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_comun", "to": "sala-edicion::nube_motores_escena_modal", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_comun", "to": "sala-edicion::nube_motores_escena_omni", "label": "se llaman (6)", "title": "se llaman (6) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_comun", "to": "sala-edicion::nube_motores_escena_parallax", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_comun", "to": "sala-edicion::nube_motores_escena_wan_hf", "label": "se llaman (6)", "title": "se llaman (6) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_comun", "to": "sala-edicion::nube_motores_voz_gemini", "label": "se llaman (5)", "title": "se llaman (5) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_comun", "to": "sala-edicion::nube_motores_voz_kokoro", "label": "se llaman (3)", "title": "se llaman (3) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_comun", "to": "sala-edicion::nube_motores_prospecto", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_comun", "to": "sala-edicion::nube_motores_politica_imagen", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_imagen", "to": "sala-edicion::nube_motores_prospecto", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_imagen", "to": "sala-edicion::nube_motores_politica_imagen", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_cerebro", "to": "sala-edicion::nube_motores_prospecto", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_cerebro", "to": "sala-edicion::nube_motores_estrategia", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_escena_modal", "to": "sala-edicion::nube_motores_escena_parallax", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_motores_escena_omni", "to": "sala-edicion::nube_motores_escena_wan_hf", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::nube_hermes_instalar_roast_room", "to": "gas:AKfycbx61UWs", "label": "llama al Apps Script", "title": "llama al Apps Script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}];
+const LEGEND = [{"cid": 0, "color": "#4E79A7", "label": "(esta carpeta) \u00b7 C\u00f3digo", "count": 15}, {"cid": 1, "color": "#F28E2B", "label": "(esta carpeta) \u00b7 Documentos y datos", "count": 2}, {"cid": 2, "color": "#E15759", "label": "motores/ \u00b7 C\u00f3digo", "count": 15}, {"cid": 3, "color": "#76B7B2", "label": "hermes/ \u00b7 C\u00f3digo", "count": 2}, {"cid": 4, "color": "#59A14F", "label": "hermes/ \u00b7 Lo que toca fuera", "count": 1}];
+
+// HTML-escape helper — prevents XSS when injecting graph data into innerHTML
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Build vis datasets
+const nodesDS = new vis.DataSet(RAW_NODES.map((n, i) => ({
+  id: n.id, label: n.label, color: n.color, size: n.size,
+  font: n.font, title: n.title,
+  // Fermat/golden-angle spiral seed positions (#3699): spreading nodes out
+  // before physics runs keeps avoidOverlap from computing near-zero-distance
+  // repulsion that blows the BarnesHut recursion into a stack overflow on large
+  // graphs. `i` is the map index — physics still settles small graphs identically.
+  x: 30 * Math.sqrt(i) * Math.cos(i * 2.4),
+  y: 30 * Math.sqrt(i) * Math.sin(i * 2.4),
+  community: n.community, community_name: n.community_name,
+  source_file: n.source_file, file_type: n.file_type, degree: n.degree,
+  member_count: n.member_count,
+})));
+
+const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({
+  id: i, from: e.from, to: e.to,
+  label: '',
+  title: e.title,
+  dashes: e.dashes,
+  width: e.width,
+  color: e.color,
+  arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+})));
+
+const container = document.getElementById('graph');
+const network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, {
+  physics: {
+    enabled: false,
+    solver: 'forceAtlas2Based',
+    forceAtlas2Based: {
+      gravitationalConstant: -60,
+      centralGravity: 0.005,
+      springLength: 120,
+      springConstant: 0.08,
+      damping: 0.4,
+      avoidOverlap: 0.8,
+    },
+    stabilization: { iterations: 200, fit: true },
+  },
+  interaction: {
+    hover: true,
+    tooltipDelay: 100,
+    hideEdgesOnDrag: true,
+    navigationButtons: false,
+    keyboard: false,
+  },
+  nodes: { shape: 'dot', borderWidth: 1.5 },
+  edges: { smooth: { type: 'continuous', roundness: 0.2 }, selectionWidth: 3 },
+});
+
+// Theme toggle (#3894): Light / Dark / System, persisted in localStorage.
+const THEME_KEY = 'graphify-theme';
+const themeMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+let themeLabelColor = '#ffffff';  // matches the per-node font color set in Python
+function themePref() {
+  let p = null;
+  try { p = localStorage.getItem(THEME_KEY); } catch (e) {}
+  return (p === 'light' || p === 'dark' || p === 'system') ? p : null;
+}
+function applyTheme(pref) {
+  const t = pref === 'light' ? 'light' : (pref === 'system' && themeMQ && themeMQ.matches) ? 'light' : 'dark';
+  const root = document.documentElement;
+  if (!root) return;
+  root.setAttribute('data-theme', t);
+  document.querySelectorAll('[data-theme-choice]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.themeChoice === (pref || 'system')));
+  });
+  const labelColor = getComputedStyle(root).getPropertyValue('--node-label').trim();
+  if (labelColor && labelColor !== themeLabelColor) {
+    themeLabelColor = labelColor;
+    nodesDS.update(nodesDS.get().map(n => ({ id: n.id, font: Object.assign({}, n.font, { color: labelColor }) })));
+  }
+}
+document.querySelectorAll('[data-theme-choice]').forEach(b => {
+  b.addEventListener('click', () => {
+    const pref = b.dataset.themeChoice;
+    try { localStorage.setItem(THEME_KEY, pref); } catch (e) {}
+    applyTheme(pref);
+  });
+});
+if (themeMQ) {
+  const onSchemeChange = () => { if (themePref() === 'system') applyTheme('system'); };
+  if (themeMQ.addEventListener) themeMQ.addEventListener('change', onSchemeChange);
+  else if (themeMQ.addListener) themeMQ.addListener(onSchemeChange);
+}
+applyTheme(themePref() || 'system');
+
+
+// ── YOD: acomodo fijo en cuadrante sobre el visor de Graphify. Los nodos y las flechas son los que exportó Graphify. ──
+(function () {
+  const Y = window.YOD;
+  // Cuando la portada enseña un borrador, trae la lámina como texto: los enlaces a otras láminas se le piden a ella.
+  const SUELTA = location.protocol === 'about:';
+  const yodIr = h => { const m = String(h).match(/^([A-Za-z0-9._-]+)\.html(?:#(.*))?$/);
+    if (SUELTA && m) { try { parent.postMessage({ yod: 2, ir: m[1], nodo: m[2] ? decodeURIComponent(m[2]) : '' }, '*'); } catch (e) {} } else location.href = h; };
+  if (SUELTA) document.addEventListener('click', e => { const a = e.target && e.target.closest ? e.target.closest('a[href]') : null; if (!a || a.target === '_blank') return;
+    const h = a.getAttribute('href') || ''; if (/^[A-Za-z0-9._-]+\.html(#.*)?$/.test(h)) { e.preventDefault(); yodIr(h); } }, true);
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const esc2 = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const fuente = p => p.forma === 'box'
+    ? { size: 13, color: '#1d1d1f', face: 'system-ui, -apple-system, sans-serif', multi: 'html', align: 'left', bold: { color: '#111111', size: 14, face: 'system-ui, -apple-system, sans-serif' } }
+    : { size: 14, color: css('--node-label') || '#222', face: 'system-ui, -apple-system, sans-serif', strokeWidth: 3, strokeColor: css('--bg') || '#fff' };
+  const estiloNodo = (n, apagado) => {
+    const p = Y.nodos[n.id] || {};
+    const o = { id: n.id, x: p.x, y: p.y, label: p.lbl, shape: p.forma, size: p.tam, opacity: apagado ? 0.14 : 1, title: undefined,
+      color: { background: p.color, border: p.al ? '#C8102E' : (p.bc || p.color), highlight: { background: p.color, border: '#111' }, hover: { background: p.color, border: '#111' } },
+      borderWidth: p.al ? 2.6 : (p.bc ? 2.4 : 1), borderWidthSelected: 3.5, font: fuente(p) };
+    if (p.forma === 'box') { o.widthConstraint = { minimum: p.caja, maximum: p.caja }; o.margin = 9; o.shapeProperties = { borderRadius: 7 }; }
+    return o;
+  };
+  const ocultas = new Set();
+  let foco = null;
+  const recto = RAW_EDGES.length > 380;
+  const det = r => Y.flechas[r.from + '>' + r.to] || Y.flechas[r.to + '>' + r.from] || {};
+  const estiloArista = e => {
+    const r = RAW_EDGES[e.id], fl = det(r), f = Y.familias[fl.f] || Y.familias.inferida;
+    const con = !foco || foco.aristas.has(e.id);
+    return { id: e.id, hidden: ocultas.has(fl.f || 'inferida'), width: con && foco ? f.ancho + 1.3 : f.ancho, title: undefined,
+             color: { color: f.color, opacity: con ? f.opacidad : 0.05, highlight: f.color, hover: f.color },
+             dashes: f.punteada, arrows: { to: { enabled: true, scaleFactor: 0.55 } }, smooth: recto ? false : { type: 'curvedCW', roundness: 0.12 } };
+  };
+  const pintar = () => {
+    nodesDS.update(nodesDS.get().map(n => estiloNodo(n, foco && !foco.nodos.has(n.id))));
+    edgesDS.update(edgesDS.get().map(estiloArista));
+  };
+  pintar();
+  network.setOptions({ physics: { enabled: false }, nodes: { labelHighlightBold: false, scaling: { label: { drawThreshold: 5, maxVisible: 44 } } },
+                       interaction: { hover: true, tooltipDelay: 150, zoomSpeed: 0.8, hideEdgesOnDrag: RAW_EDGES.length > 250, hideEdgesOnZoom: RAW_EDGES.length > 600 } });
+  new MutationObserver(() => setTimeout(pintar, 30)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  const enfocar = id => { foco = { nodos: new Set([id, ...network.getConnectedNodes(id)]), aristas: new Set(network.getConnectedEdges(id)) }; pintar(); };
+  network.on('selectNode', p => enfocar(p.nodes[0]));
+  network.on('deselectNode', () => { foco = null; pintar(); });
+
+  // barra: subir, familias de flecha y «Ver todo»
+  const barra = document.createElement('div');
+  barra.id = 'yod-barra';
+  barra.innerHTML = (Y.padre ? `<a class="yod-fuerte" href="${Y.padre[0]}">↑ ${esc2(Y.padre[1])}</a>` : '') +
+    Object.entries(Y.familias).filter(([k]) => Y.usadas.includes(k)).map(([k, f]) =>
+      `<button type="button" data-fam="${k}" aria-pressed="true" title="${f.nombre}"><i style="background:${f.color}"></i><span class="yod-l">${f.nombre}</span><span class="yod-c">${f.corto}</span></button>`).join('') +
+    '<button type="button" id="yod-todo" class="yod-fuerte">Ver todo</button>';
+  document.body.appendChild(barra);
+  barra.addEventListener('click', ev => {
+    const b = ev.target.closest('button'); if (!b) return;
+    if (b.id === 'yod-todo') { foco = null; network.unselectAll(); pintar(); ajustar(true); inicio(); return; }
+    const k = b.dataset.fam; if (ocultas.has(k)) ocultas.delete(k); else ocultas.add(k);
+    b.setAttribute('aria-pressed', String(!ocultas.has(k))); pintar();
+  });
+
+  // rejilla del cuadrante: los títulos crecen al alejarse para que siempre se lean
+  const g = Y.rejilla, W = g.cols.reduce((s, c) => s + c.w, 0), Ht = g.filas.reduce((s, f) => s + f.h, 0);
+  const MS = Math.max(70, Math.min(150, Ht * 0.07));
+  const letra = (ctx, t) => { ctx.font = '600 ' + t + 'px system-ui, -apple-system, sans-serif'; };
+  network.on('beforeDrawing', ctx => {
+    const sc = network.getScale() || 1;
+    const linea = css('--border') || '#ccc', texto = css('--text-2') || '#666', fondo = css('--panel') || '#f6f6f6';
+    ctx.save();
+    g.filas.forEach((f, i) => { if (i % 2 === 0) { ctx.fillStyle = fondo; ctx.globalAlpha = 0.6; ctx.fillRect(0, f.y, W, f.h); } });
+    ctx.globalAlpha = 1; ctx.strokeStyle = linea; ctx.lineWidth = 1.5 / Math.min(1, sc * 1.6);
+    g.cols.forEach(c => { ctx.beginPath(); ctx.moveTo(c.x, -MS); ctx.lineTo(c.x, Ht); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(W, -MS); ctx.lineTo(W, Ht); ctx.stroke();
+    g.filas.forEach(f => { ctx.beginPath(); ctx.moveTo(0, f.y); ctx.lineTo(W, f.y); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(0, Ht); ctx.lineTo(W, Ht); ctx.stroke();
+    ctx.fillStyle = texto; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'center';
+    g.cols.forEach(c => {
+      let t = Math.max(20, Math.min(15 / sc, MS * 0.62)); letra(ctx, t);
+      while (t > 11 && ctx.measureText(c.nombre).width > c.w - 14) { t -= 1; letra(ctx, t); }
+      if (ctx.measureText(c.nombre).width > c.w - 14) { const p = c.nombre.split(' '), m = Math.ceil(p.length / 2); ctx.fillText(p.slice(0, m).join(' '), c.x + c.w / 2, -t - 14); ctx.fillText(p.slice(m).join(' '), c.x + c.w / 2, -10); }
+      else ctx.fillText(c.nombre, c.x + c.w / 2, -12);
+    });
+    ctx.textAlign = 'left';
+    g.filas.forEach(f => {
+      let t = Math.max(17, Math.min(14 / sc, f.h * 0.4)); letra(ctx, t);
+      while (t > 12 && ctx.measureText(f.nombre).width > W - 20) { t -= 2; letra(ctx, t); }
+      ctx.globalAlpha = t > 30 ? 0.42 : 0.8; ctx.fillText(f.nombre, 9, f.y + t + 5);
+    });
+    ctx.globalAlpha = 1; ctx.restore();
+  });
+  const marco = (x0, y0, x1, y1, animar) => {
+    const el = document.getElementById('graph'), w = el.clientWidth, h = el.clientHeight;
+    const arriba = (document.getElementById('yod-barra') || { offsetHeight: 0 }).offsetHeight + 12;
+    const s = Math.max(0.04, Math.min((w - 10) / (x1 - x0), (h - arriba - 8) / (y1 - y0), 1.5));
+    network.moveTo({ position: { x: (x0 + x1) / 2, y: (y0 + y1) / 2 - arriba / 2 / s }, scale: s, animation: animar ? { duration: 350, easingFunction: 'easeInOutQuad' } : false });
+  };
+  const ajustar = animar => marco(-14, -MS - 6, W + 14, Ht + 12, animar);
+  const aFila = f => { const el = document.getElementById('graph'), r = el.clientWidth / Math.max(200, el.clientHeight - 60); marco(-10, f.y - 10, Math.min(W + 10, Math.max(540, (f.h + 20) * r)) - 10, f.y + f.h + 10, true); };
+  const aCol = c => { const el = document.getElementById('graph'), r = Math.max(200, el.clientHeight - 60) / el.clientWidth; marco(c.x - 12, -MS, c.x + c.w + 12, Math.min(Ht + 10, Math.max(420, (c.w + 24) * r) - MS), true); };
+  let tocado = false;
+  const cont = document.getElementById('graph');
+  ['pointerdown', 'wheel', 'touchstart'].forEach(ev => cont.addEventListener(ev, () => { tocado = true; }, { passive: true }));
+  network.once('afterDrawing', () => { if (!foco) ajustar(false); });
+  [60, 250, 700, 1500].forEach(ms => setTimeout(() => { if (!foco && !tocado) ajustar(false); }, ms));
+  window.addEventListener('resize', () => setTimeout(() => { if (!foco) ajustar(false); }, 80));
+  const ir = document.createElement('select'); ir.id = 'yod-ir'; ir.setAttribute('aria-label', 'Acercar a una fila o columna');
+  ir.innerHTML = '<option value="">Acercar a…</option><optgroup label="Filas">' + g.filas.map((f, i) => `<option value="f${i}">${esc2(f.nombre)}</option>`).join('') +
+    '</optgroup><optgroup label="Columnas">' + g.cols.map((c, i) => `<option value="c${i}">${esc2(c.nombre)}</option>`).join('') + '</optgroup>';
+  barra.insertBefore(ir, barra.querySelector('button'));
+  ir.addEventListener('change', () => { const v = ir.value; if (!v) return; tocado = true; if (v[0] === 'f') aFila(g.filas[+v.slice(1)]); else aCol(g.cols[+v.slice(1)]); ir.value = ''; });
+
+  // panel de detalle
+  const enlace = (t, id) => t[0] ? `<a href="${t[0]}#${encodeURIComponent(id)}">${esc2(t[1])}</a>` : esc2(t[1]);
+  window.showInfo = function (nodeId) {
+    const p = Y.nodos[nodeId]; if (!p) return;
+    const eds = network.getConnectedEdges(nodeId);
+    const vecinos = eds.map(eid => {
+      const r = RAW_EDGES[eid], otro = r.from === nodeId ? r.to : r.from, fl = det(r), q = Y.nodos[otro] || {};
+      return `<span class="neighbor-link" style="border-left-color:${esc2((Y.familias[fl.f] || {}).color || '#888')}" data-nid="${esc2(otro)}">${r.from === nodeId ? '→' : '←'} ${esc2(q.nombre || otro)} <i style="opacity:.72">· ${esc2(fl.r || '')}</i></span>`;
+    }).join('');
+    let h = `<div class="field"><b>${esc2(p.nombre)}</b></div><div class="field yod-tipo">${esc2(p.tipo)}${p.estado ? ' · ' + esc2(p.estado) : ''}</div>`;
+    if (p.dentro) h += `<a class="yod-entrar" href="${p.dentro[0]}">Entrar a ${esc2(p.dentro[1])} →</a>`;
+    if (p.nota) h += `<div class="field">${esc2(p.nota)}</div>`;
+    if (p.err) h += p.err.map(x => `<div class="field yod-alerta"><b>${x.tipo === 'cambio' ? 'Cambió' : 'Error'}</b> · ${esc2(x.msg)}${x.desde ? ' · desde ' + esc2(String(x.desde).slice(0, 10)) : ''}${x.url ? ` · <a href="${esc2(x.url)}" target="_blank" rel="noopener" style="color:inherit">ver</a>` : ''}</div>`).join('');
+    if (p.al) h += p.al.map(a => `<div class="field yod-alerta"><b>Hallazgo</b> · <a href="hallazgos.html#${encodeURIComponent(a[0])}" style="color:inherit">${esc2(a[1])}</a></div>`).join('');
+    if (p.lista) h += `<details class="yod-lista"${p.lista.length <= 24 ? ' open' : ''}><summary>${esc2(p.lt)}</summary><div>${p.lista.map(x => `<span>${esc2(x)}</span>`).join('')}</div></details>`;
+    if (p.ev) h += `<div class="field yod-ev">Evidencia: ${esc2(p.ev)}</div>`;
+    if (p.url) h += `<a class="yod-abrir" href="${esc2(p.url)}" target="_blank" rel="noopener">Abrir la fuente ↗</a>`;
+    if (p.tb && p.tb.length) h += `<div class="field yod-tb">También aparece en: ${p.tb.map(t => enlace(t, nodeId)).join(' · ')}</div>`;
+    h += `<div class="field yod-ev">Celda: ${esc2(p.celda)}</div>`;
+    if (eds.length) h += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Conexiones (${eds.length})</div><div id="neighbors-list">${vecinos}</div>`;
+    document.getElementById('info-content').innerHTML = h;
+  };
+  window.focusNode = function (id) {
+    const p = Y.nodos[id] || {}, el = document.getElementById('graph');
+    const s = p.forma === 'box' ? Math.min(1, (el.clientWidth - 24) / ((p.caja || 300) + 40)) : Math.min(0.9, Math.max(0.6, el.clientWidth / 520));
+    network.focus(id, { scale: s, animation: true }); network.selectNodes([id]); showInfo(id); enfocar(id);
+  };
+  const inicio = () => { const c = document.getElementById('info-content');
+    if (c) c.innerHTML = `<div class="field"><b>${esc2(Y.titulo)}</b></div><div class="field">${esc2(Y.sub)}</div><div class="field yod-ev">Toca un nodo para ver qué es, de dónde le llega y a dónde va. Con «Acercar a…» saltas a una fila o a una columna.</div>`; };
+  inicio();
+  network.on('click', p => {
+    if (p.nodes.length) return;
+    if (p.edges.length) {
+      const r = RAW_EDGES[p.edges[0]], fl = det(r), a = Y.nodos[r.from] || {}, b = Y.nodos[r.to] || {};
+      document.getElementById('info-content').innerHTML = `<div class="field"><b>${esc2(a.nombre)} → ${esc2(b.nombre)}</b></div><div class="field">${esc2(fl.r || '')}</div>` +
+        `<div class="field yod-tipo">${esc2((Y.familias[fl.f] || {}).nombre || '')}</div>` + (fl.nota ? `<div class="field">${esc2(fl.nota)}</div>` : '') +
+        (fl.ev ? `<div class="field yod-ev">Evidencia: ${esc2(fl.ev)}</div>` : '') +
+        `<span class="neighbor-link" data-nid="${esc2(r.from)}">← ${esc2(a.nombre)}</span><span class="neighbor-link" data-nid="${esc2(r.to)}">→ ${esc2(b.nombre)}</span>`;
+      return;
+    }
+    const c = p.pointer.canvas;
+    if (c.y < 0 && c.y > -MS - 30) { const col = g.cols.find(k => c.x >= k.x && c.x <= k.x + k.w); if (col) { aCol(col); return; } }
+    inicio();
+  });
+  network.on('doubleClick', p => { const d = p.nodes.length && Y.nodos[p.nodes[0]] && Y.nodos[p.nodes[0]].dentro; if (d) yodIr(d[0]); });
+
+  // textos del visor en español
+  const tx = (sel, t) => { const el = document.querySelector(sel); if (el) el.textContent = t; };
+  tx('#info-panel h3', 'Detalle'); tx('#legend-wrap h3', 'Celdas de esta lámina');
+  const inp = document.getElementById('search'); if (inp) inp.placeholder = 'Buscar en esta lámina…';
+  const lbl = document.querySelector('#legend-controls label'); if (lbl) lbl.lastChild.textContent = 'Todas';
+  document.querySelectorAll('[data-theme-choice]').forEach(b => { b.textContent = { light: 'Claro', dark: 'Oscuro', system: 'Sistema' }[b.dataset.themeChoice] || b.textContent; });
+  const st = document.getElementById('stats'); if (st) st.textContent = Y.pie;
+  const sim = document.createElement('div'); sim.id = 'yod-simbolos';
+  sim.innerHTML = Y.simbolos.map(s => `<b><span style="color:${s[1]}">${s[0]}</span> ${esc2(s[2])}</b>`).join('');
+  if (st && st.parentNode) st.parentNode.insertBefore(sim, st);
+
+  // errores en vivo: estado.json lo escribe cada hora el flujo «Grafo · estado» del repositorio
+  fetch(Y.estado || 'estado.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(E => {
+    if (!E || !E.errores) return; let n = 0;
+    E.errores.forEach(x => (x.nodos || []).forEach(id => { const p = Y.nodos[id]; if (!p) return; (p.err = p.err || []).push(x); if (x.tipo !== 'cambio') { p.al = p.al || []; p.bc = '#C8102E'; } else if (!p.bc) p.bc = '#C99A12'; n++; }));
+    if (n) { pintar(); const st2 = document.getElementById('stats'); if (st2) st2.textContent = Y.pie + ' · estado del ' + (E.generado || '').slice(0, 16).replace('T', ' ') + ' UTC'; }
+  }).catch(() => {});
+  // llegar con un nodo señalado en la liga, y avisar a la portada qué lámina es
+  const abrir = () => { let id = ''; try { id = window.YOD_FOCO || decodeURIComponent(location.hash.slice(1)); } catch (e) {} if (Y.nodos[id]) focusNode(id); };
+  if (window.YOD_FOCO || location.hash.length > 1) setTimeout(abrir, 280);
+  window.addEventListener('hashchange', abrir);
+  try { if (window.parent && window.parent !== window) window.parent.postMessage({ yod: 1, id: Y.id }, '*'); } catch (e) {}
+})();
+
+network.once('stabilizationIterationsDone', () => {
+  network.setOptions({ physics: { enabled: false } });
+});
+
+function showInfo(nodeId) {
+  const n = nodesDS.get(nodeId);
+  if (!n) return;
+  const neighborIds = network.getConnectedNodes(nodeId);
+  const neighborItems = neighborIds.map(nid => {
+    const nb = nodesDS.get(nid);
+    const color = nb ? nb.color.background : '#555';
+    return `<span class="neighbor-link" style="border-left-color:${esc(color)}" data-nid="${esc(nid)}">${esc(nb ? nb.label : nid)}</span>`;
+  }).join('');
+  const isMetaNode = !n.file_type && !n.source_file;
+  let html = `<div class="field"><b>${esc(n.label)}</b></div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Type: ${esc(n.file_type || 'unknown')}</div>`;
+  }
+  html += `<div class="field">Community: ${esc(n.community_name || '')}</div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Source: ${esc(n.source_file || '-')}</div>`;
+  } else if (n.member_count !== undefined && n.member_count !== null) {
+    html += `<div class="field">Members: ${esc(n.member_count)}</div>`;
+  }
+  html += `<div class="field">Degree: ${n.degree}</div>`;
+  if (neighborIds.length) {
+    html += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Neighbors (${neighborIds.length})</div><div id="neighbors-list">${neighborItems}</div>`;
+  }
+  document.getElementById('info-content').innerHTML = html;
+}
+
+function focusNode(nodeId) {
+  network.focus(nodeId, { scale: 1.4, animation: true });
+  network.selectNodes([nodeId]);
+  showInfo(nodeId);
+}
+
+// Neighbor links use a data attribute + one delegated listener rather than an
+// inline onclick. A node id/label sourced from a document or a scraped URL
+// (graphify add) can contain a double-quote; dropping the stringified id
+// unescaped into a quoted onclick both broke every link and allowed a hostile
+// source to inject an event handler into the local report (stored XSS, #1838).
+// esc() on data-nid keeps the value inside the attribute; the listener reads it
+// back verbatim. Bound to document so it survives the innerHTML rebuild that
+// recreates #neighbors-list on each showInfo().
+document.addEventListener('click', e => {
+  const el = e.target.closest('.neighbor-link');
+  if (el && el.dataset.nid !== undefined) focusNode(el.dataset.nid);
+});
+
+// Sidebar tooltips reuse vis-network's .vis-tooltip style and 100ms tooltipDelay.
+// Names get one only when CSS ellipsis truncates them (the full text is still in
+// the DOM); counts always get one, to say what the number is. Text is set with
+// textContent only (labels are untrusted). Delegated on document so rows rebuilt
+// later (search results, showInfo()) are covered.
+const sidebarTip = document.createElement('div');
+sidebarTip.className = 'vis-tooltip';
+sidebarTip.style.cssText = 'white-space: normal; max-width: 360px; overflow-wrap: break-word;';
+document.body.appendChild(sidebarTip);
+let sidebarTipTimer = null;
+let sidebarTipEl = null;    // element whose text the tooltip shows
+let sidebarTipZone = null;  // element the pointer must leave to hide it
+function hideSidebarTip() {
+  clearTimeout(sidebarTipTimer);
+  sidebarTip.style.visibility = 'hidden';
+  sidebarTip.textContent = '';
+  sidebarTipEl = sidebarTipZone = null;
+}
+document.addEventListener('mouseover', e => {
+  const zone = e.target.closest && e.target.closest('.legend-count, .legend-item, .search-item, .neighbor-link');
+  // Anywhere on a legend row except its count (dot, checkbox, gaps, padding)
+  // stands for the row's name, so moving within the row never re-triggers it.
+  const el = zone && zone.classList.contains('legend-item') ? zone.querySelector('.legend-label') : zone;
+  if (!el || el === sidebarTipEl) return;
+  hideSidebarTip();
+  const isCount = el.classList.contains('legend-count');
+  if (!isCount && el.scrollWidth <= el.clientWidth) return;
+  const text = isCount ? `${el.textContent} ${el.textContent === '1' ? 'nodo' : 'nodos'}` : el.textContent;
+  sidebarTipEl = el;
+  sidebarTipZone = zone;
+  const x = e.clientX, y = e.clientY;
+  sidebarTipTimer = setTimeout(() => {
+    sidebarTip.textContent = text;
+    sidebarTip.style.left = sidebarTip.style.top = '0px';  // measure at full max-width
+    sidebarTip.style.visibility = 'visible';
+    const w = sidebarTip.offsetWidth, h = sidebarTip.offsetHeight;
+    sidebarTip.style.left = Math.max(4, Math.min(x + 12, window.innerWidth - w - 4)) + 'px';
+    sidebarTip.style.top = (y + 16 + h > window.innerHeight ? Math.max(4, y - h - 8) : y + 16) + 'px';
+  }, 100);
+});
+document.addEventListener('mouseout', e => {
+  if (sidebarTipZone && !sidebarTipZone.contains(e.relatedTarget)) hideSidebarTip();
+});
+// A click rebuilds or hides the row (showInfo(), search pick) without a mouseout.
+document.addEventListener('mousedown', hideSidebarTip);
+
+// Track hovered node — hover detection is more reliable than click params
+let hoveredNodeId = null;
+network.on('hoverNode', params => {
+  hoveredNodeId = params.node;
+  container.style.cursor = 'pointer';
+});
+network.on('blurNode', () => {
+  hoveredNodeId = null;
+  container.style.cursor = 'default';
+});
+container.addEventListener('click', () => {
+  if (hoveredNodeId !== null) {
+    showInfo(hoveredNodeId);
+    network.selectNodes([hoveredNodeId]);
+  }
+});
+network.on('click', params => {
+  if (params.nodes.length > 0) {
+    showInfo(params.nodes[0]);
+  } else if (hoveredNodeId === null) {
+    document.getElementById('info-content').innerHTML = '<span class="empty">Toca un nodo para ver su detalle</span>';
+  }
+});
+
+const searchInput = document.getElementById('search');
+const searchResults = document.getElementById('search-results');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  searchResults.innerHTML = '';
+  if (!q) { searchResults.style.display = 'none'; return; }
+  const matches = RAW_NODES.filter(n => n.label.toLowerCase().includes(q)).slice(0, 20);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.style.display = 'block';
+  matches.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'search-item';
+    el.textContent = n.label;
+    el.style.borderLeft = `3px solid ${n.color.background}`;
+    el.style.paddingLeft = '8px';
+    el.onclick = () => {
+      network.focus(n.id, { scale: 1.5, animation: true });
+      network.selectNodes([n.id]);
+      showInfo(n.id);
+      searchResults.style.display = 'none';
+      searchInput.value = '';
+    };
+    searchResults.appendChild(el);
+  });
+});
+document.addEventListener('click', e => {
+  if (!searchResults.contains(e.target) && e.target !== searchInput)
+    searchResults.style.display = 'none';
+});
+
+const hiddenCommunities = new Set();
+
+const selectAllCb = document.getElementById('select-all-cb');
+
+function updateSelectAllState() {
+  const total = LEGEND.length;
+  const hidden = hiddenCommunities.size;
+  selectAllCb.checked = hidden === 0;
+  selectAllCb.indeterminate = hidden > 0 && hidden < total;
+}
+
+function toggleAllCommunities(hide) {
+  document.querySelectorAll('.legend-item').forEach(item => {
+    hide ? item.classList.add('dimmed') : item.classList.remove('dimmed');
+  });
+  document.querySelectorAll('.legend-cb').forEach(cb => {
+    cb.checked = !hide;
+  });
+  LEGEND.forEach(c => {
+    if (hide) hiddenCommunities.add(c.cid); else hiddenCommunities.delete(c.cid);
+  });
+  const updates = RAW_NODES.map(n => ({ id: n.id, hidden: hide }));
+  nodesDS.update(updates);
+  updateSelectAllState();
+}
+
+const legendEl = document.getElementById('legend');
+LEGEND.forEach(c => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.className = 'legend-cb';
+  cb.checked = true;
+  cb.addEventListener('change', (e) => {
+    e.stopPropagation();
+    if (cb.checked) {
+      hiddenCommunities.delete(c.cid);
+      item.classList.remove('dimmed');
+    } else {
+      hiddenCommunities.add(c.cid);
+      item.classList.add('dimmed');
+    }
+    const updates = RAW_NODES
+      .filter(n => n.community === c.cid)
+      .map(n => ({ id: n.id, hidden: !cb.checked }));
+    nodesDS.update(updates);
+    updateSelectAllState();
+  });
+  item.innerHTML = `<div class="legend-dot" style="background:${c.color}"></div>
+    <span class="legend-label">${c.label}</span>
+    <span class="legend-count">${c.count}</span>`;
+  item.prepend(cb);
+  item.onclick = (e) => {
+    if (e.target === cb) return;
+    cb.checked = !cb.checked;
+    cb.dispatchEvent(new Event('change'));
+  };
+  legendEl.appendChild(item);
+});
+</script>
+<script>
+// Render hyperedges as shaded regions
+const hyperedges = [];
+// afterDrawing passes ctx already transformed to network coordinate space.
+// Draw node positions raw — no manual pan/zoom/DPR math needed.
+
+// Andrew's monotone chain. Returns the hull in counter-clockwise order, which
+// is what the perimeter must be traced in. Collinear and duplicate points
+// collapse to the extremes, so degenerate member sets render as a segment
+// rather than a zero-area crossed path.
+function convexHull(pts) {
+    const p = pts.slice().sort((a, b) => (a.x - b.x) || (a.y - b.y));
+    if (p.length < 3) return p;
+    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const build = seq => {
+        const out = [];
+        for (const q of seq) {
+            while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+            out.push(q);
+        }
+        out.pop();
+        return out;
+    };
+    const hull = build(p).concat(build(p.slice().reverse()));
+    return hull.length >= 3 ? hull : p;
+}
+network.on('afterDrawing', function(ctx) {
+    hyperedges.forEach(h => {
+        // Legend toggles only set `hidden` on nodes; getPositions() still
+        // returns them, so skip hidden members or their hull lingers.
+        const positions = h.nodes
+            .filter(nid => { const n = nodesDS.get(nid); return n && n.hidden !== true; })
+            .map(nid => network.getPositions([nid])[nid])
+            .filter(p => p !== undefined);
+        if (positions.length < 2) return;
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#6366f1';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Centroid and expanded hull in network coordinates.
+        // The perimeter must follow hull order, not h.nodes order: tracing the
+        // raw member order self-intersects whenever the layout does not happen
+        // to place members in angular order, filling as crossed wedges.
+        const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length;
+        const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length;
+        const hull = convexHull(positions);
+        const expanded = hull.map(p => ({
+            x: cx + (p.x - cx) * 1.15,
+            y: cy + (p.y - cy) * 1.15
+        }));
+        ctx.moveTo(expanded[0].x, expanded[0].y);
+        expanded.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+        // Label
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#4f46e5';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(h.label, cx, cy - 5);
+        ctx.restore();
+    });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Código · amalaya-board · scripts/ · YOD OS en Graphify</title>
+<script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
+        integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"
+        crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #0f0f1a; --panel: #1a1a2e; --border: #2a2a4e; --input-border: #3a3a5e;
+    --text: #e0e0e0; --text-2: #aaa; --text-3: #ccc; --muted: #555; --count: #666;
+    --neighbor-border: #333; --node-label: #ffffff;
+  }
+  [data-theme="light"] {
+    --bg: #ffffff; --panel: #f8f9fa; --border: #d9dee5; --input-border: #c3cad4;
+    --text: #222222; --text-2: #666666; --text-3: #333333; --muted: #888888; --count: #777777;
+    --neighbor-border: #ccc; --node-label: #222222;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  #graph { flex: 1; }
+  #sidebar { width: 280px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  #search-wrap { padding: 12px; border-bottom: 1px solid var(--border); }
+  #search { width: 100%; background: var(--bg); border: 1px solid var(--input-border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+  #search:focus { border-color: #4E79A7; }
+  #search-results { max-height: 140px; overflow-y: auto; padding: 4px 12px; border-bottom: 1px solid var(--border); display: none; }
+  .search-item { padding: 4px 6px; cursor: pointer; border-radius: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-item:hover { background: var(--border); }
+  #info-panel { padding: 14px; border-bottom: 1px solid var(--border); min-height: 140px; }
+  #info-panel h3 { font-size: 13px; color: var(--text-2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #info-content { font-size: 13px; color: var(--text-3); line-height: 1.6; }
+  #info-content .field { margin-bottom: 5px; }
+  #info-content .field b { color: var(--text); }
+  #info-content .empty { color: var(--muted); font-style: italic; }
+  .neighbor-link { display: block; padding: 2px 6px; margin: 2px 0; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--neighbor-border); }
+  .neighbor-link:hover { background: var(--border); }
+  #neighbors-list { max-height: 160px; overflow-y: auto; margin-top: 4px; }
+  #legend-wrap { flex: 1; overflow-y: auto; padding: 12px; }
+  #legend-wrap h3 { font-size: 13px; color: var(--text-2); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
+  .legend-item:hover { background: var(--border); padding-left: 4px; }
+  .legend-item.dimmed { opacity: 0.35; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-count { color: var(--count); font-size: 11px; }
+  #stats { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  #legend-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 4px 0; }
+  #legend-controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-2); user-select: none; }
+  #legend-controls label:hover { color: var(--text); }
+  .legend-cb, #select-all-cb { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid var(--input-border); border-radius: 3px; background: var(--bg); cursor: pointer; position: relative; flex-shrink: 0; }
+  .legend-cb:checked, #select-all-cb:checked { background: #4E79A7; border-color: #4E79A7; }
+  .legend-cb:checked::after, #select-all-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  #select-all-cb:indeterminate { background: #4E79A7; border-color: #4E79A7; }
+  #select-all-cb:indeterminate::after { content: ''; position: absolute; left: 2px; top: 5px; width: 8px; height: 2px; background: #fff; border: none; transform: none; }
+  #theme-wrap { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  #theme-wrap button { flex: 1; background: var(--bg); color: var(--text-2); border: 1px solid var(--input-border); border-radius: 4px; padding: 3px 0; font-size: 11px; cursor: pointer; }
+  #theme-wrap button:hover { color: var(--text); }
+  #theme-wrap button[aria-pressed="true"] { background: #4E79A7; border-color: #4E79A7; color: #fff; }
+</style>
+<script id="graphify-theme-init">
+// Apply the saved theme before first paint (#3894). No saved choice keeps the
+// historical dark look; "system" follows prefers-color-scheme.
+(function () {
+  var pref = null;
+  try { pref = localStorage.getItem('graphify-theme'); } catch (e) {}
+  var t = pref === 'light' ? 'light'
+    : pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light'
+    : window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<style id="yod-capa">
+  #graph { position: relative; }
+  #yod-barra { position: fixed; top: 8px; left: 8px; right: 296px; z-index: 5; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+  #yod-barra button, #yod-barra a, #yod-barra select { pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; font: 500 12px system-ui, -apple-system, sans-serif; text-decoration: none;
+    color: var(--text); background: var(--panel); border: 1px solid var(--input-border); border-radius: 999px; padding: 5px 10px; min-height: 30px; cursor: pointer; }
+  #yod-barra button[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+  #yod-barra select { max-width: 150px; appearance: auto; }
+  #yod-barra i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  #yod-barra .yod-fuerte { font-weight: 650; }
+  #yod-barra .yod-c { display: none; }
+  .neighbor-link { white-space: normal !important; overflow-wrap: anywhere; line-height: 1.35; padding: 5px 6px !important; }
+  #neighbors-list { max-height: 260px !important; }
+  #info-content .field { overflow-wrap: anywhere; }
+  #info-content a { color: #4E79A7; }
+  [data-theme="dark"] #info-content a { color: #8FB8E8; }
+  .yod-tipo { color: var(--text-2); font-size: 12px; }
+  .yod-ev { color: var(--text-2); font-size: 11.5px; }
+  .yod-alerta { color: #C8102E; } [data-theme="dark"] .yod-alerta { color: #FF7B8A; }
+  .yod-entrar { display: block; margin: 8px 0; padding: 9px 11px; border-radius: 8px; background: #4E79A7; color: #fff !important; font-weight: 600; text-decoration: none; font-size: 13px; }
+  .yod-abrir { display: inline-block; margin: 2px 0 6px; font-size: 12px; }
+  .yod-lista { margin: 6px 0; font-size: 12px; } .yod-lista summary { cursor: pointer; color: var(--text-2); padding: 3px 0; }
+  .yod-lista div { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 0; } .yod-lista span { border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font: 11.5px ui-monospace, Menlo, monospace; }
+  .yod-tb { font-size: 12px; line-height: 1.7; }
+  #yod-simbolos { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 3px 10px; }
+  #yod-simbolos b { font-weight: 400; }
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    #graph { flex: 1 1 auto; min-height: 54vh; }
+    #sidebar { display: block; width: auto; max-height: 46vh; overflow-y: auto; border-left: 0; border-top: 1px solid var(--border); }
+    #theme-wrap { display: none; }
+    #info-panel { min-height: 0; }
+    #legend-wrap { overflow: visible; }
+    #yod-barra { right: 8px; gap: 4px; }
+    #yod-barra button, #yod-barra a, #yod-barra select { font-size: 11px; padding: 4px 8px; min-height: 28px; }
+    #yod-barra .yod-l { display: none; } #yod-barra .yod-c { display: inline; }
+    #yod-barra select { max-width: 112px; }
+    #yod-barra a.yod-fuerte { max-width: 150px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: inline-block; line-height: 20px; }
+  }
+</style>
+<script id="yod-datos">window.YOD = {"id":"codigo-amalaya-board-scripts","titulo":"Código · amalaya-board · scripts/","sub":"Carpeta scripts/ del repositorio amalaya-board.","padre":["codigo-amalaya-board.html","Código · amalaya-board"],"nodos":{"amalaya-board::scripts_verificar_publicacion":{"x":111,"y":72,"nombre":"verificar-publicacion.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"verificar-publicac\nion.mjs","ev":"amalaya-board/scripts/verificar-publicacion.mjs · 668 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/verificar-publicacion.mjs","lt":"Funciones y símbolos (103)","lista":["realFiles  · L12","real  · L13","realFreeze  · L14","pilot  · L40","pilotFiles  · L43","streetBatch50  · L54","streetBatch50Files  · L56","paramentoEvidenceFiles  · L59","paramentoRound2Files  · L61","c08EvidenceFiles  · L63","c08Point2Files  · L65","batchDirs  · L66","approved  · L68","roundProgressFiles  · L69","historicalOwner()  · L70","ob01EvidenceFiles  · L71","isc58EvidenceFiles  · L72","ob02EvidenceFiles  · L75","d105Files  · L81","d105Manifest  · L82","d106Files  · L84","d106Manifest  · L85","batch7883Files  · L87","batch7981Files  · L89","qualityR2Files  · L91","olaEvidenceFiles  · L93","modeladoDirs  · L101","c10Manifest  · L118","verify82Source()  · L125","swarm82Final  · L153","runtime82  · L165","published82Names  · L170","published82Manifest  · L172","published82Receipt  · L174","check()  · L180","evidence  · L220","worldHash  · L227","compared  · L234","ob02  · L238","integrated  · L252","isolated  · L253","currentWorldHash  · L262","provenance  · L265","worldSource  · L266","visorSource  · L274","visualBaseline  · L293","tracking  · L297","ob02Tracking  · L298","sidewalkA  · L302","progressView  · L305","sidewalkB  · L316","progressB  · L319","corners  · L330","progressC  · L333","identity  · L345","record  · L353","facadeRecord  · L356","normalized  · L359","routePhotos  · L360","volumeBefore  · L375","volume  · L376","envelopeAfter  · L381","progressV  · L381","roofView  · L381","facade  · L403","progressF  · L412","finish  · L426","progressM  · L429","equipment  · L441","equipmentRecord  · L442","… y 33 más"],"tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::scripts_pruebas_isc58":{"x":277,"y":72,"nombre":"pruebas-isc58.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"pruebas-isc58.mjs","ev":"amalaya-board/scripts/pruebas-isc58.mjs · 413 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/pruebas-isc58.mjs","lt":"Funciones y símbolos (76)","lista":["published  · L8","base  · L9","visor  · L10","moduleHash  · L12","nextHash  · L22","executable  · L28","runtime  · L29","osm  · L30","detail  · L31","ob01  · L32","ob02  · L33","world  · L34","colliders  · L36","oldIscColliders  · L37","inheritedOb01Meshes  · L39","inheritedOb02Meshes  · L40","paving  · L43","statue  · L44","body  · L45","stats  · L49","facade  · L71","red  · L72","field  · L73","upperClosure  · L74","creamPanels  · L87","oldBays  · L95","partialBays  · L96","rayHitsPanel()  · L106","redPanes  · L125","element  · L139","footprint  · L140","cells  · L141","inside()  · L148","walkWorld  · L172","walkDetail  · L173","walkStreet  · L174","walkParallel  · L175","walkColliders  · L178","northPlaza  · L179","northMatrix  · L181","transition  · L182","transitionTransform  · L184","tiles  · L185","originalTileMatrices  · L186","originalTileColors  · L187","originalWalkColliders  · L188","rayAt()  · L189","voidPoints  · L196","west  · L198","stage03  · L201","walkBase  · L209","westAfter  · L216","road  · L238","roadPosition  · L239","roadTriangles  · L241","strictlyOnRoad()  · L243","overlapArea()  · L251","repairedMeshes  · L278","pilasters  · L309","addedColliders  · L310","blockedAt()  · L316","northVoids  · L330","generic  · L335","genericMatricesBefore  · L336","genericColorsBefore  · L337","transitionNorth  · L338","southPositions  · L341","southTilesAfter03  · L342","southRepairStats  · L343","collidersAfter03  · L344","… y 6 más"],"tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::scripts_preparar_lamina":{"x":443,"y":72,"nombre":"preparar-lamina.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"\npreparar-lamina.mjs","ev":"amalaya-board/scripts/preparar-lamina.mjs · 24 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/preparar-lamina.mjs","lt":"Funciones y símbolos (6)","lista":["SHEET_BASE  · L3","sheetHash()  · L4","anchors  · L5","calls  · L6","removeSheetHook()  · L7","refineSheet()  · L16"],"tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::scripts_preparar_isc58":{"x":609,"y":72,"nombre":"preparar-isc58.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"preparar-isc58.mjs","ev":"amalaya-board/scripts/preparar-isc58.mjs · 101 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/preparar-isc58.mjs","lt":"Funciones y símbolos (17)","lista":["BASE_WORLD_SHA256  · L7","BASE_VISOR_SHA256  · L8","ISC58_IMPORT  · L9","ISC58_CALL  · L10","REGION_NAMES  · L13","ISC58_VISOR_IMPORT  · L14","ISC58_VISOR_CALL  · L15","sha256()  · L17","unique()  · L18","importFor()  · L19","removeCanonicalImport()  · L24","removeIsc58Hook()  · L32","regionHashes()  · L38","removeIsc58VisorHook()  · L49","refineVisorBundle()  · L55","refineBundle()  · L63","compileEditableIsc58()  · L74"],"tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::scripts_pruebas_chinche_visores":{"x":111,"y":156,"nombre":"pruebas-chinche-visores.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"pruebas-chinche-vi\nsores.mjs","ev":"amalaya-board/scripts/pruebas-chinche-visores.mjs · 151 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/pruebas-chinche-visores.mjs","lt":"Funciones y símbolos (36)","lista":["leer()  · L10","chinche  · L11","visor  · L11","app  · L12","mapa  · L12","panel  · L12","tramo()  · L13","{ rutas }  · L18","plano()  · L19","cambiarModo  · L39","toque  · L46","sv  · L52","cam  · L54","lienzo  · L58","marco  · L58","pintados  · L58","quitar  · L59","utiles  · L72","sucio  · L75","junto  · L85","oyente  · L91","enVisor()  · L94","centro  · L103","orilla  · L107","flecha  · L109","hoja()  · L114","Falso  · L125",".constructor()  · L125",".start()  · L125",".stop()  · L125",".decir()  · L126","h  · L128","SinPermiso  · L143",".constructor()  · L143","b  · L144","versiones  · L147"],"tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::scripts_pruebas_sector_visor":{"x":277,"y":156,"nombre":"pruebas-sector-visor.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"pruebas-sector-vis\nor.mjs","ev":"amalaya-board/scripts/pruebas-sector-visor.mjs · 37 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/pruebas-sector-visor.mjs","lt":"Funciones y símbolos (19)","lista":["source  · L10","raw  · L11","R  · L12","osm  · L13","plaza  · L13","scene()  · L14","a  · L15","b  · L15","ids  · L15","capture()  · L16","actual  · L17","reference  · L17","cs()  · L18","hash()  · L22","historical  · L24","sheetHash  · L25","priorCacheKey  · L30","badWorld  · L33","broken  · L33"],"tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::scripts_pruebas_suelo":{"x":443,"y":156,"nombre":"pruebas-suelo.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"pruebas-suelo.mjs","ev":"amalaya-board/scripts/pruebas-suelo.mjs · 71 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/pruebas-suelo.mjs","lt":"Funciones y símbolos (17)","lista":["strip()  · L17","sheet  · L18","baseSheet  · L19","R  · L21","before  · L25","colliderKey()  · L27","beforeColliders  · L28","keys  · L28","roadSegments  · L29","result  · L34","remaining  · L36","tileX()  · L48","tileY()  · L49","audit  · L52","constructor()  · L58","walkStatus  · L60","ground  · L62"],"tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::scripts_preparar_ebsw":{"x":609,"y":156,"nombre":"preparar-ebsw.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"preparar-ebsw.mjs","ev":"amalaya-board/scripts/preparar-ebsw.mjs · 41 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/preparar-ebsw.mjs","lt":"Funciones y símbolos (8)","lista":["EB_BASE_WORLD  · L6","EB_BASE_VISOR  · L7","runtime  · L8","anchors  · L9","call()  · L10","expected()  · L11","removeEbSwHook()  · L12","refineEbSw()  · L21"]},"amalaya-board::scripts_preparar_plantas":{"x":111,"y":240,"nombre":"preparar-plantas.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"\npreparar-plantas.mjs","ev":"amalaya-board/scripts/preparar-plantas.mjs · 39 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/preparar-plantas.mjs","lt":"Funciones y símbolos (8)","lista":["PLAN_BASE_WORLD  · L6","PLAN_BASE_VISOR  · L7","planHash()  · L8","anchors  · L9","calls  · L10","expected()  · L11","removePlanRoundHook()  · L12","refinePlans()  · L21"]},"amalaya-board::scripts_pruebas_c1_13_enjambre":{"x":277,"y":240,"nombre":"pruebas-c1-13-enjambre.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"pruebas-c1-13-enja\nmbre.mjs","ev":"amalaya-board/scripts/pruebas-c1-13-enjambre.mjs · 56 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/pruebas-c1-13-enjambre.mjs","lt":"Funciones y símbolos (19)","lista":["hash()  · L17","raw  · L18","R  · L19","serials  · L22","tracking  · L23","buildings  · L24","owners  · L25","signature()  · L26","colliders  · L27","summary  · L28","BASELINE  · L30","base  · L37","reviewed  · L39","current  · L40","roads  · L47","meta  · L49","key()  · L50","lite  · L51","detail()  · L52"]},"amalaya-board::scripts_pruebas_paramento":{"x":443,"y":240,"nombre":"pruebas-paramento.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"pruebas-paramento.\nmjs","ev":"amalaya-board/scripts/pruebas-paramento.mjs · 108 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/pruebas-paramento.mjs","lt":"Funciones y símbolos (17)","lista":["recessed  · L4","recessedBays  · L5","raw  · L21","R  · L22","byPart()  · L30","roofVertices()  · L31","parking  · L40","onTriangle()  · L43","lot  · L45","chihuahua  · L48","soto  · L52","d105  · L69","d106  · L75","extraStations  · L98","roads  · L101","clearance  · L102","report  · L104"]},"amalaya-board::scripts_c10_generaciones":{"x":609,"y":240,"nombre":"c10-generaciones.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"\nc10-generaciones.mjs","ev":"amalaya-board/scripts/c10-generaciones.mjs · 131 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/c10-generaciones.mjs","lt":"Funciones y símbolos (17)","lista":["C10_ROOT  · L5","EQUIPO  · L6","CONTINUACION  · L7","ACTUAL  · L8","ANCHORS  · L9","BASE_SOURCES  · L13","digest()  · L14","sourcePaths()  · L15","relative()  · L16","safePath()  · L19","safeRead()  · L25","manifestPath()  · L26","evidencePath()  · L30","hashMap()  · L34","record()  · L38","loadC10Chain()  · L39","verifyC10Generations()  · L55"]},"amalaya-board::scripts_pruebas_ajuste_visual":{"x":111,"y":324,"nombre":"pruebas-ajuste-visual.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"pruebas-ajuste-vis\nual.mjs","ev":"amalaya-board/scripts/pruebas-ajuste-visual.mjs · 63 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/pruebas-ajuste-visual.mjs","lt":"Funciones y símbolos (14)","lista":["strip()  · L15","sheet  · L16","baseSheet  · L17","runtime  · L18","changes  · L22","original  · L23","beforeColliders  · L24","referenceRoads  · L25","result  · L27","group  · L38","actual  · L40","hashes  · L40","drawing  · L52","registry  · L52"]},"amalaya-board::scripts_pruebas_plantas":{"x":277,"y":324,"nombre":"pruebas-plantas.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"\npruebas-plantas.mjs","ev":"amalaya-board/scripts/pruebas-plantas.mjs · 44 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/pruebas-plantas.mjs","lt":"Funciones y símbolos (14)","lista":["provenance  · L9","source  · L9","visor  · L9","hash  · L10","raw  · L15","R  · L16","colliders  · L17","east  · L17","world  · L17","oldColliders  · L18","owners  · L18","unchanged  · L18","bodyRecords  · L20","result  · L21"]},"mas:codigo-amalaya-board-scripts:codigo:(esta carpeta)":{"x":443,"y":324,"nombre":"+99 archivos más","forma":"dot","tam":9,"color":"#8A8F98","tipo":"Grupo","celda":"(esta carpeta) · Código","lbl":"+99 archivos más","lt":"Incluye","lista":["pruebas-respaldo-publico.mjs","pruebas-visor-isc58.mjs","exportar-escena-c08.mjs","pruebas-banquetas.mjs","pruebas-calzadas-lote50.mjs","pruebas-navegacion.mjs","pruebas-revision-plantas.mjs","exportar-huellas-inventario.mjs","generar-vista-ligera.mjs","mundo-ligero.mjs","preparar-calzadas.mjs","preparar-navegacion.mjs","preparar-revision-plantas.mjs","pruebas-calzadas.mjs","pruebas-cuadras.mjs","pruebas-ebsw.mjs","pruebas-fabrica.mjs","pruebas-lamina.mjs","pruebas-seguimiento-3d.mjs","preparar-banquetas.mjs","pruebas-chinches.mjs","pruebas-identificacion.mjs","encaje-geometry-checks.mjs","generar-generacion-c10.mjs","pruebas-puente.py","comprobar-encuentros-c10.mjs","conciliar-chinches.py","exportar-geometria-lote50.mjs","firmas-colisiones.mjs","frentes-calle-lib.mjs","generar-seguimiento-3d.mjs","preparar-ajuste-visual.mjs","preparar-paramento.mjs","preparar-suelo.mjs","pruebas-board-walk-entry.mjs","pruebas-capas.mjs","pruebas-depth-raster.mjs","pruebas-espacios-mapa.mjs","pruebas-levantamiento-mapa.mjs","pruebas-lod-ligero.mjs","pruebas-observatorio.mjs","pruebas-portal.mjs","pruebas-secciones-cuadra.mjs","pruebas-vista-ligera.mjs","trabajar-cuadra.mjs","comprobar-circuito-c10.mjs","evidencia-c10-8586.mjs","lod-ligero.mjs","preparar-levantamiento.mjs","preparar-lote50.mjs","pruebas-calc.mjs","pruebas-careta.mjs","pruebas-diagnostico.mjs","pruebas-fotos3d-ui.mjs","pruebas-generacion87.mjs","pruebas-mapa-recuperacion.mjs","pruebas-material84.mjs","pruebas-moac.mjs","pruebas-modelo87.mjs","pruebas-modelo88.mjs","pruebas-modelo89.mjs","pruebas-modelos3d.mjs","pruebas-recintos.mjs","verificar_salud.py","comprobar-encaje84-c10.mjs","encaje-edificios.py","evidencia-c08-punto1.py","evidencia-c08-punto2.py","evidencia-c1-13-enjambre.mjs","evidencia-cierre-cuadras.py","evidencia-ola-c11.mjs","generar-ajuste-visual.py","generar-inventario-cuadras.py","preparar-c08-punto2.py","pruebas-avance.mjs","pruebas-c10-patio.mjs","pruebas-calco-cuadras.mjs","pruebas-confianza.mjs","pruebas-generacion88.mjs","pruebas-overlay-c10.mjs","pruebas-plan-accion.mjs","pruebas-portal-shell.mjs","pruebas-referencias87.mjs","registrar-calzadas-lote50.py","ajuste-visual-evidencias.py","comprobar-material84-webgl.mjs","construir-calzadas-lote50.py","evidencia-calidad-7981.mjs","evidencia-ola-c06.mjs","evidencias-calzadas-lote50.py","evidencias-encaje-edificios.py","generar-paramento-suelo.py","preparar-c08-punto1.py","preparar-calco-cuadras.py","pruebas-cache-c10.mjs","pruebas-fuentes-c10.mjs","pruebas-ligero87.mjs","pruebas-recorrido.mjs","renderizar-evidencia-paramento.py"]},"f:amalaya-board:scripts/firmas-colisiones-base.json":{"x":1053,"y":72,"nombre":"firmas-colisiones-base.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"(esta carpeta) · Documentos y datos","lbl":"firmas-colisiones-\nbase.json","ev":"amalaya-board/scripts/firmas-colisiones-base.json · 589 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/firmas-colisiones-base.json","tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::scripts_jev_pilot_contract":{"x":111,"y":468,"nombre":"contract.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"jev-pilot/ · Código","lbl":"contract.mjs","ev":"amalaya-board/scripts/jev-pilot/contract.mjs · 331 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/jev-pilot/contract.mjs","lt":"Funciones y símbolos (23)","lista":["MODES  · L4","STATUSES  · L5","FAILURE_STATUSES  · L6","COUNT_FIELDS  · L7","invariant()  · L9","nonempty()  · L13","canonicalStringify()  · L18","encode()  · L20","hashCanonical()  · L46","freezeStudy()  · L51","assertFrozenStudy()  · L60","randomGenerator()  · L69","shuffled()  · L79","createSchedule()  · L89","normalizedBox()  · L130","intersectionOverUnion()  · L139","scoreDiagnostic()  · L148","validateRunReceipt()  · L197","divide()  · L236","median()  · L240","aggregateMetrics()  · L246","groupedSummary()  · L277","summarizeRuns()  · L304"],"tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::scripts_jev_pilot_prepare_dataset":{"x":277,"y":468,"nombre":"prepare-dataset.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"jev-pilot/ · Código","lbl":"\nprepare-dataset.mjs","ev":"amalaya-board/scripts/jev-pilot/prepare-dataset.mjs · 81 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/jev-pilot/prepare-dataset.mjs","lt":"Funciones y símbolos (27)","lista":["hash()  · L11","scratch  · L12","raw  · L15","R  · L16","context  · L17","osm  · L17","east  · L19","world  · L19","barra  · L20","club  · L20","front  · L21","meshes  · L23","neighbour  · L25","saved  · L27","reset()  · L28","find()  · L29","moldings  · L30","bars  · L31","cameras  · L32","defs  · L38","mutate()  · L49","visible()  · L60","exportTriangles()  · L61","baseline  · L71","caseFiles  · L71","metadata  · L77","result  · L79"]},"amalaya-board::scripts_jev_pilot_run":{"x":443,"y":468,"nombre":"run.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"jev-pilot/ · Código","lbl":"run.mjs","ev":"amalaya-board/scripts/jev-pilot/run.mjs · 161 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/jev-pilot/run.mjs","lt":"Funciones y símbolos (12)","lista":["ROOT  · L8","DATA  · L10","OUT  · L12","sha()  · L13","json()  · L14","save()  · L15","[action = 'preflight', limitArg]  · L17","rpc  · L19","keyOf()  · L21","validationFor()  · L22","validExisting()  · L27","inputs()  · L47"]},"amalaya-board::scripts_jev_pilot_transport":{"x":609,"y":468,"nombre":"transport.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"jev-pilot/ · Código","lbl":"transport.mjs","ev":"amalaya-board/scripts/jev-pilot/transport.mjs · 135 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/jev-pilot/transport.mjs","lt":"Funciones y símbolos (18)","lista":["CATEGORIES  · L5","TERMINAL  · L6","plain()  · L7","nonempty()  · L8","finite()  · L9","sha()  · L10","MCPTransportError  · L12",".constructor()  · L13","ConnectorRateLimit  · L15",".constructor()  · L16","MalformedReceipt  · L18",".constructor()  · L19","requireValue()  · L21","assertPilotOutcome()  · L24","isPilotOutcome()  · L57","decode()  · L59","createPilotTransport()  · L84","pace()  · L88"]},"amalaya-board::scripts_jev_pilot_analyze":{"x":111,"y":552,"nombre":"analyze.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"jev-pilot/ · Código","lbl":"analyze.mjs","ev":"amalaya-board/scripts/jev-pilot/analyze.mjs · 219 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/jev-pilot/analyze.mjs","lt":"Funciones y símbolos (18)","lista":["ARMS  · L6","COMPARISONS  · L7","TIME_FIELDS  · L8","fail()  · L9","check()  · L10","number()  · L11","sum()  · L12","percent()  · L13","median()  · L14","divide()  · L19","slotKey()  · L20","timingSummary()  · L22","qualitySummary()  · L29","summarizeRows()  · L66","pairTiming()  · L73","compareQuality()  · L82","analyzeReport()  · L98","main()  · L200"]},"amalaya-board::scripts_jev_pilot_run_v1":{"x":277,"y":552,"nombre":"run-v1.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"jev-pilot/ · Código","lbl":"run-v1.mjs","ev":"amalaya-board/scripts/jev-pilot/run-v1.mjs · 139 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/jev-pilot/run-v1.mjs","lt":"Funciones y símbolos (9)","lista":["ROOT  · L7","DATA  · L9","OUT  · L10","sha()  · L11","json()  · L12","save()  · L13","[action = 'preflight', limitArg]  · L15","rpc()  · L17","inputs()  · L34"]},"amalaya-board::scripts_jev_pilot_render_dataset":{"x":443,"y":552,"nombre":"render-dataset.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"jev-pilot/ · Código","lbl":"render-dataset.py","ev":"amalaya-board/scripts/jev-pilot/render-dataset.py · 66 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/jev-pilot/render-dataset.py","lt":"Funciones y símbolos (3)","lista":["clip()  · L7","render()  · L14","save_image()  · L38"]},"amalaya-board::scripts_jev_pilot_contract_test":{"x":831,"y":468,"nombre":"contract.test.mjs","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"jev-pilot/ · Flujos y pruebas","lbl":"contract.test.mjs","ev":"amalaya-board/scripts/jev-pilot/contract.test.mjs · 154 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/jev-pilot/contract.test.mjs","lt":"Funciones y símbolos (4)","lista":["HASH  · L5","box  · L6","inputs()  · L7","receipt()  · L8"],"tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::scripts_jev_pilot_transport_test":{"x":831,"y":552,"nombre":"transport.test.mjs","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"jev-pilot/ · Flujos y pruebas","lbl":"transport.test.mjs","ev":"amalaya-board/scripts/jev-pilot/transport.test.mjs · 63 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/jev-pilot/transport.test.mjs","lt":"Funciones y símbolos (5)","lista":["args  · L6","H  · L7","rejection  · L8","receipt()  · L9","envelope()  · L17"],"tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"f:amalaya-board:scripts/jev-pilot/README.md":{"x":1053,"y":468,"nombre":"README.md","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"jev-pilot/ · Documentos y datos","lbl":"README.md","ev":"amalaya-board/scripts/jev-pilot/README.md · 41 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/jev-pilot/README.md","tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"f:amalaya-board:scripts/jev-pilot/truth.json":{"x":1053,"y":552,"nombre":"truth.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"jev-pilot/ · Documentos y datos","lbl":"truth.json","ev":"amalaya-board/scripts/jev-pilot/truth.json · 898 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/jev-pilot/truth.json","tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::scripts_sidewalk_real_load_world":{"x":111,"y":696,"nombre":"load-world.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"sidewalk-real/ · Código","lbl":"load-world.mjs","ev":"amalaya-board/scripts/sidewalk-real/load-world.mjs · 45 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/sidewalk-real/load-world.mjs","lt":"Funciones y símbolos (2)","lista":["loadWorld()  · L11","exportTriangles()  · L23"]},"amalaya-board::scripts_sidewalk_real_run":{"x":277,"y":696,"nombre":"run.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"sidewalk-real/ · Código","lbl":"run.py","ev":"amalaya-board/scripts/sidewalk-real/run.py · 104 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/sidewalk-real/run.py","lt":"Funciones y símbolos (6)","lista":["append()  · L20","rpc()  · L23","validate()  · L54","run_slot()  · L66","route()  · L77","main()  · L85"]},"amalaya-board::scripts_sidewalk_real_record_review":{"x":443,"y":696,"nombre":"record-review.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"sidewalk-real/ · Código","lbl":"record-review.mjs","ev":"amalaya-board/scripts/sidewalk-real/record-review.mjs · 18 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/sidewalk-real/record-review.mjs","lt":"Funciones y símbolos (4)","lista":["review  · L4","measured  · L5","selected  · L6","evidence  · L8"]},"amalaya-board::scripts_sidewalk_real_export":{"x":609,"y":696,"nombre":"export.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"sidewalk-real/ · Código","lbl":"export.mjs","ev":"amalaya-board/scripts/sidewalk-real/export.mjs · 8 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/sidewalk-real/export.mjs","lt":"Funciones y símbolos (1)","lista":["scene  · L5"]},"amalaya-board::scripts_sidewalk_real_workflow":{"x":111,"y":780,"nombre":"workflow.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"sidewalk-real/ · Código","lbl":"workflow.py","ev":"amalaya-board/scripts/sidewalk-real/workflow.py · 52 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/sidewalk-real/workflow.py","lt":"Funciones y símbolos (3)","lista":["validate()  · L11","label()  · L25","score()  · L26"]},"amalaya-board::scripts_sidewalk_real_analyze":{"x":277,"y":780,"nombre":"analyze.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"sidewalk-real/ · Código","lbl":"analyze.py","ev":"amalaya-board/scripts/sidewalk-real/analyze.py · 43 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/sidewalk-real/analyze.py","lt":"Funciones y símbolos (2)","lista":["label()  · L8","correct()  · L9"]},"amalaya-board::scripts_sidewalk_real_prepare_photo":{"x":443,"y":780,"nombre":"prepare-photo.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"sidewalk-real/ · Código","lbl":"prepare-photo.py","ev":"amalaya-board/scripts/sidewalk-real/prepare-photo.py · 20 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/sidewalk-real/prepare-photo.py"},"amalaya-board::scripts_sidewalk_real_report":{"x":609,"y":780,"nombre":"report.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"sidewalk-real/ · Código","lbl":"report.py","ev":"amalaya-board/scripts/sidewalk-real/report.py · 72 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/sidewalk-real/report.py","lt":"Funciones y símbolos (3)","lista":["p()  · L21","page()  · L23","table()  · L29"]},"amalaya-board::scripts_sidewalk_real_policy_test":{"x":831,"y":696,"nombre":"policy.test.mjs","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"sidewalk-real/ · Flujos y pruebas","lbl":"policy.test.mjs","ev":"amalaya-board/scripts/sidewalk-real/policy.test.mjs · 10 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/sidewalk-real/policy.test.mjs","lt":"Funciones y símbolos (1)","lista":["positive  · L4"],"tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"f:amalaya-board:scripts/sidewalk-real/README.md":{"x":1053,"y":696,"nombre":"README.md","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"sidewalk-real/ · Documentos y datos","lbl":"README.md","ev":"amalaya-board/scripts/sidewalk-real/README.md · 55 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/sidewalk-real/README.md","tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::scripts_tests_c1_13_barandal_test":{"x":831,"y":924,"nombre":"c1-13-barandal.test.mjs","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"tests/ · Flujos y pruebas","lbl":"c1-13-barandal.tes\nt.mjs","ev":"amalaya-board/scripts/tests/c1-13-barandal.test.mjs · 26 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/scripts/tests/c1-13-barandal.test.mjs","tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]}},"flechas":{"amalaya-board::scripts_jev_pilot_run>amalaya-board::scripts_jev_pilot_transport":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"amalaya-board::scripts_jev_pilot_transport>amalaya-board::scripts_jev_pilot_transport_test":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"amalaya-board::scripts_jev_pilot_analyze>amalaya-board::scripts_jev_pilot_contract":{"f":"viva","r":"se llaman (8)","ev":"grafo de código de Graphify"},"amalaya-board::scripts_jev_pilot_contract>amalaya-board::scripts_jev_pilot_contract_test":{"f":"viva","r":"se llaman (9)","ev":"grafo de código de Graphify"},"amalaya-board::scripts_jev_pilot_contract>amalaya-board::scripts_jev_pilot_run":{"f":"viva","r":"se llaman (9)","ev":"grafo de código de Graphify"},"amalaya-board::scripts_jev_pilot_contract>amalaya-board::scripts_jev_pilot_run_v1":{"f":"viva","r":"se llaman (8)","ev":"grafo de código de Graphify"},"amalaya-board::scripts_sidewalk_real_export>amalaya-board::scripts_sidewalk_real_load_world":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"amalaya-board::scripts_c10_generaciones>amalaya-board::scripts_verificar_publicacion":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"amalaya-board::scripts_preparar_ebsw>amalaya-board::scripts_preparar_isc58":{"f":"viva","r":"se llaman (3)","ev":"grafo de código de Graphify"},"amalaya-board::scripts_preparar_ebsw>amalaya-board::scripts_verificar_publicacion":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"amalaya-board::scripts_preparar_ebsw>amalaya-board::scripts_pruebas_isc58":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"amalaya-board::scripts_preparar_ebsw>amalaya-board::scripts_pruebas_plantas":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"amalaya-board::scripts_preparar_ebsw>amalaya-board::scripts_pruebas_sector_visor":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"amalaya-board::scripts_preparar_isc58>amalaya-board::scripts_verificar_publicacion":{"f":"viva","r":"se llaman (7)","ev":"grafo de código de Graphify"},"amalaya-board::scripts_preparar_isc58>amalaya-board::scripts_pruebas_isc58":{"f":"viva","r":"se llaman (8)","ev":"grafo de código de Graphify"},"amalaya-board::scripts_preparar_lamina>amalaya-board::scripts_pruebas_paramento":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"amalaya-board::scripts_preparar_lamina>amalaya-board::scripts_pruebas_suelo":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"amalaya-board::scripts_preparar_plantas>amalaya-board::scripts_pruebas_plantas":{"f":"viva","r":"se llaman (5)","ev":"grafo de código de Graphify"},"amalaya-board::scripts_preparar_plantas>amalaya-board::scripts_pruebas_isc58":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"amalaya-board::scripts_preparar_plantas>amalaya-board::scripts_pruebas_sector_visor":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"amalaya-board::scripts_preparar_plantas>amalaya-board::scripts_verificar_publicacion":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"amalaya-board::scripts_preparar_isc58>amalaya-board::scripts_pruebas_plantas":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"amalaya-board::scripts_preparar_isc58>amalaya-board::scripts_pruebas_sector_visor":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"}},"familias":{"viva":{"corto":"Visto","nombre":"Visto en código u hoja","color":"#5B6470","ancho":1.3,"opacidad":0.75,"punteada":false},"inferida":{"corto":"Atlas","nombre":"Del atlas o deducido","color":"#9AA1AB","ancho":1.0,"opacidad":0.6,"punteada":false},"propuesta":{"corto":"Propuesta","nombre":"Propuesta","color":"#C99A12","ancho":1.6,"opacidad":0.9,"punteada":[7,5]},"hueco":{"corto":"Falta","nombre":"Falta o hallazgo","color":"#C8102E","ancho":1.7,"opacidad":0.9,"punteada":[3,5]}},"usadas":["viva"],"rejilla":{"cols":[{"x":0,"w":720,"nombre":"Código"},{"x":720,"w":222,"nombre":"Flujos y pruebas"},{"x":942,"w":222,"nombre":"Documentos y datos"}],"filas":[{"y":0,"h":396,"nombre":"(esta carpeta)"},{"y":396,"h":228,"nombre":"jev-pilot/"},{"y":624,"h":228,"nombre":"sidewalk-real/"},{"y":852,"h":144,"nombre":"tests/"}]},"eje_x":"Tipo de archivo","eje_y":"Carpeta","estado":"https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/grafo-datos/estado.json","simbolos":[["■","#59A14F","Tablero o página"],["▭","#F1CE63","Pantalla propuesta"],["◆","#F28E2B","Motor"],["⬢","#79706E","Repositorio o código"],["▲","#4E79A7","Libro"],["▼","#A0CBE8","Pestaña"],["●","#B07AA1","Quién"],["★","#EDC948","Propuesta"],["★","#E15759","Hallazgo o clave"]],"pie":"38 nodos · 23 flechas · Código · amalaya-board · scripts/ · Graphify 0.9.106"};</script>
+</head>
+<body>
+<div id="graph"></div>
+<div id="sidebar">
+  <div id="theme-wrap" role="group" aria-label="Theme">
+    <button type="button" data-theme-choice="light">Claro</button>
+    <button type="button" data-theme-choice="dark">Oscuro</button>
+    <button type="button" data-theme-choice="system">Sistema</button>
+  </div>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Buscar…" autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div id="info-panel">
+    <h3>Detalle</h3>
+    <div id="info-content"><span class="empty">Toca un nodo para ver su detalle</span></div>
+  </div>
+  <div id="legend-wrap">
+    <h3>Grupos</h3>
+    <div id="legend-controls">
+      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">Todos</label>
+    </div>
+    <div id="legend"></div>
+  </div>
+  <div id="stats">38 nodes &middot; 23 edges &middot; 9 communities</div>
+</div>
+<script>
+const RAW_NODES = [{"id": "amalaya-board::scripts_verificar_publicacion", "label": "verificar-publicacion.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 34.0, "font": {"size": 12, "color": "#ffffff"}, "title": "verificar-publicacion.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/verificar-publicacion.mjs \u00b7 668 l\u00edneas", "file_type": "code", "degree": 4}, {"id": "amalaya-board::scripts_pruebas_isc58", "label": "pruebas-isc58.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 28.0, "font": {"size": 12, "color": "#ffffff"}, "title": "pruebas-isc58.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/pruebas-isc58.mjs \u00b7 413 l\u00edneas", "file_type": "code", "degree": 3}, {"id": "amalaya-board::scripts_preparar_lamina", "label": "preparar-lamina.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 22.0, "font": {"size": 12, "color": "#ffffff"}, "title": "preparar-lamina.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/preparar-lamina.mjs \u00b7 24 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "amalaya-board::scripts_preparar_isc58", "label": "preparar-isc58.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "preparar-isc58.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/preparar-isc58.mjs \u00b7 101 l\u00edneas", "file_type": "code", "degree": 5}, {"id": "amalaya-board::scripts_pruebas_chinche_visores", "label": "pruebas-chinche-visores.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "pruebas-chinche-visores.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/pruebas-chinche-visores.mjs \u00b7 151 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "amalaya-board::scripts_pruebas_sector_visor", "label": "pruebas-sector-visor.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 28.0, "font": {"size": 12, "color": "#ffffff"}, "title": "pruebas-sector-visor.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/pruebas-sector-visor.mjs \u00b7 37 l\u00edneas", "file_type": "code", "degree": 3}, {"id": "amalaya-board::scripts_pruebas_suelo", "label": "pruebas-suelo.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "pruebas-suelo.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/pruebas-suelo.mjs \u00b7 71 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "amalaya-board::scripts_preparar_ebsw", "label": "preparar-ebsw.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "preparar-ebsw.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/preparar-ebsw.mjs \u00b7 41 l\u00edneas", "file_type": "code", "degree": 5}, {"id": "amalaya-board::scripts_preparar_plantas", "label": "preparar-plantas.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 34.0, "font": {"size": 12, "color": "#ffffff"}, "title": "preparar-plantas.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/preparar-plantas.mjs \u00b7 39 l\u00edneas", "file_type": "code", "degree": 4}, {"id": "amalaya-board::scripts_pruebas_c1_13_enjambre", "label": "pruebas-c1-13-enjambre.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "pruebas-c1-13-enjambre.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/pruebas-c1-13-enjambre.mjs \u00b7 56 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "amalaya-board::scripts_pruebas_paramento", "label": "pruebas-paramento.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "pruebas-paramento.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/pruebas-paramento.mjs \u00b7 108 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "amalaya-board::scripts_c10_generaciones", "label": "c10-generaciones.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "c10-generaciones.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/c10-generaciones.mjs \u00b7 131 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "amalaya-board::scripts_pruebas_ajuste_visual", "label": "pruebas-ajuste-visual.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "pruebas-ajuste-visual.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/pruebas-ajuste-visual.mjs \u00b7 63 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "amalaya-board::scripts_pruebas_plantas", "label": "pruebas-plantas.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 28.0, "font": {"size": 12, "color": "#ffffff"}, "title": "pruebas-plantas.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/pruebas-plantas.mjs \u00b7 44 l\u00edneas", "file_type": "code", "degree": 3}, {"id": "mas:codigo-amalaya-board-scripts:codigo:(esta carpeta)", "label": "+99 archivos m\u00e1s", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "+99 archivos m\u00e1s", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "", "file_type": "concept", "degree": 0}, {"id": "f:amalaya-board:scripts/firmas-colisiones-base.json", "label": "firmas-colisiones-base.json", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "firmas-colisiones-base.json", "community": 1, "community_name": "(esta carpeta) \u00b7 Documentos y datos", "source_file": "amalaya-board/scripts/firmas-colisiones-base.json \u00b7 589 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "amalaya-board::scripts_jev_pilot_contract", "label": "contract.mjs", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 34.0, "font": {"size": 12, "color": "#ffffff"}, "title": "contract.mjs", "community": 2, "community_name": "jev-pilot/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/jev-pilot/contract.mjs \u00b7 331 l\u00edneas", "file_type": "code", "degree": 4}, {"id": "amalaya-board::scripts_jev_pilot_prepare_dataset", "label": "prepare-dataset.mjs", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "prepare-dataset.mjs", "community": 2, "community_name": "jev-pilot/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/jev-pilot/prepare-dataset.mjs \u00b7 81 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "amalaya-board::scripts_jev_pilot_run", "label": "run.mjs", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 22.0, "font": {"size": 12, "color": "#ffffff"}, "title": "run.mjs", "community": 2, "community_name": "jev-pilot/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/jev-pilot/run.mjs \u00b7 161 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "amalaya-board::scripts_jev_pilot_transport", "label": "transport.mjs", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 22.0, "font": {"size": 12, "color": "#ffffff"}, "title": "transport.mjs", "community": 2, "community_name": "jev-pilot/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/jev-pilot/transport.mjs \u00b7 135 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "amalaya-board::scripts_jev_pilot_analyze", "label": "analyze.mjs", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "analyze.mjs", "community": 2, "community_name": "jev-pilot/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/jev-pilot/analyze.mjs \u00b7 219 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "amalaya-board::scripts_jev_pilot_run_v1", "label": "run-v1.mjs", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "run-v1.mjs", "community": 2, "community_name": "jev-pilot/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/jev-pilot/run-v1.mjs \u00b7 139 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "amalaya-board::scripts_jev_pilot_render_dataset", "label": "render-dataset.py", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "render-dataset.py", "community": 2, "community_name": "jev-pilot/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/jev-pilot/render-dataset.py \u00b7 66 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "amalaya-board::scripts_jev_pilot_contract_test", "label": "contract.test.mjs", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "contract.test.mjs", "community": 3, "community_name": "jev-pilot/ \u00b7 Flujos y pruebas", "source_file": "amalaya-board/scripts/jev-pilot/contract.test.mjs \u00b7 154 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "amalaya-board::scripts_jev_pilot_transport_test", "label": "transport.test.mjs", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "transport.test.mjs", "community": 3, "community_name": "jev-pilot/ \u00b7 Flujos y pruebas", "source_file": "amalaya-board/scripts/jev-pilot/transport.test.mjs \u00b7 63 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "f:amalaya-board:scripts/jev-pilot/README.md", "label": "README.md", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "README.md", "community": 4, "community_name": "jev-pilot/ \u00b7 Documentos y datos", "source_file": "amalaya-board/scripts/jev-pilot/README.md \u00b7 41 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:scripts/jev-pilot/truth.json", "label": "truth.json", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "truth.json", "community": 4, "community_name": "jev-pilot/ \u00b7 Documentos y datos", "source_file": "amalaya-board/scripts/jev-pilot/truth.json \u00b7 898 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "amalaya-board::scripts_sidewalk_real_load_world", "label": "load-world.mjs", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "load-world.mjs", "community": 5, "community_name": "sidewalk-real/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/sidewalk-real/load-world.mjs \u00b7 45 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "amalaya-board::scripts_sidewalk_real_run", "label": "run.py", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "run.py", "community": 5, "community_name": "sidewalk-real/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/sidewalk-real/run.py \u00b7 104 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "amalaya-board::scripts_sidewalk_real_record_review", "label": "record-review.mjs", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "record-review.mjs", "community": 5, "community_name": "sidewalk-real/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/sidewalk-real/record-review.mjs \u00b7 18 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "amalaya-board::scripts_sidewalk_real_export", "label": "export.mjs", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 16.0, "font": {"size": 12, "color": "#ffffff"}, "title": "export.mjs", "community": 5, "community_name": "sidewalk-real/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/sidewalk-real/export.mjs \u00b7 8 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "amalaya-board::scripts_sidewalk_real_workflow", "label": "workflow.py", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "workflow.py", "community": 5, "community_name": "sidewalk-real/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/sidewalk-real/workflow.py \u00b7 52 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "amalaya-board::scripts_sidewalk_real_analyze", "label": "analyze.py", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "analyze.py", "community": 5, "community_name": "sidewalk-real/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/sidewalk-real/analyze.py \u00b7 43 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "amalaya-board::scripts_sidewalk_real_prepare_photo", "label": "prepare-photo.py", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "prepare-photo.py", "community": 5, "community_name": "sidewalk-real/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/sidewalk-real/prepare-photo.py \u00b7 20 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "amalaya-board::scripts_sidewalk_real_report", "label": "report.py", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "report.py", "community": 5, "community_name": "sidewalk-real/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/scripts/sidewalk-real/report.py \u00b7 72 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "amalaya-board::scripts_sidewalk_real_policy_test", "label": "policy.test.mjs", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "policy.test.mjs", "community": 6, "community_name": "sidewalk-real/ \u00b7 Flujos y pruebas", "source_file": "amalaya-board/scripts/sidewalk-real/policy.test.mjs \u00b7 10 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "f:amalaya-board:scripts/sidewalk-real/README.md", "label": "README.md", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "README.md", "community": 7, "community_name": "sidewalk-real/ \u00b7 Documentos y datos", "source_file": "amalaya-board/scripts/sidewalk-real/README.md \u00b7 55 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "amalaya-board::scripts_tests_c1_13_barandal_test", "label": "c1-13-barandal.test.mjs", "color": {"background": "#9C755F", "border": "#9C755F", "highlight": {"background": "#ffffff", "border": "#9C755F"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "c1-13-barandal.test.mjs", "community": 8, "community_name": "tests/ \u00b7 Flujos y pruebas", "source_file": "amalaya-board/scripts/tests/c1-13-barandal.test.mjs \u00b7 26 l\u00edneas", "file_type": "code", "degree": 0}];
+const RAW_EDGES = [{"from": "amalaya-board::scripts_c10_generaciones", "to": "amalaya-board::scripts_verificar_publicacion", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_preparar_ebsw", "to": "amalaya-board::scripts_verificar_publicacion", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_preparar_isc58", "to": "amalaya-board::scripts_verificar_publicacion", "label": "se llaman (7)", "title": "se llaman (7) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_preparar_plantas", "to": "amalaya-board::scripts_verificar_publicacion", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_preparar_ebsw", "to": "amalaya-board::scripts_pruebas_isc58", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_preparar_isc58", "to": "amalaya-board::scripts_pruebas_isc58", "label": "se llaman (8)", "title": "se llaman (8) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_preparar_plantas", "to": "amalaya-board::scripts_pruebas_isc58", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_preparar_lamina", "to": "amalaya-board::scripts_pruebas_paramento", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_preparar_lamina", "to": "amalaya-board::scripts_pruebas_suelo", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_preparar_ebsw", "to": "amalaya-board::scripts_preparar_isc58", "label": "se llaman (3)", "title": "se llaman (3) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_preparar_isc58", "to": "amalaya-board::scripts_pruebas_plantas", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_preparar_isc58", "to": "amalaya-board::scripts_pruebas_sector_visor", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_preparar_ebsw", "to": "amalaya-board::scripts_pruebas_sector_visor", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_preparar_plantas", "to": "amalaya-board::scripts_pruebas_sector_visor", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_preparar_ebsw", "to": "amalaya-board::scripts_pruebas_plantas", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_preparar_plantas", "to": "amalaya-board::scripts_pruebas_plantas", "label": "se llaman (5)", "title": "se llaman (5) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_jev_pilot_analyze", "to": "amalaya-board::scripts_jev_pilot_contract", "label": "se llaman (8)", "title": "se llaman (8) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_jev_pilot_contract", "to": "amalaya-board::scripts_jev_pilot_contract_test", "label": "se llaman (9)", "title": "se llaman (9) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_jev_pilot_contract", "to": "amalaya-board::scripts_jev_pilot_run", "label": "se llaman (9)", "title": "se llaman (9) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_jev_pilot_contract", "to": "amalaya-board::scripts_jev_pilot_run_v1", "label": "se llaman (8)", "title": "se llaman (8) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_jev_pilot_run", "to": "amalaya-board::scripts_jev_pilot_transport", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_jev_pilot_transport", "to": "amalaya-board::scripts_jev_pilot_transport_test", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::scripts_sidewalk_real_export", "to": "amalaya-board::scripts_sidewalk_real_load_world", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}];
+const LEGEND = [{"cid": 0, "color": "#4E79A7", "label": "(esta carpeta) \u00b7 C\u00f3digo", "count": 15}, {"cid": 1, "color": "#F28E2B", "label": "(esta carpeta) \u00b7 Documentos y datos", "count": 1}, {"cid": 2, "color": "#E15759", "label": "jev-pilot/ \u00b7 C\u00f3digo", "count": 7}, {"cid": 3, "color": "#76B7B2", "label": "jev-pilot/ \u00b7 Flujos y pruebas", "count": 2}, {"cid": 4, "color": "#59A14F", "label": "jev-pilot/ \u00b7 Documentos y datos", "count": 2}, {"cid": 5, "color": "#EDC948", "label": "sidewalk-real/ \u00b7 C\u00f3digo", "count": 8}, {"cid": 6, "color": "#B07AA1", "label": "sidewalk-real/ \u00b7 Flujos y pruebas", "count": 1}, {"cid": 7, "color": "#FF9DA7", "label": "sidewalk-real/ \u00b7 Documentos y datos", "count": 1}, {"cid": 8, "color": "#9C755F", "label": "tests/ \u00b7 Flujos y pruebas", "count": 1}];
+
+// HTML-escape helper — prevents XSS when injecting graph data into innerHTML
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Build vis datasets
+const nodesDS = new vis.DataSet(RAW_NODES.map((n, i) => ({
+  id: n.id, label: n.label, color: n.color, size: n.size,
+  font: n.font, title: n.title,
+  // Fermat/golden-angle spiral seed positions (#3699): spreading nodes out
+  // before physics runs keeps avoidOverlap from computing near-zero-distance
+  // repulsion that blows the BarnesHut recursion into a stack overflow on large
+  // graphs. `i` is the map index — physics still settles small graphs identically.
+  x: 30 * Math.sqrt(i) * Math.cos(i * 2.4),
+  y: 30 * Math.sqrt(i) * Math.sin(i * 2.4),
+  community: n.community, community_name: n.community_name,
+  source_file: n.source_file, file_type: n.file_type, degree: n.degree,
+  member_count: n.member_count,
+})));
+
+const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({
+  id: i, from: e.from, to: e.to,
+  label: '',
+  title: e.title,
+  dashes: e.dashes,
+  width: e.width,
+  color: e.color,
+  arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+})));
+
+const container = document.getElementById('graph');
+const network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, {
+  physics: {
+    enabled: false,
+    solver: 'forceAtlas2Based',
+    forceAtlas2Based: {
+      gravitationalConstant: -60,
+      centralGravity: 0.005,
+      springLength: 120,
+      springConstant: 0.08,
+      damping: 0.4,
+      avoidOverlap: 0.8,
+    },
+    stabilization: { iterations: 200, fit: true },
+  },
+  interaction: {
+    hover: true,
+    tooltipDelay: 100,
+    hideEdgesOnDrag: true,
+    navigationButtons: false,
+    keyboard: false,
+  },
+  nodes: { shape: 'dot', borderWidth: 1.5 },
+  edges: { smooth: { type: 'continuous', roundness: 0.2 }, selectionWidth: 3 },
+});
+
+// Theme toggle (#3894): Light / Dark / System, persisted in localStorage.
+const THEME_KEY = 'graphify-theme';
+const themeMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+let themeLabelColor = '#ffffff';  // matches the per-node font color set in Python
+function themePref() {
+  let p = null;
+  try { p = localStorage.getItem(THEME_KEY); } catch (e) {}
+  return (p === 'light' || p === 'dark' || p === 'system') ? p : null;
+}
+function applyTheme(pref) {
+  const t = pref === 'light' ? 'light' : (pref === 'system' && themeMQ && themeMQ.matches) ? 'light' : 'dark';
+  const root = document.documentElement;
+  if (!root) return;
+  root.setAttribute('data-theme', t);
+  document.querySelectorAll('[data-theme-choice]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.themeChoice === (pref || 'system')));
+  });
+  const labelColor = getComputedStyle(root).getPropertyValue('--node-label').trim();
+  if (labelColor && labelColor !== themeLabelColor) {
+    themeLabelColor = labelColor;
+    nodesDS.update(nodesDS.get().map(n => ({ id: n.id, font: Object.assign({}, n.font, { color: labelColor }) })));
+  }
+}
+document.querySelectorAll('[data-theme-choice]').forEach(b => {
+  b.addEventListener('click', () => {
+    const pref = b.dataset.themeChoice;
+    try { localStorage.setItem(THEME_KEY, pref); } catch (e) {}
+    applyTheme(pref);
+  });
+});
+if (themeMQ) {
+  const onSchemeChange = () => { if (themePref() === 'system') applyTheme('system'); };
+  if (themeMQ.addEventListener) themeMQ.addEventListener('change', onSchemeChange);
+  else if (themeMQ.addListener) themeMQ.addListener(onSchemeChange);
+}
+applyTheme(themePref() || 'system');
+
+
+// ── YOD: acomodo fijo en cuadrante sobre el visor de Graphify. Los nodos y las flechas son los que exportó Graphify. ──
+(function () {
+  const Y = window.YOD;
+  // Cuando la portada enseña un borrador, trae la lámina como texto: los enlaces a otras láminas se le piden a ella.
+  const SUELTA = location.protocol === 'about:';
+  const yodIr = h => { const m = String(h).match(/^([A-Za-z0-9._-]+)\.html(?:#(.*))?$/);
+    if (SUELTA && m) { try { parent.postMessage({ yod: 2, ir: m[1], nodo: m[2] ? decodeURIComponent(m[2]) : '' }, '*'); } catch (e) {} } else location.href = h; };
+  if (SUELTA) document.addEventListener('click', e => { const a = e.target && e.target.closest ? e.target.closest('a[href]') : null; if (!a || a.target === '_blank') return;
+    const h = a.getAttribute('href') || ''; if (/^[A-Za-z0-9._-]+\.html(#.*)?$/.test(h)) { e.preventDefault(); yodIr(h); } }, true);
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const esc2 = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const fuente = p => p.forma === 'box'
+    ? { size: 13, color: '#1d1d1f', face: 'system-ui, -apple-system, sans-serif', multi: 'html', align: 'left', bold: { color: '#111111', size: 14, face: 'system-ui, -apple-system, sans-serif' } }
+    : { size: 14, color: css('--node-label') || '#222', face: 'system-ui, -apple-system, sans-serif', strokeWidth: 3, strokeColor: css('--bg') || '#fff' };
+  const estiloNodo = (n, apagado) => {
+    const p = Y.nodos[n.id] || {};
+    const o = { id: n.id, x: p.x, y: p.y, label: p.lbl, shape: p.forma, size: p.tam, opacity: apagado ? 0.14 : 1, title: undefined,
+      color: { background: p.color, border: p.al ? '#C8102E' : (p.bc || p.color), highlight: { background: p.color, border: '#111' }, hover: { background: p.color, border: '#111' } },
+      borderWidth: p.al ? 2.6 : (p.bc ? 2.4 : 1), borderWidthSelected: 3.5, font: fuente(p) };
+    if (p.forma === 'box') { o.widthConstraint = { minimum: p.caja, maximum: p.caja }; o.margin = 9; o.shapeProperties = { borderRadius: 7 }; }
+    return o;
+  };
+  const ocultas = new Set();
+  let foco = null;
+  const recto = RAW_EDGES.length > 380;
+  const det = r => Y.flechas[r.from + '>' + r.to] || Y.flechas[r.to + '>' + r.from] || {};
+  const estiloArista = e => {
+    const r = RAW_EDGES[e.id], fl = det(r), f = Y.familias[fl.f] || Y.familias.inferida;
+    const con = !foco || foco.aristas.has(e.id);
+    return { id: e.id, hidden: ocultas.has(fl.f || 'inferida'), width: con && foco ? f.ancho + 1.3 : f.ancho, title: undefined,
+             color: { color: f.color, opacity: con ? f.opacidad : 0.05, highlight: f.color, hover: f.color },
+             dashes: f.punteada, arrows: { to: { enabled: true, scaleFactor: 0.55 } }, smooth: recto ? false : { type: 'curvedCW', roundness: 0.12 } };
+  };
+  const pintar = () => {
+    nodesDS.update(nodesDS.get().map(n => estiloNodo(n, foco && !foco.nodos.has(n.id))));
+    edgesDS.update(edgesDS.get().map(estiloArista));
+  };
+  pintar();
+  network.setOptions({ physics: { enabled: false }, nodes: { labelHighlightBold: false, scaling: { label: { drawThreshold: 5, maxVisible: 44 } } },
+                       interaction: { hover: true, tooltipDelay: 150, zoomSpeed: 0.8, hideEdgesOnDrag: RAW_EDGES.length > 250, hideEdgesOnZoom: RAW_EDGES.length > 600 } });
+  new MutationObserver(() => setTimeout(pintar, 30)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  const enfocar = id => { foco = { nodos: new Set([id, ...network.getConnectedNodes(id)]), aristas: new Set(network.getConnectedEdges(id)) }; pintar(); };
+  network.on('selectNode', p => enfocar(p.nodes[0]));
+  network.on('deselectNode', () => { foco = null; pintar(); });
+
+  // barra: subir, familias de flecha y «Ver todo»
+  const barra = document.createElement('div');
+  barra.id = 'yod-barra';
+  barra.innerHTML = (Y.padre ? `<a class="yod-fuerte" href="${Y.padre[0]}">↑ ${esc2(Y.padre[1])}</a>` : '') +
+    Object.entries(Y.familias).filter(([k]) => Y.usadas.includes(k)).map(([k, f]) =>
+      `<button type="button" data-fam="${k}" aria-pressed="true" title="${f.nombre}"><i style="background:${f.color}"></i><span class="yod-l">${f.nombre}</span><span class="yod-c">${f.corto}</span></button>`).join('') +
+    '<button type="button" id="yod-todo" class="yod-fuerte">Ver todo</button>';
+  document.body.appendChild(barra);
+  barra.addEventListener('click', ev => {
+    const b = ev.target.closest('button'); if (!b) return;
+    if (b.id === 'yod-todo') { foco = null; network.unselectAll(); pintar(); ajustar(true); inicio(); return; }
+    const k = b.dataset.fam; if (ocultas.has(k)) ocultas.delete(k); else ocultas.add(k);
+    b.setAttribute('aria-pressed', String(!ocultas.has(k))); pintar();
+  });
+
+  // rejilla del cuadrante: los títulos crecen al alejarse para que siempre se lean
+  const g = Y.rejilla, W = g.cols.reduce((s, c) => s + c.w, 0), Ht = g.filas.reduce((s, f) => s + f.h, 0);
+  const MS = Math.max(70, Math.min(150, Ht * 0.07));
+  const letra = (ctx, t) => { ctx.font = '600 ' + t + 'px system-ui, -apple-system, sans-serif'; };
+  network.on('beforeDrawing', ctx => {
+    const sc = network.getScale() || 1;
+    const linea = css('--border') || '#ccc', texto = css('--text-2') || '#666', fondo = css('--panel') || '#f6f6f6';
+    ctx.save();
+    g.filas.forEach((f, i) => { if (i % 2 === 0) { ctx.fillStyle = fondo; ctx.globalAlpha = 0.6; ctx.fillRect(0, f.y, W, f.h); } });
+    ctx.globalAlpha = 1; ctx.strokeStyle = linea; ctx.lineWidth = 1.5 / Math.min(1, sc * 1.6);
+    g.cols.forEach(c => { ctx.beginPath(); ctx.moveTo(c.x, -MS); ctx.lineTo(c.x, Ht); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(W, -MS); ctx.lineTo(W, Ht); ctx.stroke();
+    g.filas.forEach(f => { ctx.beginPath(); ctx.moveTo(0, f.y); ctx.lineTo(W, f.y); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(0, Ht); ctx.lineTo(W, Ht); ctx.stroke();
+    ctx.fillStyle = texto; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'center';
+    g.cols.forEach(c => {
+      let t = Math.max(20, Math.min(15 / sc, MS * 0.62)); letra(ctx, t);
+      while (t > 11 && ctx.measureText(c.nombre).width > c.w - 14) { t -= 1; letra(ctx, t); }
+      if (ctx.measureText(c.nombre).width > c.w - 14) { const p = c.nombre.split(' '), m = Math.ceil(p.length / 2); ctx.fillText(p.slice(0, m).join(' '), c.x + c.w / 2, -t - 14); ctx.fillText(p.slice(m).join(' '), c.x + c.w / 2, -10); }
+      else ctx.fillText(c.nombre, c.x + c.w / 2, -12);
+    });
+    ctx.textAlign = 'left';
+    g.filas.forEach(f => {
+      let t = Math.max(17, Math.min(14 / sc, f.h * 0.4)); letra(ctx, t);
+      while (t > 12 && ctx.measureText(f.nombre).width > W - 20) { t -= 2; letra(ctx, t); }
+      ctx.globalAlpha = t > 30 ? 0.42 : 0.8; ctx.fillText(f.nombre, 9, f.y + t + 5);
+    });
+    ctx.globalAlpha = 1; ctx.restore();
+  });
+  const marco = (x0, y0, x1, y1, animar) => {
+    const el = document.getElementById('graph'), w = el.clientWidth, h = el.clientHeight;
+    const arriba = (document.getElementById('yod-barra') || { offsetHeight: 0 }).offsetHeight + 12;
+    const s = Math.max(0.04, Math.min((w - 10) / (x1 - x0), (h - arriba - 8) / (y1 - y0), 1.5));
+    network.moveTo({ position: { x: (x0 + x1) / 2, y: (y0 + y1) / 2 - arriba / 2 / s }, scale: s, animation: animar ? { duration: 350, easingFunction: 'easeInOutQuad' } : false });
+  };
+  const ajustar = animar => marco(-14, -MS - 6, W + 14, Ht + 12, animar);
+  const aFila = f => { const el = document.getElementById('graph'), r = el.clientWidth / Math.max(200, el.clientHeight - 60); marco(-10, f.y - 10, Math.min(W + 10, Math.max(540, (f.h + 20) * r)) - 10, f.y + f.h + 10, true); };
+  const aCol = c => { const el = document.getElementById('graph'), r = Math.max(200, el.clientHeight - 60) / el.clientWidth; marco(c.x - 12, -MS, c.x + c.w + 12, Math.min(Ht + 10, Math.max(420, (c.w + 24) * r) - MS), true); };
+  let tocado = false;
+  const cont = document.getElementById('graph');
+  ['pointerdown', 'wheel', 'touchstart'].forEach(ev => cont.addEventListener(ev, () => { tocado = true; }, { passive: true }));
+  network.once('afterDrawing', () => { if (!foco) ajustar(false); });
+  [60, 250, 700, 1500].forEach(ms => setTimeout(() => { if (!foco && !tocado) ajustar(false); }, ms));
+  window.addEventListener('resize', () => setTimeout(() => { if (!foco) ajustar(false); }, 80));
+  const ir = document.createElement('select'); ir.id = 'yod-ir'; ir.setAttribute('aria-label', 'Acercar a una fila o columna');
+  ir.innerHTML = '<option value="">Acercar a…</option><optgroup label="Filas">' + g.filas.map((f, i) => `<option value="f${i}">${esc2(f.nombre)}</option>`).join('') +
+    '</optgroup><optgroup label="Columnas">' + g.cols.map((c, i) => `<option value="c${i}">${esc2(c.nombre)}</option>`).join('') + '</optgroup>';
+  barra.insertBefore(ir, barra.querySelector('button'));
+  ir.addEventListener('change', () => { const v = ir.value; if (!v) return; tocado = true; if (v[0] === 'f') aFila(g.filas[+v.slice(1)]); else aCol(g.cols[+v.slice(1)]); ir.value = ''; });
+
+  // panel de detalle
+  const enlace = (t, id) => t[0] ? `<a href="${t[0]}#${encodeURIComponent(id)}">${esc2(t[1])}</a>` : esc2(t[1]);
+  window.showInfo = function (nodeId) {
+    const p = Y.nodos[nodeId]; if (!p) return;
+    const eds = network.getConnectedEdges(nodeId);
+    const vecinos = eds.map(eid => {
+      const r = RAW_EDGES[eid], otro = r.from === nodeId ? r.to : r.from, fl = det(r), q = Y.nodos[otro] || {};
+      return `<span class="neighbor-link" style="border-left-color:${esc2((Y.familias[fl.f] || {}).color || '#888')}" data-nid="${esc2(otro)}">${r.from === nodeId ? '→' : '←'} ${esc2(q.nombre || otro)} <i style="opacity:.72">· ${esc2(fl.r || '')}</i></span>`;
+    }).join('');
+    let h = `<div class="field"><b>${esc2(p.nombre)}</b></div><div class="field yod-tipo">${esc2(p.tipo)}${p.estado ? ' · ' + esc2(p.estado) : ''}</div>`;
+    if (p.dentro) h += `<a class="yod-entrar" href="${p.dentro[0]}">Entrar a ${esc2(p.dentro[1])} →</a>`;
+    if (p.nota) h += `<div class="field">${esc2(p.nota)}</div>`;
+    if (p.err) h += p.err.map(x => `<div class="field yod-alerta"><b>${x.tipo === 'cambio' ? 'Cambió' : 'Error'}</b> · ${esc2(x.msg)}${x.desde ? ' · desde ' + esc2(String(x.desde).slice(0, 10)) : ''}${x.url ? ` · <a href="${esc2(x.url)}" target="_blank" rel="noopener" style="color:inherit">ver</a>` : ''}</div>`).join('');
+    if (p.al) h += p.al.map(a => `<div class="field yod-alerta"><b>Hallazgo</b> · <a href="hallazgos.html#${encodeURIComponent(a[0])}" style="color:inherit">${esc2(a[1])}</a></div>`).join('');
+    if (p.lista) h += `<details class="yod-lista"${p.lista.length <= 24 ? ' open' : ''}><summary>${esc2(p.lt)}</summary><div>${p.lista.map(x => `<span>${esc2(x)}</span>`).join('')}</div></details>`;
+    if (p.ev) h += `<div class="field yod-ev">Evidencia: ${esc2(p.ev)}</div>`;
+    if (p.url) h += `<a class="yod-abrir" href="${esc2(p.url)}" target="_blank" rel="noopener">Abrir la fuente ↗</a>`;
+    if (p.tb && p.tb.length) h += `<div class="field yod-tb">También aparece en: ${p.tb.map(t => enlace(t, nodeId)).join(' · ')}</div>`;
+    h += `<div class="field yod-ev">Celda: ${esc2(p.celda)}</div>`;
+    if (eds.length) h += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Conexiones (${eds.length})</div><div id="neighbors-list">${vecinos}</div>`;
+    document.getElementById('info-content').innerHTML = h;
+  };
+  window.focusNode = function (id) {
+    const p = Y.nodos[id] || {}, el = document.getElementById('graph');
+    const s = p.forma === 'box' ? Math.min(1, (el.clientWidth - 24) / ((p.caja || 300) + 40)) : Math.min(0.9, Math.max(0.6, el.clientWidth / 520));
+    network.focus(id, { scale: s, animation: true }); network.selectNodes([id]); showInfo(id); enfocar(id);
+  };
+  const inicio = () => { const c = document.getElementById('info-content');
+    if (c) c.innerHTML = `<div class="field"><b>${esc2(Y.titulo)}</b></div><div class="field">${esc2(Y.sub)}</div><div class="field yod-ev">Toca un nodo para ver qué es, de dónde le llega y a dónde va. Con «Acercar a…» saltas a una fila o a una columna.</div>`; };
+  inicio();
+  network.on('click', p => {
+    if (p.nodes.length) return;
+    if (p.edges.length) {
+      const r = RAW_EDGES[p.edges[0]], fl = det(r), a = Y.nodos[r.from] || {}, b = Y.nodos[r.to] || {};
+      document.getElementById('info-content').innerHTML = `<div class="field"><b>${esc2(a.nombre)} → ${esc2(b.nombre)}</b></div><div class="field">${esc2(fl.r || '')}</div>` +
+        `<div class="field yod-tipo">${esc2((Y.familias[fl.f] || {}).nombre || '')}</div>` + (fl.nota ? `<div class="field">${esc2(fl.nota)}</div>` : '') +
+        (fl.ev ? `<div class="field yod-ev">Evidencia: ${esc2(fl.ev)}</div>` : '') +
+        `<span class="neighbor-link" data-nid="${esc2(r.from)}">← ${esc2(a.nombre)}</span><span class="neighbor-link" data-nid="${esc2(r.to)}">→ ${esc2(b.nombre)}</span>`;
+      return;
+    }
+    const c = p.pointer.canvas;
+    if (c.y < 0 && c.y > -MS - 30) { const col = g.cols.find(k => c.x >= k.x && c.x <= k.x + k.w); if (col) { aCol(col); return; } }
+    inicio();
+  });
+  network.on('doubleClick', p => { const d = p.nodes.length && Y.nodos[p.nodes[0]] && Y.nodos[p.nodes[0]].dentro; if (d) yodIr(d[0]); });
+
+  // textos del visor en español
+  const tx = (sel, t) => { const el = document.querySelector(sel); if (el) el.textContent = t; };
+  tx('#info-panel h3', 'Detalle'); tx('#legend-wrap h3', 'Celdas de esta lámina');
+  const inp = document.getElementById('search'); if (inp) inp.placeholder = 'Buscar en esta lámina…';
+  const lbl = document.querySelector('#legend-controls label'); if (lbl) lbl.lastChild.textContent = 'Todas';
+  document.querySelectorAll('[data-theme-choice]').forEach(b => { b.textContent = { light: 'Claro', dark: 'Oscuro', system: 'Sistema' }[b.dataset.themeChoice] || b.textContent; });
+  const st = document.getElementById('stats'); if (st) st.textContent = Y.pie;
+  const sim = document.createElement('div'); sim.id = 'yod-simbolos';
+  sim.innerHTML = Y.simbolos.map(s => `<b><span style="color:${s[1]}">${s[0]}</span> ${esc2(s[2])}</b>`).join('');
+  if (st && st.parentNode) st.parentNode.insertBefore(sim, st);
+
+  // errores en vivo: estado.json lo escribe cada hora el flujo «Grafo · estado» del repositorio
+  fetch(Y.estado || 'estado.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(E => {
+    if (!E || !E.errores) return; let n = 0;
+    E.errores.forEach(x => (x.nodos || []).forEach(id => { const p = Y.nodos[id]; if (!p) return; (p.err = p.err || []).push(x); if (x.tipo !== 'cambio') { p.al = p.al || []; p.bc = '#C8102E'; } else if (!p.bc) p.bc = '#C99A12'; n++; }));
+    if (n) { pintar(); const st2 = document.getElementById('stats'); if (st2) st2.textContent = Y.pie + ' · estado del ' + (E.generado || '').slice(0, 16).replace('T', ' ') + ' UTC'; }
+  }).catch(() => {});
+  // llegar con un nodo señalado en la liga, y avisar a la portada qué lámina es
+  const abrir = () => { let id = ''; try { id = window.YOD_FOCO || decodeURIComponent(location.hash.slice(1)); } catch (e) {} if (Y.nodos[id]) focusNode(id); };
+  if (window.YOD_FOCO || location.hash.length > 1) setTimeout(abrir, 280);
+  window.addEventListener('hashchange', abrir);
+  try { if (window.parent && window.parent !== window) window.parent.postMessage({ yod: 1, id: Y.id }, '*'); } catch (e) {}
+})();
+
+network.once('stabilizationIterationsDone', () => {
+  network.setOptions({ physics: { enabled: false } });
+});
+
+function showInfo(nodeId) {
+  const n = nodesDS.get(nodeId);
+  if (!n) return;
+  const neighborIds = network.getConnectedNodes(nodeId);
+  const neighborItems = neighborIds.map(nid => {
+    const nb = nodesDS.get(nid);
+    const color = nb ? nb.color.background : '#555';
+    return `<span class="neighbor-link" style="border-left-color:${esc(color)}" data-nid="${esc(nid)}">${esc(nb ? nb.label : nid)}</span>`;
+  }).join('');
+  const isMetaNode = !n.file_type && !n.source_file;
+  let html = `<div class="field"><b>${esc(n.label)}</b></div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Type: ${esc(n.file_type || 'unknown')}</div>`;
+  }
+  html += `<div class="field">Community: ${esc(n.community_name || '')}</div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Source: ${esc(n.source_file || '-')}</div>`;
+  } else if (n.member_count !== undefined && n.member_count !== null) {
+    html += `<div class="field">Members: ${esc(n.member_count)}</div>`;
+  }
+  html += `<div class="field">Degree: ${n.degree}</div>`;
+  if (neighborIds.length) {
+    html += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Neighbors (${neighborIds.length})</div><div id="neighbors-list">${neighborItems}</div>`;
+  }
+  document.getElementById('info-content').innerHTML = html;
+}
+
+function focusNode(nodeId) {
+  network.focus(nodeId, { scale: 1.4, animation: true });
+  network.selectNodes([nodeId]);
+  showInfo(nodeId);
+}
+
+// Neighbor links use a data attribute + one delegated listener rather than an
+// inline onclick. A node id/label sourced from a document or a scraped URL
+// (graphify add) can contain a double-quote; dropping the stringified id
+// unescaped into a quoted onclick both broke every link and allowed a hostile
+// source to inject an event handler into the local report (stored XSS, #1838).
+// esc() on data-nid keeps the value inside the attribute; the listener reads it
+// back verbatim. Bound to document so it survives the innerHTML rebuild that
+// recreates #neighbors-list on each showInfo().
+document.addEventListener('click', e => {
+  const el = e.target.closest('.neighbor-link');
+  if (el && el.dataset.nid !== undefined) focusNode(el.dataset.nid);
+});
+
+// Sidebar tooltips reuse vis-network's .vis-tooltip style and 100ms tooltipDelay.
+// Names get one only when CSS ellipsis truncates them (the full text is still in
+// the DOM); counts always get one, to say what the number is. Text is set with
+// textContent only (labels are untrusted). Delegated on document so rows rebuilt
+// later (search results, showInfo()) are covered.
+const sidebarTip = document.createElement('div');
+sidebarTip.className = 'vis-tooltip';
+sidebarTip.style.cssText = 'white-space: normal; max-width: 360px; overflow-wrap: break-word;';
+document.body.appendChild(sidebarTip);
+let sidebarTipTimer = null;
+let sidebarTipEl = null;    // element whose text the tooltip shows
+let sidebarTipZone = null;  // element the pointer must leave to hide it
+function hideSidebarTip() {
+  clearTimeout(sidebarTipTimer);
+  sidebarTip.style.visibility = 'hidden';
+  sidebarTip.textContent = '';
+  sidebarTipEl = sidebarTipZone = null;
+}
+document.addEventListener('mouseover', e => {
+  const zone = e.target.closest && e.target.closest('.legend-count, .legend-item, .search-item, .neighbor-link');
+  // Anywhere on a legend row except its count (dot, checkbox, gaps, padding)
+  // stands for the row's name, so moving within the row never re-triggers it.
+  const el = zone && zone.classList.contains('legend-item') ? zone.querySelector('.legend-label') : zone;
+  if (!el || el === sidebarTipEl) return;
+  hideSidebarTip();
+  const isCount = el.classList.contains('legend-count');
+  if (!isCount && el.scrollWidth <= el.clientWidth) return;
+  const text = isCount ? `${el.textContent} ${el.textContent === '1' ? 'nodo' : 'nodos'}` : el.textContent;
+  sidebarTipEl = el;
+  sidebarTipZone = zone;
+  const x = e.clientX, y = e.clientY;
+  sidebarTipTimer = setTimeout(() => {
+    sidebarTip.textContent = text;
+    sidebarTip.style.left = sidebarTip.style.top = '0px';  // measure at full max-width
+    sidebarTip.style.visibility = 'visible';
+    const w = sidebarTip.offsetWidth, h = sidebarTip.offsetHeight;
+    sidebarTip.style.left = Math.max(4, Math.min(x + 12, window.innerWidth - w - 4)) + 'px';
+    sidebarTip.style.top = (y + 16 + h > window.innerHeight ? Math.max(4, y - h - 8) : y + 16) + 'px';
+  }, 100);
+});
+document.addEventListener('mouseout', e => {
+  if (sidebarTipZone && !sidebarTipZone.contains(e.relatedTarget)) hideSidebarTip();
+});
+// A click rebuilds or hides the row (showInfo(), search pick) without a mouseout.
+document.addEventListener('mousedown', hideSidebarTip);
+
+// Track hovered node — hover detection is more reliable than click params
+let hoveredNodeId = null;
+network.on('hoverNode', params => {
+  hoveredNodeId = params.node;
+  container.style.cursor = 'pointer';
+});
+network.on('blurNode', () => {
+  hoveredNodeId = null;
+  container.style.cursor = 'default';
+});
+container.addEventListener('click', () => {
+  if (hoveredNodeId !== null) {
+    showInfo(hoveredNodeId);
+    network.selectNodes([hoveredNodeId]);
+  }
+});
+network.on('click', params => {
+  if (params.nodes.length > 0) {
+    showInfo(params.nodes[0]);
+  } else if (hoveredNodeId === null) {
+    document.getElementById('info-content').innerHTML = '<span class="empty">Toca un nodo para ver su detalle</span>';
+  }
+});
+
+const searchInput = document.getElementById('search');
+const searchResults = document.getElementById('search-results');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  searchResults.innerHTML = '';
+  if (!q) { searchResults.style.display = 'none'; return; }
+  const matches = RAW_NODES.filter(n => n.label.toLowerCase().includes(q)).slice(0, 20);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.style.display = 'block';
+  matches.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'search-item';
+    el.textContent = n.label;
+    el.style.borderLeft = `3px solid ${n.color.background}`;
+    el.style.paddingLeft = '8px';
+    el.onclick = () => {
+      network.focus(n.id, { scale: 1.5, animation: true });
+      network.selectNodes([n.id]);
+      showInfo(n.id);
+      searchResults.style.display = 'none';
+      searchInput.value = '';
+    };
+    searchResults.appendChild(el);
+  });
+});
+document.addEventListener('click', e => {
+  if (!searchResults.contains(e.target) && e.target !== searchInput)
+    searchResults.style.display = 'none';
+});
+
+const hiddenCommunities = new Set();
+
+const selectAllCb = document.getElementById('select-all-cb');
+
+function updateSelectAllState() {
+  const total = LEGEND.length;
+  const hidden = hiddenCommunities.size;
+  selectAllCb.checked = hidden === 0;
+  selectAllCb.indeterminate = hidden > 0 && hidden < total;
+}
+
+function toggleAllCommunities(hide) {
+  document.querySelectorAll('.legend-item').forEach(item => {
+    hide ? item.classList.add('dimmed') : item.classList.remove('dimmed');
+  });
+  document.querySelectorAll('.legend-cb').forEach(cb => {
+    cb.checked = !hide;
+  });
+  LEGEND.forEach(c => {
+    if (hide) hiddenCommunities.add(c.cid); else hiddenCommunities.delete(c.cid);
+  });
+  const updates = RAW_NODES.map(n => ({ id: n.id, hidden: hide }));
+  nodesDS.update(updates);
+  updateSelectAllState();
+}
+
+const legendEl = document.getElementById('legend');
+LEGEND.forEach(c => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.className = 'legend-cb';
+  cb.checked = true;
+  cb.addEventListener('change', (e) => {
+    e.stopPropagation();
+    if (cb.checked) {
+      hiddenCommunities.delete(c.cid);
+      item.classList.remove('dimmed');
+    } else {
+      hiddenCommunities.add(c.cid);
+      item.classList.add('dimmed');
+    }
+    const updates = RAW_NODES
+      .filter(n => n.community === c.cid)
+      .map(n => ({ id: n.id, hidden: !cb.checked }));
+    nodesDS.update(updates);
+    updateSelectAllState();
+  });
+  item.innerHTML = `<div class="legend-dot" style="background:${c.color}"></div>
+    <span class="legend-label">${c.label}</span>
+    <span class="legend-count">${c.count}</span>`;
+  item.prepend(cb);
+  item.onclick = (e) => {
+    if (e.target === cb) return;
+    cb.checked = !cb.checked;
+    cb.dispatchEvent(new Event('change'));
+  };
+  legendEl.appendChild(item);
+});
+</script>
+<script>
+// Render hyperedges as shaded regions
+const hyperedges = [];
+// afterDrawing passes ctx already transformed to network coordinate space.
+// Draw node positions raw — no manual pan/zoom/DPR math needed.
+
+// Andrew's monotone chain. Returns the hull in counter-clockwise order, which
+// is what the perimeter must be traced in. Collinear and duplicate points
+// collapse to the extremes, so degenerate member sets render as a segment
+// rather than a zero-area crossed path.
+function convexHull(pts) {
+    const p = pts.slice().sort((a, b) => (a.x - b.x) || (a.y - b.y));
+    if (p.length < 3) return p;
+    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const build = seq => {
+        const out = [];
+        for (const q of seq) {
+            while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+            out.push(q);
+        }
+        out.pop();
+        return out;
+    };
+    const hull = build(p).concat(build(p.slice().reverse()));
+    return hull.length >= 3 ? hull : p;
+}
+network.on('afterDrawing', function(ctx) {
+    hyperedges.forEach(h => {
+        // Legend toggles only set `hidden` on nodes; getPositions() still
+        // returns them, so skip hidden members or their hull lingers.
+        const positions = h.nodes
+            .filter(nid => { const n = nodesDS.get(nid); return n && n.hidden !== true; })
+            .map(nid => network.getPositions([nid])[nid])
+            .filter(p => p !== undefined);
+        if (positions.length < 2) return;
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#6366f1';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Centroid and expanded hull in network coordinates.
+        // The perimeter must follow hull order, not h.nodes order: tracing the
+        // raw member order self-intersects whenever the layout does not happen
+        // to place members in angular order, filling as crossed wedges.
+        const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length;
+        const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length;
+        const hull = convexHull(positions);
+        const expanded = hull.map(p => ({
+            x: cx + (p.x - cx) * 1.15,
+            y: cy + (p.y - cy) * 1.15
+        }));
+        ctx.moveTo(expanded[0].x, expanded[0].y);
+        expanded.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+        // Label
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#4f46e5';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(h.label, cx, cy - 5);
+        ctx.restore();
+    });
+});
+</script>
+</body>
+</html>
