@@ -13,3 +13,7 @@
 {"cuando": "2026-11-12T10:37:55-07:00", "que": "grafo rehecho (borrador)", "id": "G-20261112-1036", "pr": 66, "ia": "claude:claude-sonnet-5-5", "por": "alexpueblag"}
 {"cuando": "2026-11-12T10:58:37-07:00", "que": "grafo rehecho (borrador)", "id": "G-20261112-1056", "pr": 66, "ia": null, "por": "alexpueblag"}
 {"cuando": "2026-11-12T11:09:02-07:00", "que": "grafo aprobado", "id": "G-20261112-1056", "pr": 66, "por": "alexpueblag"}
+{"cuando":"2026-11-12T18:09:38.693Z","que":"se resuelve","clave":"cambio:yodesarrollomx/yod-portal","tipo":"cambio","msg":"yod-portal cambió después de armar el grafo (2026-11-11); se refleja al rehacerlo","desde":"2026-11-12T07:08:57Z"}
+{"cuando":"2026-11-12T18:09:38.693Z","que":"se resuelve","clave":"cambio:yodesarrollomx/yodesarrollo-board","tipo":"cambio","msg":"yodesarrollo-board cambió después de armar el grafo (2026-11-11); se refleja al rehacerlo","desde":"2026-11-12T07:09:32Z"}
+{"cuando":"2026-11-12T18:09:38.693Z","que":"se resuelve","clave":"cambio:yodesarrollomx/sala-edicion","tipo":"cambio","msg":"sala-edicion cambió después de armar el grafo (2026-11-11); se refleja al rehacerlo","desde":"2026-11-12T16:34:37Z"}
+{"cuando":"2026-11-12T18:09:38.910Z","que":"grafo aprobado","id":"G-20261112-1056","pr":66,"por":"revisión de cada hora"}
