@@ -56,6 +56,8 @@ test('la edad sólo pasa a árbol si la última sesión del consejo aprueba la v
      la V2 del plan inventado vigente y distintos votos, recalculada por LibreOffice. */
   const E = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/ppp2-consejo-edad.json'), 'utf8'));
   const edad = (n) => { const e = E.find((x) => x.escenario === n); assert.ok(e, 'falta el escenario ' + n); return e; };
+  assert.equal(edad('plantilla vacía').edad, 'semilla', 'la plantilla vacía que copia Sembrar es semilla');
+  assert.equal(edad('plantilla vacía').muestra, false, 'la plantilla vacía no enseña resultados');
   const esperado = {
     'sin consejo': 'plántula',
     'regresa 7 de 7': 'plántula',

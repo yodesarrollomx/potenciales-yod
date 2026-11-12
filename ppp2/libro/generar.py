@@ -1023,7 +1023,10 @@ def hoja_plan(wb, plan, npreg):
     celda(ws, "A1", f"=IF({D('plan.nombre')}=\"\",\"Plan sin nombre\",{D('plan.nombre')})", Font(name="Arial", size=20, bold=True, color=TINTA))
     celda(ws, "A2", f"={D('plan.ubicacion')}&IF({D('plan.tipo')}=\"\",\"\",\" · \"&{D('plan.tipo')})", F_SUB)
     celda(ws, "A4", "Edad del plan", F_SECCION)
-    calcula = f"ISNUMBER(INDEX(Versiones!$C${VER_FILA['ganancia']}:$E${VER_FILA['ganancia']},1,$B$6))"
+    # calcula = la versión da un número Y no falta ningún dato que se necesita para calcular Y hay productos.
+    # (Con el libro vacío Google Sheets da 0 donde LibreOffice da vacío: el número solo no basta.)
+    calcula = (f"AND(ISNUMBER(INDEX(Versiones!$C${VER_FILA['ganancia']}:$E${VER_FILA['ganancia']},1,$B$6)),"
+               f"COUNTIFS(Datos!$K$5:$K$200,\"sí\",Datos!$C$5:$C$200,\"\")=0,Productos!$B${PT}>0)")
     vig = f"COUNTIF(Versiones!$C${VER_FILA['estado']}:$E${VER_FILA['estado']},\"vigente\")>0"
     n_c, _, _, si_c, veto_c, _, misma_c = consejo_partes("$B$6")
     # el consejo cuenta sólo si su ÚLTIMA sesión aprobó la versión que se muestra: 5 de 7 y sin veto

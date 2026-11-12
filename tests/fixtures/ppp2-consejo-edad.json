@@ -1,5 +1,12 @@
 [
  {
+  "escenario": "plantilla vacía",
+  "edad": "semilla",
+  "muestra": false,
+  "falta": "Capturar al menos un producto. Que la versión base calcule: faltan 8 datos para calcular.",
+  "consejo": "El consejo todavía no se reúne."
+ },
+ {
   "escenario": "sin consejo",
   "edad": "plántula",
   "falta": "Que el consejo de planes revise la versión. Datos sin resolver: 6.",

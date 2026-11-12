@@ -52,6 +52,14 @@ def main(salida):
     with tempfile.TemporaryDirectory() as tmp:
         calc = os.path.join(tmp, "calc")
         os.makedirs(calc)
+        # la plantilla vacía (lo que copia «Sembrar») es semilla y no enseña resultados
+        vacia = os.path.join(tmp, "vacia.xlsx")
+        generar.construir(None, catalogo).save(vacia)
+        subprocess.run(["soffice", "--headless", "--calc", "--convert-to", "xlsx", "--outdir", calc, vacia],
+                       check=True, capture_output=True, timeout=180)
+        wb = openpyxl.load_workbook(os.path.join(calc, "vacia.xlsx"), data_only=True)
+        out.append({"escenario": "plantilla vacía", "edad": wb["Plan"]["B4"].value, "muestra": wb["Plan"]["D6"].value,
+                    "falta": wb["Plan"]["B5"].value, "consejo": wb["Consejo"]["A3"].value})
         for i, (nombre, filas) in enumerate(ESCENARIOS):
             plan = copy.deepcopy(base)
             plan["versiones"][1]["estado"] = "vigente"
