@@ -456,6 +456,18 @@ def sincroniza_atlas(X, M):
 MOTORES = dict(vertical='mixto.html', macrolotes='macrolotes.html', unifamiliar='unifamiliar.html', residencial='residencial.html', patrimonial='patrimonial.html')
 
 
+def excluye(X, R=None):
+    """Quita del grafo lo que Dirección decidió no publicar (reglas.json → "excluir"): piezas cuyo id o ruta cumplen los
+    patrones, con sus flechas, pares y símbolos. Corre después del atlas y de los repositorios, así nada vuelve a entrar."""
+    R = R if R is not None else (json.load(open(os.path.join(AQUI, 'datos', 'reglas.json'), encoding='utf-8')).get('excluir') or {})
+    ids = [re.compile(x) for x in R.get('ids') or []]; rutas = [re.compile(x) for x in R.get('rutas') or []]; comp = [re.compile(x) for x in R.get('comp') or []]
+    fuera = [i for i, n in X.N.items() if any(p.search(i) for p in ids) or any(p.search(str(n.get('comp') or '')) for p in comp)
+             or any(p.search(str(n.get(k) or '')) for k in ('ruta', 'source_file') for p in rutas)]
+    for i in fuera: X.quita_nodo(i)
+    X.limpia(); X.fid = {(n.get('repo'), n.get('ruta')): i for i, n in X.N.items() if n.get('capa') in ARCH and n.get('ruta') is not None}
+    return sorted(fuera)
+
+
 def contrato_ppp(d):
     out = {}
     for tipo, arch in MOTORES.items():
@@ -504,6 +516,7 @@ def main():
         r = refresca_repo(X, tag, d, own, a.todo)
         if r: res['repos'].append(r)
     if M: res['atlas'] = sincroniza_atlas(X, M)
+    res['excluidos'] = excluye(X)
     pd = os.path.join(a.repos, 'potenciales-yod')
     if os.path.isdir(pd): B['ppp'] = contrato_ppp(pd)
     if a.hoy: B['armado'] = a.hoy

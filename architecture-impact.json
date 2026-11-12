@@ -1,19 +1,13 @@
 {
   "model_revision": "2026-11-11.grafo-accesos.3",
-  "proposal_id": "CHG-GRAFO-ACCESOS-20261111",
-  "summary": "Arreglos tras la verificación en vivo del 12-nov-2026, después de fusionar el PR 61. (1) Prueba de navegador del grafo en Accesos: sembraba la sesión sintética en cada documento del contexto, también en los marcos; al apagarse el grafo su marco se vacía, el guion devolvía la llave recién quitada y la página se volvía a encender sola, así que el paso «sin sesión todo se apaga» fallaba a ratos (falló en la rama principal y en el PR de un borrador). Ahora la sesión se siembra una sola vez y sólo en la página, y la prueba comprueba además que el grafo se queda apagado. La página se comportaba bien. (2) Dónde se pinta un error: grafo/mapa-ids.json ligaba cada repositorio con los tres primeros tableros de su fila del mapa, así que un error aparecía en tableros ajenos (una chinche de Amalaya se pintaba en tres tableros que no son Amalaya). Ahora liga cada repositorio con los tableros que viven en él según el atlas. (3) Chinches: el vigilante pinta cada chinche en el repositorio que nombra su título («📌 repositorio/vista · …») y no sólo en el que está abierta; el puente de la Sala las junta todas en su repositorio. (4) El vigilante ya no depende sólo del reloj: GitHub lo arrancó una sola vez por horario en sus primeras diez horas. Ahora pide dos horarios por hora y además corre al terminar en la principal una revisión de este repositorio y cuando aquí se abre o se cierra una chinche. Un flujo cuenta como caído si su última corrida en la principal falló (ya no «si aparece entre las últimas 40 corridas», que perdía la falla en cuanto otros flujos corrían más); lo que no se pudo leer se conserva en vez de darse por resuelto; no abre una chinche repetida; y cada revisión deja su hora. (5) Documentación: lo comprobado en producción y la precisión de qué trae lo publicado. No cambia accesos.html, portero.js, backend, hojas ni permisos. El grafo aprobado sigue siendo G-20261111-2354, con la misma base; de lo publicado sólo cambia grafo/mapa-ids.json.",
+  "proposal_id": "CHG-GRAFO-DEC19-20261112",
+  "summary": "DEC-19 (Dirección, 12-nov-2026): el grafo de YOD OS deja de reflejar el sistema de evaluación de personas de un cliente externo. Nueva regla «excluir» en grafo-motor/datos/reglas.json (patrones de id, componente y ruta) que refrescar.py aplica al final de cada refresco, después del atlas y de los repositorios. La base publicada no cambia en este PR: la limpia el siguiente «Rehacer grafo» (pedido tras fusionar), cuyo borrador aprueba Dirección. Sin código de producto, backend, hojas ni permisos.",
   "components": [
-    "SYS-POTENCIALES",
-    "SYS-CONTROL"
+    "SYS-POTENCIALES"
   ],
   "tests": [
-    "node tests/grafo-accesos-browser.cjs: 10 corridas seguidas correctas en local (antes fallaba alrededor de una de cada tres); en «Verificar acceso PPP» corre con Chromium y WebKit reales. Contraprueba: con la siembra anterior y las comprobaciones nuevas falla siempre (4 de 4).",
-    "tests/salud-accesos-browser.cjs revisada: ahí el marco del grafo no llega a cargarse y no le afecta (8 corridas correctas, sin cambios).",
-    "python -m unittest discover -s grafo-motor/pruebas -p 'prueba_*.py': 19 pruebas; la nueva «DondeSeMarcaElError» comprueba que cada repositorio apunta sólo a tableros que viven en él y falla con el código anterior.",
-    "node --test tests/grafo-estado.test.cjs tests/grafo-control.test.cjs: 35 pruebas. Nuevas: una chinche se pinta en el repositorio que nombra su título; una falla no se pierde por vieja ni porque otros flujos corran después; lo que no se pudo leer no se da por resuelto; no se abre una chinche repetida.",
-    "Ensayo de sólo lectura del vigilante contra la API real de GitHub: 109 llamadas para 25 repositorios; con 22 de ellos ilegibles desde la sesión de prueba, no dio nada por resuelto. actionlint sin hallazgos en grafo-estado.yml.",
-    "grafo/ regenerado con rehacer.py inicial desde la misma base: de 95 archivos sólo cambia mapa-ids.json.",
-    "Comprobado en producción el 12-nov-2026: Pages publicó accesos.html y portero.js byte a byte con el commit 60774eb; «Grafo · estado» creó la rama grafo-datos; un pedido real rehízo el grafo y dejó el borrador; abrir su PR a mano, «Arquitectura YOD» en él y descartarlo funcionaron. Falta ver en vivo: aprobar un borrador y la sección con sesión real de administrador."
+    "grafo-motor/pruebas/prueba_motor.py: nueva test_sin_sistemas_de_clientes_externos (la regla quita 7 piezas de prueba por id, componente y ruta, con sus flechas; y vigila la base publicada en cuanto se arme después de la decisión).",
+    "verificar-impacto contra el atlas fijado."
   ],
-  "rollback": "Revertir el merge: la prueba, el mapa de errores y el vigilante vuelven a como estaban. Nada de esto toca datos."
+  "rollback": "Revertir el merge y quitar la regla «excluir» de reglas.json; el grafo publicado no se toca en este cambio."
 }
