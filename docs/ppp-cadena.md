@@ -85,7 +85,7 @@ Los seis tonos conservan el significado que ya tienen en el tablero y usan el pa
 
 ## Criterio móvil
 
-Antes: las cinco tarjetas cerradas cabían en ≤ 1.2 pantallas de teléfono (430 × 932). Con el diagrama arriba, por instrucción de Dirección, el criterio queda así en `tests/ppp-browser.cjs` y `tests/ppp-terrain-browser.cjs`: las cinco tarjetas conservan su bloque (< 728 px, el mismo espacio que tenían), el diagrama ocupa menos de 0.85 pantallas y el conjunto cabe en ≤ 2 pantallas.
+Antes: las cinco tarjetas cerradas cabían en ≤ 1.2 pantallas de teléfono (430 × 932). Con el diagrama arriba, por instrucción de Dirección, el criterio queda así en `tests/ppp-browser.cjs` y `tests/ppp-terrain-browser.cjs`: las cinco tarjetas conservan su bloque (< 728 px, el mismo espacio que tenían), el diagrama ocupa menos de 0.9 pantallas y el conjunto cabe en ≤ 2 pantallas.
 
 ## Verificación reproducible
 

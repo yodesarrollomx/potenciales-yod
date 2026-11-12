@@ -72,7 +72,7 @@ body.ppp-reading .cad,body.ppp-unconfirmed .cad{opacity:.55;pointer-events:none}
 .cad-prod p{margin:0 0 4px;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .cad-prod-bar{display:flex;gap:2px;height:20px;margin-bottom:5px}
 .cad-prod-bar i{display:block;flex:0 1 0;min-width:3px;height:100%;padding-left:6px;border-radius:4px;overflow:hidden;font-style:normal;font-size:11px;font-weight:700;line-height:20px;white-space:nowrap;color:#fff}
-.cad-prod .cad-ley{margin:0}
+.cad-prod .cad-ley{margin:0;font-size:11.5px;gap:1px 10px}
 .cad-p0{background:var(--cad-verde)}
 .cad-p1{background:repeating-linear-gradient(135deg,var(--cad-verde) 0 2.5px,transparent 2.5px 5px);box-shadow:inset 0 0 0 1px var(--cad-verde)}
 .cad-prod-bar i.cad-p1{color:var(--text);text-shadow:0 0 2px var(--card),0 0 2px var(--card),0 0 4px var(--card),0 0 4px var(--card)}
@@ -127,7 +127,9 @@ body.ppp-reading .cad,body.ppp-unconfirmed .cad{opacity:.55;pointer-events:none}
 .cad-socios-ley b,.cad-fila strong{font-variant-numeric:tabular-nums}
 
 /* Ligas a las tarjetas del plan y muelle de versiones */
-.cad-pie{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.cad-pie{display:flex;flex-wrap:nowrap;gap:6px;margin-top:9px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.cad-pie::-webkit-scrollbar{display:none}
+.cad-pie .cad-liga{flex:none}
 .cad-liga{min-height:38px;padding:5px 11px;border:1px solid var(--lineaf);border-radius:999px;background:transparent;color:var(--text);font:600 12px/1.2 inherit;font-family:inherit;white-space:nowrap;cursor:pointer}
 .cad-pie .cad-liga:first-child{border-color:var(--gold);color:var(--gold)}
 .cad-ajuste::before{content:"⚙ ";opacity:.6}
@@ -161,7 +163,7 @@ body.ppp-reading .cad,body.ppp-unconfirmed .cad{opacity:.55;pointer-events:none}
   .cad-chev{display:none}
   .cad-cifra{max-width:none}
   .cad-cuerpo{display:flex;flex-direction:column;flex:1 1 auto;padding:0 0 12px}
-  .cad-pie{margin-top:auto;padding-top:9px}
+  .cad-pie{flex-wrap:wrap;overflow:visible;margin-top:auto;padding-top:9px}
   .cad-liga{min-height:32px;padding:4px 10px}
   .cad-plot,.cad-pan[data-k="A"] .cad-plot{flex:1 0 164px;height:auto;min-height:164px}
   .cad-por{display:flex;align-items:center;gap:7px;min-height:30px;font:700 20px/1.05 var(--cad-mano);color:var(--text);transition:opacity .35s}

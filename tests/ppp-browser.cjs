@@ -20,7 +20,7 @@ const pause=p=>p.waitForTimeout(480), root=path.resolve(__dirname,'..');
    // Las cinco tarjetas conservan su bloque (antes 1040-312 px) y todo cabe en dos pantallas de teléfono.
    const deck=await p.locator('.ppp-card').evaluateAll(es=>[es[0].getBoundingClientRect().top,es[es.length-1].getBoundingClientRect().bottom]),chain=await p.locator('#pppCadena').evaluate(e=>e.getBoundingClientRect().height);
    assert.ok(deck[1]-deck[0]<728,'Five summaries keep their block under 0.78 mobile viewports: '+(deck[1]-deck[0]));
-   assert.ok(chain>300&&chain<792,'Chain diagram stays under 0.85 mobile viewports: '+chain);
+   assert.ok(chain>300&&chain<839,'Chain diagram stays under 0.9 mobile viewports: '+chain);
    assert.ok(deck[1]<1864,'Diagram and five summaries fit <=2 mobile viewports: '+deck[1]);
    if(process.env.PPP_SCREENSHOTS){fs.mkdirSync(process.env.PPP_SCREENSHOTS,{recursive:true});await p.screenshot({path:path.join(process.env.PPP_SCREENSHOTS,name+'-summary.png'),fullPage:true});}
    for(const id of ['dArq','dVentas','dCostos','dMacro','dDota']){

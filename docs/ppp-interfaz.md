@@ -50,4 +50,4 @@ Las cinco tarjetas muestran dos barras cuya longitud representa las razones etiq
 
 Arriba de las cinco tarjetas, después del encabezado de resultados, va el diagrama en cadena (`ppp-cadena.js`, propuesta `CHG-PPP-CADENA-20261111`): Se vende → Entra y sale → En el banco y prestado → Lo que queda. Lee el mismo estado que `PPPView.update`, no calcula y no escribe; sus botones son las versiones del caso y cada eslabón liga a la tarjeta y al control de donde sale. Contrato, colores, pruebas y reversión en [ppp-cadena.md](ppp-cadena.md).
 
-Con el diagrama arriba, el criterio móvil de las pruebas queda así: las cinco tarjetas cerradas conservan su bloque (< 728 px), el diagrama ocupa menos de 0.85 pantallas de 430 × 932 y el conjunto cabe en ≤ 2 pantallas. `PPPView.reveal(idDelControl)` muestra un control dentro de su tarjeta sin enfocarlo.
+Con el diagrama arriba, el criterio móvil de las pruebas queda así: las cinco tarjetas cerradas conservan su bloque (< 728 px), el diagrama ocupa menos de 0.9 pantallas de 430 × 932 y el conjunto cabe en ≤ 2 pantallas. `PPPView.reveal(idDelControl)` muestra un control dentro de su tarjeta sin enfocarlo.
