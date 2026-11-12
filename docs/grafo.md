@@ -75,14 +75,28 @@ Si otros cambios entran a la rama principal mientras el borrador espera, puede q
 
 ## Vigilancia
 
-«Grafo · estado» corre cada hora, y también en cuanto se aprueba un grafo, y sólo lee (API de GitHub y páginas estáticas; ningún `/exec`):
+«Grafo · estado» sólo lee (API de GitHub y páginas estáticas; ningún `/exec`). Corre:
+
+- por horario, dos veces cada hora. **GitHub arranca los horarios cuando puede**: el 12-nov-2026, recién instalado, lo corrió una sola vez en diez horas. Por eso no depende sólo del reloj;
+- en cuanto se aprueba un grafo;
+- en cuanto termina en la rama principal una revisión de este repositorio («Arquitectura YOD», «Verificar acceso PPP», «Verificar interfaz PPP»): si falló, se pinta y se abre su chinche en ese momento;
+- cuando en este repositorio se abre, se cierra o se reabre una chinche.
+
+Lo de los otros repositorios se ve en la siguiente corrida, sea por horario o por cualquiera de las anteriores. Cada corrida deja su hora: es el «revisado» que enseña la página.
+
+Qué mira:
 
 - flujos cuyo último intento falló, con el trabajo y el paso;
 - chinches abiertas;
 - repositorios que cambiaron después de armar el grafo;
 - páginas que responden con error.
 
-Lo pinta en el grafo, lo anota en el registro y abre una chinche (`📌 Grafo: …`) por cada flujo o página que falla, para que la ronda diaria de chinches lo atienda. También pone al día el aviso de borrador con lo que de verdad hay en GitHub.
+Lo pinta en el grafo, lo anota en el registro y abre una chinche (`📌 Grafo: …`) por cada flujo o página que falla, para que la ronda diaria de chinches lo atienda; si esa chinche ya está abierta no abre otra. También pone al día el aviso de borrador con lo que de verdad hay en GitHub.
+
+Dos cuidados para que el registro diga la verdad:
+
+- **Un flujo está en rojo si su última corrida en la principal falló**, no si «aparece entre las últimas corridas»: se pregunta por las fallas de los últimos 45 días y luego por la última corrida de ese flujo. Así una falla no desaparece sola porque otros flujos corrieron muchas veces después.
+- **Lo que no se pudo leer no se da por resuelto.** Si GitHub no contesta algo de un repositorio, sus errores de antes se conservan y `estado.json` lo anota en `sin_dato`.
 
 Dónde se pinta cada error: en el repositorio donde pasó y en los tableros que **viven** en ese repositorio según el atlas (`grafo/mapa-ids.json`, que genera `laminas.py`). Si en un repositorio viven tableros de varias filas del mapa —la cabina aloja varios—, sólo en los de su propia fila. Una chinche se pinta en el repositorio donde está abierta, aunque hable de otro tablero.
 
@@ -117,7 +131,7 @@ Revertir el merge, desactivar los dos flujos y borrar las ramas `grafo-datos` y 
 Después de fusionar, con hechos:
 
 - **Publicación.** Pages publicó `accesos.html` y `portero.js` byte a byte con el commit de la rama principal (lo comprueba «Verificar acceso PPP»).
-- **Vigilancia.** La primera corrida de «Grafo · estado» creó la rama `grafo-datos` con su estado y su registro.
+- **Vigilancia.** La primera corrida de «Grafo · estado» creó la rama `grafo-datos` con su estado y su registro. Por horario, GitHub lo corrió una sola vez en las primeras diez horas (a las 16:01Z): desde entonces corre también con lo que pasa en el repositorio y pide dos horarios por hora.
 - **Rehacer a pedido.** Un pedido real (issue «🕸️ Rehacer grafo») rehízo el grafo en menos de dos minutos, dejó el borrador en `grafo-borrador`, contestó y cerró el pedido y escribió el aviso. Sin claves de IA: dice «no hay clave» y sigue.
 - **PR del borrador.** El repositorio no deja que el flujo lo abra (ver arriba): quedó la liga. Al abrirlo a mano, «borrador-abierto» le puso título y explicación y el aviso tomó su número; «Arquitectura YOD» pasó en él.
 - **Descartar.** Al cerrar el PR sin fusionar se anotó «borrador descartado», se quitó el aviso y se borró la rama.
