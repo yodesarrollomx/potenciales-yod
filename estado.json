@@ -1,6 +1,29 @@
 {
- "generado": "2026-11-12T20:07:28.377Z",
+ "generado": "2026-11-12T20:34:51.164Z",
  "errores": [
+  {
+   "clave": "flujo:yodesarrollomx/yod-portal:.github/workflows/conocimiento-browser.yml",
+   "tipo": "flujo",
+   "nodos": [
+    "yod-portal::github_workflows_conocimiento_browser",
+    "repo:yodesarrollomx/yod-portal",
+    "SYS-CONTROL",
+    "SYS-YOD-OS"
+   ],
+   "desde": "2026-11-12T20:08:36Z",
+   "url": "https://github.com/yodesarrollomx/yod-portal/actions/runs/43297309334",
+   "msg": "Falló el flujo «Conocimiento del Despacho» de yod-portal, trabajo «navegador», paso 10 «Recorrido real y encuentro por cercanía»"
+  },
+  {
+   "clave": "cambio:yodesarrollomx/yod-portal",
+   "tipo": "cambio",
+   "nodos": [
+    "repo:yodesarrollomx/yod-portal"
+   ],
+   "desde": "2026-11-12T20:08:32Z",
+   "url": "https://github.com/yodesarrollomx/yod-portal/commit/bb97266ad7e3f5c72422224aeb3526eec4dd7502",
+   "msg": "yod-portal cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
+  },
   {
    "clave": "cambio:yodesarrollomx/potenciales-yod",
    "tipo": "cambio",
@@ -8,8 +31,32 @@
     "repo:yodesarrollomx/potenciales-yod"
    ],
    "desde": "2026-11-12T19:55:58Z",
-   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/685ed2ccb0e1d7cf1224fe4216bc071349e7751c",
+   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/26c3498c4201467b8d3157f35568b2eb7abc710a",
    "msg": "potenciales-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
+  },
+  {
+   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-diario.yml",
+   "tipo": "flujo",
+   "nodos": [
+    "sala-edicion::github_workflows_sala_diario",
+    "repo:yodesarrollomx/sala-edicion",
+    "SYS-SALA"
+   ],
+   "desde": "2026-11-12T20:23:40Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/43299860849",
+   "msg": "Falló el flujo «Sala · Diario» de sala-edicion, trabajo «mesa / mesa», paso 14 «Avisar si algo falló»"
+  },
+  {
+   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-cada-hora.yml",
+   "tipo": "flujo",
+   "nodos": [
+    "sala-edicion::github_workflows_sala_cada_hora",
+    "repo:yodesarrollomx/sala-edicion",
+    "SYS-SALA"
+   ],
+   "desde": "2026-11-12T20:17:50Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/43298883516",
+   "msg": "Falló el flujo «Sala · Cada hora» de sala-edicion, trabajo «mesa / mesa», paso 14 «Avisar si algo falló»"
   },
   {
    "clave": "chinche:yodesarrollomx/sala-edicion#294",
