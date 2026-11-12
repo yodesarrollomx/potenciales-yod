@@ -53,7 +53,9 @@ body.ppp-reading .cad,body.ppp-unconfirmed .cad{opacity:.55;pointer-events:none}
 .cad-con-antes .cad-ley-antes{display:inline}
 
 /* Gráficas por mes */
-.cad-plot{position:relative;height:176px;border-bottom:1px solid var(--muted);touch-action:pan-y;-webkit-user-select:none;user-select:none}
+/* overflow:hidden: al cambiar el ancho, las notas ya colocadas (en pixeles) no deben desbordar la página
+   mientras el diagrama se reacomoda. */
+.cad-plot{position:relative;height:176px;border-bottom:1px solid var(--muted);overflow:hidden;touch-action:pan-y;-webkit-user-select:none;user-select:none}
 .cad-pan[data-k="A"] .cad-plot{height:138px}
 .cad-obra{position:absolute;top:0;bottom:0;background:var(--cad-velo);border-left:1.5px solid var(--muted);transition:left .6s,width .6s}
 .cad-raya{position:absolute;top:0;bottom:0;width:0;border-left:2px dashed var(--gold);transition:left .6s}

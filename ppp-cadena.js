@@ -222,15 +222,22 @@
     if (root.ResizeObserver) {
       let tR = 0; const tam = {};
       const ro = new ResizeObserver(es => {
-        let cambio = false; es.forEach(e => { const k = e.target.dataset.cad, t = Math.round(e.contentRect.width) + 'x' + Math.round(e.contentRect.height); nd[k].W = e.contentRect.width; if (tam[k] !== t) { if (tam[k] !== undefined && e.contentRect.width > 0) cambio = true; tam[k] = t; } });
+        let cambio = false; es.forEach(e => { const k = e.target.dataset.cad, t = Math.round(e.contentRect.width) + 'x' + Math.round(e.contentRect.height); nd[k].W = e.contentRect.width; if (tam[k] !== t) { if (tam[k] !== undefined && e.contentRect.width > 0) { cambio = true; if (k !== 'D') nd[k].plot.classList.add('cad-sin-notas'); } tam[k] = t; } });
         if (!cambio) return; clearTimeout(tR);
-        tR = setTimeout(() => { if (!S || cadena.activa) return; acordeon(); GRAF.forEach(k => { if (visto[k] && !nd[k].cuerpo.hidden) { pintarGraf(k, visto[k]); anotar(k, false); } }); if (visto.D && !nd.D.cuerpo.hidden) pintarD(visto.D, false, null, true); }, 120);
+        tR = setTimeout(() => { if (cadena.activa) { tamPendiente = true; return; } reacomodar(); }, 120);
       });
       GRAF.forEach(k => { nd[k].plot.dataset.cad = k; ro.observe(nd[k].plot); }); nd.D.tira.dataset.cad = 'D'; ro.observe(nd.D.tira);
     }
     if (D.fonts && D.fonts.load) D.fonts.load('700 20px Caveat').then(() => { if (S && !cadena.activa) GRAF.forEach(k => anotar(k, false)); }, () => {});
   }
 
+  // Tras un cambio de tamaño: barras y notas vuelven a su lugar.
+  let tamPendiente = false;
+  function reacomodar() {
+    tamPendiente = false; GRAF.forEach(k => nd[k].plot.classList.remove('cad-sin-notas')); if (!S) return;
+    acordeon(); GRAF.forEach(k => { if (visto[k] && !nd[k].cuerpo.hidden) { pintarGraf(k, visto[k]); anotar(k, false); } });
+    if (visto.D && !nd.D.cuerpo.hidden) pintarD(visto.D, false, null, true);
+  }
   // En el teléfono los eslabones son un acordeón; en pantalla ancha se ven los cuatro.
   function acordeon() {
     const mv = movil();
@@ -542,6 +549,7 @@
   function terminar() {
     nd.raiz.classList.remove('cad-cadena'); PAN.forEach(k => { nd[k].pan.classList.remove('cad-foco'); nd.por[k].classList.remove('on'); });
     nd.rep.hidden = !ultima || reducido(); clearTimeout(cadena.tFant); cadena.tFant = setTimeout(quitarFantasmas, 9000);
+    if (tamPendiente) reacomodar();
   }
   function parar() {
     cadena.timers.forEach(clearTimeout); cadena.timers = [];
