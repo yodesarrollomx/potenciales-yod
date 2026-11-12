@@ -54,6 +54,8 @@ Decisión de Dirección del 12-nov-2026 (DEC-19): el grafo **no refleja** sistem
 
 «Ver el borrador» lo enseña en la misma página sin publicarlo (`grafo/index.html?rama=grafo-borrador`).
 
+Si el Portero confirma la sesión de administrador pero la lista de usuarios no llega (tardó más de 20 s o no hubo red), Accesos borra lo privado y no deja escribir, pero el grafo y el estado de los sistemas se quedan: son archivos estáticos que no dependen de esa lista. Un rechazo de la sesión sí apaga todo. (12-nov-2026: el Portero tardó y el grafo desaparecía.)
+
 ### Por qué un PR
 
 La rama principal está protegida (comprobación obligatoria «Arquitectura YOD»), así que ningún flujo escribe en ella. El borrador lleva su propio `architecture-impact.json` para poder pasar esa comprobación.
