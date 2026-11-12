@@ -86,6 +86,17 @@ class LoPublicado(unittest.TestCase):
         Z = refrescar.Base(dict(nodos={'SYS-POTENCIALES': dict(capa='sistema', source_file=refrescar.ATL, label='P')}, flechas=[], simbolos={}, repos={}, entre=[]))
         res = refrescar.sincroniza_atlas(Z, F); refrescar.excluye(Z, R)
         self.assertEqual(res['componentes_nuevos'], ['SYS-NUEVO', 'PROC-PPP']); self.assertNotIn('EMD', json.dumps(res)); self.assertFalse([i for i in Z.N if 'EMD' in i])
+        # el informe del rehecho tampoco nombra lo excluido: archivos por repositorio y notas
+        # (12-nov-2026: el borrador G-20261112-1351 decía «llega EMD al portal» por archivos nuevos bajo emd/)
+        C = dict(repos=[dict(repo='yodesarrollomx/yod-portal', de='a', a='b', nuevos=['emd/endpoint.js', 'os/x.js'], quitados=['docs/arquitectura/emd-escala-captura.md'],
+                             cambiados=['emd/index.html', 'docs/arquitectura/modelo.json', 'despacho/emd-no/x.js'], ligas_mas=3, ligas_menos=0)],
+                 notas=['yod-portal/emd/endpoint.js L2: llama a un Apps Script que el grafo no conoce (AKfycbwvvLVi…)',
+                        'potenciales-yod/server/ppp2/PPP2.gs L4: llama a un Apps Script que el grafo no conoce (AKfycbzzzzzz…)'])
+        self.assertEqual(refrescar.filtra_cambios(C, R), 4)
+        r = C['repos'][0]
+        self.assertEqual((r['nuevos'], r['quitados'], r['cambiados']), (['os/x.js'], [], ['docs/arquitectura/modelo.json', 'despacho/emd-no/x.js']))
+        self.assertEqual(C['notas'], ['potenciales-yod/server/ppp2/PPP2.gs L4: llama a un Apps Script que el grafo no conoce (AKfycbzzzzzz…)'])
+        self.assertNotIn('emd/', json.dumps(C)); self.assertNotIn('emd-', json.dumps(C).replace('emd-no', ''))
         if str(self.B.get('armado') or '') >= '2026-11-12T18:00':
             Y = refrescar.Base(json.loads(json.dumps(self.B))); self.assertEqual(refrescar.excluye(Y, R), [], 'la base publicada aún trae piezas excluidas')
 
