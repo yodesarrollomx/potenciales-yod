@@ -61,10 +61,13 @@ def linea_ia(inf):
     return f"Explicación de IA: se preguntó a {pedidos} y ninguna respuesta sirvió ({json.dumps(i.get('fallos') or {}, ensure_ascii=False)}). El grafo se rehízo igual, sin explicación."
 
 
-# Cuando el PR lo abre un flujo, GitHub deja sus pruebas «en espera de aprobación» y no deja fusionar hasta que una
-# persona con permiso de escritura las deja correr. Comprobado en vivo el 12-nov-2026 (PR 66). Abierto a mano no lo pide.
-PASOS = ('**Para aprobar:** si GitHub muestra «Approve workflows to run», tócalo primero: sólo deja correr las pruebas (lo pide cuando el PR '
-         'lo abrió un flujo y no una persona). Cuando queden en verde, toca «Merge pull request» y luego «Confirm merge».')
+# Cuando el flujo abre el PR con su propia credencial, GitHub deja sus pruebas «en espera de aprobación» y no deja
+# fusionar hasta que una persona con permiso de escritura las deja correr (comprobado en vivo el 12-nov-2026, PR 66).
+# Abierto a mano, o por el flujo con la App del grafo, no lo pide. El texto vale para los dos casos: el cuerpo del PR
+# debe salir igual lo abra quien lo abra (lo comprueba prueba_motor).
+PASOS = ('**Para aprobar:** si GitHub muestra «Approve workflows to run», tócalo primero: sólo deja correr las pruebas (lo pide cuando el flujo '
+         'abrió el PR con su propia credencial; con la App del grafo, o si lo abrió una persona, las pruebas corren solas). '
+         'Cuando queden en verde, toca «Merge pull request» y luego «Confirm merge».')
 
 
 def cuerpo_pr(inf):
@@ -114,7 +117,7 @@ def comentario(inf, liga, numero=0):
     if not inf.get('cambio'): return (inf.get('mensaje') or 'El grafo ya está al día.') + ' No se abrió ningún borrador.\n\n' + linea_ia(dict(ia_informe=dict(omitida=True))).replace('se pidió no usarla en esta corrida', 'no hizo falta: no había nada que explicar') + '\n'
     ia = inf.get('ia'); hay_pr = str(numero or '').isdigit() and int(numero) > 0
     donde = f'en {liga}' if hay_pr else 'en la rama `grafo-borrador`'
-    aprobar = ('- **Aprobar ya:** abre ese PR. Si GitHub muestra «Approve workflows to run», tócalo primero (sólo deja correr las pruebas); cuando queden en verde, '
+    aprobar = ('- **Aprobar ya:** abre ese PR. Si GitHub muestra «Approve workflows to run», tócalo primero (sólo deja correr las pruebas; con la App del grafo no sale); cuando queden en verde, '
                'toca «Merge pull request». Las presentaciones cambian solas al grafo nuevo.' if hay_pr else
                f'- **Aprobar ya:** abre [esta página]({liga}), toca «Create pull request» y luego «Merge pull request». Las presentaciones cambian solas al grafo nuevo.')
     return '\n'.join([f"Listo: el grafo **{inf['id']}** quedó como **borrador** {donde}.", '',

@@ -48,7 +48,7 @@ Decisión de Dirección del 12-nov-2026 (DEC-19): el grafo **no refleja** sistem
 3. Rehace el grafo. Si nada de lo que dibuja cambió, lo dice y no abre borrador.
 4. Si cambió, pide la explicación a las IA (si hay claves) y deja el grafo nuevo en la rama **`grafo-borrador`** con su PR. Contesta en el pedido y lo cierra.
 5. En Accesos aparece el aviso: **¿Lo apruebas ya o lo dejas en borrador?**
-   - **Aprobar ya** = fusionar ese PR. Si el PR lo abrió el flujo, GitHub muestra antes «Approve workflows to run»: se toca primero (sólo deja correr las pruebas) y, cuando quedan en verde, «Merge pull request». Pages publica el grafo nuevo y las presentaciones lo usan solas.
+   - **Aprobar ya** = fusionar ese PR. Si el flujo lo abrió con su propia credencial (sin la App del grafo), GitHub muestra antes «Approve workflows to run»: se toca primero (sólo deja correr las pruebas) y, cuando quedan en verde, «Merge pull request». Con la App del grafo las pruebas corren solas y basta «Merge pull request». Pages publica el grafo nuevo y las presentaciones lo usan solas.
    - **Dejar en borrador** = no hacer nada. Lo publicado, las presentaciones y sus ligas siguen igual.
    - **Descartar** = cerrar el PR sin fusionar.
 
@@ -60,7 +60,13 @@ Si el Portero confirma la sesión de administrador pero la lista de usuarios no 
 
 La rama principal está protegida (comprobación obligatoria «Arquitectura YOD»), así que ningún flujo escribe en ella. El borrador lleva su propio `architecture-impact.json` para poder pasar esa comprobación.
 
-Desde el 12-nov-2026 este repositorio deja que un flujo abra PR (Settings → Actions → General → Workflow permissions → «Allow GitHub Actions to create and approve pull requests»), así que el borrador llega con su PR ya abierto. **Aprobar son dos toques.** GitHub, desde junio de 2026, deja «en espera de aprobación» las pruebas de un PR abierto por un flujo y lo marca como bloqueado hasta que una persona con permiso de escritura toca **«Approve workflows to run»**; después se toca **«Merge pull request»**. Pedir aparte la comprobación obligatoria no quita ese paso (se probó: el PR siguió bloqueado), por eso el flujo ya no la pide. Para que aprobar fuera un solo toque, el flujo tendría que abrir el PR con una credencial propia (una GitHub App o un token) y no con la del flujo: es decisión de Dirección.
+Desde el 12-nov-2026 este repositorio deja que un flujo abra PR (Settings → Actions → General → Workflow permissions → «Allow GitHub Actions to create and approve pull requests»), así que el borrador llega con su PR ya abierto.
+
+**Aprobar: dos toques sin la App del grafo, uno con ella** (DEC-21, decisión de Dirección).
+
+- **Sin App (así está hoy).** GitHub, desde junio de 2026, deja «en espera de aprobación» las pruebas de un PR que abre o pone al día un flujo con su propia credencial (`GITHUB_TOKEN`) y lo marca como bloqueado hasta que una persona con permiso de escritura toca **«Approve workflows to run»**; después se toca **«Merge pull request»**. Pedir aparte la comprobación obligatoria no quita ese paso (se probó: el PR siguió bloqueado), por eso el flujo ya no la pide.
+- **Con App.** Si el repositorio tiene los secretos `GRAFO_APP_ID` (el App ID o el Client ID) y `GRAFO_APP_PRIVATE_KEY` de una GitHub App instalada sólo aquí, con permisos de contenido y de PR en escritura, el flujo saca con ella un token de una hora (`actions/create-github-app-token`, fijada por commit) y lo usa **sólo** para subir la rama `grafo-borrador` y abrir o poner al día su PR. Lo que hace una App no queda en espera: las pruebas corren solas y aprobar es **«Merge pull request»**. Todo lo demás (el pedido, la rama de datos, los comentarios) sigue con la credencial del flujo, sin más permisos. Si los secretos no están o la App falla, el flujo avisa y sigue como sin App.
+- Fuentes: [changelog de GitHub del 11-jun-2026](https://github.blog/changelog/2026-06-11-bot-created-pull-requests-can-run-workflows-if-approved/) y [«Triggering a workflow from a workflow»](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow).
 
 Si el repositorio no permite que un flujo abra PR, el flujo deja la rama y una liga: en esa página se toca «Create pull request» y el trabajo «borrador-abierto» le pone título, explicación y aviso. Un PR abierto así por una persona no pide «Approve workflows to run»: sus pruebas corren solas.
 

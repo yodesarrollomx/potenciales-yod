@@ -360,8 +360,9 @@ class Versiones(unittest.TestCase):
         with open(os.path.join(datos, 'registro.jsonl'), encoding='utf-8') as f: self.assertEqual(len(f.readlines()), 2, 'sin-registro no anota otra línea')
         sin_pr = aviso.comentario(I, liga, 0); self.assertIn('«Create pull request» y luego «Merge pull request»', sin_pr); self.assertIn('rama `grafo-borrador`', sin_pr); self.assertIn(f'[esta página]({liga})', sin_pr)
         con_pr = aviso.comentario(I, 'https://github.com/x/y/pull/12', 12); self.assertNotIn('Create pull request', con_pr)
-        # el PR que abre el flujo llega con sus pruebas en espera de aprobación: se dice ese paso antes de «Merge» (12-nov-2026, PR 66)
-        for texto in (con_pr, cuerpo): self.assertRegex(texto, r'«Approve workflows to run», tócalo primero[^\n]*«Merge pull request»')
+        # el PR que abre el flujo con su credencial llega con sus pruebas en espera de aprobación: se dice ese paso antes de «Merge»
+        # (12-nov-2026, PR 66); con la App del grafo no sale, y el texto lo dice (DEC-21)
+        for texto in (con_pr, cuerpo): self.assertRegex(texto, r'«Approve workflows to run», tócalo primero[^\n]*con la App del grafo[^\n]*«Merge pull request»')
         for texto in (sin_pr, con_pr): self.assertIn('Dejarlo en borrador', texto); self.assertIn('no cambian', texto)
         # el informe se puede reconstruir del registro de versiones (cuando el PR lo abre una persona)
         R = aviso.informe_de(V, jl(os.path.join(m, 'recetas.json')))

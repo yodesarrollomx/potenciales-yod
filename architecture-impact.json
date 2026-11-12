@@ -1,14 +1,16 @@
 {
   "model_revision": "2026-11-12.ppp2.1",
   "proposal_id": "CHG-GRAFO-ACCESOS-20261111",
-  "summary": "Grafo del sistema rehecho a pedido: versión G-20261112-1420 (la aprobada era G-20261112-1203). Cambian sólo los datos del grafo (grafo-motor/datos/base.json) y lo que se genera de ellos en grafo/: láminas, registro de versiones y datos para presentaciones. Sin código, backend, hojas ni permisos. Fusionar este cambio es aprobar el grafo; cerrarlo lo descarta.",
+  "summary": "Grafo (DEC-21): aprobar el borrador puede ser un solo toque. Si el repositorio tiene los secretos GRAFO_APP_ID y GRAFO_APP_PRIVATE_KEY de una GitHub App, «Grafo · rehacer» saca con actions/create-github-app-token (fijada por commit, v3.3.0) un token de una hora limitado a este repositorio con contenido y PR en escritura, y lo usa sólo para subir la rama grafo-borrador y abrir o poner al día su PR; así GitHub corre solas sus pruebas y basta «Merge pull request». Sin esos secretos el paso no corre y todo sigue igual (dos toques: «Approve workflows to run» y «Merge pull request»); si la App falla, avisa y sigue con la credencial del flujo. No se amplían los permisos de GITHUB_TOKEN. Los textos del PR, del comentario del pedido y del aviso en Accesos dicen la verdad en los dos casos; docs/grafo.md y CLAUDE.md lo explican. No se sube la etiqueta de versiones (?v=): hacerlo tocaría páginas de otras propuestas (PPP 2) por un cambio de texto; el aviso nuevo de grafo-control.js llega cuando caduque la copia del navegador. Sin cambios en portero.js, backend, hojas ni permisos de usuarios.",
   "components": [
-    "SYS-POTENCIALES"
+    "SYS-POTENCIALES",
+    "SYS-CONTROL"
   ],
   "tests": [
-    "Láminas generadas por grafo-motor/laminas.py desde la base de este mismo cambio (determinista).",
-    "Recetas de presentación comprobadas contra el contrato del Plan de Potencial al rehacer.",
-    "verificar-impacto contra el atlas fijado."
+    "actionlint (con shellcheck) sobre .github/workflows/grafo-rehacer.yml: sin hallazgos.",
+    "python3 -m unittest discover -s grafo-motor/pruebas -p 'prueba_*.py': el cuerpo del PR y el comentario dicen el paso de aprobar y el caso con la App, y el PR abierto a mano sigue diciendo lo mismo que el abierto por el flujo.",
+    "node --test tests/grafo-estado.test.cjs tests/grafo-control.test.cjs: el aviso de Accesos dice el paso de aprobar y que con la App del grafo no sale.",
+    "verificar-impacto contra el atlas fijado (bb97266)."
   ],
-  "rollback": "Cerrar el PR del borrador, o revertir su merge: el grafo aprobado anterior sigue publicado."
+  "rollback": "Revertir el PR, o simplemente no crear (o borrar) los secretos GRAFO_APP_ID y GRAFO_APP_PRIVATE_KEY: sin ellos el flujo abre el PR como hoy. Si la App ya existe, desinstalarla del repositorio la deja sin efecto."
 }
