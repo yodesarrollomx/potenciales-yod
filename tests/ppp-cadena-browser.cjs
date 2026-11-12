@@ -12,7 +12,11 @@ function tresVersiones(){
 const lectura=p=>p.evaluate(()=>{
   const c=document.getElementById('pppCadena'),plots=[...c.querySelectorAll('.cad-plot')].filter(e=>e.getClientRects().length);
   const fuera=plots.flatMap(pl=>{const r=pl.getBoundingClientRect();return [...pl.querySelectorAll('.cad-nota.on')].filter(n=>{const q=n.getBoundingClientRect();return q.left<r.left-3||q.right>r.right+3||q.top<r.top-3||q.bottom>r.bottom+3;}).map(n=>n.textContent);});
-  return {desborde:document.documentElement.scrollWidth-innerWidth,notas:c.querySelectorAll('.cad-nota.on').length,fuera,hud:document.getElementById('hudUtilidad').textContent.trim(),queda:document.querySelector('#cadCabD .cad-cifra').textContent.trim(),
+  const nombre=e=>e.tagName.toLowerCase()+(e.id?'#'+e.id:'')+(typeof e.className==='string'&&e.className?'.'+e.className.trim().split(/\s+/).join('.'):'');
+  const visible=e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&getComputedStyle(e).visibility!=='hidden';};
+  const recortado=e=>{for(let a=e.parentElement;a&&a!==document.body;a=a.parentElement){const o=getComputedStyle(a).overflowX;if(o!=='visible')return true;}return false;};
+  const salidos=raiz=>[...raiz.querySelectorAll('*')].filter(e=>visible(e)&&!recortado(e)&&(e.getBoundingClientRect().right>innerWidth+1||e.getBoundingClientRect().left<-1)).slice(0,6).map(e=>nombre(e)+'@'+Math.round(e.getBoundingClientRect().right));
+  return {desborde:document.documentElement.scrollWidth-innerWidth,propios:salidos(c),ajenos:document.documentElement.scrollWidth-innerWidth>1?salidos(document.body).filter(x=>!x.includes('cad-')).slice(0,4):[],notas:c.querySelectorAll('.cad-nota.on').length,fuera,hud:document.getElementById('hudUtilidad').textContent.trim(),queda:document.querySelector('#cadCabD .cad-cifra').textContent.trim(),
     abiertos:[...c.querySelectorAll('.cad-cab')].map(b=>b.getAttribute('aria-expanded')).join(','),cuerpos:[...c.querySelectorAll('.cad-cuerpo')].filter(e=>e.getClientRects().length).length};
 });
 const finCadena=p=>p.waitForFunction(()=>window.PPPCadena.estado()&&!window.PPPCadena.estado().cadena,null,{timeout:30000});
@@ -31,11 +35,13 @@ const finCadena=p=>p.waitForFunction(()=>window.PPPCadena.estado()&&!window.PPPC
    assert.ok(await p.evaluate(()=>{const c=document.getElementById('pppCadena'),hud=document.querySelector('.ppp-hud'),deck=document.getElementById('pppDeck');return !!(hud.compareDocumentPosition(c)&Node.DOCUMENT_POSITION_FOLLOWING)&&!!(c.compareDocumentPosition(deck)&Node.DOCUMENT_POSITION_FOLLOWING)&&!c.closest('.ppp-card');}),'El diagrama va después del encabezado de resultados y antes de las cinco tarjetas');
    assert.deepEqual(await p.locator('.cad-nom').allInnerTexts(),['Se vende','Entra y sale','En el banco y prestado','Lo que queda']);
    let s=await lectura(p);
-   assert.ok(s.desborde<=1,'Sin desborde horizontal');assert.equal(s.abiertos,'true,false,false,false');assert.equal(s.cuerpos,1);
+   assert.deepEqual(s.propios,[]);assert.ok(s.desborde<=1,'Sin desborde horizontal: '+s.ajenos.join(' '));assert.equal(s.abiertos,'true,false,false,false');assert.equal(s.cuerpos,1);
    assert.equal(s.queda,s.hud,'«Lo que queda» es la misma utilidad del tablero');assert.ok(s.notas>=2,'Hay notas a mano: '+s.notas);assert.deepEqual(s.fuera,[],'Las notas caben en su gráfica');
    assert.match(await p.locator('.cad-una').innerText(),/Una sola versión/);assert.equal(await p.locator('.cad-vers').isVisible(),false);
    assert.match(await p.locator('.cad-fuente').innerText(),/Estimación de este plan.*no calcula/);
    if(process.env.PPP_SCREENSHOTS){fs.mkdirSync(process.env.PPP_SCREENSHOTS,{recursive:true});await p.locator('#pppCadena').screenshot({path:path.join(process.env.PPP_SCREENSHOTS,name+'-cadena-movil.png')});}
+   for(const width of [320,390]){await p.setViewportSize({width,height:780});await p.waitForTimeout(450);for(const k of ['A','C']){if(await p.locator('#cadCab'+k).getAttribute('aria-expanded')!=='true'){await p.locator('#cadCab'+k).click();await p.waitForTimeout(300);}s=await lectura(p);assert.deepEqual(s.propios,[],'Nada del diagrama se sale a '+width+' px ('+k+')');assert.ok(s.desborde<=1,'Sin desborde a '+width+' px: '+s.ajenos.join(' '));assert.deepEqual(s.fuera,[],'Notas dentro a '+width);}}
+   await p.setViewportSize({width:430,height:932});await p.waitForTimeout(450);await p.locator('#cadCabA').click();await p.waitForTimeout(250);s=await lectura(p);assert.equal(s.abiertos,'true,false,false,false');assert.deepEqual(s.propios,[]);
    for(const k of ['B','C','D']){await p.locator('#cadCab'+k).click();await p.waitForTimeout(250);s=await lectura(p);assert.equal(s.cuerpos,1,'Un solo eslabón abierto');assert.equal(await p.locator('#cadCab'+k).getAttribute('aria-expanded'),'true');assert.deepEqual(s.fuera,[]);if(k!=='D')assert.ok(s.notas>=2,'Notas en '+k);}
    assert.match(await p.locator('.cad-fila-util strong').innerText(),new RegExp('^'+s.hud.replace(/[$.]/g,'\\$&')+'$'));
    // Mover un dato del plan con su control original mueve el diagrama; el motor sigue siendo el del tablero.
@@ -51,14 +57,14 @@ const finCadena=p=>p.waitForFunction(()=>window.PPPCadena.estado()&&!window.PPPC
    await p.locator('#pppBack').click();await p.waitForTimeout(400);
    await p.locator('.cad-una .cad-liga').click();await p.waitForTimeout(300);assert.equal(await p.locator('#pppVersiones').evaluate(e=>e.open),true);
    await p.locator('.cad-tabla').click();await p.waitForTimeout(300);assert.equal(await p.locator('#flowRows tr').first().isVisible(),true,'La tabla mes a mes queda a la vista');
-   for(const width of [320,390]){await p.setViewportSize({width,height:780});await p.waitForTimeout(450);s=await lectura(p);assert.ok(s.desborde<=1,'Sin desborde a '+width);assert.deepEqual(s.fuera,[],'Notas dentro a '+width);}
+   s=await lectura(p);assert.deepEqual(s.propios,[],'Nada del diagrama se sale del ancho');
    assert.equal(t.posts.length,0,'El diagrama no escribe');assert.equal(t.gets.length,gets,'El diagrama no pide nada a la red');assert.deepEqual(errors,[]);
    console.log('PASS '+name+': diagrama arriba de las cinco tarjetas, acordeón, misma utilidad que el tablero, edición viva con «antes», ligas a tarjeta y control, 320/390/430 px, sin red.');await c.close();
 
    // Escritorio con tres versiones y animación: los botones del diagrama son las versiones del caso y la cadena corre 1→4.
    const d=await browser.newContext({viewport:{width:1280,height:900}}),dt=await install(d,{seed:tresVersiones()}),q=await d.newPage(),de=[];q.on('pageerror',e=>de.push(e.message));
    await q.goto('https://ppp.test/potenciales-yod/mixto.html');await q.locator('#pppCadena').waitFor();await q.waitForTimeout(1700);
-   s=await lectura(q);assert.equal(s.cuerpos,4,'Los cuatro eslabones a la vista');assert.ok(s.desborde<=1);assert.deepEqual(s.fuera,[]);assert.ok(s.notas>=7,'Notas en escritorio: '+s.notas);assert.equal(s.queda,s.hud);
+   s=await lectura(q);assert.equal(s.cuerpos,4,'Los cuatro eslabones a la vista');assert.deepEqual(s.propios,[]);assert.ok(s.desborde<=1,'Sin desborde: '+s.ajenos.join(' '));assert.deepEqual(s.fuera,[]);assert.ok(s.notas>=7,'Notas en escritorio: '+s.notas);assert.equal(s.queda,s.hud);
    assert.ok(await q.evaluate(()=>{const r=k=>document.querySelector('.cad-pan[data-k='+k+']').getBoundingClientRect(),A=r('A'),B=r('B'),C=r('C'),D=r('D');return B.left>=A.right-1&&Math.abs(B.top-A.top)<2&&C.top>=A.bottom-1&&Math.abs(C.left-A.left)<2&&Math.abs(D.left-B.left)<2&&Math.abs(D.top-C.top)<2;}),'Cuadrícula 2×2 que se lee 1→2→3→4');
    assert.deepEqual(await q.locator('.cad-ver span').allInnerTexts(),['Ritmo bajo','Ritmo medio','Ritmo alto']);assert.equal(await q.locator('.cad-ver[aria-pressed=true]').getAttribute('data-version'),'r-medio');
    assert.ok((await q.locator('.cad-ver small').allInnerTexts()).every(x=>/^queda [−]?\$\d/.test(x)));assert.match(await q.locator('.cad-rango p').innerText(),/Entre tus 3 versiones queda de \$/);
