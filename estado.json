@@ -1,16 +1,6 @@
 {
- "generado": "2026-11-12T19:13:41.620Z",
+ "generado": "2026-11-12T19:37:16.437Z",
  "errores": [
-  {
-   "clave": "cambio:yodesarrollomx/potenciales-yod",
-   "tipo": "cambio",
-   "nodos": [
-    "repo:yodesarrollomx/potenciales-yod"
-   ],
-   "desde": "2026-11-12T17:24:17Z",
-   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/78c045da3429e8491fc0f96589660d99932cc8ba",
-   "msg": "potenciales-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
-  },
   {
    "clave": "chinche:yodesarrollomx/sala-edicion#294",
    "tipo": "chinche",

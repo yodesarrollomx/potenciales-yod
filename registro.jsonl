@@ -20,3 +20,4 @@
 {"cuando": "2026-11-12T11:48:18-07:00", "que": "grafo rehecho (borrador)", "id": "G-20261112-1147", "pr": 71, "ia": "claude:claude-sonnet-5-5", "por": "alexpueblag"}
 {"cuando": "2026-11-12T12:03:56-07:00", "que": "grafo rehecho (borrador)", "id": "G-20261112-1203", "pr": 71, "ia": "claude:claude-sonnet-5-5", "por": "alexpueblag"}
 {"cuando": "2026-11-12T12:36:41-07:00", "que": "grafo aprobado", "id": "G-20261112-1203", "pr": 71, "por": "alexpueblag"}
+{"cuando":"2026-11-12T19:37:16.437Z","que":"se resuelve","clave":"cambio:yodesarrollomx/potenciales-yod","tipo":"cambio","msg":"potenciales-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo","desde":"2026-11-12T17:24:17Z"}
