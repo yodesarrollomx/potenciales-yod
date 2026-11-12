@@ -106,6 +106,11 @@ test('«cambió» sólo si cambió algo que el grafo no escribe él mismo', asyn
   const cabeza = { '/repos/yodesarrollomx/potenciales-yod/commits': [{ sha: 'cccc333344ffffffffffffffffffffffffffffff', commit: { committer: { date: '2026-11-12T00:00:00Z' } }, html_url: 'c' }] };
   const propio = crear({ mapa, fetchImpl: api({ ...cabeza, '/repos/yodesarrollomx/potenciales-yod/compare/aaaa111122...cccc': { files: [{ filename: 'grafo/mapa.html' }, { filename: 'grafo-motor/datos/base.json' }] } }) });
   assert.equal((await propio.leer()).filter(x => x.tipo === 'cambio').length, 0);
+  // Aprobar un grafo fusiona también el architecture-impact.json que el borrador reescribe: eso tampoco es «el sistema cambió».
+  const aprobacion = crear({ mapa, fetchImpl: api({ ...cabeza, '/repos/yodesarrollomx/potenciales-yod/compare/aaaa111122...cccc': { files: [{ filename: 'architecture-impact.json' }, { filename: 'grafo/versiones.json' }, { filename: 'grafo-motor/datos/base.json' }] } }) });
+  assert.equal((await aprobacion.leer()).filter(x => x.tipo === 'cambio').length, 0, 'después de aprobar, el grafo no se ve atrasado');
+  const otroRepo = crear({ mapa: { ...mapa, repos: { 'yodesarrollomx/yod-portal': mapa.repos['yodesarrollomx/yod-portal'] } }, fetchImpl: api({ '/repos/yodesarrollomx/yod-portal/commits': cabeza['/repos/yodesarrollomx/potenciales-yod/commits'], '/repos/yodesarrollomx/yod-portal/compare/bbbb222233...cccc': { files: [{ filename: 'architecture-impact.json' }] } }) });
+  assert.equal((await otroRepo.leer()).filter(x => x.tipo === 'cambio').length, 1, 'en los demás repositorios ese archivo sí es un cambio');
   const ajeno = crear({ mapa, fetchImpl: api({ ...cabeza, '/repos/yodesarrollomx/potenciales-yod/compare/aaaa111122...cccc': { files: [{ filename: 'grafo/mapa.html' }, { filename: 'mixto.html' }] } }) });
   const e = (await ajeno.leer()).filter(x => x.tipo === 'cambio'); assert.equal(e.length, 1); assert.match(e[0].msg, /potenciales-yod cambió después de armar el grafo \(2026-11-11\)/);
   const desconocido = crear({ mapa, fetchImpl: api({ ...cabeza, '/repos/yodesarrollomx/potenciales-yod/compare/': 404 }) });
@@ -208,7 +213,46 @@ test('borrador: lo que hay en GitHub se lee de la rama, de su PR y de su registr
     [`/repos/${REPO}/pulls/70`]: { number: 70, html_url: 'u70', mergeable_state: 'dirty' }, [`/repos/${REPO}/contents/grafo/versiones.json?ref=grafo-borrador`]: contenido }) }).borradorEnGitHub();
   assert.equal(hay.rama, true); assert.equal(hay.pr.mergeable_state, 'dirty'); assert.deepEqual(hay.deRama, deRama);
   const noHay = await crear({ mapa, fetchImpl: api({ [`/repos/${REPO}/branches/grafo-borrador`]: 404 }) }).borradorEnGitHub();
-  assert.deepEqual(noHay, { rama: false, pr: undefined, deRama: null });
+  assert.deepEqual(noHay, { rama: false, pr: undefined, deRama: null, reciente: false });
   const sinPR = await crear({ mapa, fetchImpl: api({ [`/repos/${REPO}/branches/grafo-borrador`]: {}, [`/repos/${REPO}/pulls?state=open`]: [], [`/repos/${REPO}/contents/`]: contenido }) }).borradorEnGitHub();
   assert.equal(sinPR.pr, null); assert.equal(sinPR.deRama.aprobado, NUEVO);
 });
+
+/* ── el cierre de un borrador se anota una sola vez (12-nov-2026: el flujo de cierre y el vigilante lo anotaron los dos) ── */
+const { cerradosDe, GRACIA_MS } = require('../scripts/grafo-estado.cjs');
+
+test('borrador: si su PR se acaba de cerrar, el vigilante espera al flujo de cierre y no anota él', () => {
+  const recien = reconciliarBorrador({ puntero: punt(), aprobado: NUEVO, rama: true, pr: null, deRama, reciente: true, repo: REPO, ahora: T });
+  assert.equal(recien.linea, null); assert.equal(recien.cambio, false); assert.deepEqual(recien.puntero, punt(), 'el aviso lo quita el flujo de cierre');
+  const sinRama = reconciliarBorrador({ puntero: punt(), aprobado: NUEVO, rama: false, reciente: true, repo: REPO, ahora: T });
+  assert.equal(sinRama.linea, null); assert.equal(sinRama.cambio, false);
+  const despues = reconciliarBorrador({ puntero: punt(), aprobado: NUEVO, rama: false, reciente: false, repo: REPO, ahora: T });
+  assert.equal(despues.linea.que, 'grafo aprobado', 'pasado el rato, si el flujo de cierre no corrió, lo anota el vigilante'); assert.deepEqual(despues.puntero, {});
+});
+
+test('borrador: un cierre que ya está en el registro no se anota otra vez, pero el aviso sí se quita', () => {
+  const r = reconciliarBorrador({ puntero: punt(), aprobado: NUEVO, rama: false, cerrados: [NUEVO], reciente: true, repo: REPO, ahora: T });
+  assert.equal(r.linea, null); assert.equal(r.cambio, true); assert.deepEqual(r.puntero, {});
+  const otro = reconciliarBorrador({ puntero: punt(), aprobado: NUEVO, rama: false, cerrados: ['G-20261101-0800'], repo: REPO, ahora: T });
+  assert.equal(otro.linea.id, NUEVO, 'el cierre de otro borrador no cuenta');
+});
+
+test('borrador: los cierres ya anotados se leen del registro', () => {
+  const registro = [
+    { cuando: 'a', que: 'grafo rehecho (borrador)', id: 'G-20261112-1036', pr: 66 },
+    { cuando: 'b', que: 'grafo aprobado', id: 'G-20261112-1056', pr: 66, por: 'alguien' },
+    { cuando: 'c', que: 'aparece', clave: 'cambio:x' },
+    { cuando: 'd', que: 'borrador descartado', id: 'G-20261112-0037', pr: 64 },
+  ].map(l => JSON.stringify(l)).join('\n') + '\nesto no es json\n';
+  assert.deepEqual(cerradosDe(registro), ['G-20261112-1056', 'G-20261112-0037']); assert.deepEqual(cerradosDe(''), []); assert.deepEqual(cerradosDe(undefined), []);
+});
+
+test('borrador: «se acaba de cerrar» sale de la hora en que se cerró el PR del aviso', async () => {
+  const con = (cerrado, ahora) => crear({ mapa, ahora: () => ahora, fetchImpl: api({ [`/repos/${REPO}/branches/grafo-borrador`]: 404, [`/repos/${REPO}/pulls/66`]: cerrado }) }).borradorEnGitHub(66);
+  assert.equal((await con({ number: 66, state: 'closed', closed_at: '2026-11-12T18:08:47Z' }, '2026-11-12T18:09:30Z')).reciente, true);
+  assert.equal((await con({ number: 66, state: 'closed', closed_at: '2026-11-12T18:08:47Z' }, new Date(Date.parse('2026-11-12T18:08:47Z') + GRACIA_MS + 1000).toISOString())).reciente, false);
+  assert.equal((await con({ number: 66, state: 'open', closed_at: null }, '2026-11-12T18:09:30Z')).reciente, false);
+  assert.equal((await crear({ mapa, fetchImpl: api({ [`/repos/${REPO}/branches/grafo-borrador`]: 404 }) }).borradorEnGitHub(0)).reciente, false, 'un aviso sin PR no espera a nadie');
+  assert.equal((await crear({ mapa, fetchImpl: api({ [`/repos/${REPO}/branches/grafo-borrador`]: 404, [`/repos/${REPO}/pulls/66`]: 404 }) }).borradorEnGitHub(66)).reciente, false, 'si no se pudo leer el PR, no se espera');
+});
+

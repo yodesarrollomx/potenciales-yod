@@ -55,8 +55,16 @@ def linea_ia(inf):
     if not i.get('pedidos'): return ('Explicación de IA: no hay clave en este repositorio. Para activarla, agrega `OPENAI_API_KEY` o `ANTHROPIC_API_KEY` '
                                      '(o las dos) en Settings → Secrets and variables → Actions. Con las dos, se pregunta a ambas y se usa la primera que conteste bien.')
     pedidos = ' y '.join({'openai': 'OpenAI', 'claude': 'Claude'}.get(p, p) for p in i['pedidos'])
-    if i.get('gano'): return f"Explicación de IA: se preguntó a {pedidos}; contestó primero `{i['gano']}` en {i.get('segundos')} s." + (f" Falló: {json.dumps(i['fallos'], ensure_ascii=False)}." if i.get('fallos') else '')
+    if i.get('gano'):
+        otra = ' Su primera respuesta llegó mal formada y se le pidió otra vez.' if str(i['gano']).split(':')[0] in (i.get('reintentos') or []) else ''
+        return f"Explicación de IA: se preguntó a {pedidos}; contestó primero `{i['gano']}` en {i.get('segundos')} s." + otra + (f" Falló: {json.dumps(i['fallos'], ensure_ascii=False)}." if i.get('fallos') else '')
     return f"Explicación de IA: se preguntó a {pedidos} y ninguna respuesta sirvió ({json.dumps(i.get('fallos') or {}, ensure_ascii=False)}). El grafo se rehízo igual, sin explicación."
+
+
+# Cuando el PR lo abre un flujo, GitHub deja sus pruebas «en espera de aprobación» y no deja fusionar hasta que una
+# persona con permiso de escritura las deja correr. Comprobado en vivo el 12-nov-2026 (PR 66). Abierto a mano no lo pide.
+PASOS = ('**Para aprobar:** si GitHub muestra «Approve workflows to run», tócalo primero: sólo deja correr las pruebas (lo pide cuando el PR '
+         'lo abrió un flujo y no una persona). Cuando queden en verde, toca «Merge pull request» y luego «Confirm merge».')
 
 
 def cuerpo_pr(inf):
@@ -64,6 +72,7 @@ def cuerpo_pr(inf):
     p += [f"## Grafo {inf['id']} · borrador", '',
           f"**Fusionar este PR es aprobar el grafo.** Mientras siga abierto, es un borrador: las presentaciones siguen leyendo el grafo aprobado `{inf.get('antes')}` y sus ligas no cambian.",
           'Cerrarlo sin fusionar lo descarta.', '',
+          PASOS, '',
           f"Vista previa del borrador y botones: {PAGINA}", '']
     if ia:
         p += ['### Qué cambió, explicado', f"**{ia['titulo']}**", '', ia['resumen'], '']
@@ -105,7 +114,8 @@ def comentario(inf, liga, numero=0):
     if not inf.get('cambio'): return (inf.get('mensaje') or 'El grafo ya está al día.') + ' No se abrió ningún borrador.\n\n' + linea_ia(dict(ia_informe=dict(omitida=True))).replace('se pidió no usarla en esta corrida', 'no hizo falta: no había nada que explicar') + '\n'
     ia = inf.get('ia'); hay_pr = str(numero or '').isdigit() and int(numero) > 0
     donde = f'en {liga}' if hay_pr else 'en la rama `grafo-borrador`'
-    aprobar = ('- **Aprobar ya:** fusiona ese PR («Merge pull request»). Las presentaciones cambian solas al grafo nuevo.' if hay_pr else
+    aprobar = ('- **Aprobar ya:** abre ese PR. Si GitHub muestra «Approve workflows to run», tócalo primero (sólo deja correr las pruebas); cuando queden en verde, '
+               'toca «Merge pull request». Las presentaciones cambian solas al grafo nuevo.' if hay_pr else
                f'- **Aprobar ya:** abre [esta página]({liga}), toca «Create pull request» y luego «Merge pull request». Las presentaciones cambian solas al grafo nuevo.')
     return '\n'.join([f"Listo: el grafo **{inf['id']}** quedó como **borrador** {donde}.", '',
                       (ia['resumen'] if ia else 'Cambios: ' + '; '.join(que_cambio(inf)[:4]) + '.'), '', aprobar,
@@ -125,13 +135,34 @@ def puntero(inf, numero, liga, carpeta, registrar=True):
     return d
 
 
+CIERRES = ('grafo aprobado', 'borrador descartado')
+
+
+def ya_cerrado(registro, vid='', numero=None):
+    """¿El registro ya trae el cierre de ese borrador? Se busca por su id; sin id, por el número de su PR."""
+    try:
+        with open(registro, encoding='utf-8') as f: lineas = f.readlines()[-400:]
+    except OSError: return False
+    for l in lineas:
+        try: d = json.loads(l)
+        except ValueError: continue
+        if isinstance(d, dict) and d.get('que') in CIERRES and ((vid and d.get('id') == vid) or (not vid and numero and d.get('pr') == numero)): return True
+    return False
+
+
 def cierre(carpeta, fusionado, por, numero):
-    p = os.path.join(carpeta, 'borrador.json')
+    """Quita el aviso de borrador y anota el cierre una sola vez: el vigilante también sabe cerrarlo (por si este flujo
+    no corre), y repetir esta corrida no debe dejar dos renglones del mismo cierre."""
+    p = os.path.join(carpeta, 'borrador.json'); reg = os.path.join(carpeta, 'registro.jsonl')
     try: antes = _lee(p)
     except (OSError, ValueError): antes = {}
+    if not isinstance(antes, dict): antes = {}
     _escribe(p, {})
-    with open(os.path.join(carpeta, 'registro.jsonl'), 'a', encoding='utf-8') as f:
-        f.write(json.dumps(dict(cuando=_ahora(), que='grafo aprobado' if fusionado else 'borrador descartado', id=antes.get('id') or '', pr=int(numero) if str(numero).isdigit() else None, por=por or ''), ensure_ascii=False) + '\n')
+    n = int(numero) if str(numero).isdigit() else None
+    if ya_cerrado(reg, str(antes.get('id') or ''), n): return False
+    with open(reg, 'a', encoding='utf-8') as f:
+        f.write(json.dumps(dict(cuando=_ahora(), que=CIERRES[0] if fusionado else CIERRES[1], id=antes.get('id') or '', pr=n, por=por or ''), ensure_ascii=False) + '\n')
+    return True
 
 
 if __name__ == '__main__':

@@ -63,6 +63,8 @@ test('con un borrador, pregunta si se aprueba ya o se deja en borrador, y dice q
   assert.match(h, /¿Lo apruebas ya o lo dejas en borrador\?/); assert.match(h, /Aprobar ya ↗/); assert.match(h, /Dejar en borrador<\/button>/); assert.match(h, /Ver el borrador/);
   assert.match(h, /las presentaciones se arman solas con el grafo nuevo/); assert.match(h, new RegExp('siguen leyendo el aprobado ' + A + ' y sus ligas no cambian'));
   assert.match(h, new RegExp('href="' + REPO.replace(/\//g, '\\/') + '\\/pull\\/70"')); assert.match(h, /«Merge pull request»/); assert.doesNotMatch(h, /Create pull request/);
+  // el PR abierto por el flujo llega con sus pruebas en espera de aprobación: el aviso dice ese paso antes de «Merge»
+  assert.match(h, /si GitHub muestra «Approve workflows to run», tócalo primero[^<]*cuando queden en verde, toca «Merge pull request»/);
   assert.match(h, /Rehacer otra vez/); assert.match(h, /Entró un tablero/);
   p.ctl.detener();
 });

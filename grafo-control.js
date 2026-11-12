@@ -78,7 +78,7 @@
               '<div class="gc-fila"><button type="button" class="btn mini" data-gc="ver">' + (viendoBorrador ? 'Ver el aprobado' : 'Ver el borrador') + '</button>' +
               '<a class="btn mini" data-gc="aprobar" href="' + esc(b.liga) + '" target="_blank" rel="noopener">Aprobar ya ↗</a>' +
               '<button type="button" class="btn mini" data-gc="plegar">Dejar en borrador</button></div>' +
-              '<p class="gc-nota">' + (b.conPR ? 'Aprobar es tocar «Merge pull request» en esa página. Cerrar el PR sin fusionar lo descarta.'
+              '<p class="gc-nota">' + (b.conPR ? 'Para aprobar, en esa página: si GitHub muestra «Approve workflows to run», tócalo primero (sólo deja correr las pruebas); cuando queden en verde, toca «Merge pull request». Cerrar el PR sin fusionar lo descarta.'
                 : 'Para aprobar, en esa página toca «Create pull request» y luego «Merge pull request».') + '</p></div>' : '') +
         '<div class="gc-fila"><button type="button" class="btn mini" data-gc="rehacer">' + (b ? 'Rehacer otra vez' : 'Rehacer grafo') + '</button>' +
           (R.conCambio && !b ? '<span class="gc-nota">' + R.conCambio + (R.conCambio === 1 ? ' repositorio cambió' : ' repositorios cambiaron') + ' desde que se armó.</span>' : '') + '</div>' +

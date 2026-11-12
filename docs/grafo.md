@@ -48,7 +48,7 @@ Decisión de Dirección del 12-nov-2026 (DEC-19): el grafo **no refleja** sistem
 3. Rehace el grafo. Si nada de lo que dibuja cambió, lo dice y no abre borrador.
 4. Si cambió, pide la explicación a las IA (si hay claves) y deja el grafo nuevo en la rama **`grafo-borrador`** con su PR. Contesta en el pedido y lo cierra.
 5. En Accesos aparece el aviso: **¿Lo apruebas ya o lo dejas en borrador?**
-   - **Aprobar ya** = fusionar ese PR. Pages publica el grafo nuevo y las presentaciones lo usan solas.
+   - **Aprobar ya** = fusionar ese PR. Si el PR lo abrió el flujo, GitHub muestra antes «Approve workflows to run»: se toca primero (sólo deja correr las pruebas) y, cuando quedan en verde, «Merge pull request». Pages publica el grafo nuevo y las presentaciones lo usan solas.
    - **Dejar en borrador** = no hacer nada. Lo publicado, las presentaciones y sus ligas siguen igual.
    - **Descartar** = cerrar el PR sin fusionar.
 
@@ -56,11 +56,11 @@ Decisión de Dirección del 12-nov-2026 (DEC-19): el grafo **no refleja** sistem
 
 ### Por qué un PR
 
-La rama principal está protegida (comprobación obligatoria «Arquitectura YOD»), así que ningún flujo escribe en ella. El borrador lleva su propio `architecture-impact.json` para poder pasar esa comprobación, y el flujo la pide para la rama del borrador.
+La rama principal está protegida (comprobación obligatoria «Arquitectura YOD»), así que ningún flujo escribe en ella. El borrador lleva su propio `architecture-impact.json` para poder pasar esa comprobación.
 
-Si el repositorio no permite que un flujo abra PR, el flujo deja la rama y una liga: en esa página se toca «Create pull request» y el trabajo «borrador-abierto» le pone título, explicación y aviso. Son dos toques para aprobar en lugar de uno.
+Desde el 12-nov-2026 este repositorio deja que un flujo abra PR (Settings → Actions → General → Workflow permissions → «Allow GitHub Actions to create and approve pull requests»), así que el borrador llega con su PR ya abierto. **Aprobar son dos toques.** GitHub, desde junio de 2026, deja «en espera de aprobación» las pruebas de un PR abierto por un flujo y lo marca como bloqueado hasta que una persona con permiso de escritura toca **«Approve workflows to run»**; después se toca **«Merge pull request»**. Pedir aparte la comprobación obligatoria no quita ese paso (se probó: el PR siguió bloqueado), por eso el flujo ya no la pide. Para que aprobar fuera un solo toque, el flujo tendría que abrir el PR con una credencial propia (una GitHub App o un token) y no con la del flujo: es decisión de Dirección.
 
-Comprobado en vivo el 12-nov-2026: **hoy este repositorio no lo permite**, así que aprobar son esos dos toques. Para que el PR se abra solo y aprobar sea un toque, Dirección puede activar en GitHub: Settings → Actions → General → Workflow permissions → «Allow GitHub Actions to create and approve pull requests».
+Si el repositorio no permite que un flujo abra PR, el flujo deja la rama y una liga: en esa página se toca «Create pull request» y el trabajo «borrador-abierto» le pone título, explicación y aviso. Un PR abierto así por una persona no pide «Approve workflows to run»: sus pruebas corren solas.
 
 Si otros cambios entran a la rama principal mientras el borrador espera, puede quedar atrás. Accesos lo avisa; se arregla con «Rehacer otra vez».
 
@@ -108,7 +108,7 @@ Dónde se pinta cada error: en el repositorio donde pasó y en los tableros que 
 
 - Las capas curadas a mano (pantallas propuestas, plan, hallazgos, pestañas y columnas de hojas) no se regeneran solas: `refrescar.py` actualiza lo que se lee del código y del atlas.
 - El grafo no ve repositorios privados.
-- «Cambió» significa que hubo commits que tocan algo que el grafo dibuja; no dice si el cambio es bueno.
+- «Cambió» significa que hubo commits que tocan algo que el grafo dibuja; no dice si el cambio es bueno. No cuenta lo que el propio grafo escribe en este repositorio: `grafo/`, `grafo-motor/datos/` y el `architecture-impact.json` que cada borrador reescribe.
 - La explicación de IA puede equivocarse; lo contado (archivos, piezas, ligas) sale del motor, no del modelo.
 
 ## Pruebas
@@ -133,7 +133,10 @@ Después de fusionar, con hechos:
 - **Publicación.** Pages publicó `accesos.html` y `portero.js` byte a byte con el commit de la rama principal (lo comprueba «Verificar acceso PPP»).
 - **Vigilancia.** La primera corrida de «Grafo · estado» creó la rama `grafo-datos` con su estado y su registro. Por horario, GitHub lo corrió una sola vez en las primeras diez horas (a las 16:01Z): desde entonces corre también con lo que pasa en el repositorio y pide dos horarios por hora.
 - **Rehacer a pedido.** Un pedido real (issue «🕸️ Rehacer grafo») rehízo el grafo en menos de dos minutos, dejó el borrador en `grafo-borrador`, contestó y cerró el pedido y escribió el aviso. Sin claves de IA: dice «no hay clave» y sigue.
-- **PR del borrador.** El repositorio no deja que el flujo lo abra (ver arriba): quedó la liga. Al abrirlo a mano, «borrador-abierto» le puso título y explicación y el aviso tomó su número; «Arquitectura YOD» pasó en él.
+- **PR del borrador.** En la mañana el repositorio no dejaba que el flujo lo abriera: quedó la liga y, al abrirlo a mano, «borrador-abierto» le puso título y explicación y el aviso tomó su número. Con el permiso ya activo (17:37Z) el flujo lo abrió solo.
+- **Explicación con IA.** Con la clave de Claude puesta, el primer borrador salió con su explicación (9.7 s). En el siguiente, Claude contestó un JSON mal formado y el borrador salió sin explicación: desde entonces la respuesta se le pide como herramienta con esquema y, si llega mal formada, se pide una vez más.
+- **Aprobar.** El PR abierto por el flujo estuvo bloqueado mientras sus cuatro corridas esperaban aprobación. Al aprobarlas una persona (18:03Z) pasó a fusionable y se fusionó (18:08Z). En menos de un minuto Pages publicó, el flujo de cierre anotó «grafo aprobado», quitó el aviso y borró la rama, y el vigilante dio por resueltos los «cambió» de los demás repositorios.
+- **Lo que esa primera aprobación sacó a la luz, ya corregido.** El vigilante siguió diciendo que este repositorio «cambió», porque cada borrador reescribe `architecture-impact.json` y ese archivo no contaba como «lo que el grafo escribe»; y «grafo aprobado» quedó anotado dos veces, una por el flujo de cierre y otra por el vigilante. Ahora ese archivo cuenta como propio (en el vigilante y en `refrescar.py`), el vigilante le da diez minutos al flujo de cierre antes de anotar él, y ninguno de los dos repite un cierre que ya está en el registro.
 - **Descartar.** Al cerrar el PR sin fusionar se anotó «borrador descartado», se quitó el aviso y se borró la rama.
 
-Falta ver en vivo: **aprobar** un borrador (fusionar su PR) y la sección del grafo con una sesión real de administrador en el navegador. El aviso de borrador que leen las páginas tarda unos minutos en ponerse al día porque `raw.githubusercontent.com` guarda copia.
+Falta ver en vivo: la sección del grafo con una sesión real de administrador en el navegador. El aviso de borrador que leen las páginas tarda unos minutos en ponerse al día porque `raw.githubusercontent.com` guarda copia.
