@@ -1,19 +1,15 @@
 {
   "model_revision": "2026-11-12.ppp2.1",
-  "proposal_id": "CHG-PPP2-20261112",
-  "summary": "PPP 2: un portal nuevo del Plan de Potencial que empieza de cero sin tocar el PPP actual. ppp2/libro genera la plantilla ppp2-libro-v1: un Google Sheets por plan con todas las fórmulas (tres versiones con el mismo motor de flujo mensual, revisión para fondos de nueve pruebas, cinco esquemas de reparto con el dueño, las 96 preguntas del oficio, candados, hallazgos, consejo, pruebas de estrés y bitácora; la edad semilla→fruto la calcula el libro). server/ppp2/PPP2.gs es un Apps Script aparte, ligado al registro del vivero: valida la sesión con el Portero (board PT), escribe sólo celdas permitidas con revisión, request_id y bitácora, y no calcula finanzas. Ya está desplegado (versión 1), y las lecturas con la sesión de Dirección se comprobaron el 12-nov. ppp2.html/js/css muestran el vivero y el plan vivo con lo que recibe el dueño primero. El workflow fija el atlas con CHG-PPP2 y suma las pruebas de PPP 2 a la verificación de la interfaz. No cambian los motores actuales, portero.js, accesos.html ni el Apps Script del Portero.",
+  "proposal_id": "CHG-GRAFO-ACCESOS-20261111",
+  "summary": "Grafo (DEC-19): el informe de cada rehecho tampoco nombra lo excluido. refrescar.py agrega filtra_cambios: quita de los archivos nuevos, quitados o cambiados por repositorio, y de las notas, las rutas que cumplen la regla «excluir» de reglas.json. Ese informe es lo que leen la IA, el PR del borrador y grafo/versiones.json; el borrador G-20261112-1351 (PR 80) decía «llega EMD al portal» porque yod-portal agregó archivos bajo emd/. El grafo mismo ya salía limpio (excluye). Sin cambios en Accesos, portero.js, backend, hojas ni permisos.",
   "components": [
     "SYS-POTENCIALES",
-    "SYS-PPP2",
-    "GAS-PPP2",
-    "SHEET-PPP2"
+    "SYS-CONTROL"
   ],
   "tests": [
-    "node --test tests/ppp2-servidor.test.cjs: 20 en verde. Cubren el canje con board=PT y el respaldo sólo ante una falla, los permisos por rol, los rangos y las claves inventadas, la revisión vieja, el request_id repetido, las palancas y los renglones calculados, la aprobación sólo de Dirección, preguntas y pedidos, los candados con evidencia, el estrés que restablece, sembrar y la pausa.",
-    "node --test tests/ppp2-libro.test.cjs: 5 en verde (el libro de ejemplo, recalculado por una hoja de cálculo, cuadra flujo, cobranza, unidades, ganancia y reparto).",
-    "node tests/ppp2-browser.cjs: 9 recorridos en verde. Sin servidor, sin sesión, sesión rechazada sin borrar la credencial, vivero → plan, escrituras con revisión, aprobación sólo admin, lector sin controles, teléfono sin desborde y sin datos reales en la página.",
-    "En vivo (12-nov-2026): ppp2-meta, rechazo de una liga inválida vía canje, y lecturas de vivero y plan con la sesión de Dirección. El primer libro, recalculado por Google Sheets, cuadra con el borrador previo (comparación privada).",
-    "node scripts/versiones.cjs --check · git diff --check · verificar-impacto contra el atlas fijado."
+    "python3 -m unittest discover -s grafo-motor/pruebas -p 'prueba_*.py': 23 en verde; test_sin_sistemas_de_clientes_externos agrega el informe con archivos bajo emd/, documentos emd-*.md y una nota de Apps Script desconocido, y comprueba que sólo sale lo excluido.",
+    "Rehacer en seco con los repositorios reales (rehacer.py rehacer --ensayo --sin-ia): 0 menciones del sistema excluido en el informe; mismas cuentas del grafo que el borrador G-20261112-1351.",
+    "verificar-impacto contra el atlas fijado (bb97266)."
   ],
-  "rollback": "Revertir el merge quita la página, el servidor del repositorio y las pruebas. El Apps Script «PPP 2 · servidor» queda en sólo lectura con Config!pausa = sí, o se regresa a la versión anterior de su misma implementación. Los libros y el registro del vivero no se borran."
+  "rollback": "Revertir el PR; el grafo publicado no cambia (sólo el texto de los siguientes borradores)."
 }

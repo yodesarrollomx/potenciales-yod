@@ -495,6 +495,26 @@ def excluye(X, R=None):
     return sorted(fuera)
 
 
+def filtra_cambios(res, R=None):
+    """Lo excluido tampoco se nombra en el informe del rehecho (archivos nuevos, quitados o cambiados por repositorio y notas),
+    que es lo que leen la IA, el PR del borrador y grafo/versiones.json. excluye() limpia el grafo; esto limpia lo que se cuenta
+    de él. 12-nov-2026: el borrador G-20261112-1351 decía «llega EMD al portal» porque yod-portal agregó archivos bajo emd/."""
+    R = R if R is not None else reglas_excluir()
+    rutas = [re.compile(x) for x in R.get('rutas') or []]
+    fuera = lambda p: any(x.search(p) for x in rutas)
+    quitados = 0
+    for r in res.get('repos') or []:
+        for k in ('nuevos', 'quitados', 'cambiados'):
+            antes = r.get(k) or []; r[k] = [p for p in antes if not fuera(p)]; quitados += len(antes) - len(r[k])
+
+    def nota_fuera(n):
+        sf = str(n).split(' ', 1)[0]
+        return fuera(sf) or fuera(sf.split('/', 1)[-1])
+    notas = res.get('notas') or []
+    res['notas'] = [n for n in notas if not nota_fuera(n)]
+    return quitados + len(notas) - len(res['notas'])
+
+
 def contrato_ppp(d):
     out = {}
     for tipo, arch in MOTORES.items():
@@ -544,6 +564,7 @@ def main():
         if r: res['repos'].append(r)
     if M: res['atlas'] = sincroniza_atlas(X, filtra_atlas(M))
     res['excluidos'] = excluye(X)
+    res['excluidos_en_informe'] = filtra_cambios(res)
     pd = os.path.join(a.repos, 'potenciales-yod')
     if os.path.isdir(pd): B['ppp'] = contrato_ppp(pd)
     if a.hoy: B['armado'] = a.hoy
