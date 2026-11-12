@@ -7,7 +7,7 @@
     "SYS-YOD-OS",
     "N-PUERTAS"
    ],
-   "commit": "ed19f0baeb",
+   "commit": "f34255b676",
    "flujos": {
     ".github/workflows/salud-online.yml": "yod-portal::github_workflows_salud_online",
     ".github/workflows/arquitectura.yml": "yod-portal::github_workflows_arquitectura",
@@ -40,7 +40,7 @@
     "repo:yodesarrollomx/yodesarrollo-board",
     "SYS-INVERSION"
    ],
-   "commit": "9f93328ea8",
+   "commit": "888cbd0d61",
    "flujos": {
     ".github/workflows/offer-review.yml": "yodesarrollo-board::github_workflows_offer_review",
     ".github/workflows/broker-journey.yml": "yodesarrollo-board::github_workflows_broker_journey",
@@ -351,5 +351,5 @@
    "flujos": {}
   }
  },
- "armado": "2026-11-11T23:54:15-07:00"
+ "armado": "2026-11-12T00:37:39-07:00"
 }

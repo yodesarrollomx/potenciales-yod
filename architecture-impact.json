@@ -1,20 +1,14 @@
 {
   "model_revision": "2026-11-11.grafo-accesos.3",
   "proposal_id": "CHG-GRAFO-ACCESOS-20261111",
-  "summary": "accesos.html agrega al final la sección «Grafo del sistema» (sólo admin) con sus controles. El motor del grafo vive en grafo-motor/ (base pública, generador determinista de láminas, refresco desde los repositorios públicos y el atlas). «Rehacer grafo» abre un pedido; el flujo «Grafo · rehacer» comprueba el permiso de quien lo pide, rehace, pide a OpenAI y a Claude a la vez la explicación del cambio (sólo si hay claves como secretos del flujo) y deja el resultado como borrador en la rama grafo-borrador con su PR: fusionarlo es aprobar. «Grafo · estado» revisa cada hora flujos, chinches, cambios y páginas (sólo lectura), escribe en la rama de datos grafo-datos y abre una chinche por cada falla. El grafo publicado es la versión completa que eligió Dirección (identificadores y pestañas de hojas y el plan propuesto); nunca lleva repositorios privados, clientes externos, hallazgos de seguridad, nombres de personas ni de tratos, correos, claves ni identificadores completos de /exec. Cada grafo aprobado publica el contrato del plan y las recetas por audiencia que leen las presentaciones. Sin cambios en portero.js, backend, hojas ni permisos; ningún flujo escribe en la rama principal.",
+  "summary": "Grafo del sistema rehecho a pedido: versión G-20261112-0037 (la aprobada era G-20261111-2354). Cambian sólo los datos del grafo (grafo-motor/datos/base.json) y lo que se genera de ellos en grafo/: láminas, registro de versiones y datos para presentaciones. Sin código, backend, hojas ni permisos. Fusionar este cambio es aprobar el grafo; cerrarlo lo descarta.",
   "components": [
-    "SYS-POTENCIALES",
-    "SYS-CONTROL"
+    "SYS-POTENCIALES"
   ],
   "tests": [
-    "python -m unittest discover -s grafo-motor/pruebas -p 'prueba_*.py' (recetas contra el contrato del plan, carrera de las dos IA con servidores locales, refresco sobre un repositorio sintético, versiones, registro de impacto del borrador, avisos con y sin PR, láminas deterministas).",
-    "Prueba «LoPublicado» del motor: la base publicada no trae correos, claves, folios de tratos, repositorios privados, hallazgos de seguridad ni identificadores completos de /exec.",
-    "node --test tests/grafo-estado.test.cjs tests/grafo-control.test.cjs (vigilante con API de mentira, puesta al día del aviso de borrador, controles pintados y escapados, sin claves).",
-    "node --test tests/access-gates.cjs tests/accesos-admin-session.test.cjs; node scripts/versiones.cjs --check; git diff --check.",
-    "Rama de datos con dos flujos escribiendo a la vez contra un remoto local: se conservan las líneas de ambos.",
-    "Borrador simulado contra un remoto local: verificar-impacto del atlas fijado lo da por válido y sus láminas son las que genera su base.",
-    "node tests/grafo-accesos-browser.cjs (en «Verificar acceso PPP»): Accesos con sesión de admin sintética en 1280 y 390 px, con y sin borrador, vista previa sin publicar, pedido de rehacer y apagado sin sesión; sin escrituras ni errores de JavaScript.",
-    "Trabajo «ensayo» de «Grafo · rehacer» en este PR. Pendiente de comprobar en producción tras fusionar: pedido → flujo → borrador, primera corrida de «Grafo · estado» y publicación de Pages."
+    "Láminas generadas por grafo-motor/laminas.py desde la base de este mismo cambio (determinista).",
+    "Recetas de presentación comprobadas contra el contrato del Plan de Potencial al rehacer.",
+    "verificar-impacto contra el atlas fijado."
   ],
-  "rollback": "Revertir el merge, desactivar los flujos «Grafo · rehacer» y «Grafo · estado» y borrar las ramas grafo-datos y grafo-borrador. grafo/ y grafo-motor/ son archivos estáticos sin efecto en el Portero."
+  "rollback": "Cerrar el PR del borrador, o revertir su merge: el grafo aprobado anterior sigue publicado."
 }

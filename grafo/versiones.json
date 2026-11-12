@@ -1,13 +1,13 @@
 {
  "esquema": 1,
- "aprobado": "G-20261111-2354",
- "actualizado": "2026-11-11T23:54:15-07:00",
+ "aprobado": "G-20261112-0037",
+ "actualizado": "2026-11-12T00:37:39-07:00",
  "versiones": [
   {
    "id": "G-20261111-2354",
    "armado": "2026-11-11T23:54:15-07:00",
    "fecha": "11-nov 23:54",
-   "estado": "aprobado",
+   "estado": "anterior",
    "huella": "1582bc4f3dbb",
    "piezas": 3202,
    "ligas": 10665,
@@ -39,6 +39,101 @@
     "alexpueblag/yod-terreno-dormido": "1159ca5"
    },
    "nota": "Primera versión del grafo dentro del repositorio."
+  },
+  {
+   "id": "G-20261112-0037",
+   "armado": "2026-11-12T00:37:39-07:00",
+   "fecha": "12-nov 00:37",
+   "estado": "aprobado",
+   "huella": "df1b77b226a9",
+   "piezas": 3211,
+   "ligas": 10701,
+   "repos": {
+    "yodesarrollomx/yod-portal": "f34255b",
+    "yodesarrollomx/potenciales-yod": "1e8ae56",
+    "yodesarrollomx/yodesarrollo-board": "888cbd0",
+    "yodesarrollomx/yod-despacho": "d89b151",
+    "yodesarrollomx/board-aurum": "93bf624",
+    "yodesarrollomx/board-flujo-yod": "e9d122f",
+    "yodesarrollomx/real-miramar-board": "9db34a9",
+    "yodesarrollomx/interiores-aurum": "8bcdfc3",
+    "yodesarrollomx/aurum-board": "e3dd428",
+    "yodesarrollomx/sala-edicion": "07a7076",
+    "yodesarrollomx/plan-potencial": "9f036c7",
+    "yodesarrollomx/crokiss": "7a7a557",
+    "yodesarrollomx/Co-desarrolladores-Yod": "bdaf46b",
+    "yodesarrollomx/alquimia-urbana": "0c0da90",
+    "yodesarrollomx/aurum-experiencia": "70c63b3",
+    "yodesarrollomx/pintarron": "0979d3f",
+    "yodesarrollomx/prueba-dominio": "715c6c7",
+    "yodesarrollomx/yodesarrollomx.github.io": "a5680f2",
+    "alexpueblag/pizarron-claude-yodbot": "31593a1",
+    "yodesarrollo/amalaya-board": "e3f94e6",
+    "aurumarquitectos/experiencia": "89d29e8",
+    "aurumarquitectos/aurumarquitectos.github.io": "d33f765",
+    "alexpueblag/codesarrolladores-libre": "96d26c5",
+    "alexpueblag/yod-terreno-si": "09f75f4",
+    "alexpueblag/yod-terreno-dormido": "1159ca5"
+   },
+   "cambios": {
+    "piezas_mas": {
+     "documento": 1,
+     "codigo": 3,
+     "pagina": 1,
+     "prueba": 3,
+     "contrato": 1
+    },
+    "piezas_menos": {},
+    "piezas_cambiadas": 10,
+    "ligas_mas": 36,
+    "ligas_menos": 0,
+    "piezas": 3211,
+    "ligas": 10701,
+    "ppp": {},
+    "primer_ppp": false,
+    "repos": [
+     {
+      "repo": "yodesarrollomx/yod-portal",
+      "de": "ed19f0b",
+      "a": "f34255b",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 5
+     },
+     {
+      "repo": "yodesarrollomx/yodesarrollo-board",
+      "de": "9f93328",
+      "a": "888cbd0",
+      "nuevos": 8,
+      "quitados": 0,
+      "cambiados": 3
+     }
+    ],
+    "atlas": {
+     "componentes_nuevos": [],
+     "componentes_fuera": [],
+     "conexiones_mas": 1,
+     "conexiones_menos": 0,
+     "estados": [],
+     "propuestas": [],
+     "revision": "2026-11-11.grafo-accesos.3"
+    },
+    "sin_clon": [],
+    "sin_campo": [],
+    "notas": []
+   },
+   "ia": null,
+   "ia_informe": {
+    "pedidos": [],
+    "gano": null,
+    "fallos": {},
+    "segundos": null
+   },
+   "pedido": {
+    "por": "alexpueblag",
+    "numero": 63,
+    "motivo": "prueba en vivo del flujo completo después de fusionar (pedido → borrador → descartar); este borrador de prueba se cierra al terminar"
+   }
   }
  ]
 }
