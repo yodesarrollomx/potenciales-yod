@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-12T20:34:51.164Z",
+ "generado": "2026-11-12T20:35:45.018Z",
  "errores": [
   {
    "clave": "flujo:yodesarrollomx/yod-portal:.github/workflows/conocimiento-browser.yml",
@@ -33,18 +33,6 @@
    "desde": "2026-11-12T19:55:58Z",
    "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/26c3498c4201467b8d3157f35568b2eb7abc710a",
    "msg": "potenciales-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
-  },
-  {
-   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-diario.yml",
-   "tipo": "flujo",
-   "nodos": [
-    "sala-edicion::github_workflows_sala_diario",
-    "repo:yodesarrollomx/sala-edicion",
-    "SYS-SALA"
-   ],
-   "desde": "2026-11-12T20:23:40Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/43299860849",
-   "msg": "Falló el flujo «Sala · Diario» de sala-edicion, trabajo «mesa / mesa», paso 14 «Avisar si algo falló»"
   },
   {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-cada-hora.yml",
