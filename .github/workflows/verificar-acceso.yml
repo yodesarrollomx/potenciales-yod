@@ -27,7 +27,7 @@ jobs:
           node --test tests/access-gates.cjs tests/sheets-offline.cjs
       - name: Instalar navegadores de prueba
         run: |
-          npm install --prefix "$RUNNER_TEMP/yod-browser" --no-audit --no-fund playwright@1.55.1
+          npm install --prefix "$RUNNER_TEMP/yod-browser" --no-audit --no-fund playwright@1.55.1 vis-network@9.1.6
       - name: Siete plantillas reales · Chromium y WebKit móvil · sin red de negocio
         env:
           NODE_PATH: ${{ runner.temp }}/yod-browser/node_modules
@@ -46,6 +46,12 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/yod-browser/node_modules
           SALUD_CLIENT_SOURCE: .salud-portal/os/yod-salud.js
         run: node tests/salud-accesos-browser.cjs
+      - name: Grafo de Accesos · escritorio y móvil · sin red de negocio
+        env:
+          NODE_PATH: ${{ runner.temp }}/yod-browser/node_modules
+        run: |
+          node --check tests/grafo-accesos-browser.cjs
+          node tests/grafo-accesos-browser.cjs
       - name: Comprobar JavaScript realmente publicado en Pages
         if: github.event_name == 'push'
         env:

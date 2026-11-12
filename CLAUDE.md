@@ -183,3 +183,14 @@ Dirección exige que **datos y fórmulas vivan en Sheets**. El tablero leerá lo
 
 **Estado real:** los cinco HTML todavía calculan con computar(); la migración no está implementada. El commit 9b88384 amplió inventario documental y no trasladó las fórmulas. El contrato, antes/ahora/futuro y pendientes están registrados en **PPP_Arquitectura** y **PPP_Cambios** del Control Maestro; se corrigió la descripción histórica de SYS-POTENCIALES. Toda nueva escritura debe registrar actor, revisión base, antes/después, fuente, validación y siguiente paso, sin sobrescribir trabajo concurrente. No publicar datos privados en Git.
 
+
+## 11-nov-2026 · Grafo del sistema en Accesos
+
+Al final de `accesos.html` (sólo admin) vive el grafo de YOD OS con sus controles. Detalle completo en **docs/grafo.md**; propuesta `CHG-GRAFO-ACCESOS-20261111`.
+
+- **`grafo/` es generado: no se edita a mano.** Sale de `grafo-motor/datos/base.json`; tras tocar el motor se regenera con `python3 grafo-motor/rehacer.py inicial`. CI comprueba que lo publicado es lo que genera la base.
+- **Ningún flujo escribe en la rama principal.** Un grafo rehecho queda en la rama `grafo-borrador` con su PR: fusionarlo es aprobar; abierto es borrador; cerrarlo lo descarta. Lo vivo (estado, registro, aviso de borrador) va en la rama de datos `grafo-datos`.
+- **Las claves de IA son sólo secretos de Actions** (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`). Nunca en una página, archivo o registro. Sin claves el grafo se rehace igual.
+- **Repo público:** lo de `grafo/` lo abre cualquiera con la liga. Dirección eligió publicar la versión completa (identificadores y pestañas de hojas, y el plan propuesto por tablero). **Nunca** debe llevar repositorios privados, clientes externos, hallazgos de seguridad, nombres de personas, folios o nombres de tratos, correos, claves ni identificadores completos de `/exec`; la prueba `LoPublicado` lo vigila.
+- **Las presentaciones leen el grafo aprobado** (`grafo/versiones.json` y `grafo/datos/<id>.json`). Cambiar `grafo-motor/recetas.json` cambia lo que cuentan; las recetas no llevan cifras.
+- Pruebas: `python -m unittest discover -s grafo-motor/pruebas -p 'prueba_*.py'` y `node --test tests/grafo-estado.test.cjs tests/grafo-control.test.cjs`.

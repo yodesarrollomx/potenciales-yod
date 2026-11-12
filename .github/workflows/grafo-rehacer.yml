@@ -1,0 +1,271 @@
+name: Grafo · rehacer
+# El botón «Rehacer grafo» de Accesos abre un pedido (issue). Este flujo comprueba que quien lo pide tiene permiso,
+# rehace el grafo (sólo lee repositorios públicos y el atlas), pregunta a la vez a OpenAI y a Claude si hay claves
+# y deja el resultado como BORRADOR en la rama grafo-borrador, con su PR. Fusionar el PR es aprobar; cerrarlo es
+# descartar. La rama principal nunca se escribe desde aquí.
+#
+# Si el repositorio no deja que un flujo abra PR, queda la rama y una liga: al tocar «Create pull request» el PR se
+# abre y el trabajo «borrador-abierto» de este mismo flujo le pone título, explicación y aviso.
+run-name: >-
+  Grafo · ${{ github.event_name == 'issues' && 'pedido de rehacer' || github.event_name == 'workflow_dispatch' && 'rehacer a mano'
+  || github.event.action == 'closed' && 'cierre del borrador' || github.head_ref == 'grafo-borrador' && 'PR del borrador' || 'ensayo del motor' }}
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+    inputs:
+      sin_ia:
+        description: Rehacer sin pedir la explicación a la IA (no gasta crédito)
+        type: boolean
+        default: false
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    paths:
+      - 'grafo-motor/**'
+      - 'grafo/**'
+      - 'scripts/grafo-*'
+      - '.github/workflows/grafo-*.yml'
+permissions:
+  contents: read
+concurrency:
+  group: grafo-rehacer-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'principal' }}
+  cancel-in-progress: false
+env:
+  GRAPHIFY: graphifyy==0.9.106
+jobs:
+  ensayo:
+    name: Ensayo del motor (no escribe nada)
+    if: >-
+      github.event_name == 'pull_request' && github.event.action != 'closed'
+      && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref != 'grafo-borrador'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar Graphify (versión fijada)
+        run: python -m pip install --quiet --disable-pip-version-check "$GRAPHIFY" && graphify --version
+      - name: Pruebas del motor, del vigilante y de los controles
+        run: |
+          python -m unittest discover -s grafo-motor/pruebas -p 'prueba_*.py'
+          node --test tests/grafo-estado.test.cjs tests/grafo-control.test.cjs
+          bash -n scripts/grafo-rama-datos.sh
+      - name: Las láminas publicadas salen de la base publicada
+        run: |
+          python grafo-motor/laminas.py "$RUNNER_TEMP/laminas" > /dev/null
+          mal=0
+          for f in "$RUNNER_TEMP"/laminas/*; do cmp -s "$f" "grafo/$(basename "$f")" || { echo "::error::grafo/$(basename "$f") no coincide con lo que genera la base"; mal=1; }; done
+          for f in grafo/*.html; do [ -f "$RUNNER_TEMP/laminas/$(basename "$f")" ] || { echo "::error::$f sobra: la base ya no la genera"; mal=1; }; done
+          exit $mal
+      - name: Rehacer en ensayo (clona, refresca y compara; no guarda)
+        run: |
+          set -o pipefail
+          python grafo-motor/rehacer.py rehacer --ensayo --sin-ia --aqui . --informe "$RUNNER_TEMP/informe.json" | tail -60
+      - name: Claves de IA disponibles en este repositorio (sólo sí o no)
+        env:
+          HAY_OPENAI: ${{ secrets.OPENAI_API_KEY != '' }}
+          HAY_CLAUDE: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+        run: |
+          echo "Claves para la explicación con IA · OpenAI: $HAY_OPENAI · Claude: $HAY_CLAUDE" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  rehacer:
+    name: Rehacer el grafo y dejarlo en borrador
+    if: >-
+      github.ref == 'refs/heads/main'
+      && ((github.event_name == 'issues' && contains(github.event.issue.title, 'Rehacer grafo')) || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      NUM: ${{ github.event.issue.number }}
+      POR: ${{ github.actor }}
+      EVENTO: ${{ github.event_name }}
+      ASOCIACION: ${{ github.event.issue.author_association }}
+    steps:
+      - name: Quién lo pide
+        id: quien
+        run: |
+          p=$(gh api "repos/$REPO/collaborators/$POR/permission" --jq .permission 2>/dev/null || echo ninguno)
+          # Si la consulta de permisos no contesta: lanzar el flujo a mano ya exige permiso de escritura, y el dueño siempre puede.
+          case "$p" in admin|maintain|write) ;; *) if [ "$EVENTO" = workflow_dispatch ] || [ "$ASOCIACION" = OWNER ]; then p='write'; fi ;; esac
+          case "$p" in
+            admin|maintain|write) echo "ok=1" >> "$GITHUB_OUTPUT" ;;
+            *) echo "Sin permiso de escritura ($p): no se hace nada."
+               if [ -n "$NUM" ]; then
+                 gh api "repos/$REPO/issues/$NUM/comments" -f body='Sólo el equipo con permiso de escritura en este repositorio puede rehacer el grafo. No se hizo nada.' > /dev/null
+                 gh api -X PATCH "repos/$REPO/issues/$NUM" -f state=closed -f state_reason=not_planned > /dev/null
+               fi ;;
+          esac
+      - uses: actions/checkout@v4
+        if: steps.quien.outputs.ok
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        if: steps.quien.outputs.ok
+        with:
+          python-version: '3.13'
+      - name: Instalar Graphify (versión fijada)
+        if: steps.quien.outputs.ok
+        run: python -m pip install --quiet --disable-pip-version-check "$GRAPHIFY"
+      - name: Rehacer (pregunta a OpenAI y a Claude a la vez si hay claves)
+        if: steps.quien.outputs.ok
+        id: r
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GRAFO_OPENAI_MODEL: ${{ vars.GRAFO_OPENAI_MODEL }}
+          GRAFO_CLAUDE_MODEL: ${{ vars.GRAFO_CLAUDE_MODEL }}
+          MOTIVO: ${{ github.event.issue.body }}
+          SIN_IA: ${{ inputs.sin_ia && '--sin-ia' || '' }}
+        run: |
+          set -o pipefail
+          # del pedido sólo se guarda el renglón «Motivo: …», si lo trae
+          MOTIVO=$(printf '%s\n' "$MOTIVO" | sed -n 's/^Motivo: *//p' | head -n 1 | cut -c1-280)
+          python grafo-motor/rehacer.py rehacer --aqui . --por "$POR" --pedido "${NUM:-0}" --motivo "$MOTIVO" ${SIN_IA:+"$SIN_IA"} --informe "$RUNNER_TEMP/informe.json" | tail -80
+          python - "$RUNNER_TEMP/informe.json" >> "$GITHUB_OUTPUT" <<'PY'
+          import json, sys
+          i = json.load(open(sys.argv[1]))
+          print('cambio=' + ('1' if i.get('cambio') else ''))
+          print('id=' + str(i.get('id') or ''))
+          PY
+      - name: Rama del borrador y su PR
+        if: steps.r.outputs.cambio
+        id: pr
+        env:
+          ID: ${{ steps.r.outputs.id }}
+        run: |
+          git config user.name 'yod-grafo'; git config user.email 'yod-grafo@users.noreply.github.com'
+          BASE_SHA=$(git rev-parse HEAD)
+          git checkout --quiet -B grafo-borrador
+          git add -A grafo grafo-motor/datos architecture-impact.json
+          git commit --quiet -m "Grafo $ID (borrador): fusionar este cambio es aprobarlo"
+          git push --quiet --force origin grafo-borrador
+          HEAD_SHA=$(git rev-parse HEAD)
+          python grafo-motor/aviso.py pr "$RUNNER_TEMP/informe.json" > "$RUNNER_TEMP/pr.md"
+          TITULO=$(python grafo-motor/aviso.py titulo "$RUNNER_TEMP/informe.json")
+          N=$(gh api "repos/$REPO/pulls?state=open&head=${REPO%%/*}:grafo-borrador" --jq '.[0].number // empty' 2>/dev/null || true)
+          case "$N" in ''|*[!0-9]*) N='' ;; esac
+          if [ -n "$N" ]; then
+            gh api -X PATCH "repos/$REPO/pulls/$N" -f title="$TITULO" -F body=@"$RUNNER_TEMP/pr.md" > /dev/null
+          else
+            N=$(gh api "repos/$REPO/pulls" -f title="$TITULO" -f head=grafo-borrador -f base=main -F body=@"$RUNNER_TEMP/pr.md" --jq .number 2>/dev/null || true)
+            case "$N" in ''|*[!0-9]*) N='' ;; esac
+          fi
+          if [ -n "$N" ]; then
+            LIGA="https://github.com/$REPO/pull/$N"
+          else
+            echo "::notice::Este repositorio no deja que un flujo abra PR. Queda la rama y la liga para abrirlo con un toque."
+            LIGA=$(python grafo-motor/aviso.py abrir "$RUNNER_TEMP/informe.json" "$REPO")
+          fi
+          { echo "numero=$N"; echo "liga=$LIGA"; } >> "$GITHUB_OUTPUT"
+          # La comprobación obligatoria «Arquitectura YOD» no arranca sola en un PR abierto por un flujo: se pide aquí.
+          gh workflow run arquitectura.yml -R "$REPO" --ref grafo-borrador -f base_sha="$BASE_SHA" -f head_sha="$HEAD_SHA" \
+            || echo "::warning::No se pudo pedir la comprobación «Arquitectura YOD»; arranca sola cuando el PR se abre a mano."
+      - name: Aviso de borrador en la rama de datos
+        if: steps.r.outputs.cambio
+        env:
+          NUMERO: ${{ steps.pr.outputs.numero }}
+          LIGA: ${{ steps.pr.outputs.liga }}
+          ID: ${{ steps.r.outputs.id }}
+        run: |
+          git checkout --quiet main
+          bash scripts/grafo-rama-datos.sh traer
+          python grafo-motor/aviso.py puntero "$RUNNER_TEMP/informe.json" "${NUMERO:-0}" "$LIGA" "$RUNNER_TEMP/grafo-datos"
+          bash scripts/grafo-rama-datos.sh guardar "Grafo: borrador $ID"
+      - name: Responder el pedido
+        if: steps.quien.outputs.ok && github.event_name == 'issues'
+        env:
+          NUMERO: ${{ steps.pr.outputs.numero }}
+          LIGA: ${{ steps.pr.outputs.liga }}
+        run: |
+          python grafo-motor/aviso.py comentario "$RUNNER_TEMP/informe.json" "$LIGA" "${NUMERO:-0}" > "$RUNNER_TEMP/comentario.md"
+          gh api "repos/$REPO/issues/$NUM/comments" -F body=@"$RUNNER_TEMP/comentario.md" > /dev/null
+          gh api -X PATCH "repos/$REPO/issues/$NUM" -f state=closed -f state_reason=completed > /dev/null
+      - name: Resumen
+        if: steps.quien.outputs.ok
+        env:
+          NUMERO: ${{ steps.pr.outputs.numero }}
+          LIGA: ${{ steps.pr.outputs.liga }}
+        run: python grafo-motor/aviso.py comentario "$RUNNER_TEMP/informe.json" "$LIGA" "${NUMERO:-0}" >> "$GITHUB_STEP_SUMMARY"
+      - name: Si algo falló, avisar en el pedido y dejarlo como chinche
+        if: failure() && github.event_name == 'issues'
+        env:
+          CORRIDA: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api "repos/$REPO/issues/$NUM/comments" -f body="No se pudo rehacer el grafo. Lo publicado no cambió. Qué pasó: $CORRIDA" > /dev/null || true
+          gh api -X PATCH "repos/$REPO/issues/$NUM" -f title='📌 Grafo: falló al rehacer el grafo' -f 'labels[]=chinche' > /dev/null || true
+
+  borrador-abierto:
+    name: Completar el PR del borrador abierto a mano
+    if: >-
+      github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened')
+      && github.head_ref == 'grafo-borrador' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      NUM: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Título, explicación y aviso
+        run: |
+          # El programa es el de la rama principal; de la rama del borrador sólo se lee su registro de versiones.
+          git fetch --quiet --depth 1 origin grafo-borrador
+          git show FETCH_HEAD:grafo/versiones.json > "$RUNNER_TEMP/versiones-borrador.json"
+          python grafo-motor/aviso.py informe "$RUNNER_TEMP/versiones-borrador.json" > "$RUNNER_TEMP/informe.json"
+          python grafo-motor/aviso.py pr "$RUNNER_TEMP/informe.json" > "$RUNNER_TEMP/pr.md"
+          gh api -X PATCH "repos/$REPO/pulls/$NUM" -f title="$(python grafo-motor/aviso.py titulo "$RUNNER_TEMP/informe.json")" -F body=@"$RUNNER_TEMP/pr.md" > /dev/null
+          bash scripts/grafo-rama-datos.sh traer
+          python grafo-motor/aviso.py puntero "$RUNNER_TEMP/informe.json" "$NUM" "https://github.com/$REPO/pull/$NUM" "$RUNNER_TEMP/grafo-datos" sin-registro
+          bash scripts/grafo-rama-datos.sh guardar "Grafo: PR del borrador abierto"
+
+  cierre:
+    name: Borrador aprobado o descartado
+    if: >-
+      github.event_name == 'pull_request' && github.event.action == 'closed' && github.head_ref == 'grafo-borrador'
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Anotar el cierre y quitar el aviso de borrador
+        env:
+          FUSIONADO: ${{ github.event.pull_request.merged && 'si' || 'no' }}
+          POR: ${{ github.event.pull_request.merged_by.login || github.actor }}
+          NUM: ${{ github.event.pull_request.number }}
+        run: |
+          bash scripts/grafo-rama-datos.sh traer
+          python grafo-motor/aviso.py cierre "$RUNNER_TEMP/grafo-datos" "$FUSIONADO" "$POR" "$NUM"
+          bash scripts/grafo-rama-datos.sh guardar "Grafo: borrador $([ "$FUSIONADO" = si ] && echo aprobado || echo descartado)"
+      - name: Borrar la rama del borrador
+        run: git push --quiet origin --delete grafo-borrador || true
