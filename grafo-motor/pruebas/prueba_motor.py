@@ -114,15 +114,18 @@ class Recetas(unittest.TestCase):
 class IA(unittest.TestCase):
     BUENA = dict(titulo='Entraron piezas nuevas', resumen='Se agregaron archivos.', cambios=[dict(que='Archivo nuevo', donde='tablero', importa='Se ve en el mapa')], riesgos=['Ninguno'], presentaciones='Siguen igual.', recomendacion='aprobar')
 
-    def servidor(self, forma, espera=0.0, cuerpo=None, estado=200):
+    def servidor(self, forma, espera=0.0, cuerpo=None, estado=200, guion=None, pedidos=None):
+        """guion: lista de (estado, respuesta) que se van entregando en orden (la última se repite) · pedidos: aquí se anota lo que llega."""
         buena = self.BUENA
         class H(http.server.BaseHTTPRequestHandler):
             def log_message(self, *a): pass
             def do_POST(self):
-                self.rfile.read(int(self.headers.get('content-length') or 0)); time.sleep(espera)
+                crudo = self.rfile.read(int(self.headers.get('content-length') or 0)); time.sleep(espera)
+                if pedidos is not None: pedidos.append(json.loads(crudo))
                 t = json.dumps(dict(buena, titulo=buena['titulo'] + ' · ' + forma)) if cuerpo is None else cuerpo
-                d = dict(output_text=t) if forma == 'openai' else dict(content=[dict(type='text', text=t)])
-                b = json.dumps(d).encode(); self.send_response(estado); self.send_header('content-type', 'application/json'); self.send_header('content-length', str(len(b))); self.end_headers(); self.wfile.write(b)
+                d = dict(output_text=t) if forma == 'openai' else dict(content=[dict(type='text', text=t)]); st = estado
+                if guion: st, d = guion.pop(0) if len(guion) > 1 else guion[0]
+                b = json.dumps(d).encode(); self.send_response(st); self.send_header('content-type', 'application/json'); self.send_header('content-length', str(len(b))); self.end_headers(); self.wfile.write(b)
         s = http.server.ThreadingHTTPServer(('127.0.0.1', 0), H); threading.Thread(target=s.serve_forever, daemon=True).start(); self.addCleanup(s.server_close); self.addCleanup(s.shutdown)
         return f'http://127.0.0.1:{s.server_address[1]}/v1'
 
@@ -154,6 +157,40 @@ class IA(unittest.TestCase):
         self.con(OPENAI_API_KEY='prueba', ANTHROPIC_API_KEY='prueba', GRAFO_OPENAI_URL=self.servidor('openai', 0, estado=500), GRAFO_CLAUDE_URL=self.servidor('claude', 0, cuerpo='{"titulo":"x"}'))
         exp, inf = ia.explicar({'a': 1}, espera=10)
         self.assertIsNone(exp); self.assertEqual(set(inf['fallos']), {'openai', 'claude'}); self.assertIsNone(inf['gano'])
+
+    def test_a_claude_se_le_pide_como_herramienta_y_llega_un_objeto(self):
+        import ia
+        pedidos = []; obj = dict(self.BUENA, titulo='Dijo "listo" y cerró', resumen='Con comillas "dentro" y un salto\nde línea.')
+        self.con(ANTHROPIC_API_KEY='prueba', GRAFO_CLAUDE_URL=self.servidor('claude', pedidos=pedidos, guion=[(200, dict(content=[dict(type='tool_use', id='t1', name='explicacion_grafo', input=obj)], stop_reason='tool_use'))]))
+        exp, inf = ia.explicar({'a': 1}, espera=10)
+        self.assertEqual(exp['titulo'], 'Dijo "listo" y cerró'); self.assertTrue(inf['gano'].startswith('claude:')); self.assertEqual(inf['reintentos'], [])
+        self.assertEqual(len(pedidos), 1); self.assertEqual(pedidos[0]['tool_choice'], {'type': 'tool', 'name': 'explicacion_grafo'})
+        self.assertEqual(pedidos[0]['tools'][0]['input_schema']['required'], ia.ESQUEMA['required'])
+
+    def test_una_respuesta_mal_formada_se_pide_otra_vez(self):
+        import ia
+        # así llegó el 12-nov-2026: un texto con comillas sin escapar dentro de una cadena («Expecting ',' delimiter»)
+        mala = '{"titulo": "Grafo rehecho", "resumen": "la revisión se llama "grafo-accesos" y sigue", "cambios": [], "riesgos": [], "presentaciones": "", "recomendacion": "aprobar"}'
+        with self.assertRaises(ValueError): ia._json_de(mala)
+        pedidos = []
+        self.con(ANTHROPIC_API_KEY='prueba', GRAFO_CLAUDE_URL=self.servidor('claude', pedidos=pedidos, guion=[(200, dict(content=[dict(type='text', text=mala)])), (200, dict(content=[dict(type='text', text=json.dumps(self.BUENA))]))]))
+        exp, inf = ia.explicar({'a': 1}, espera=40)
+        self.assertEqual(exp['titulo'], self.BUENA['titulo']); self.assertEqual(inf['reintentos'], ['claude']); self.assertEqual(len(pedidos), 2); self.assertEqual(inf['fallos'], {})
+        import aviso
+        self.assertIn('se le pidió otra vez', aviso.linea_ia(dict(ia_informe=inf)))
+        # si la segunda tampoco sirve, no hay tercera: el grafo se rehace igual, sin explicación
+        pedidos2 = []
+        self.con(ANTHROPIC_API_KEY='prueba', GRAFO_CLAUDE_URL=self.servidor('claude', pedidos=pedidos2, cuerpo=mala))
+        exp2, inf2 = ia.explicar({'a': 1}, espera=40)
+        self.assertIsNone(exp2); self.assertEqual(len(pedidos2), 2); self.assertIn('JSONDecodeError', inf2['fallos']['claude'])
+
+    def test_un_modelo_sin_herramienta_forzada_se_pide_como_texto(self):
+        import ia
+        pedidos = []
+        self.con(ANTHROPIC_API_KEY='prueba', GRAFO_CLAUDE_URL=self.servidor('claude', pedidos=pedidos, guion=[(400, dict(error='tool_choice no admitido')), (200, dict(content=[dict(type='text', text=json.dumps(self.BUENA))]))]))
+        exp, inf = ia.explicar({'a': 1}, espera=10)
+        self.assertEqual(exp['titulo'], self.BUENA['titulo']); self.assertEqual(len(pedidos), 2); self.assertIn('tool_choice', pedidos[0]); self.assertNotIn('tool_choice', pedidos[1]); self.assertNotIn('tools', pedidos[1])
+        self.assertEqual(inf['reintentos'], [], 'pedirlo como texto no cuenta como segundo intento')
 
     def test_validar_recorta_y_quita_ligas(self):
         import ia
@@ -224,6 +261,10 @@ class Refresco(unittest.TestCase):
         import refrescar
         self.assertTrue(refrescar.solo_propio('potenciales-yod', {'grafo/mapa.html', 'grafo/versiones.json', 'grafo-motor/datos/base.json'}))
         self.assertTrue(refrescar.solo_propio('pintarron', set()), 'un commit sin archivos tampoco mueve el grafo')
+        # aprobar un grafo fusiona también el registro de impacto que el borrador reescribe (12-nov-2026: se veía «cambió» tras aprobar)
+        self.assertTrue(refrescar.solo_propio('potenciales-yod', {'architecture-impact.json', 'grafo/versiones.json', 'grafo-motor/datos/base.json'}))
+        self.assertFalse(refrescar.solo_propio('pintarron', {'architecture-impact.json'}), 'en los demás repositorios ese archivo sí es un cambio')
+        self.assertNotIn('architecture-impact.json', refrescar.IGNORAR['potenciales-yod'], 'se sigue dibujando: sólo deja de contar como cambio')
         self.assertFalse(refrescar.solo_propio('potenciales-yod', {'grafo/mapa.html', 'mixto.html'}))
         self.assertFalse(refrescar.solo_propio('potenciales-yod', {'grafo-motor/laminas.py'}), 'el motor sí es código del sistema')
         self.assertFalse(refrescar.solo_propio('pintarron', {'grafo/mapa.html'}), 'sólo aplica al repositorio del grafo')
@@ -278,13 +319,23 @@ class Versiones(unittest.TestCase):
         aviso.cierre(datos, True, 'alguien', '12'); self.assertEqual(jl(os.path.join(datos, 'borrador.json')), {})
         with open(os.path.join(datos, 'registro.jsonl'), encoding='utf-8') as f: reg = [json.loads(l) for l in f]
         self.assertEqual([l['que'] for l in reg], ['grafo rehecho (borrador)', 'grafo aprobado']); self.assertEqual(reg[1]['id'], I['id'])
+        # repetir el cierre (otra corrida del flujo, o el vigilante que ya lo anotó) no deja dos renglones del mismo cierre
+        self.assertFalse(aviso.cierre(datos, True, 'alguien', '12'))
+        with open(os.path.join(datos, 'registro.jsonl'), encoding='utf-8') as f: self.assertEqual(len(f.readlines()), 2)
+        otro = os.path.join(d, 'rama2'); os.makedirs(otro); aviso.puntero(I, 12, 'https://github.com/x/y/pull/12', otro)
+        with open(os.path.join(otro, 'registro.jsonl'), 'a', encoding='utf-8') as f: f.write(json.dumps(dict(cuando='x', que='grafo aprobado', id=I['id'], pr=12, por='revisión de cada hora')) + '\n')
+        self.assertFalse(aviso.cierre(otro, True, 'alguien', '12'), 'el vigilante ya lo había anotado'); self.assertEqual(jl(os.path.join(otro, 'borrador.json')), {})
+        with open(os.path.join(otro, 'registro.jsonl'), encoding='utf-8') as f: self.assertEqual([json.loads(l)['que'] for l in f], ['grafo rehecho (borrador)', 'grafo aprobado'])
+        self.assertTrue(aviso.ya_cerrado(os.path.join(otro, 'registro.jsonl'), numero=12)); self.assertFalse(aviso.ya_cerrado(os.path.join(otro, 'registro.jsonl'), numero=13)); self.assertFalse(aviso.ya_cerrado(os.path.join(otro, 'no-existe.jsonl'), 'G-x'))
         # camino sin PR automático: queda la liga para abrirlo con un toque y el aviso vale igual
         liga = aviso.liga_abrir(I, 'yodesarrollomx/potenciales-yod')
         self.assertTrue(liga.startswith('https://github.com/yodesarrollomx/potenciales-yod/compare/main...grafo-borrador?expand=1&title=')); self.assertNotIn(' ', liga); self.assertIn(I['id'], liga)
         p0 = aviso.puntero(I, '', liga, datos, registrar=False); self.assertEqual(p0['pr'], 0); self.assertEqual(p0['liga'], liga); self.assertNotIn('`', p0['resumen'], 'el aviso se pinta como texto llano')
         with open(os.path.join(datos, 'registro.jsonl'), encoding='utf-8') as f: self.assertEqual(len(f.readlines()), 2, 'sin-registro no anota otra línea')
         sin_pr = aviso.comentario(I, liga, 0); self.assertIn('«Create pull request» y luego «Merge pull request»', sin_pr); self.assertIn('rama `grafo-borrador`', sin_pr); self.assertIn(f'[esta página]({liga})', sin_pr)
-        con_pr = aviso.comentario(I, 'https://github.com/x/y/pull/12', 12); self.assertIn('fusiona ese PR', con_pr); self.assertNotIn('Create pull request', con_pr)
+        con_pr = aviso.comentario(I, 'https://github.com/x/y/pull/12', 12); self.assertNotIn('Create pull request', con_pr)
+        # el PR que abre el flujo llega con sus pruebas en espera de aprobación: se dice ese paso antes de «Merge» (12-nov-2026, PR 66)
+        for texto in (con_pr, cuerpo): self.assertRegex(texto, r'«Approve workflows to run», tócalo primero[^\n]*«Merge pull request»')
         for texto in (sin_pr, con_pr): self.assertIn('Dejarlo en borrador', texto); self.assertIn('no cambian', texto)
         # el informe se puede reconstruir del registro de versiones (cuando el PR lo abre una persona)
         R = aviso.informe_de(V, jl(os.path.join(m, 'recetas.json')))

@@ -16,6 +16,8 @@ ESQUEMA = {'type': 'object', 'additionalProperties': False, 'required': ['titulo
                                            'properties': {'que': {'type': 'string'}, 'donde': {'type': 'string'}, 'importa': {'type': 'string'}}}},
     'riesgos': {'type': 'array', 'items': {'type': 'string'}}, 'presentaciones': {'type': 'string'},
     'recomendacion': {'type': 'string', 'enum': ['aprobar', 'revisar']}}}
+# A Claude la respuesta se le pide como «herramienta» con este mismo esquema: el proveedor entrega el objeto ya armado.
+HERRAMIENTA = {'name': 'explicacion_grafo', 'description': 'Entrega a Dirección la explicación de lo que cambió en el grafo.', 'input_schema': ESQUEMA}
 SISTEMA = ('Eres el analista del grafo de YOD OS, el sistema de tableros de una desarrolladora inmobiliaria. Recibes, en JSON, lo que cambió '
            'entre el grafo aprobado y el grafo recién rehecho. Explica a Dirección, en español llano y sin tecnicismos, qué cambió, dónde y por '
            'qué importa. No inventes: usa sólo lo que viene en los datos. No incluyas ligas ni nombres de personas. Responde únicamente con un '
@@ -76,9 +78,17 @@ def _openai(texto, conexiones, espera):
 
 def _claude(texto, conexiones, espera):
     modelo = os.environ.get('GRAFO_CLAUDE_MODEL') or 'claude-sonnet-5-5'
-    r = _post(os.environ.get('GRAFO_CLAUDE_URL') or 'https://api.anthropic.com/v1/messages',
-              {'model': modelo, 'max_tokens': 2500, 'system': SISTEMA, 'messages': [{'role': 'user', 'content': [{'type': 'text', 'text': texto}]}]},
-              {'x-api-key': os.environ['ANTHROPIC_API_KEY'].strip(), 'anthropic-version': '2023-06-01'}, conexiones, 'claude', espera)
+    url = os.environ.get('GRAFO_CLAUDE_URL') or 'https://api.anthropic.com/v1/messages'
+    cab = {'x-api-key': os.environ['ANTHROPIC_API_KEY'].strip(), 'anthropic-version': '2023-06-01'}
+    base = {'model': modelo, 'max_tokens': 2500, 'system': SISTEMA, 'messages': [{'role': 'user', 'content': [{'type': 'text', 'text': texto}]}]}
+    # Como texto libre, el 12-nov-2026 llegó un JSON mal formado y el borrador salió sin explicación. Con la herramienta
+    # forzada llega un objeto; si el modelo no la admite (HTTP 400), se pide como antes y se interpreta el texto.
+    try: r = _post(url, {**base, 'tools': [HERRAMIENTA], 'tool_choice': {'type': 'tool', 'name': HERRAMIENTA['name']}}, cab, conexiones, 'claude', espera)
+    except RuntimeError as e:
+        if str(e) != 'HTTP 400': raise
+        r = _post(url, base, cab, conexiones, 'claude', espera)
+    for c in r.get('content') or []:
+        if c.get('type') == 'tool_use' and isinstance(c.get('input'), dict): return 'claude:' + modelo, c['input']
     return 'claude:' + modelo, _json_de(''.join(c.get('text', '') for c in (r.get('content') or []) if c.get('type') == 'text'))
 
 
@@ -90,16 +100,24 @@ def disponibles():
 def explicar(datos, espera=90):
     """Lanza los motores con clave a la vez y regresa (explicación, informe). La explicación es None si ninguno sirvió."""
     motores = {'openai': _openai, 'claude': _claude}; activos = disponibles()
-    informe = dict(pedidos=activos, gano=None, fallos={}, segundos=None)
+    informe = dict(pedidos=activos, gano=None, fallos={}, segundos=None, reintentos=[])
     if not activos: return None, informe
     texto = json.dumps(datos, ensure_ascii=False)[:60000]
-    q = queue.Queue(); conexiones = {}; t0 = time.time()
+    q = queue.Queue(); conexiones = {}; t0 = time.time(); listo = threading.Event()
 
     def corre(nombre):
-        try:
-            motor, crudo = motores[nombre](texto, conexiones, espera); q.put((nombre, motor, validar(crudo), None))
-        except Exception as e:                      # el motivo se guarda sin texto del proveedor: podría traer datos de la cuenta
-            q.put((nombre, None, None, type(e).__name__ + (': ' + str(e) if isinstance(e, (ValueError, RuntimeError)) else '')))
+        err = None
+        for intento in (1, 2):                      # una respuesta mal formada se pide una vez más, si queda tiempo y nadie ganó
+            falta = espera - (time.time() - t0)
+            if intento == 2:
+                if listo.is_set() or falta < 15: break
+                informe['reintentos'].append(nombre)
+            try:
+                motor, crudo = motores[nombre](texto, conexiones, max(5, falta)); q.put((nombre, motor, validar(crudo), None)); return
+            except ValueError as e: err = type(e).__name__ + ': ' + str(e)
+            except Exception as e:                  # el motivo se guarda sin texto del proveedor: podría traer datos de la cuenta
+                err = type(e).__name__ + (': ' + str(e) if isinstance(e, RuntimeError) else ''); break
+        q.put((nombre, None, None, err))
 
     for n in activos: threading.Thread(target=corre, args=(n,), daemon=True).start()
     faltan = len(activos); buena = None
@@ -109,6 +127,7 @@ def explicar(datos, espera=90):
         faltan -= 1
         if exp is not None: buena = exp; informe['gano'] = motor
         else: informe['fallos'][nombre] = _corta(err, 120)
+    listo.set()
     for n, c in list(conexiones.items()):            # el que no ganó se corta para no seguir gastando
         try: c.close()
         except Exception: pass

@@ -13,8 +13,12 @@ const GRAFO = path.join(__dirname, '..', 'grafo');
 const SALIDA = arg('--salida') || GRAFO;
 const TOKEN = process.env.GITHUB_TOKEN || '', AQUI = process.env.GITHUB_REPOSITORY || 'yodesarrollomx/potenciales-yod';
 const ABRIR = process.argv.includes('--chinches');
-// Lo que el propio grafo escribe en este repositorio no cuenta como «el sistema cambió».
-const PROPIO = { 'yodesarrollomx/potenciales-yod': ['grafo/', 'grafo-motor/datos/'] };
+// Lo que el propio grafo escribe en este repositorio no cuenta como «el sistema cambió»: sus datos, sus láminas y el
+// registro de impacto que cada borrador reescribe para poder fusionarse (mismo criterio que grafo-motor/refrescar.py).
+const PROPIO = { 'yodesarrollomx/potenciales-yod': ['grafo/', 'grafo-motor/datos/', 'architecture-impact.json'] };
+// El flujo «Grafo · rehacer» anota el cierre de un borrador al cerrarse su PR. El vigilante sólo lo anota si aquél no corrió:
+// le da este rato. Los dos a la vez dejaban dos renglones «grafo aprobado» (12-nov-2026).
+const GRACIA_MS = 10 * 60 * 1000;
 
 function crear({ fetchImpl = fetch, ahora = () => new Date().toISOString(), mapa } = {}) {
   async function gh(ruta, opc = {}) {
@@ -136,8 +140,8 @@ function crear({ fetchImpl = fetch, ahora = () => new Date().toISOString(), mapa
     }
   }
   /* Qué hay de verdad del borrador en GitHub. null o undefined = no se pudo saber (no se toca nada). */
-  async function borradorEnGitHub() {
-    const [dueno] = AQUI.split('/'); let rama = null, pr, deRama = null;
+  async function borradorEnGitHub(numPR) {
+    const [dueno] = AQUI.split('/'); let rama = null, pr, deRama = null, reciente = false;
     try { await gh(`/repos/${AQUI}/branches/${RAMA_BORRADOR}`); rama = true; } catch (e) { rama = e.status === 404 ? false : null; }
     if (rama) {
       try {
@@ -146,7 +150,12 @@ function crear({ fetchImpl = fetch, ahora = () => new Date().toISOString(), mapa
       } catch (e) { pr = undefined; }
       deRama = await suave(async () => { const c = await gh(`/repos/${AQUI}/contents/grafo/versiones.json?ref=${RAMA_BORRADOR}`); return JSON.parse(Buffer.from(String(c.content || ''), 'base64').toString('utf8')); }, null);
     }
-    return { rama, pr, deRama };
+    // ¿El PR del aviso se acaba de cerrar? Entonces el flujo de cierre lo está anotando: el vigilante no se le adelanta.
+    if (Number.isInteger(numPR) && numPR > 0) {
+      const c = await suave(() => gh(`/repos/${AQUI}/pulls/${numPR}`), null), t = c && c.state === 'closed' ? Date.parse(c.closed_at || '') : NaN;
+      reciente = Number.isFinite(t) && Date.parse(ahora()) - t < GRACIA_MS;
+    }
+    return { rama, pr, deRama, reciente };
   }
   return { leer, leerTodo, conciliar, chinches, cambio, borradorEnGitHub };
 }
@@ -158,13 +167,14 @@ const ligaAbrir = (repo, id) => `https://github.com/${repo}/compare/main...${RAM
 
 /* El aviso de borrador, puesto al día con lo que hay en GitHub. Función pura.
    puntero: lo guardado · aprobado: id aprobado en la rama principal · rama: ¿existe grafo-borrador? (null = sin dato)
-   pr: su PR abierto, null si no hay, undefined si no se supo · deRama: versiones.json de esa rama. */
-function reconciliarBorrador({ puntero, aprobado, rama, pr, deRama, repo, ahora }) {
+   pr: su PR abierto, null si no hay, undefined si no se supo · deRama: versiones.json de esa rama.
+   reciente: el PR del aviso se cerró hace un momento (se espera al flujo de cierre) · cerrados: ids cuyo cierre ya está en el registro. */
+function reconciliarBorrador({ puntero, aprobado, rama, pr, deRama, repo, ahora, reciente = false, cerrados = [] }) {
   const p = puntero && ID.test(String(puntero.id || '')) ? puntero : null, igual = { puntero: p || {}, linea: null, cambio: !p && !!puntero && Object.keys(puntero).length > 0 };
   if (rama === null || rama === undefined) return igual;
   const idRama = deRama && ID.test(String(deRama.aprobado || '')) ? deRama.aprobado : '';
-  const cerrar = () => p ? { puntero: {}, cambio: true, linea: { cuando: ahora, que: p.id === aprobado ? 'grafo aprobado' : 'borrador descartado', id: p.id, pr: p.pr || null, por: 'revisión de cada hora' } } : { puntero: {}, linea: null, cambio: igual.cambio };
-  if (!rama || (idRama && idRama === aprobado)) return cerrar();              // ya no hay rama, o su grafo ya es el aprobado
+  const cerrar = () => p ? { puntero: {}, cambio: true, linea: cerrados.includes(p.id) ? null : { cuando: ahora, que: p.id === aprobado ? 'grafo aprobado' : 'borrador descartado', id: p.id, pr: p.pr || null, por: 'revisión de cada hora' } } : { puntero: {}, linea: null, cambio: igual.cambio };
+  if (!rama || (idRama && idRama === aprobado)) return p && reciente && !cerrados.includes(p.id) ? igual : cerrar();   // ya no hay rama, o su grafo ya es el aprobado
   let n = p ? { ...p } : null;
   if (!n || (idRama && n.id !== idRama)) {                                      // falta el aviso, o es de un borrador anterior
     if (!idRama) return igual;
@@ -178,6 +188,16 @@ function reconciliarBorrador({ puntero, aprobado, rama, pr, deRama, repo, ahora 
     if (pr && ['dirty', 'behind'].includes(pr.mergeable_state)) n.atrasado = true; else delete n.atrasado;
   }
   return { puntero: n, linea: null, cambio: JSON.stringify(n) !== JSON.stringify(puntero || {}) };
+}
+
+/* Ids de los borradores cuyo cierre (aprobado o descartado) ya está anotado en el registro. */
+function cerradosDe(texto) {
+  const out = [];
+  for (const l of String(texto || '').split('\n').slice(-400)) {
+    let d; try { d = JSON.parse(l); } catch (e) { continue; }
+    if (d && ['grafo aprobado', 'borrador descartado'].includes(d.que) && d.id) out.push(String(d.id));
+  }
+  return out;
 }
 
 async function main() {
@@ -195,10 +215,11 @@ async function main() {
   if (ABRIR && TOKEN) await E.chinches(r.nuevos);
   // el aviso de borrador, al día con GitHub
   const fBorr = path.join(SALIDA, 'borrador.json'), lee = f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { return null; } };
-  const b = reconciliarBorrador({ puntero: lee(fBorr) || {}, aprobado: (lee(path.join(GRAFO, 'versiones.json')) || {}).aprobado || '', ...(await E.borradorEnGitHub()), repo: AQUI, ahora: new Date().toISOString() });
+  const punt = lee(fBorr) || {}, cerrados = cerradosDe((() => { try { return fs.readFileSync(fReg, 'utf8'); } catch (e) { return ''; } })());
+  const b = reconciliarBorrador({ puntero: punt, aprobado: (lee(path.join(GRAFO, 'versiones.json')) || {}).aprobado || '', ...(await E.borradorEnGitHub(Number(punt.pr) || 0)), cerrados, repo: AQUI, ahora: new Date().toISOString() });
   if (b.cambio) { fs.writeFileSync(fBorr, JSON.stringify(b.puntero, null, 1) + '\n'); console.log('borrador: aviso puesto al día', b.puntero.id || '(sin borrador)'); }
   if (b.linea) fs.appendFileSync(fReg, JSON.stringify(b.linea) + '\n');
 }
 
 if (require.main === module) main().catch(e => { console.error(e); process.exit(1); });
-module.exports = { crear, PROPIO, reconciliarBorrador, ligaAbrir, tituloPR };
+module.exports = { crear, PROPIO, GRACIA_MS, reconciliarBorrador, cerradosDe, ligaAbrir, tituloPR };

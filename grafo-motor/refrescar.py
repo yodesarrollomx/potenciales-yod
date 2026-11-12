@@ -45,6 +45,10 @@ RX = dict(
 HOJAS_RX = re.compile(r'(?<![A-Za-z0-9_-])(1[A-Za-z0-9_-]{43})(?![A-Za-z0-9_-])')
 GHIO = re.compile(r'https?://([a-z0-9-]+)\.github\.io/([A-Za-z0-9._-]+)/?([^?#\s"\']*)')
 IGNORAR = {'potenciales-yod': ('grafo/', 'grafo-motor/datos/')}     # el grafo no se dibuja a sí mismo
+# Lo que el grafo escribe en su repositorio al rehacerse: lo anterior y el registro de impacto, que cada borrador reescribe
+# para poder fusionarse (rehacer.py, impacto()). Ese archivo sí se dibuja, pero su cambio solo no es «el sistema cambió»:
+# sin esto, después de cada aprobación el grafo se veía atrasado y rehacerlo daba otro borrador sin nada nuevo.
+PROPIO = {'potenciales-yod': IGNORAR['potenciales-yod'] + ('architecture-impact.json',)}
 REL_IMPORTA = ('imports_from', 'imports', 'dynamic_import')
 REL_ESCANEO = ('carga el script', 'incrusta', 'llama al Apps Script', 'documenta el Apps Script', 'referencia la hoja', 'documenta la hoja',
                'usa la llave del navegador', 'usa el secreto', 'ejecuta', 'corre en')
@@ -213,7 +217,7 @@ def cambiados(d, viejo, nuevo, todo):
 def solo_propio(tag, cam):
     """True si entre un commit y otro no cambió nada, o sólo lo que el propio grafo escribe en su repositorio.
     Es el mismo criterio del vigilante (scripts/grafo-estado.cjs): eso no cuenta como «el sistema cambió»."""
-    return cam is not None and all(p.startswith(IGNORAR.get(tag, ('\0',))) for p in cam)
+    return cam is not None and all(p.startswith(PROPIO.get(tag, ('\0',))) for p in cam)
 
 
 def refresca_repo(X, tag, d, model_own, todo=False):
