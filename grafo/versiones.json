@@ -1,7 +1,7 @@
 {
  "esquema": 1,
- "aprobado": "G-20261112-1056",
- "actualizado": "2026-11-12T10:56:38-07:00",
+ "aprobado": "G-20261112-1203",
+ "actualizado": "2026-11-12T12:03:04-07:00",
  "versiones": [
   {
    "id": "G-20261111-2354",
@@ -44,7 +44,7 @@
    "id": "G-20261112-1056",
    "armado": "2026-11-12T10:56:38-07:00",
    "fecha": "12-nov 10:56",
-   "estado": "aprobado",
+   "estado": "anterior",
    "huella": "2b8c8db2d6e9",
    "piezas": 3145,
    "ligas": 10479,
@@ -166,6 +166,126 @@
     "por": "alexpueblag",
     "numero": 68,
     "motivo": ""
+   }
+  },
+  {
+   "id": "G-20261112-1203",
+   "armado": "2026-11-12T12:03:04-07:00",
+   "fecha": "12-nov 12:03",
+   "estado": "aprobado",
+   "huella": "df60fec4df95",
+   "piezas": 3145,
+   "ligas": 10479,
+   "repos": {
+    "yodesarrollomx/yod-portal": "f34255b",
+    "yodesarrollomx/potenciales-yod": "78c045d",
+    "yodesarrollomx/yodesarrollo-board": "888cbd0",
+    "yodesarrollomx/yod-despacho": "d89b151",
+    "yodesarrollomx/board-aurum": "93bf624",
+    "yodesarrollomx/board-flujo-yod": "e9d122f",
+    "yodesarrollomx/real-miramar-board": "9db34a9",
+    "yodesarrollomx/interiores-aurum": "8bcdfc3",
+    "yodesarrollomx/aurum-board": "e3dd428",
+    "yodesarrollomx/sala-edicion": "55cfff2",
+    "yodesarrollomx/plan-potencial": "9f036c7",
+    "yodesarrollomx/crokiss": "7a7a557",
+    "yodesarrollomx/Co-desarrolladores-Yod": "bdaf46b",
+    "yodesarrollomx/alquimia-urbana": "0c0da90",
+    "yodesarrollomx/aurum-experiencia": "70c63b3",
+    "yodesarrollomx/pintarron": "0979d3f",
+    "yodesarrollomx/prueba-dominio": "715c6c7",
+    "yodesarrollomx/yodesarrollomx.github.io": "a5680f2",
+    "alexpueblag/pizarron-claude-yodbot": "31593a1",
+    "yodesarrollo/amalaya-board": "e3f94e6",
+    "aurumarquitectos/experiencia": "89d29e8",
+    "aurumarquitectos/aurumarquitectos.github.io": "d33f765",
+    "alexpueblag/codesarrolladores-libre": "96d26c5",
+    "alexpueblag/yod-terreno-si": "09f75f4",
+    "alexpueblag/yod-terreno-dormido": "1159ca5"
+   },
+   "cambios": {
+    "piezas_mas": {},
+    "piezas_menos": {},
+    "piezas_cambiadas": 11,
+    "ligas_mas": 0,
+    "ligas_menos": 0,
+    "piezas": 3145,
+    "ligas": 10479,
+    "ppp": {},
+    "primer_ppp": false,
+    "repos": [
+     {
+      "repo": "yodesarrollomx/potenciales-yod",
+      "de": "ec704b0",
+      "a": "78c045d",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 10
+     }
+    ],
+    "atlas": {
+     "componentes_nuevos": [],
+     "componentes_fuera": [],
+     "conexiones_mas": 0,
+     "conexiones_menos": 0,
+     "estados": [],
+     "propuestas": [],
+     "revision": "2026-11-11.grafo-accesos.3"
+    },
+    "sin_clon": [],
+    "sin_campo": [],
+    "notas": []
+   },
+   "ia": {
+    "titulo": "Grafo rehecho sin cambios de estructura: sólo se tocaron archivos del propio motor",
+    "resumen": "El grafo se rehízo y su estructura quedó igual: 3,145 piezas y 10,479 ligas, sin piezas ni ligas nuevas o retiradas. Hubo 11 piezas con cambios, todas en el repositorio de potenciales. Son archivos del motor que rehace el grafo, sus avisos, sus pruebas, su documentación y el flujo automático que lo ejecuta. El atlas no muestra componentes nuevos ni fuera, ni cambios en conexiones, estados o propuestas. No hay campos que desaparezcan para las presentaciones.",
+    "presentaciones": "Las presentaciones para Cliente o inversionista, Dueño del terreno y Departamentos, lotes o casas siguen leyendo el grafo igual: no desaparece ningún campo y no hay piezas ni ligas nuevas o retiradas.",
+    "recomendacion": "aprobar",
+    "cambios": [
+     {
+      "que": "Ajustes en el motor que rehace el grafo (avisos, uso de IA y refresco)",
+      "donde": "Repositorio de potenciales, carpeta del motor del grafo",
+      "importa": "Cambia la forma en que se genera el grafo, aunque el resultado en piezas y ligas no varió."
+     },
+     {
+      "que": "Cambio en el flujo automático que rehace el grafo",
+      "donde": "Repositorio de potenciales, flujo de automatización del grafo",
+      "importa": "Define cuándo y cómo se vuelve a generar el grafo; conviene confirmar que sigue corriendo como se espera."
+     },
+     {
+      "que": "Actualización de pruebas del motor y de control/estado del grafo",
+      "donde": "Repositorio de potenciales, carpetas de pruebas",
+      "importa": "Indica que la verificación automática se ajustó junto con el motor."
+     },
+     {
+      "que": "Cambio en el script de estado del grafo",
+      "donde": "Repositorio de potenciales, carpeta de scripts",
+      "importa": "Afecta cómo se reporta la salud del grafo."
+     },
+     {
+      "que": "Actualización de documentación y del archivo de impacto en la arquitectura",
+      "donde": "Repositorio de potenciales, documentación y archivo de arquitectura",
+      "importa": "Mantiene la descripción del grafo al día con los cambios del motor."
+     }
+    ],
+    "riesgos": [
+     "Se modificó el motor y el flujo automático a la vez; un error ahí podría notarse hasta la siguiente regeneración del grafo.",
+     "Que la estructura no cambie es buena señal, pero no prueba por sí sola que el motor modificado se comporte igual en todos los casos."
+    ]
+   },
+   "ia_informe": {
+    "pedidos": [
+     "claude"
+    ],
+    "gano": "claude:claude-sonnet-5-5",
+    "fallos": {},
+    "segundos": 6.7,
+    "reintentos": []
+   },
+   "pedido": {
+    "por": "alexpueblag",
+    "numero": 73,
+    "motivo": "borrador limpio tras el PR 72 (el resumen ya no nombra lo excluido por DEC-19)"
    }
   }
  ]
