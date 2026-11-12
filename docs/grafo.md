@@ -19,7 +19,7 @@ Este repositorio es público: aunque la sección sólo se enseña al admin, los 
 
 Nunca debe traer, y una prueba lo vigila (`LoPublicado` en `grafo-motor/pruebas/`): repositorios privados ni repositorios de clientes externos, hallazgos de seguridad, nombres de personas, folios o nombres de tratos, correos, claves ni identificadores completos de `/exec` (van abreviados).
 
-Una precisión, comprobada el 12-nov-2026: el grafo **sí refleja** el sistema de evaluación de personas, que es de otro cliente. Su repositorio es privado y no está en el grafo, pero el atlas y `yod-portal` (los dos públicos) ya publican su descripción saneada —contratos, procesos y la página que lo envuelve, sin nombres ni datos— y el grafo la trae tal cual, en la fila «Fuera del menú». Dejarla o quitarla del grafo es decisión de Dirección; mientras no la tome, se queda como está.
+Decisión de Dirección del 12-nov-2026 (DEC-19): el grafo **no refleja** sistemas hechos para otros clientes, aunque el atlas y `yod-portal` publiquen su descripción saneada. La regla vive en `grafo-motor/datos/reglas.json` → `excluir` (patrones de id, componente y ruta); `refrescar.py` la aplica al final de cada refresco, después del atlas y de los repositorios, así nada de eso vuelve a entrar, y una prueba (`test_sin_sistemas_de_clientes_externos`) lo vigila. Hoy excluye el sistema de evaluación de personas de un cliente externo: su pieza, contratos, procesos, hoja, almacén, endpoint, llaves de navegador y secretos, y los archivos de `yod-portal` que lo envuelven.
 
 `refrescar.py` sólo agrega lo que lee de repositorios públicos y del atlas. Para quitar algo del grafo publicado se edita `grafo-motor/datos/base.json` y se regeneran las láminas.
 

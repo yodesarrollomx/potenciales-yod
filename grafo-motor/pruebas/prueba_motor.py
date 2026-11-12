@@ -55,6 +55,25 @@ class LoPublicado(unittest.TestCase):
         seg = re.compile(r'(?i)secreto|contraseñ|clave maestra|comprometid')
         self.assertEqual([i for i, n in self.B['nodos'].items() if n.get('capa') == 'hallazgo' and seg.search(' '.join(str(n.get(k) or '') for k in ('label', 'nota', 'hacer')))], [])
 
+    def test_sin_sistemas_de_clientes_externos(self):
+        """DEC-19 (12-nov-2026): lo que Dirección excluyó en reglas.json → "excluir" sale del grafo al refrescar, por id, por
+        componente o por ruta, con sus flechas. Se comprueba sobre una base pequeña; y sobre la base publicada en cuanto
+        haya sido armada después de la decisión (la anterior es una foto previa y la limpia el siguiente rehecho)."""
+        import refrescar
+        with open(os.path.join(MOTOR, 'datos', 'reglas.json'), encoding='utf-8') as x: R = json.load(x).get('excluir') or {}
+        self.assertTrue(R.get('ids') and R.get('rutas') and R.get('comp'), 'la regla de exclusión debe existir')
+        N = {'SYS-EMD': dict(capa='sistema'), 'CTR-EMD-DRAFTS': dict(capa='contrato'), 'PROC-EMD-PROFILES·2': dict(capa='proceso'),
+             'gas:AKfycbwvvLVi': dict(capa='endpoint', comp='GAS-EMD'), 'sec:EMD_BRIDGE_KEY': dict(capa='llave'),
+             'yod-portal::emd_wrapper': dict(capa='codigo', repo='yod-portal', ruta='emd/wrapper.js'),
+             'f:yod-portal:docs/arquitectura/emd-contratos-20261102.md': dict(capa='documento', repo='yod-portal', ruta='docs/arquitectura/emd-contratos-20261102.md'),
+             'SYS-POTENCIALES': dict(capa='sistema'), 'SYS-EMDX': dict(capa='sistema'), 'yod-portal::despacho': dict(capa='codigo', repo='yod-portal', ruta='despacho/emd-no/x.js')}
+        B = dict(nodos=N, flechas=[dict(s='SYS-EMD', t='SYS-POTENCIALES', r='usa'), dict(s='SYS-POTENCIALES', t='yod-portal::despacho', r='usa')], simbolos={k: 1 for k in N}, repos={}, entre=[['SYS-EMD', 'SYS-POTENCIALES', 1]])
+        X = refrescar.Base(B); fuera = refrescar.excluye(X, R)
+        self.assertEqual(sorted(X.N), ['SYS-EMDX', 'SYS-POTENCIALES', 'yod-portal::despacho']); self.assertEqual(len(fuera), 7)
+        self.assertEqual(B['flechas'], [dict(s='SYS-POTENCIALES', t='yod-portal::despacho', r='usa')]); self.assertEqual(B['entre'], []); self.assertEqual(set(B['simbolos']), set(X.N))
+        if str(self.B.get('armado') or '') >= '2026-11-12T18:00':
+            Y = refrescar.Base(json.loads(json.dumps(self.B))); self.assertEqual(refrescar.excluye(Y, R), [], 'la base publicada aún trae piezas excluidas')
+
     def test_las_ligas_a_github_son_de_repositorios_del_grafo(self):
         ok = tuple(f"https://github.com/{r['owner']}/{r['repo']}" for r in self.B['repos'].values())
         fuera = [n['url'] for n in self.B['nodos'].values() if str(n.get('url') or '').startswith('https://github.com/') and not n['url'].startswith(ok)]

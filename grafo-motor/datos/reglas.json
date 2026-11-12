@@ -26,7 +26,6 @@
   "SYS-PRUEBA-DOMINIO": "fuera",
   "SYS-PINTARRON": "fuera",
   "SYS-AMALAYA": "fuera",
-  "SYS-EMD": "fuera",
   "N-PUERTAS": "control",
   "GAS-PORTERO": "control",
   "GAS-CATALOGO": "control",
@@ -47,7 +46,6 @@
   "GAS-ALQUIMIA": "codes",
   "GAS-OBRA": "obra",
   "GAS-OBRA-CLIENTE": "obra",
-  "GAS-EMD": "fuera",
   "GAS-AMALAYA": "fuera",
   "GAS-CRM": "brokers",
   "GAS-INVERSION": "brokers",
@@ -57,7 +55,6 @@
   "X-HERMES": "asistentes",
   "N-REPARTO": "ppp",
   "SHEET-PPP-MODELOS": "ppp",
-  "STORE-EMD-DRAFTS": "fuera",
   "STORE-DESPACHO-CORCHO": "despacho",
   "STORE-AUTON-ESTADO": "despacho",
   "STORE-HORARIOS-CLOUD": "despacho",
@@ -230,8 +227,7 @@
   "SYS-POTENCIALES": "PPP (Potenciales)",
   "SYS-TAREAS": "MOAC (tareas)",
   "SYS-YOD-OS": "YOD OS (cabina)",
-  "SYS-MERCADO": "Mercado Hermosillo",
-  "SYS-EMD": "EMD · evaluación de personas"
+  "SYS-MERCADO": "Mercado Hermosillo"
  },
  "libro_corto": {
   "1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk": "Control Maestro",
@@ -326,5 +322,19 @@
   "P-CLIENTE",
   "P-ALIANZA",
   "P-EQUIPO"
- ]
+ ],
+ "excluir": {
+  "motivo": "Decisión de Dirección (DEC-19, 12-nov-2026): el grafo no refleja sistemas hechos para clientes externos, aunque el atlas o yod-portal publiquen su descripción saneada. Se quitan la pieza, sus contratos, procesos, hojas, almacenes y los archivos que la envuelven.",
+  "ids": [
+   "^(SYS|GAS|SHEET|STORE|CTR|PROC|N|X|R|SK)-EMD(?:$|-|·)",
+   "(?i)^(ls|sec|ss):emd"
+  ],
+  "rutas": [
+   "(^|/)emd/",
+   "(^|/)emd-[^/]*\\.md$"
+  ],
+  "comp": [
+   "^(SYS|GAS|SHEET|STORE)-EMD(?:$|-)"
+  ]
+ }
 }
