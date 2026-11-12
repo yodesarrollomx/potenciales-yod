@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-12T21:21:45.699Z",
+ "generado": "2026-11-12T21:29:53.496Z",
  "errores": [
   {
    "clave": "flujo:yodesarrollomx/yod-portal:.github/workflows/conocimiento-browser.yml",
@@ -43,6 +43,30 @@
    "desde": "2026-11-12T20:50:25Z",
    "url": "https://github.com/yodesarrollomx/yodesarrollo-board/commit/53893b31a1880baaa70a56797b538e45941b3ee4",
    "msg": "yodesarrollo-board cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
+  },
+  {
+   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-consejo.yml",
+   "tipo": "flujo",
+   "nodos": [
+    "sala-edicion::github_workflows_sala_consejo",
+    "repo:yodesarrollomx/sala-edicion",
+    "SYS-SALA"
+   ],
+   "desde": "2026-11-12T21:22:40Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/43309653613",
+   "msg": "Falló el flujo «Roast Room · paquete» de sala-edicion, trabajo «consejo», paso 7 «Estación de salida»"
+  },
+  {
+   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-cada-hora.yml",
+   "tipo": "flujo",
+   "nodos": [
+    "sala-edicion::github_workflows_sala_cada_hora",
+    "repo:yodesarrollomx/sala-edicion",
+    "SYS-SALA"
+   ],
+   "desde": "2026-11-12T21:22:05Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/43309557160",
+   "msg": "Falló el flujo «Sala · Cada hora» de sala-edicion, trabajo «mesa / mesa», paso 14 «Avisar si algo falló»"
   },
   {
    "clave": "chinche:yodesarrollomx/sala-edicion#393",
