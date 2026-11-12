@@ -1,15 +1,15 @@
 {
- "id": "G-20261112-1351",
- "fecha": "12-nov 13:51",
- "creado": "2026-11-12T13:53:51-07:00",
+ "id": "G-20261112-1420",
+ "fecha": "12-nov 14:20",
+ "creado": "2026-11-12T14:22:21-07:00",
  "pr": 80,
  "liga": "https://github.com/yodesarrollomx/potenciales-yod/pull/80",
  "rama": "grafo-borrador",
  "antes": "G-20261112-1203",
  "piezas": 3167,
  "ligas": 10529,
- "titulo": "Nace PPP2 con servicio externo de IA y llega EMD al portal; hay dos conexiones por revisar",
- "resumen": "El grafo pasó de aprobado a rehecho con 23 piezas modificadas, 51 ligas nuevas y 1 eliminada. El grueso es PPP2, un sistema nuevo con su página, su libro, su script de servidor, su hoja de datos y 6 pruebas. También aparece un servicio externo de Anthropic. En el portal se añadió el módulo EMD con documentación y código propios, y se tocaron las reglas de acceso. No desaparece ninguna pieza ni ningún campo de las presentaciones. Dos llamadas a scripts de servidor (una de PPP2 y una de EMD) apuntan a destinos que el grafo no conoce.",
+ "titulo": "Nuevo módulo PPP2 con servicio externo y una conexión sin identificar",
+ "resumen": "El grafo pasó a 3,167 piezas y 10,529 ligas. Lo principal es la llegada de PPP2, un módulo nuevo con su sistema, su script de servidor, su hoja de datos y un servicio externo de inteligencia artificial (Anthropic). Se sumaron 22 piezas y 25 cambiaron en total. Las ligas subieron en 51 y bajó 1. También se tocaron archivos de accesos y de arquitectura en el portal. No se quitó ninguna pieza ni se perdió ningún campo que usen las presentaciones. Hay un aviso: PPP2 llama a un script de servidor que el grafo no reconoce.",
  "recomendacion": "revisar",
  "ia": "claude:claude-sonnet-5-5",
  "audiencias": [
@@ -17,6 +17,5 @@
   "Dueño del terreno",
   "Departamentos, lotes o casas"
  ],
- "sin_campo": [],
- "atrasado": true
+ "sin_campo": []
 }
