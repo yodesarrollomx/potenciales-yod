@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-12T20:44:10.809Z",
+ "generado": "2026-11-12T21:20:58.409Z",
  "errores": [
   {
    "clave": "flujo:yodesarrollomx/yod-portal:.github/workflows/conocimiento-browser.yml",
@@ -21,7 +21,7 @@
     "repo:yodesarrollomx/yod-portal"
    ],
    "desde": "2026-11-12T20:08:32Z",
-   "url": "https://github.com/yodesarrollomx/yod-portal/commit/bb97266ad7e3f5c72422224aeb3526eec4dd7502",
+   "url": "https://github.com/yodesarrollomx/yod-portal/commit/f6f342bdcf826e6af9ac44138cd2ad933ce419b3",
    "msg": "yod-portal cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
@@ -31,20 +31,51 @@
     "repo:yodesarrollomx/potenciales-yod"
    ],
    "desde": "2026-11-12T19:55:58Z",
-   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/26c3498c4201467b8d3157f35568b2eb7abc710a",
+   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/15a27a2402717e9aef894187b4c0164d33c50f4d",
    "msg": "potenciales-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
-   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-cada-hora.yml",
-   "tipo": "flujo",
+   "clave": "cambio:yodesarrollomx/yodesarrollo-board",
+   "tipo": "cambio",
    "nodos": [
-    "sala-edicion::github_workflows_sala_cada_hora",
+    "repo:yodesarrollomx/yodesarrollo-board"
+   ],
+   "desde": "2026-11-12T20:50:25Z",
+   "url": "https://github.com/yodesarrollomx/yodesarrollo-board/commit/53893b31a1880baaa70a56797b538e45941b3ee4",
+   "msg": "yodesarrollo-board cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
+  },
+  {
+   "clave": "chinche:yodesarrollomx/sala-edicion#393",
+   "tipo": "chinche",
+   "nodos": [
     "repo:yodesarrollomx/sala-edicion",
     "SYS-SALA"
    ],
-   "desde": "2026-11-12T20:17:50Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/43298883516",
-   "msg": "Falló el flujo «Sala · Cada hora» de sala-edicion, trabajo «mesa / mesa», paso 14 «Avisar si algo falló»"
+   "desde": "2026-11-12T21:09:31Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/issues/393",
+   "msg": "Chinche #393 en sala-edicion: 📌 Corrección de Sala · CHN-20261112-1033-4087"
+  },
+  {
+   "clave": "chinche:yodesarrollomx/sala-edicion#392",
+   "tipo": "chinche",
+   "nodos": [
+    "repo:yodesarrollomx/sala-edicion",
+    "SYS-SALA"
+   ],
+   "desde": "2026-11-12T21:09:11Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/issues/392",
+   "msg": "Chinche #392 en sala-edicion: 📌 Corrección de Sala · CHN-20261112-0840-a2f9"
+  },
+  {
+   "clave": "chinche:yodesarrollomx/sala-edicion#391",
+   "tipo": "chinche",
+   "nodos": [
+    "repo:yodesarrollomx/sala-edicion",
+    "SYS-SALA"
+   ],
+   "desde": "2026-11-12T21:08:47Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/issues/391",
+   "msg": "Chinche #391 en sala-edicion: 📌 Corrección de Sala · CHN-20261112-0835-b3c3"
   },
   {
    "clave": "chinche:yodesarrollomx/sala-edicion#294",
