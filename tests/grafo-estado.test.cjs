@@ -150,6 +150,63 @@ test('no abre otra chinche si la del mismo error sigue abierta', async () => {
   assert.deepEqual(nada, [], 'sin errores de flujo o de página no se pregunta nada');
 });
 
+/* ── chinches con revisiones seguidas: el vigilante corre con cada cambio y cuando GitHub arranca el horario ── */
+const { pendientesChinche, nucleo } = require('../scripts/grafo-estado.cjs');
+const LISTA = '/repos/yodesarrollomx/potenciales-yod/issues?state=open&labels=chinche', SALA = 'flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-cada-hora.yml';
+const falla = (paso, extra = {}) => ({ clave: SALA, tipo: 'flujo', msg: `Falló el flujo «Sala · Cada hora» de sala-edicion, trabajo «${paso} / ${paso}», paso 4 «Correr»`, desde: 'd', url: 'u', nodos: ['n'], ...extra });
+// GitHub de mentira con memoria: lo que se abre aparece en la lista de abiertas de la siguiente revisión.
+function githubConMemoria(abiertas = [], pedidos = []) {
+  return async (url, opc = {}) => {
+    pedidos.push({ url, metodo: opc.method || 'GET', cuerpo: opc.body });
+    const ruta = url.slice('https://api.github.com'.length);
+    if (opc.method === 'POST') { const b = JSON.parse(opc.body); abiertas.push({ number: 100 + abiertas.length, title: b.title, body: b.body }); return { ok: true, status: 201, json: async () => ({}) }; }
+    if (ruta.startsWith(LISTA)) return { ok: true, status: 200, json: async () => abiertas.map(i => ({ ...i })) };
+    return { ok: true, status: 200, json: async () => [] };
+  };
+}
+
+test('un flujo que se va y vuelve entre revisiones seguidas, y truena en otro trabajo, no abre otra chinche', async () => {
+  const abiertas = [], pedidos = [], E = crear({ mapa, fetchImpl: githubConMemoria(abiertas, pedidos) });
+  let estado = {};
+  for (const leidos of [[falla('mesa')], [], [falla('arranque')], [falla('arranque')], [], [falla('chinches')]]) {   // falla · pasa · falla · sigue · pasa · falla
+    const r = E.conciliar(estado.errores || [], leidos), p = pendientesChinche(estado, r), falta = await E.chinches(p.candidatos);
+    estado = { ...r.estado, ...(falta.length ? { chinche_pendiente: falta } : {}) };
+  }
+  assert.equal(pedidos.filter(p => p.metodo === 'POST').length, 1, 'una sola chinche para el mismo flujo');
+  assert.match(abiertas[0].body, /Clave: `flujo:yodesarrollomx\/sala-edicion:\.github\/workflows\/sala-cada-hora\.yml`/, 'la chinche lleva la clave del error');
+});
+
+test('reconoce la chinche ya abierta por su clave aunque el título haya cambiado, y las de antes por su flujo', async () => {
+  const pedidos = [], E = crear({ mapa, fetchImpl: githubConMemoria([
+    { number: 7, title: '📌 Grafo: Falló el flujo «Nombre viejo» de sala-edicion', body: '- Clave: `' + SALA + '`' },
+    { number: 8, title: '📌 Grafo: Falló el flujo «Arquitectura YOD» de yod-portal, trabajo «a», paso 2 «b»', body: 'sin clave (abierta antes de este cambio)' },
+    { number: 9, title: '📌 Grafo: La página de board-aurum respondió 503', body: '' }], pedidos) });
+  const falta = await E.chinches([falla('mesa'),
+    { clave: 'flujo:yodesarrollomx/yod-portal:.github/workflows/arquitectura.yml', tipo: 'flujo', msg: 'Falló el flujo «Arquitectura YOD» de yod-portal, trabajo «c», paso 7 «d»', desde: 'd', url: 'u', nodos: [] },
+    { clave: 'pagina:yodesarrollomx/board-aurum', tipo: 'pagina', msg: 'La página de board-aurum respondió 502', desde: 'd', url: 'u', nodos: [] }]);
+  assert.deepEqual(pedidos.filter(p => p.metodo === 'POST'), [], 'las tres ya tienen chinche abierta');
+  assert.deepEqual(falta, []);
+  assert.equal(nucleo('Falló el flujo «X» de y, trabajo «a», paso 1 «b»'), 'Falló el flujo «X» de y');
+});
+
+test('si no se sabe qué chinches hay abiertas, no abre ninguna: quedan para la siguiente revisión', async () => {
+  const pedidos = [], E = crear({ mapa, fetchImpl: api({ [LISTA]: 404 }, pedidos) });
+  const falta = await E.chinches([falla('mesa'), { clave: 'pagina:yodesarrollomx/crokiss', tipo: 'pagina', msg: 'La página de crokiss respondió 500', desde: 'd', url: 'u', nodos: [] }]);
+  assert.deepEqual(pedidos.filter(p => p.metodo === 'POST'), [], 'no se abre a ciegas: podría repetir');
+  assert.deepEqual(falta, [SALA, 'pagina:yodesarrollomx/crokiss']);
+});
+
+test('si GitHub no deja abrir la chinche, queda pendiente; la siguiente revisión la abre si el error sigue y la olvida si se resolvió', async () => {
+  const pedidos = [], E = crear({ mapa, fetchImpl: api({ [LISTA]: [], '/repos/yodesarrollomx/potenciales-yod/issues': 404 }, pedidos) });
+  assert.deepEqual(await E.chinches([falla('mesa')]), [SALA]);
+  const sigue = E.conciliar([falla('mesa')], [falla('mesa')]), p = pendientesChinche({ chinche_pendiente: [SALA] }, sigue);
+  assert.equal(sigue.nuevos.length, 0); assert.deepEqual(p.candidatos.map(x => x.clave), [SALA], 'ya no es nuevo, pero se vuelve a intentar');
+  const resuelto = E.conciliar([falla('mesa')], []);
+  assert.deepEqual(pendientesChinche({ chinche_pendiente: [SALA] }, resuelto).candidatos, [], 'si ya pasó, no se abre');
+  const nuevo = E.conciliar([], [falla('mesa')]);
+  assert.equal(pendientesChinche({ chinche_pendiente: [SALA] }, nuevo).candidatos.length, 1, 'nuevo y pendiente a la vez cuenta una vez');
+});
+
 /* ── el aviso de borrador se pone al día con lo que de verdad hay en GitHub ── */
 const { reconciliarBorrador, ligaAbrir } = require('../scripts/grafo-estado.cjs');
 const REPO = 'yodesarrollomx/potenciales-yod', T = '2026-11-12T10:00:00.000Z', APROBADO = 'G-20261111-2217', NUEVO = 'G-20261112-0915';
@@ -164,7 +221,7 @@ test('borrador: sin dato de GitHub no se toca nada', () => {
 
 test('borrador: si la rama ya no existe, se quita el aviso y se anota si se aprobó o se descartó', () => {
   const aprobado = reconciliarBorrador({ puntero: punt(), aprobado: NUEVO, rama: false, repo: REPO, ahora: T });
-  assert.deepEqual(aprobado.puntero, {}); assert.equal(aprobado.cambio, true); assert.deepEqual(aprobado.linea, { cuando: T, que: 'grafo aprobado', id: NUEVO, pr: 70, por: 'revisión de cada hora' });
+  assert.deepEqual(aprobado.puntero, {}); assert.equal(aprobado.cambio, true); assert.deepEqual(aprobado.linea, { cuando: T, que: 'grafo aprobado', id: NUEVO, pr: 70, por: 'revisión del vigilante' });
   const descartado = rec({ puntero: punt(), rama: false });
   assert.deepEqual(descartado.puntero, {}); assert.equal(descartado.linea.que, 'borrador descartado');
   assert.deepEqual(rec({ puntero: {}, rama: false }), { puntero: {}, linea: null, cambio: false }, 'sin aviso y sin rama: nada que hacer');

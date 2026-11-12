@@ -1,14 +1,17 @@
 {
   "model_revision": "2026-11-12.ppp2.1",
   "proposal_id": "CHG-GRAFO-ACCESOS-20261111",
-  "summary": "Grafo del sistema rehecho a pedido: versión G-20261112-1420 (la aprobada era G-20261112-1203). Cambian sólo los datos del grafo (grafo-motor/datos/base.json) y lo que se genera de ellos en grafo/: láminas, registro de versiones y datos para presentaciones. Sin código, backend, hojas ni permisos. Fusionar este cambio es aprobar el grafo; cerrarlo lo descarta.",
+  "summary": "Vigilante del grafo («Grafo · estado»): dice la verdad sobre su reloj y no repite chinches con revisiones seguidas. GitHub arranca los horarios cuando puede (medido en la organización del 8 al 12-nov-2026: cada línea de horario corre unas tres veces al día, con horas de retraso), así que los textos de Accesos, del flujo y de docs/grafo.md dejan de decir «cada hora». La chinche de un error se reconoce por su clave o por su flujo o página aunque truene en otro trabajo o paso; si no se pudo leer cuáles hay abiertas, no se abre a ciegas y queda pendiente para la siguiente revisión. Sólo lectura: sin /exec, hojas, permisos ni cambios en la rama principal desde los flujos.",
   "components": [
-    "SYS-POTENCIALES"
+    "SYS-POTENCIALES",
+    "SYS-CONTROL"
   ],
   "tests": [
-    "Láminas generadas por grafo-motor/laminas.py desde la base de este mismo cambio (determinista).",
-    "Recetas de presentación comprobadas contra el contrato del Plan de Potencial al rehacer.",
-    "verificar-impacto contra el atlas fijado."
+    "node --test tests/grafo-estado.test.cjs tests/grafo-control.test.cjs (43 pruebas; 4 nuevas de chinches con revisiones seguidas, lectura fallida y reintento).",
+    "python -m unittest discover -s grafo-motor/pruebas -p 'prueba_*.py' (23 pruebas).",
+    "node --test tests/accesos-admin-session.test.cjs (34 pruebas).",
+    "actionlint .github/workflows/grafo-estado.yml sin hallazgos.",
+    "verificar-impacto contra el atlas fijado en .github/workflows/arquitectura.yml."
   ],
-  "rollback": "Cerrar el PR del borrador, o revertir su merge: el grafo aprobado anterior sigue publicado."
+  "rollback": "Revertir el merge de este PR: vuelven los textos anteriores y la deduplicación por título exacto. La rama de datos grafo-datos no necesita limpieza (el campo chinche_pendiente es opcional)."
 }
