@@ -78,7 +78,8 @@ test('la edad sólo pasa a árbol si la última sesión del consejo aprueba la v
 
 test('la plantilla no trae datos de planes reales', () => {
   for (const f of ['ppp2/libro/generar.py', 'ppp2/libro/ejemplo-plan.json', 'ppp2/libro/consejo_edad.py',
-    'tests/fixtures/ppp2-libro-ejemplo.json', 'tests/fixtures/ppp2-consejo-edad.json']) {
+    'tests/fixtures/ppp2-libro-ejemplo.json', 'tests/fixtures/ppp2-consejo-edad.json',
+    'architecture-impact.json', 'docs/ppp2.md', 'ppp2/libro/README.md', 'server/ppp2/INSTALAR.md']) {
     const t = fs.readFileSync(path.join(RAIZ, f), 'utf8');
     assert.doesNotMatch(t, /Mor[eé]o|Avermont|Morelos|Colinas del Bachoco|aurumarquitectos/i, f);
   }

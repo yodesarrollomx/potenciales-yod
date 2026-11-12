@@ -68,7 +68,11 @@ function seguro_(v) {
 }
 function fila_(arr) { return arr.map(seguro_); }
 function limpio_(v) {
-  if (v instanceof Date) return Utilities.formatDate(v, PPP2.TZ, 'yyyy-MM-dd');
+  // Una fecha con hora conserva la hora: así se distinguen dos corridas de pruebas del mismo día.
+  if (v instanceof Date) {
+    var hm = Utilities.formatDate(v, PPP2.TZ, 'HH:mm');
+    return Utilities.formatDate(v, PPP2.TZ, 'yyyy-MM-dd') + (hm !== '00:00' ? ' ' + hm : '');
+  }
   if (typeof v === 'string' && /^#(N\/A|REF!|VALUE!|DIV\/0!|NUM!|NAME\?|NULL!|ERROR!)/.test(v)) return null;
   if (typeof v === 'number' && !isFinite(v)) return null;
   return v;
@@ -515,8 +519,10 @@ function estres_(s, libro, b, rev, rid) {
     lista.forEach(function (esc) {
       var cambios = [];
       esc.ops.forEach(function (op) {
-        var f = filas[op.c] || (filas[op.c] = filaPorClave_(mod, op.c));
-        if (!f) return;
+        if (!(op.c in filas)) filas[op.c] = guardarPrueba_(mod, op.c);
+        var it = filas[op.c];
+        if (!it) return;
+        var f = it.f;
         var actual = Number(mod.getRange(f, 4 + k).getValue()) || 0, nuevo;
         if (op.fija != null) nuevo = op.fija;
         else if (op.suma != null) nuevo = actual + op.suma;
@@ -533,6 +539,16 @@ function estres_(s, libro, b, rev, rid) {
     restablecer_(mod, filas);
     if (String(antesB4).charAt(0) === '=') pru.getRange('B4').setFormula(antesB4); else pru.getRange('B4').setValue(antesB4);
   }
+  // La columna Prueba debe quedar como estaba: si no, las cifras de la corrida no sirven y no se anotan.
+  SpreadsheetApp.flush();
+  pru.getRange('B4').setValue(k);
+  var despues = leerPrueba_(pru);
+  if (String(antesB4).charAt(0) === '=') pru.getRange('B4').setFormula(antesB4); else pru.getRange('B4').setValue(antesB4);
+  if (JSON.stringify(despues) !== JSON.stringify(base)) {
+    bitacora_(libro, s, 'Pruebas de estrés sobre V' + k + ' NO anotadas: la columna Prueba no volvió a su estado', 'Pruebas',
+      b.escenario || 'estándar', JSON.stringify(base), JSON.stringify(despues), '', rev, rid);
+    return { ok: false, error: 'prueba' };
+  }
   var fecha = ahora_(), quien = actor_(s);
   var filasLog = resultados.map(function (r) { return r.concat(['V' + k, fecha, quien]); });
   var desde = Math.max(14, pru.getLastRow() + 1);
@@ -543,11 +559,36 @@ function estres_(s, libro, b, rev, rid) {
 function leerPrueba_(pru) {
   return pru.getRange(6, 2, 5, 1).getValues().map(function (r) { var v = limpio_(r[0]); return typeof v === 'number' ? Math.round(v * 10) / 10 : v; });
 }
+/* La columna Prueba se restablece con LO MISMO que tenía (getFormula → setFormula, o su valor). Así no
+   depende del idioma del libro: con coma decimal Sheets separa con «;», y una fórmula escrita aquí con
+   comas queda en #ERROR! (pasó el 12-nov-2026 con el primer libro real). Si la celda ya estaba rota, se
+   copia la fórmula de una fila sana del bloque: copyTo ajusta la fila y tampoco depende del idioma. */
+function guardarPrueba_(mod, clave) {
+  var f = filaPorClave_(mod, clave);
+  if (!f) return null;
+  var r = mod.getRange(f, 8);
+  return { f: f, frm: r.getFormula(), val: r.getValue(), roto: String(r.getDisplayValue()).charAt(0) === '#' };
+}
 function restablecer_(mod, filas) {
   Object.keys(filas).forEach(function (c) {
-    var f = filas[c];
-    if (f) mod.getRange(f, 8).setFormula('=INDEX($E' + f + ':$G' + f + ',1,Pruebas!$B$4)');
+    var it = filas[c];
+    if (!it) return;
+    if (it.roto) { copiarPruebaSana_(mod, it.f, filas); return; }
+    var r = mod.getRange(it.f, 8);
+    if (it.frm) r.setFormula(it.frm); else r.setValue(it.val);
   });
+}
+function copiarPruebaSana_(mod, f, filas) {
+  var n = mod.getLastRow(), rango = mod.getRange(1, 8, n, 1), frms = rango.getFormulas(), vis = rango.getDisplayValues(), tocadas = {};
+  Object.keys(filas).forEach(function (c) { if (filas[c]) tocadas[filas[c].f] = true; });
+  for (var i = 0; i < n; i++) {
+    if (i + 1 === f || tocadas[i + 1]) continue;
+    if (/^=INDEX\(\$E\d+:\$G\d+/i.test(frms[i][0]) && String(vis[i][0]).charAt(0) !== '#') {
+      mod.getRange(i + 1, 8).copyTo(mod.getRange(f, 8), SpreadsheetApp.CopyPasteType.PASTE_FORMULA, false);
+      return true;
+    }
+  }
+  return false;
 }
 
 /* Sembrar: copia la plantilla, escribe la identidad y lo anota en el vivero. */

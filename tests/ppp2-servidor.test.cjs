@@ -186,6 +186,54 @@ test('las pruebas de estrés sólo tocan la columna Prueba y la dejan como estab
   }
 });
 
+test('con coma decimal (fórmulas con «;») las pruebas dejan la columna Prueba sana, sin #ERROR!', () => {
+  /* 12-nov-2026: el primer libro real separa con «;». El servidor restablecía la columna Prueba con una
+     fórmula escrita con comas y 14 celdas quedaron en #ERROR!: desde «Obra 5% arriba» todas las cifras
+     salieron mal. Ahora se restablece con la misma fórmula que tenía. */
+  const w = mundo({ idioma: 'puntoycoma' });
+  const mod = w.libro.getSheetByName('Modelo');
+  const antes = Object.entries(mod.f).filter(([k]) => k.endsWith(',8'));
+  assert.ok(antes.length > 20 && antes.every(([, f]) => !/,/.test(f.replace(/"[^"]*"/g, ''))), 'el libro de prueba separa con «;»');
+  const r = w.post({ k: EDITOR, tipo: 'ppp2-estres', plan: PLAN, version: 2 });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  for (const [k, f] of antes) assert.equal(mod.f[k], f, 'Prueba restablecida igual en ' + k);
+  assert.deepEqual(Object.keys(mod.roto), [], 'ninguna celda en #ERROR!');
+});
+
+test('si la columna Prueba ya estaba rota, las pruebas la reparan con la fórmula de una fila sana', () => {
+  const w = mundo({ idioma: 'puntoycoma' });
+  const mod = w.libro.getSheetByName('Modelo');
+  const f = filaDe(mod, 'ajuste_precio');
+  mod.getRange(f, 8).setFormula('=INDEX($E' + f + ':$G' + f + ',1,Pruebas!$B$4)');
+  assert.equal(mod.getRange(f, 8).getDisplayValue(), '#ERROR!');
+  const r = w.post({ k: EDITOR, tipo: 'ppp2-estres', plan: PLAN, version: 2 });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(mod.getRange(f, 8).getFormula(), '=INDEX($E' + f + ':$G' + f + ';1;Pruebas!$B$4)');
+  assert.deepEqual(Object.keys(mod.roto), []);
+});
+
+test('si la columna Prueba no vuelve a su estado, la corrida no se anota', () => {
+  const n = mundo().get({ k: EDITOR, recurso: 'ppp2-plan', plan: PLAN }).escenarios.length;
+  const w = mundo({
+    alFlush: (i, libro) => { if (i === n + 2) libro.getSheetByName('Pruebas').getRange(9, 2).setValue(-999); }
+  });
+  const pru = w.libro.getSheetByName('Pruebas'), filas = pru.getLastRow();
+  const r = w.post({ k: EDITOR, tipo: 'ppp2-estres', plan: PLAN, version: 2 });
+  assert.equal(r.ok, false);
+  assert.equal(r.error, 'prueba');
+  assert.equal(pru.getLastRow(), filas, 'no escribe renglones de resultados');
+  const bit = w.libro.getSheetByName('Bitácora');
+  assert.match(String(bit.v[bit.getLastRow() - 1][2]), /NO anotadas/);
+});
+
+test('una fecha con hora conserva la hora (dos corridas del mismo día no se mezclan)', () => {
+  const w = mundo({ fechasReales: true });
+  // la fecha se crea dentro del contexto del servidor, como la regresa Sheets
+  const fecha = (h, m) => require('node:vm').runInContext('new Date(Date.UTC(2026, 10, 12, ' + h + ', ' + m + '))', w.ctx);
+  assert.equal(w.ctx.limpio_(fecha(13, 46)), '2026-11-12 13:46');
+  assert.equal(w.ctx.limpio_(fecha(0, 0)), '2026-11-12');
+});
+
 test('sembrar copia la plantilla, escribe la identidad y lo anota en el vivero', () => {
   const w = mundo();
   const r = w.post({ k: EDITOR, tipo: 'ppp2-sembrar', nombre: 'Lote de prueba', ubicacion: 'Calle Falsa 123', objetivo: 'Probar', terreno_m2: 1200 });

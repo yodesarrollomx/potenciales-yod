@@ -27,7 +27,8 @@
     respuesta: 'Escribe la respuesta antes de guardarla.', evidencia: 'Para cerrar un candado escribe la evidencia.',
     pausa: 'El servidor está en mantenimiento: sólo se puede leer.', ocupado: 'El libro está ocupado; intenta en unos segundos.',
     board: 'Tu acceso no incluye Potenciales.', portero: 'No pude validar tu sesión con el Portero; intenta de nuevo.',
-    plan: 'Ese plan no existe o está archivado.', calculado: 'Ese renglón lo calcula el libro; no se captura.'
+    plan: 'Ese plan no existe o está archivado.', calculado: 'Ese renglón lo calcula el libro; no se captura.',
+    prueba: 'Las pruebas no se anotaron: la columna Prueba del libro no volvió a su estado. Quedó en la bitácora.'
   };
 
   var estado = { vivero: null, plan: null, planId: '', pestana: 'versiones', version: 0, ocupado: false };
@@ -69,11 +70,12 @@
   function token() { try { return localStorage.getItem(LLAVE) || ''; } catch (e) { return ''; } }
   function rid() { return 'p2-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8); }
   var toastT = 0;
-  function toast(t) {
+  function toast(t, fijo) {
     var el = document.getElementById('p2Toast');
     if (!el) return;
     el.textContent = t; el.hidden = false;
-    clearTimeout(toastT); toastT = setTimeout(function () { el.hidden = true; }, 4200);
+    clearTimeout(toastT);
+    if (!fijo) toastT = setTimeout(function () { el.hidden = true; }, 4200);
   }
   function configurado() { return !/\/PENDIENTE\//.test(ENDPOINT); }
 
@@ -446,7 +448,9 @@
     if (estado.ocupado) return Promise.resolve();
     estado.ocupado = true;
     if (estado.plan) { cuerpo.plan = estado.planId; cuerpo.rev = estado.plan.rev; }
-    toast('Guardando en el libro…');
+    // lo que tarda (las pruebas de estrés: el libro recalcula cada escenario) deja el aviso puesto hasta terminar
+    if (ms > 60000) toast('Corriendo en el libro… tarda cerca de un minuto; no cierres la página.', true);
+    else toast('Guardando en el libro…');
     return escribir(cuerpo, ms).then(function (r) {
       estado.ocupado = false;
       if (!r || !r.ok) {
@@ -518,7 +522,14 @@
     if (a === 'editar-dato') { editarDato(b.getAttribute('data-clave')); return; }
     if (a === 'candado') { dialogoCandado(b.getAttribute('data-id')); return; }
     if (a === 'hallazgo') { enviar({ tipo: 'ppp2-hallazgo', fila: Number(b.getAttribute('data-fila')), estado: b.getAttribute('data-estado') }); return; }
-    if (a === 'estres') { enviar({ tipo: 'ppp2-estres', version: estado.version }, 'Pruebas listas: el libro recalculó cada escenario.', 300000); return; }
+    if (a === 'estres') {
+      if (estado.ocupado) return;
+      b.disabled = true;
+      b.innerHTML = '<i class="ti ti-loader-2" aria-hidden="true"></i> Corriendo las pruebas… cerca de un minuto';
+      enviar({ tipo: 'ppp2-estres', version: estado.version }, 'Pruebas listas: el libro recalculó cada escenario.', 300000)
+        .then(function () { if (b.isConnected) { b.disabled = false; b.innerHTML = '<i class="ti ti-bolt"></i> Correr pruebas sobre la V' + estado.version; } });
+      return;
+    }
     var q = b.getAttribute('data-q');
     if (a === 'responder') {
       var t = document.querySelector('[data-respuesta="' + q + '"]'), f = document.querySelector('[data-fuente="' + q + '"]');

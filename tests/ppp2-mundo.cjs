@@ -18,11 +18,29 @@ function a1(ref) {
   for (const ch of m[1]) c = c * 26 + (ch.charCodeAt(0) - 64);
   return [Number(m[2]), c];
 }
+/* Idioma del libro: con coma decimal (es-ES y similares) Google Sheets separa los argumentos con «;»
+   y una fórmula escrita con comas queda en #ERROR!. El primer libro real vive así. */
+function comaFuera(f) {
+  let dentro = false;
+  for (const ch of String(f)) { if (ch === '"') dentro = !dentro; else if (ch === ',' && !dentro) return true; }
+  return false;
+}
+function aPuntoYComa(f) {
+  let dentro = false, out = '';
+  for (const ch of String(f)) { if (ch === '"') dentro = !dentro; out += (ch === ',' && !dentro) ? ';' : ch; }
+  return out;
+}
+function moverFilas(f, delta) {
+  return String(f).replace(/(\$?)([A-Z]{1,3})(\$?)(\d+)/g, (m, c1, col, r1, fila) => c1 + col + r1 + (r1 ? fila : String(Number(fila) + delta)));
+}
 class Hoja {
-  constructor(nombre, valores, formulas) {
+  constructor(nombre, valores, formulas, idioma) {
     this.nombre = nombre;
     this.v = (valores || []).map((r) => r.slice());
     this.f = Object.assign({}, formulas || {});
+    this.idioma = idioma || 'coma';
+    this.roto = {};
+    if (this.idioma === 'puntoycoma') for (const k of Object.keys(this.f)) this.f[k] = aPuntoYComa(this.f[k]);
   }
   vacia(x) { return x === '' || x === null || x === undefined; }
   getLastRow() {
@@ -63,21 +81,36 @@ class Rango {
       this.h.asegura(this.r + i, this.c + j);
       this.h.v[this.r + i - 1][this.c + j - 1] = x;
       delete this.h.f[(this.r + i) + ',' + (this.c + j)];
+      delete this.h.roto[(this.r + i) + ',' + (this.c + j)];
     }));
     return this;
   }
   setValue(x) { return this.setValues([[x]]); }
   getFormula() { return this.h.f[this.r + ',' + this.c] || ''; }
-  setFormula(f) { this.h.asegura(this.r, this.c); this.h.f[this.r + ',' + this.c] = f; return this; }
+  setFormula(f) {
+    const k = this.r + ',' + this.c;
+    this.h.asegura(this.r, this.c);
+    this.h.f[k] = f;
+    if (this.h.idioma === 'puntoycoma' && comaFuera(f)) this.h.roto[k] = true; else delete this.h.roto[k];
+    return this;
+  }
+  getDisplayValue() { return this.h.roto[this.r + ',' + this.c] ? '#ERROR!' : String(this.getValue()); }
+  getFormulas() { return this.getValues().map((fila, i) => fila.map((x, j) => this.h.f[(this.r + i) + ',' + (this.c + j)] || '')); }
+  getDisplayValues() { return this.getValues().map((fila, i) => fila.map((x, j) => (this.h.roto[(this.r + i) + ',' + (this.c + j)] ? '#ERROR!' : String(x)))); }
+  copyTo(destino) {
+    const f = this.getFormula();
+    if (f) destino.setFormula(moverFilas(f, destino.r - this.r)); else destino.setValue(this.getValue());
+    return destino;
+  }
 }
 class Libro {
   constructor(hojas) { this.hojas = hojas; }
   getSheetByName(n) { return this.hojas[n] || null; }
   insertSheet(n) { this.hojas[n] = new Hoja(n, []); return this.hojas[n]; }
 }
-function libroDeAccesorio() {
+function libroDeAccesorio(idioma) {
   const hojas = {};
-  for (const [nombre, d] of Object.entries(ACCESORIO)) hojas[nombre] = new Hoja(nombre, d.valores, d.formulas);
+  for (const [nombre, d] of Object.entries(ACCESORIO)) hojas[nombre] = new Hoja(nombre, d.valores, d.formulas, idioma);
   return new Libro(hojas);
 }
 
@@ -91,7 +124,8 @@ const SESIONES = {
 };
 function mundo(opciones) {
   const op = opciones || {};
-  const libros = { 'libro-ejemplo': libroDeAccesorio(), 'libro-plantilla': libroDeAccesorio() };
+  const libros = { 'libro-ejemplo': libroDeAccesorio(op.idioma), 'libro-plantilla': libroDeAccesorio(op.idioma) };
+  let flushes = 0;
   const vivero = new Libro({
     Planes: new Hoja('Planes', [
       ['plan_id', 'nombre', 'libro_id', 'estado', 'creado', 'creado_por', 'caso_ppp', 'plantilla', 'nota'],
@@ -113,7 +147,8 @@ function mundo(opciones) {
     SpreadsheetApp: {
       getActiveSpreadsheet: () => vivero,
       openById: (id) => { if (!libros[id]) throw new Error('no existe ' + id); return libros[id]; },
-      flush: () => {}
+      flush: () => { flushes++; if (op.alFlush) op.alFlush(flushes, libros['libro-ejemplo']); },
+      CopyPasteType: { PASTE_FORMULA: 'PASTE_FORMULA' }
     },
     CacheService: { getScriptCache: () => ({ get: (k) => (cache.has(k) ? cache.get(k) : null), put: (k, v) => cache.set(k, v), remove: (k) => cache.delete(k) }) },
     UrlFetchApp: {
@@ -128,7 +163,13 @@ function mundo(opciones) {
     LockService: { getScriptLock: () => ({ tryLock: () => true, waitLock: () => {}, releaseLock: () => {} }) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (s) => ({ contenido: s, setMimeType() { return this; } }) },
     Utilities: {
-      formatDate: (d, tz, fmt) => (fmt === 'yyyy-MM-dd' ? '2026-11-12' : '2026-11-12 10:00'),
+      formatDate: (d, tz, fmt) => {
+        if (op.fechasReales && Object.prototype.toString.call(d) === '[object Date]') {
+          const p2 = (n) => String(n).padStart(2, '0'), f = d.getUTCFullYear() + '-' + p2(d.getUTCMonth() + 1) + '-' + p2(d.getUTCDate()), h = p2(d.getUTCHours()) + ':' + p2(d.getUTCMinutes());
+          return fmt === 'yyyy-MM-dd' ? f : fmt === 'HH:mm' ? h : f + ' ' + h;
+        }
+        return fmt === 'yyyy-MM-dd' ? '2026-11-12' : fmt === 'HH:mm' ? '10:00' : '2026-11-12 10:00';
+      },
       computeDigest: (alg, s) => Array.from(crypto.createHash('sha256').update(String(s)).digest()),
       base64EncodeWebSafe: (bytes) => Buffer.from(bytes).toString('base64url'),
       getUuid: () => crypto.randomUUID(),
