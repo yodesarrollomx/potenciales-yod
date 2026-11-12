@@ -377,6 +377,33 @@ class Versiones(unittest.TestCase):
         self.assertGreater(len(os.listdir(a)), 80)
 
 
+class VistaPreviaDelBorrador(unittest.TestCase):
+    """La portada (grafo/index.html) enseña el borrador sin publicarlo trayendo cada lámina como texto. Sólo de la rama
+    grafo-borrador, y la lámina traída corre en un marco aislado: comparte dominio con todos los tableros y ahí vive la
+    sesión del Portero. La prueba de navegador (tests/grafo-accesos-browser.cjs) lo comprueba además en vivo."""
+    @classmethod
+    def setUpClass(cls):
+        cls.dir = tempfile.mkdtemp(); corre(MOTOR, 'laminas.py', cls.dir)
+        with open(os.path.join(cls.dir, 'index.html'), encoding='utf-8') as f: cls.h = f.read()
+
+    @classmethod
+    def tearDownClass(cls): shutil.rmtree(cls.dir, ignore_errors=True)
+
+    def test_solo_acepta_la_rama_del_borrador(self):
+        self.assertEqual(re.findall(r"get\('rama'\)[^;\n]*", self.h), ["get('rama') === 'grafo-borrador'"])
+        self.assertEqual(set(re.findall(r"https://raw\.githubusercontent\.com/[^'\"\s]*", self.h)), {'https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/grafo-borrador/grafo/'})
+        self.assertIsNone(re.search(r"raw\.githubusercontent\.com/[^'\n]*'\s*\+", self.h), 'la dirección cruda no se arma con nada de la liga')
+        self.assertIn('LAM_ID.test(', self.h, 'la lista de láminas del borrador sólo acepta nombres de lámina')
+
+    def test_la_lamina_traida_corre_aislada(self):
+        self.assertNotIn('allow-same-origin', self.h)
+        aisla = "if (CRUDO) marco.setAttribute('sandbox', 'allow-scripts allow-popups');"
+        self.assertEqual(self.h.count(aisla), 1)
+        usos = [m.start() for m in re.finditer(r'\.srcdoc\s*=', self.h)]
+        self.assertTrue(usos and all(u > self.h.index(aisla) for u in usos), 'el marco se aísla antes de recibir cualquier lámina traída')
+        self.assertIn('e.source !== marco.contentWindow', self.h, 'la portada sólo escucha a su marco')
+
+
 class DondeSeMarcaElError(unittest.TestCase):
     """El vigilante pinta cada error en el repositorio donde pasó y en los tableros que viven en él; nunca en sus vecinos de fila
     (antes tomaba los tres primeros tableros de la fila y un error de un repositorio aparecía en tableros ajenos)."""
