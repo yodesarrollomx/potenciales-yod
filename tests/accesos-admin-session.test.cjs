@@ -157,17 +157,52 @@ test('Sólo el listado más reciente de la misma sesión puede pintar',async()=>
   h.fill();const q=h.nodes.get('aBtn').onclick();await h.respond(4,{ok:true});await q;
   await h.respond(5,{ok:true,usuarios:[user({nombre:'Última lista'})]});await h.respond(3,{ok:true,usuarios:[user({nombre:'Lista vieja'})]});assert.match(h.nodes.get('lista').innerHTML,/Última lista/);assert.doesNotMatch(h.nodes.get('lista').innerHTML,/Lista vieja/);
 });
-for(const resource of ['canje','accesos-lista'])test('Lectura '+resource+' vencida limpia controles sin cambiar token ni reintentar sola',async()=>{
+// La espera de cada lectura del Portero (canje y lista): la primera llamada del día tarda de 20 a 25 s (12-nov-2026).
+const ESPERA=30000;
+const vencer=async h=>{for(const [id,timer] of [...h.timers.entries()])if(timer.ms===ESPERA){h.timers.delete(id);timer.fn();}await flush();};
+test('Las lecturas del Portero esperan al menos lo que la cabina (25 s) y las escrituras no cambian',async()=>{
+  const h=harness();const espera=[...h.timers.values()].map(t=>t.ms);assert.deepEqual(espera,[ESPERA]);assert.ok(ESPERA>=25000);
+  // Un Portero que contesta a los 22 s ya no se corta: entra a la primera, sin reintento.
+  await allow(h);assert.equal(h.requests.length,2);h.fill();assert.equal(h.nodes.get('aBtn').disabled,false);
+  const p=h.nodes.get('aBtn').onclick();assert.equal(h.requests[2].body.tipo,'acceso-alta');assert.ok([...h.timers.values()].some(t=>t.ms===20000),'la escritura conserva su límite');
+  await h.respond(2,{ok:true});await p;
+});
+for(const resource of ['canje','accesos-lista'])test('Lectura '+resource+' que vence dos veces limpia controles sin cambiar token y sólo reintenta una vez',async()=>{
   const h=harness();if(resource==='accesos-lista')await h.respond(0,{ok:true,rol:'admin'});
-  const count=h.requests.length,last=h.requests.at(-1);
-  for(const timer of [...h.timers.values()])if(timer.ms===20000)timer.fn();await flush();
-  assert.equal(last.options.signal.aborted,true);privateEmpty(h);assert.equal(h.store.get(KEY),A);await h.tick();assert.equal(h.requests.length,count);
-  await h.respond(count-1,{ok:true,rol:'admin',usuarios:[user()]});privateEmpty(h);
+  const count=h.requests.length,first=h.requests.at(-1);
+  await vencer(h);
+  assert.equal(first.options.signal.aborted,true);assert.equal(h.requests.length,count+1,'un solo reintento');
+  const second=h.requests.at(-1);assert.equal(second.resource,resource);assert.equal(second.token,A);assert.equal(second.url,first.url);privateEmpty(h);
+  if(resource==='canje')assert.match(h.nodes.get('lista').innerHTML,/tardando/);
+  await vencer(h);
+  assert.equal(second.options.signal.aborted,true);privateEmpty(h);assert.equal(h.store.get(KEY),A);await h.tick();assert.equal(h.requests.length,count+1,'no hay tercer intento');
+  await h.respond(count-1,{ok:true,rol:'admin',usuarios:[user()]});await h.respond(count,{ok:true,rol:'admin',usuarios:[user()]});privateEmpty(h);
+});
+test('Si el canje vence y el reintento confirma admin, entra; si el reintento es un rechazo, apaga todo',async()=>{
+  const h=harness();await vencer(h);assert.equal(h.requests[1].resource,'canje');privateEmpty(h);
+  await h.respond(1,{ok:true,rol:'admin'});assert.equal(h.requests[2].resource,'accesos-lista');await h.respond(2,{ok:true,usuarios:[user()]});
+  assert.match(h.nodes.get('lista').innerHTML,/persona@example/);h.fill();assert.equal(h.nodes.get('aBtn').disabled,false);
+  const r=harness();await vencer(r);await r.respond(1,{ok:false,error:'revocado'});privateEmpty(r);assert.match(r.nodes.get('lista').innerHTML,/no se pudo validar: revocado/);
+  await r.tick();assert.equal(r.requests.length,2);
+});
+test('La respuesta tardía del primer canje no pinta nada si ya se reintentó; sólo cuenta la vigente',async()=>{
+  const h=harness();await vencer(h);await h.respond(0,{ok:true,rol:'admin'});assert.equal(h.requests.length,2);privateEmpty(h);
+  await h.respond(1,{ok:true,rol:'vista'});privateEmpty(h);assert.match(h.nodes.get('lista').innerHTML,/administrador/);assert.equal(h.requests.length,2);
+});
+test('Si la sesión cambia durante la espera, el canje viejo no se reintenta',async()=>{
+  const h=harness();await h.change(B);assert.equal(h.requests[1].token,B);
+  const [id,timer]=[...h.timers.entries()].find(([,t])=>t.ms===ESPERA);h.timers.delete(id);timer.fn();await flush();
+  assert.equal(h.requests[0].options.signal.aborted,true);assert.equal(h.requests.length,2,'A no se reintenta');assert.ok(h.requests.every(r=>r.resource==='canje'));
+  await h.respond(1,{ok:true,rol:'admin'});assert.equal(h.requests[2].token,B);
+});
+test('Un fallo de red no se reintenta: sólo el tiempo vencido',async()=>{
+  const h=harness();h.requests[0].reject(Object.assign(new TypeError('Failed to fetch')));await flush();await h.tick();assert.equal(h.requests.length,1);privateEmpty(h);
+  assert.match(h.nodes.get('lista').innerHTML,/No se pudo comprobar tu sesión/);
 });
 test('Si sólo la lista tarda, se borra lo privado y no se deja escribir; reintentar vuelve a canjear y un rechazo limpia todo',async()=>{
   // Que el grafo se quede visible lo comprueba tests/grafo-accesos-browser.cjs en navegador real (aquí no hay DOM de verdad).
   const h=harness();await h.respond(0,{ok:true,rol:'admin'});
-  for(const timer of [...h.timers.values()])if(timer.ms===20000)timer.fn();await flush();
+  await vencer(h);assert.equal(h.requests.length,3,'la lista se pide una vez más');assert.equal(h.requests[2].resource,'accesos-lista');await vencer(h);
   privateEmpty(h);assert.match(h.nodes.get('lista').innerHTML,/el Portero no contestó a tiempo/);
   assert.equal(h.nodes.get('aRetry').disabled,false);assert.equal(h.nodes.get('aCorreo').disabled,true);h.fill();denied(h);assert.equal(h.requests.filter(r=>r.body).length,0);
   h.nodes.get('aRetry').onclick();await flush();const i=h.requests.length-1;assert.equal(h.requests[i].resource,'canje');

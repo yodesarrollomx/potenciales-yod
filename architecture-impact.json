@@ -1,14 +1,17 @@
 {
   "model_revision": "2026-11-12.ppp2.1",
   "proposal_id": "CHG-GRAFO-ACCESOS-20261111",
-  "summary": "Grafo del sistema rehecho a pedido: versión G-20261112-1420 (la aprobada era G-20261112-1203). Cambian sólo los datos del grafo (grafo-motor/datos/base.json) y lo que se genera de ellos en grafo/: láminas, registro de versiones y datos para presentaciones. Sin código, backend, hojas ni permisos. Fusionar este cambio es aprobar el grafo; cerrarlo lo descarta.",
+  "summary": "Accesos espera lo que tarda el Portero. Visto en vivo el 12-nov-2026: la primera llamada al Portero tardó de 20 a 25 s y accesos.html cortaba sus lecturas (canje y lista) a los 20 s, así que Dirección se quedaba en «No se pudo comprobar tu sesión» y sin la sección del grafo; «Reintentar validación» volvía a cortar a los 20 s. Ahora cada lectura espera hasta 30 s (la cabina de yod-portal ya espera 25) y, sólo si venció ese tiempo y la sesión sigue siendo la misma, se intenta una vez más. Una respuesta del Portero, también un rechazo, y un fallo de red se toman como vienen: un rechazo real sigue apagando todo. Mientras se espera la pantalla sigue en «Validando sesión…» (o «El Portero está tardando…»): nada privado se pinta antes de que el canje confirme admin, y una respuesta de otra sesión o generación se descarta como antes. Las escrituras no cambian: un solo intento con su límite de 20 s. Sin cambios de backend, hojas, permisos, portero.js ni ?v=.",
   "components": [
-    "SYS-POTENCIALES"
+    "SYS-POTENCIALES",
+    "SYS-CONTROL"
   ],
   "tests": [
-    "Láminas generadas por grafo-motor/laminas.py desde la base de este mismo cambio (determinista).",
-    "Recetas de presentación comprobadas contra el contrato del Plan de Potencial al rehacer.",
-    "verificar-impacto contra el atlas fijado."
+    "node --test tests/accesos-admin-session.test.cjs: 39/39. Nuevas o ajustadas: la lectura espera 30 s y la escritura conserva 20; un Portero que contesta antes del límite entra a la primera; si vence dos veces, un solo reintento y luego se limpia todo sin tercer intento; si el reintento confirma admin, entra, y si es un rechazo, apaga todo; la respuesta tardía del intento vencido no pinta; con la sesión cambiada no se reintenta; un fallo de red no se reintenta. Con el accesos.html anterior fallan 7.",
+    "node --test tests/access-gates.cjs tests/sheets-offline.cjs: 22/22.",
+    "node tests/grafo-accesos-browser.cjs (Chromium y Chromium en lugar de WebKit móvil): recorrido nuevo «Portero lento»: con el reloj de la página adelantado 22 s la pantalla sigue en «Validando sesión…», sin datos privados ni reintento; al contestar admin aparece el grafo y se habilita el alta con un solo canje. Con el accesos.html anterior falla con «No se pudo comprobar tu sesión». Los recorridos de antes siguen pasando.",
+    "Regresión: node tests/salud-accesos-browser.cjs (12 recorridos) y node tests/access-browser.cjs (20).",
+    "verificar-impacto contra el atlas bb97266ad7e3f5c72422224aeb3526eec4dd7502."
   ],
-  "rollback": "Cerrar el PR del borrador, o revertir su merge: el grafo aprobado anterior sigue publicado."
+  "rollback": "Revertir el commit por PR. Sin backend, hojas, permisos ni datos."
 }
