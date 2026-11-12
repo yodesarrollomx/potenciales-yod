@@ -211,6 +211,18 @@
       grafoVisto.observe(sec);
     }catch(e){}
   }
+  // El Portero ya confirmó que es admin (canje) y lo que falló es sólo traer la lista, por tiempo o por red: se borra lo
+  // privado y no se deja escribir, pero el grafo y la salud se quedan (son archivos estáticos que no dependen de esa
+  // lista). Antes se apagaba todo: el 12-nov-2026 el Portero tardó más de 20 s y el grafo desapareció de Accesos.
+  function listaSinCargar(mensaje){
+    admin=false;listado++;
+    $('lista').innerHTML='<p class="u-meta">'+esc(mensaje)+'</p>';
+    $('matriz').innerHTML='<tbody><tr><td class="u">'+esc(mensaje)+'</td></tr></tbody>';
+    $('uCnt').textContent='';
+    ['aCorreo','aNombre','aBoards','aRol'].forEach(id=>{$(id).disabled=true});
+    $('aBtn').disabled=true;$('aBtn').classList.remove('is-saving');
+    $('aRetry').disabled=!tokenActual;
+  }
   function limpiarVista(mensaje){
     window.YodSalud?.detener();
     mostrarGrafo(false);
@@ -416,7 +428,12 @@
         // tenía (guardados en el botón desde la última lista cargada).
         try{const r=await post({tipo:'acceso-alta',correo:b.dataset.rea,nombre:b.dataset.nom,rol:b.dataset.rolrea,boards:b.dataset.boardsrea},s);if(!vigente(s,true))return;if(r.ok){toast('✓ Acceso reactivado')}else{toast('No se pudo reactivar: '+(r.error||''),'err')}cargar()}catch(e){if(!vigente(s,true))return;b.disabled=false;toast('No se pudo reactivar: '+e.message,'err')}
       });
-    }catch(e){if(!actual())return;limpiarVista('No se pudo cargar la lista.');cont.innerHTML='<p class="u-meta">No se pudo cargar la lista ('+esc(e.message||'sin conexión')+'). Recarga con Ctrl/⌘+Shift+R o vuelve a entrar con tu Google.</p>'}
+    }catch(e){
+      if(!actual())return;
+      // Tiempo agotado (AbortError) o sin red (TypeError): el Portero no contestó. Lo demás (p. ej. sesión de Google caducada) sí limpia todo.
+      if(e&&(e.name==='AbortError'||e.name==='TypeError')){listaSinCargar('No se pudo cargar la lista: el Portero no contestó a tiempo. El grafo y el estado de los sistemas siguen abajo. Pulsa «Reintentar validación» o recarga con Ctrl/⌘+Shift+R.');return}
+      limpiarVista('No se pudo cargar la lista.');cont.innerHTML='<p class="u-meta">No se pudo cargar la lista ('+esc(e.message||'sin conexión')+'). Recarga con Ctrl/⌘+Shift+R o vuelve a entrar con tu Google.</p>'
+    }
   }
   async function probarSesionSalud(){
     const s=sesion();

@@ -1,14 +1,16 @@
 {
   "model_revision": "2026-11-11.grafo-accesos.3",
   "proposal_id": "CHG-GRAFO-ACCESOS-20261111",
-  "summary": "Grafo del sistema rehecho a pedido: versión G-20261112-1203 (la aprobada era G-20261112-1056). Cambian sólo los datos del grafo (grafo-motor/datos/base.json) y lo que se genera de ellos en grafo/: láminas, registro de versiones y datos para presentaciones. Sin código, backend, hojas ni permisos. Fusionar este cambio es aprobar el grafo; cerrarlo lo descarta.",
+  "summary": "Accesos ya no esconde el grafo cuando sólo falla la lista de usuarios. Visto en vivo el 12-nov-2026 con la sesión de Dirección: el Portero confirmó el rol de administrador, pero «accesos-lista» tardó más de 20 s, la página llamaba a limpiarVista y apagaba todo, también el grafo y el estado de los sistemas. Ahora, si la lectura de la lista se corta por tiempo (AbortError) o por red (TypeError), accesos.html borra lo privado (lista, matriz y contador), deshabilita el alta y deja de considerar admin para escrituras, pero deja el grafo y la salud, que son archivos estáticos. Cualquier otra falla (respuesta inesperada, sesión de Google caducada) y todo rechazo del Portero siguen limpiando todo. No cambia portero.js, backend, hojas ni permisos.",
   "components": [
-    "SYS-POTENCIALES"
+    "SYS-POTENCIALES",
+    "SYS-CONTROL"
   ],
   "tests": [
-    "Láminas generadas por grafo-motor/laminas.py desde la base de este mismo cambio (determinista).",
-    "Recetas de presentación comprobadas contra el contrato del Plan de Potencial al rehacer.",
+    "node tests/grafo-accesos-browser.cjs (Chromium y WebKit móvil): caso nuevo «lista-falla»: el Portero confirma admin y la lista no llega; el grafo queda visible con el aprobado y su lámina, el alta deshabilitada y «Reintentar validación» disponible. Sin el arreglo, el caso falla.",
+    "node --test tests/accesos-admin-session.test.cjs: prueba nueva: con la lista vencida no queda nada privado ni se puede escribir; reintentar vuelve a canjear y un rechazo limpia todo. Sin el arreglo, falla. Las 47 anteriores siguen en verde.",
+    "tests/salud-accesos-browser.cjs y tests/access-gates.cjs sin cambios y en verde.",
     "verificar-impacto contra el atlas fijado."
   ],
-  "rollback": "Cerrar el PR del borrador, o revertir su merge: el grafo aprobado anterior sigue publicado."
+  "rollback": "Revertir el merge: si la lista de usuarios tarda, Accesos vuelve a apagar todo, incluido el grafo."
 }

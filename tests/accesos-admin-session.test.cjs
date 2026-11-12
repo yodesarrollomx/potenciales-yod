@@ -164,6 +164,15 @@ for(const resource of ['canje','accesos-lista'])test('Lectura '+resource+' venci
   assert.equal(last.options.signal.aborted,true);privateEmpty(h);assert.equal(h.store.get(KEY),A);await h.tick();assert.equal(h.requests.length,count);
   await h.respond(count-1,{ok:true,rol:'admin',usuarios:[user()]});privateEmpty(h);
 });
+test('Si sólo la lista tarda, se borra lo privado y no se deja escribir; reintentar vuelve a canjear y un rechazo limpia todo',async()=>{
+  // Que el grafo se quede visible lo comprueba tests/grafo-accesos-browser.cjs en navegador real (aquí no hay DOM de verdad).
+  const h=harness();await h.respond(0,{ok:true,rol:'admin'});
+  for(const timer of [...h.timers.values()])if(timer.ms===20000)timer.fn();await flush();
+  privateEmpty(h);assert.match(h.nodes.get('lista').innerHTML,/el Portero no contestó a tiempo/);
+  assert.equal(h.nodes.get('aRetry').disabled,false);assert.equal(h.nodes.get('aCorreo').disabled,true);h.fill();denied(h);assert.equal(h.requests.filter(r=>r.body).length,0);
+  h.nodes.get('aRetry').onclick();await flush();const i=h.requests.length-1;assert.equal(h.requests[i].resource,'canje');
+  await h.respond(i,{ok:false,error:'revocado'});privateEmpty(h);assert.match(h.nodes.get('lista').innerHTML,/no se pudo validar/);
+});
 test('Reintento manual vuelve a canjear sin caché y sólo lista tras confirmar admin',async()=>{
   const h=harness();await h.respond(0,{ok:true,rol:'vista'});h.nodes.get('aRetry').onclick();await flush();assert.equal(h.requests[1].resource,'canje');denied(h);
   await h.respond(1,{ok:true,rol:'admin'});await h.respond(2,{ok:true,usuarios:[user()]});h.fill();assert.equal(h.nodes.get('aBtn').disabled,false);assert.equal(h.requests.filter(r=>r.body).length,0);

@@ -22,7 +22,7 @@ async function run(){
     for(const [nombre,tipo,viewport] of [['Chromium',chromium,{width:1280,height:800}],['WebKit móvil',webkit,{width:390,height:844}]]){
       const browser=await tipo.launch({headless:true});
       try{
-        for(const modo of ['admin','sin-admin']){
+        for(const modo of ['admin','sin-admin','lista-falla']){
           const ctx=await browser.newContext({viewport});ctx.setDefaultTimeout(20000);
           // Este guion corre en CADA documento del contexto, también en los marcos y en about:blank. La sesión sintética se siembra
           // una sola vez y sólo en la página: si se sembrara siempre, al apagarse el grafo (su marco se vacía y pasa por about:blank)
@@ -45,8 +45,8 @@ async function run(){
             }
             if(u.pathname.endsWith('/yod-acceso.js'))return da("window.YOD_PORTERO={original:'https://synthetic.invalid/exec'};",'text/javascript');
             if(u.hostname==='synthetic.invalid'){
-              if(u.searchParams.get('recurso')==='canje')return da({ok:true,rol:modo==='admin'?'admin':'vista',boards:'*'});
-              if(u.searchParams.get('recurso')==='accesos-lista')return da({ok:true,usuarios:[]});
+              if(u.searchParams.get('recurso')==='canje')return da({ok:true,rol:modo==='sin-admin'?'vista':'admin',boards:'*'});
+              if(u.searchParams.get('recurso')==='accesos-lista')return modo==='lista-falla'?route.abort('failed'):da({ok:true,usuarios:[]});
               return da({ok:false});
             }
             if(u.hostname==='unpkg.com'&&u.pathname==='/vis-network@9.1.6/standalone/umd/vis-network.min.js')return da(fs.readFileSync(VIS),'text/javascript');
@@ -61,7 +61,14 @@ async function run(){
           await page.goto(origen+'/accesos.html',{waitUntil:'domcontentloaded'});
           const sec=page.locator('#grafo-sistema'),caja=page.locator('#grafoControl'),marco=page.frameLocator('#grafoMarco'),lamina=marco.frameLocator('#marco');
           const cabe=()=>page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2);
-          if(modo==='sin-admin'){
+          if(modo==='lista-falla'){
+            // El Portero confirma admin pero la lista no llega (12-nov-2026: tardó más de 20 s): lo privado se borra y el grafo se queda.
+            await page.waitForFunction(()=>document.querySelector('#lista').textContent.includes('no contestó a tiempo'));
+            await sec.waitFor({state:'visible'});await sec.scrollIntoViewIfNeeded();
+            await caja.locator('.gc-ver b').first().filter({hasText:APROBADO}).waitFor();
+            assert.equal(await page.locator('#grafoMarco').getAttribute('src'),'grafo/index.html');await lamina.locator('canvas').first().waitFor();
+            assert.equal(await page.locator('#aBtn').isDisabled(),true);assert.equal(await page.locator('#aCorreo').isDisabled(),true);assert.equal(await page.locator('#aRetry').isDisabled(),false);
+          }else if(modo==='sin-admin'){
             await page.waitForFunction(()=>document.querySelector('#lista').textContent.includes('administrador'));
             assert.equal(await sec.isVisible(),false);assert.equal(await caja.textContent(),'');
             assert.ok(pedidos.every(p=>!p.url.includes('raw.githubusercontent.com')&&!p.url.includes('/grafo/')&&!p.url.includes('unpkg.com')),'sin admin no se pide nada del grafo');
@@ -116,7 +123,7 @@ async function run(){
           recorridos++;await ctx.close();
         }
       }finally{await browser.close();}
-      console.log(nombre+': aprobado, borrador con su pregunta, vista previa sin publicar, dejar en borrador, pedido de rehacer, registro y apagado sin sesión correctos');
+      console.log(nombre+': aprobado, borrador con su pregunta, vista previa sin publicar, dejar en borrador, pedido de rehacer, registro, apagado sin sesión y grafo visible aunque la lista no llegue correctos');
     }
   }finally{await new Promise(r=>server.close(r));}
   console.log('GRAFO_ACCESOS: '+recorridos+' recorridos; Portero, rama de datos y borrador exclusivamente sintéticos');
