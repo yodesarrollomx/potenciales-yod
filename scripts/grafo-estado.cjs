@@ -34,6 +34,17 @@ function crear({ fetchImpl = fetch, ahora = () => new Date().toISOString(), mapa
     return archivos.some(f => !propios.some(p => String(f.filename || '').startsWith(p)));
   }
 
+  /* Una chinche puede estar abierta en un repositorio y hablar de otro: la que se clava desde la pantalla lleva en el título
+     «📌 <repositorio>/<vista> · …» y el puente de la Sala las junta todas en el suyo. Si ese repositorio es del grafo, el error
+     se pinta ahí, que es donde pasó; si el título no nombra uno conocido, donde está abierta. */
+  function destinoChinche(titulo, repo) {
+    const m = /^\s*📌\s*([A-Za-z0-9._-]+)(?:\/[^\s·]*)?\s+·/u.exec(String(titulo || ''));
+    if (!m) return repo;
+    const nombre = m[1].toLowerCase(), dueno = repo.split('/')[0];
+    const iguales = Object.keys(mapa.repos).filter(k => k.split('/')[1].toLowerCase() === nombre);
+    return iguales.find(k => k.split('/')[0] === dueno) || iguales[0] || repo;
+  }
+
   async function leer() {
     const errores = [];
     for (const [repo, m] of Object.entries(mapa.repos)) {
@@ -55,7 +66,9 @@ function crear({ fetchImpl = fetch, ahora = () => new Date().toISOString(), mapa
         const etq = (i.labels || []).map(l => (l.name || '').toLowerCase());
         if (!etq.some(e => e.startsWith('chinche')) && !/^\s*(📌|chinche)/i.test(i.title || '')) continue;
         if (/^📌 Grafo:/.test(i.title)) continue;
-        errores.push({ clave: `chinche:${repo}#${i.number}`, tipo: 'chinche', nodos: m.nodos, desde: i.created_at, url: i.html_url, msg: `Chinche #${i.number} en ${repo.split('/')[1]}: ${String(i.title).slice(0, 110)}` });
+        const de = destinoChinche(i.title, repo);
+        errores.push({ clave: `chinche:${repo}#${i.number}`, tipo: 'chinche', nodos: mapa.repos[de].nodos, desde: i.created_at, url: i.html_url,
+          msg: `Chinche #${i.number} en ${repo.split('/')[1]}${de === repo ? '' : ` (sobre ${de.split('/')[1]})`}: ${String(i.title).slice(0, 110)}` });
       }
       // 3 · el repositorio cambió desde que se armó el grafo
       const c = await suave(() => gh(`/repos/${repo}/commits?per_page=1`), []);

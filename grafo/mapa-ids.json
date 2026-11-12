@@ -4,8 +4,7 @@
    "nodos": [
     "repo:yodesarrollomx/yod-portal",
     "SYS-CONTROL",
-    "SYS-YOD-OS",
-    "N-PUERTAS"
+    "SYS-YOD-OS"
    ],
    "commit": "ed19f0baeb",
    "flujos": {
@@ -51,8 +50,7 @@
   "yodesarrollomx/yod-despacho": {
    "nodos": [
     "repo:yodesarrollomx/yod-despacho",
-    "SYS-DESPACHO",
-    "SYS-DESPACHO-3D"
+    "SYS-DESPACHO"
    ],
    "commit": "d89b15114f",
    "flujos": {
@@ -83,9 +81,7 @@
   "yodesarrollomx/real-miramar-board": {
    "nodos": [
     "repo:yodesarrollomx/real-miramar-board",
-    "SYS-TRACK",
-    "SYS-MIRAMAR",
-    "SYS-CODES-PORTAL"
+    "SYS-MIRAMAR"
    ],
    "commit": "9db34a902f",
    "flujos": {
@@ -95,9 +91,7 @@
   "yodesarrollomx/interiores-aurum": {
    "nodos": [
     "repo:yodesarrollomx/interiores-aurum",
-    "SYS-INTERIORES",
-    "SYS-CROKISS",
-    "SYS-AURUM-EXPERIENCIA"
+    "SYS-INTERIORES"
    ],
    "commit": "8bcdfc35b9",
    "flujos": {
@@ -107,9 +101,7 @@
   "yodesarrollomx/aurum-board": {
    "nodos": [
     "repo:yodesarrollomx/aurum-board",
-    "SYS-MARKETING",
-    "SYS-PLAN-POTENCIAL",
-    "SYS-SALA"
+    "SYS-MARKETING"
    ],
    "commit": "e3dd428a01",
    "flujos": {
@@ -125,8 +117,6 @@
   "yodesarrollomx/sala-edicion": {
    "nodos": [
     "repo:yodesarrollomx/sala-edicion",
-    "SYS-MARKETING",
-    "SYS-PLAN-POTENCIAL",
     "SYS-SALA"
    ],
    "commit": "07a7076de1",
@@ -184,9 +174,7 @@
   "yodesarrollomx/plan-potencial": {
    "nodos": [
     "repo:yodesarrollomx/plan-potencial",
-    "SYS-MARKETING",
-    "SYS-PLAN-POTENCIAL",
-    "SYS-SALA"
+    "SYS-PLAN-POTENCIAL"
    ],
    "commit": "9f036c7251",
    "flujos": {
@@ -196,9 +184,7 @@
   "yodesarrollomx/crokiss": {
    "nodos": [
     "repo:yodesarrollomx/crokiss",
-    "SYS-INTERIORES",
-    "SYS-CROKISS",
-    "SYS-AURUM-EXPERIENCIA"
+    "SYS-CROKISS"
    ],
    "commit": "7a7a5572d1",
    "flujos": {
@@ -208,8 +194,6 @@
   "yodesarrollomx/Co-desarrolladores-Yod": {
    "nodos": [
     "repo:yodesarrollomx/Co-desarrolladores-Yod",
-    "SYS-TRACK",
-    "SYS-MIRAMAR",
     "SYS-CODES-PORTAL"
    ],
    "commit": "bdaf46b447",
@@ -220,9 +204,7 @@
   "yodesarrollomx/alquimia-urbana": {
    "nodos": [
     "repo:yodesarrollomx/alquimia-urbana",
-    "SYS-TRACK",
-    "SYS-MIRAMAR",
-    "SYS-CODES-PORTAL"
+    "SYS-ALQUIMIA"
    ],
    "commit": "0c0da90783",
    "flujos": {
@@ -232,8 +214,6 @@
   "yodesarrollomx/aurum-experiencia": {
    "nodos": [
     "repo:yodesarrollomx/aurum-experiencia",
-    "SYS-INTERIORES",
-    "SYS-CROKISS",
     "SYS-AURUM-EXPERIENCIA"
    ],
    "commit": "70c63b3309",
@@ -244,9 +224,7 @@
   "yodesarrollomx/pintarron": {
    "nodos": [
     "repo:yodesarrollomx/pintarron",
-    "SYS-EMD",
-    "SYS-PINTARRON",
-    "SYS-PRUEBA-DOMINIO"
+    "SYS-PINTARRON"
    ],
    "commit": "0979d3f7f5",
    "flujos": {
@@ -256,8 +234,6 @@
   "yodesarrollomx/prueba-dominio": {
    "nodos": [
     "repo:yodesarrollomx/prueba-dominio",
-    "SYS-EMD",
-    "SYS-PINTARRON",
     "SYS-PRUEBA-DOMINIO"
    ],
    "commit": "715c6c7c58",
@@ -265,10 +241,7 @@
   },
   "yodesarrollomx/yodesarrollomx.github.io": {
    "nodos": [
-    "repo:yodesarrollomx/yodesarrollomx.github.io",
-    "SYS-CONTROL",
-    "SYS-YOD-OS",
-    "N-PUERTAS"
+    "repo:yodesarrollomx/yodesarrollomx.github.io"
    ],
    "commit": "a5680f2cf2",
    "flujos": {
@@ -287,9 +260,7 @@
   "yodesarrollo/amalaya-board": {
    "nodos": [
     "repo:yodesarrollo/amalaya-board",
-    "SYS-EMD",
-    "SYS-PINTARRON",
-    "SYS-PRUEBA-DOMINIO"
+    "SYS-AMALAYA"
    ],
    "commit": "e3f94e67ea",
    "flujos": {
@@ -300,20 +271,14 @@
   },
   "aurumarquitectos/experiencia": {
    "nodos": [
-    "repo:aurumarquitectos/experiencia",
-    "SYS-INTERIORES",
-    "SYS-CROKISS",
-    "SYS-AURUM-EXPERIENCIA"
+    "repo:aurumarquitectos/experiencia"
    ],
    "commit": "89d29e8fe2",
    "flujos": {}
   },
   "aurumarquitectos/aurumarquitectos.github.io": {
    "nodos": [
-    "repo:aurumarquitectos/aurumarquitectos.github.io",
-    "SYS-INTERIORES",
-    "SYS-CROKISS",
-    "SYS-AURUM-EXPERIENCIA"
+    "repo:aurumarquitectos/aurumarquitectos.github.io"
    ],
    "commit": "d33f765349",
    "flujos": {
@@ -322,30 +287,21 @@
   },
   "alexpueblag/codesarrolladores-libre": {
    "nodos": [
-    "repo:alexpueblag/codesarrolladores-libre",
-    "SYS-TRACK",
-    "SYS-MIRAMAR",
-    "SYS-CODES-PORTAL"
+    "repo:alexpueblag/codesarrolladores-libre"
    ],
    "commit": "96d26c5e30",
    "flujos": {}
   },
   "alexpueblag/yod-terreno-si": {
    "nodos": [
-    "repo:alexpueblag/yod-terreno-si",
-    "SYS-MARKETING",
-    "SYS-PLAN-POTENCIAL",
-    "SYS-SALA"
+    "repo:alexpueblag/yod-terreno-si"
    ],
    "commit": "09f75f40f0",
    "flujos": {}
   },
   "alexpueblag/yod-terreno-dormido": {
    "nodos": [
-    "repo:alexpueblag/yod-terreno-dormido",
-    "SYS-MARKETING",
-    "SYS-PLAN-POTENCIAL",
-    "SYS-SALA"
+    "repo:alexpueblag/yod-terreno-dormido"
    ],
    "commit": "1159ca5e6c",
    "flujos": {}

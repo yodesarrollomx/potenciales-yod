@@ -281,5 +281,33 @@ class Versiones(unittest.TestCase):
         self.assertGreater(len(os.listdir(a)), 80)
 
 
+class DondeSeMarcaElError(unittest.TestCase):
+    """El vigilante pinta cada error en el repositorio donde pasó y en los tableros que viven en él; nunca en sus vecinos de fila
+    (antes tomaba los tres primeros tableros de la fila y un error de un repositorio aparecía en tableros ajenos)."""
+
+    def test_cada_repositorio_apunta_solo_a_los_tableros_que_viven_en_el(self):
+        a = tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, a, True)
+        corre(MOTOR, 'laminas.py', a)
+        M = jl(os.path.join(a, 'mapa-ids.json'))['repos']; B = jl(os.path.join(MOTOR, 'datos', 'base.json')); R = jl(os.path.join(MOTOR, 'datos', 'reglas.json'))
+        es_tablero = lambda i: B['nodos'].get(i, {}).get('capa') == 'sistema'
+        vive = {(f['s'], f['t']) for f in B['flechas'] if f['r'] == 'vive en' and es_tablero(f['s'])}
+        self.assertGreater(len(M), 20); self.assertGreater(len(vive), 15)
+        con_tablero = 0
+        for nombre, m in M.items():
+            rn, sis = m['nodos'][0], m['nodos'][1:]
+            self.assertEqual(rn, 'repo:' + nombre)
+            for s in sis: self.assertIn((s, rn), vive, f'{s} no vive en {nombre}')
+            todos = {s for s, t in vive if t == rn}
+            fila = R['repo_area'].get(nombre.split('/')[1])
+            propios = {s for s in todos if R['sis_area'].get(s) == fila}
+            self.assertEqual(set(sis), propios or todos, nombre)
+            self.assertEqual(len(sis), len(set(sis)), nombre)
+            con_tablero += bool(sis)
+        self.assertGreater(con_tablero, 12, 'casi todos los repositorios del grafo alojan un tablero')
+        # ningún tablero queda señalado por un repositorio en el que no vive
+        for s in {x for m in M.values() for x in m['nodos'][1:]}:
+            self.assertEqual({n for n, m in M.items() if s in m['nodos'][1:]}, {t[5:] for x, t in vive if x == s} & set(M), s)
+
+
 if __name__ == '__main__':
     unittest.main()

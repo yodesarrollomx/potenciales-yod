@@ -31,6 +31,23 @@ test('sólo cuenta el último intento de cada flujo', async () => {
   assert.equal((await E.leer()).filter(x => x.tipo === 'flujo').length, 0);
 });
 
+test('una chinche se pinta en el repositorio que nombra su título, no sólo en el que está abierta', async () => {
+  const E = crear({ mapa, fetchImpl: api({ '/repos/yodesarrollomx/potenciales-yod/issues': [
+    { number: 11, title: '📌 yod-portal/os · el menú no abre', labels: [], created_at: '2026-11-10T00:00:00Z', html_url: 'u11' },
+    { number: 12, title: '📌 YOD-PORTAL/tablero.html · se encima', labels: [], created_at: '2026-11-10T00:00:00Z', html_url: 'u12' },
+    { number: 13, title: '📌 amalaya · board · no me gustó', labels: [], created_at: '2026-11-10T00:00:00Z', html_url: 'u13' },
+    { number: 14, title: '📌 potenciales-yod/mixto.html · falta un dato', labels: [], created_at: '2026-11-10T00:00:00Z', html_url: 'u14' },
+    { number: 15, title: '📌 El plan no guarda', labels: [], created_at: '2026-11-10T00:00:00Z', html_url: 'u15' }] }) });
+  const e = Object.fromEntries((await E.leer()).filter(x => x.tipo === 'chinche').map(x => [x.clave.split('#')[1], x]));
+  const portal = mapa.repos['yodesarrollomx/yod-portal'].nodos, ppp = mapa.repos['yodesarrollomx/potenciales-yod'].nodos;
+  assert.deepEqual(e[11].nodos, portal); assert.match(e[11].msg, /^Chinche #11 en potenciales-yod \(sobre yod-portal\): /);
+  assert.deepEqual(e[12].nodos, portal, 'sin importar mayúsculas');
+  assert.deepEqual(e[13].nodos, ppp, 'un nombre que no es repositorio del grafo se queda donde está abierta'); assert.match(e[13].msg, /^Chinche #13 en potenciales-yod: /);
+  assert.deepEqual(e[14].nodos, ppp); assert.doesNotMatch(e[14].msg, /sobre/);
+  assert.deepEqual(e[15].nodos, ppp, 'sin la forma repositorio/vista se queda donde está abierta');
+  assert.equal(e[11].clave, 'chinche:yodesarrollomx/potenciales-yod#11', 'la clave sigue siendo la del repositorio donde está abierta');
+});
+
 test('las chinches abiertas cuentan; las que abrió el propio grafo y los PR no', async () => {
   const E = crear({ mapa, fetchImpl: api({ '/repos/yodesarrollomx/yod-portal/issues': [
     { number: 5, title: '📌 El menú se encima', labels: [], created_at: '2026-11-10T00:00:00Z', html_url: 'u5' },

@@ -17,7 +17,9 @@ Este repositorio es público: aunque la sección sólo se enseña al admin, los 
 - los identificadores y los nombres de pestañas de las hojas de la operación (sin filas ni valores);
 - el plan propuesto por tablero: pantallas, zonas, mejoras y hallazgos.
 
-Nunca debe traer, y una prueba lo vigila (`LoPublicado` en `grafo-motor/pruebas/`): repositorios privados, clientes externos, hallazgos de seguridad, nombres de personas, folios o nombres de tratos, correos, claves ni identificadores completos de `/exec` (van abreviados).
+Nunca debe traer, y una prueba lo vigila (`LoPublicado` en `grafo-motor/pruebas/`): repositorios privados ni repositorios de clientes externos, hallazgos de seguridad, nombres de personas, folios o nombres de tratos, correos, claves ni identificadores completos de `/exec` (van abreviados).
+
+Una precisión, comprobada el 12-nov-2026: el grafo **sí refleja** el sistema de evaluación de personas, que es de otro cliente. Su repositorio es privado y no está en el grafo, pero el atlas y `yod-portal` (los dos públicos) ya publican su descripción saneada —contratos, procesos y la página que lo envuelve, sin nombres ni datos— y el grafo la trae tal cual, en la fila «Fuera del menú». Dejarla o quitarla del grafo es decisión de Dirección; mientras no la tome, se queda como está.
 
 `refrescar.py` sólo agrega lo que lee de repositorios públicos y del atlas. Para quitar algo del grafo publicado se edita `grafo-motor/datos/base.json` y se regeneran las láminas.
 
@@ -58,6 +60,8 @@ La rama principal está protegida (comprobación obligatoria «Arquitectura YOD�
 
 Si el repositorio no permite que un flujo abra PR, el flujo deja la rama y una liga: en esa página se toca «Create pull request» y el trabajo «borrador-abierto» le pone título, explicación y aviso. Son dos toques para aprobar en lugar de uno.
 
+Comprobado en vivo el 12-nov-2026: **hoy este repositorio no lo permite**, así que aprobar son esos dos toques. Para que el PR se abra solo y aprobar sea un toque, Dirección puede activar en GitHub: Settings → Actions → General → Workflow permissions → «Allow GitHub Actions to create and approve pull requests».
+
 Si otros cambios entran a la rama principal mientras el borrador espera, puede quedar atrás. Accesos lo avisa; se arregla con «Rehacer otra vez».
 
 ## Claves de IA
@@ -79,6 +83,8 @@ Si otros cambios entran a la rama principal mientras el borrador espera, puede q
 - páginas que responden con error.
 
 Lo pinta en el grafo, lo anota en el registro y abre una chinche (`📌 Grafo: …`) por cada flujo o página que falla, para que la ronda diaria de chinches lo atienda. También pone al día el aviso de borrador con lo que de verdad hay en GitHub.
+
+Dónde se pinta cada error: en el repositorio donde pasó y en los tableros que **viven** en ese repositorio según el atlas (`grafo/mapa-ids.json`, que genera `laminas.py`). Si en un repositorio viven tableros de varias filas del mapa —la cabina aloja varios—, sólo en los de su propia fila. Una chinche se pinta en el repositorio donde está abierta, aunque hable de otro tablero.
 
 ## Rama de datos `grafo-datos`
 
@@ -106,6 +112,14 @@ Para regenerar las láminas después de cambiar el motor: `python3 grafo-motor/r
 
 Revertir el merge, desactivar los dos flujos y borrar las ramas `grafo-datos` y `grafo-borrador`. No hay backend, hojas ni datos de negocio.
 
-## Pendiente de comprobar en producción
+## Comprobado en producción (12-nov-2026)
 
-Hasta fusionar el PR no existen ni los flujos ni la rama de datos. Falta ver, ya en vivo: pedido → flujo → borrador; primera corrida de «Grafo · estado»; publicación de Pages; y si el repositorio deja que un flujo abra PR.
+Después de fusionar, con hechos:
+
+- **Publicación.** Pages publicó `accesos.html` y `portero.js` byte a byte con el commit de la rama principal (lo comprueba «Verificar acceso PPP»).
+- **Vigilancia.** La primera corrida de «Grafo · estado» creó la rama `grafo-datos` con su estado y su registro.
+- **Rehacer a pedido.** Un pedido real (issue «🕸️ Rehacer grafo») rehízo el grafo en menos de dos minutos, dejó el borrador en `grafo-borrador`, contestó y cerró el pedido y escribió el aviso. Sin claves de IA: dice «no hay clave» y sigue.
+- **PR del borrador.** El repositorio no deja que el flujo lo abra (ver arriba): quedó la liga. Al abrirlo a mano, «borrador-abierto» le puso título y explicación y el aviso tomó su número; «Arquitectura YOD» pasó en él.
+- **Descartar.** Al cerrar el PR sin fusionar se anotó «borrador descartado», se quitó el aviso y se borró la rama.
+
+Falta ver en vivo: **aprobar** un borrador (fusionar su PR) y la sección del grafo con una sesión real de administrador en el navegador. El aviso de borrador que leen las páginas tarda unos minutos en ponerse al día porque `raw.githubusercontent.com` guarda copia.
