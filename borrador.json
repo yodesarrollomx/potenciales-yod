@@ -1,1 +1,21 @@
-{}
+{
+ "id": "G-20261112-1351",
+ "fecha": "12-nov 13:51",
+ "creado": "2026-11-12T13:53:51-07:00",
+ "pr": 80,
+ "liga": "https://github.com/yodesarrollomx/potenciales-yod/pull/80",
+ "rama": "grafo-borrador",
+ "antes": "G-20261112-1203",
+ "piezas": 3167,
+ "ligas": 10529,
+ "titulo": "Nace PPP2 con servicio externo de IA y llega EMD al portal; hay dos conexiones por revisar",
+ "resumen": "El grafo pasó de aprobado a rehecho con 23 piezas modificadas, 51 ligas nuevas y 1 eliminada. El grueso es PPP2, un sistema nuevo con su página, su libro, su script de servidor, su hoja de datos y 6 pruebas. También aparece un servicio externo de Anthropic. En el portal se añadió el módulo EMD con documentación y código propios, y se tocaron las reglas de acceso. No desaparece ninguna pieza ni ningún campo de las presentaciones. Dos llamadas a scripts de servidor (una de PPP2 y una de EMD) apuntan a destinos que el grafo no conoce.",
+ "recomendacion": "revisar",
+ "ia": "claude:claude-sonnet-5-5",
+ "audiencias": [
+  "Cliente o inversionista",
+  "Dueño del terreno",
+  "Departamentos, lotes o casas"
+ ],
+ "sin_campo": []
+}
