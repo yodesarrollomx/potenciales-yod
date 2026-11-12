@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-12T16:03:06.442Z",
+ "generado": "2026-11-12T17:25:48.136Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -10,6 +10,16 @@
    "desde": "2026-11-12T07:08:57Z",
    "url": "https://github.com/yodesarrollomx/yod-portal/commit/f34255b676ae85f6d39623bc76fa83ab7d6d4046",
    "msg": "yod-portal cambió después de armar el grafo (2026-11-11); se refleja al rehacerlo"
+  },
+  {
+   "clave": "cambio:yodesarrollomx/potenciales-yod",
+   "tipo": "cambio",
+   "nodos": [
+    "repo:yodesarrollomx/potenciales-yod"
+   ],
+   "desde": "2026-11-12T17:24:17Z",
+   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/d07e75d86a2f32b83d5b7c862aa5e7958d6c7ac2",
+   "msg": "potenciales-yod cambió después de armar el grafo (2026-11-11); se refleja al rehacerlo"
   },
   {
    "clave": "cambio:yodesarrollomx/yodesarrollo-board",
@@ -25,62 +35,66 @@
    "clave": "chinche:yodesarrollomx/sala-edicion#294",
    "tipo": "chinche",
    "nodos": [
-    "repo:yodesarrollomx/sala-edicion",
-    "SYS-MARKETING",
-    "SYS-PLAN-POTENCIAL",
-    "SYS-SALA"
+    "repo:yodesarrollomx/yod-portal",
+    "SYS-CONTROL",
+    "SYS-YOD-OS"
    ],
    "desde": "2026-10-12T21:41:20Z",
    "url": "https://github.com/yodesarrollomx/sala-edicion/issues/294",
-   "msg": "Chinche #294 en sala-edicion: 📌 yod-portal/os · No se puede conectar nunca este y tampoco interpretarlo con la voz y d"
+   "msg": "Chinche #294 en sala-edicion (sobre yod-portal): 📌 yod-portal/os · No se puede conectar nunca este y tampoco interpretarlo con la voz y d"
   },
   {
    "clave": "chinche:yodesarrollomx/sala-edicion#292",
    "tipo": "chinche",
    "nodos": [
-    "repo:yodesarrollomx/sala-edicion",
-    "SYS-MARKETING",
-    "SYS-PLAN-POTENCIAL",
-    "SYS-SALA"
+    "repo:yodesarrollomx/yod-portal",
+    "SYS-CONTROL",
+    "SYS-YOD-OS"
    ],
    "desde": "2026-10-12T21:41:08Z",
    "url": "https://github.com/yodesarrollomx/sala-edicion/issues/292",
-   "msg": "Chinche #292 en sala-edicion: 📌 yod-portal/os · O es su sesión como que no se veEs que está bien ese estado sin trabaj"
+   "msg": "Chinche #292 en sala-edicion (sobre yod-portal): 📌 yod-portal/os · O es su sesión como que no se veEs que está bien ese estado sin trabaj"
   },
   {
    "clave": "chinche:yodesarrollomx/sala-edicion#291",
    "tipo": "chinche",
    "nodos": [
-    "repo:yodesarrollomx/sala-edicion",
-    "SYS-MARKETING",
-    "SYS-PLAN-POTENCIAL",
-    "SYS-SALA"
+    "repo:yodesarrollomx/yod-portal",
+    "SYS-CONTROL",
+    "SYS-YOD-OS"
    ],
    "desde": "2026-10-12T21:41:04Z",
    "url": "https://github.com/yodesarrollomx/sala-edicion/issues/291",
-   "msg": "Chinche #291 en sala-edicion: 📌 yod-portal/os · Y ahí en reunión más que nada sonDocumentos terminados procesados me e"
+   "msg": "Chinche #291 en sala-edicion (sobre yod-portal): 📌 yod-portal/os · Y ahí en reunión más que nada sonDocumentos terminados procesados me e"
   },
   {
    "clave": "chinche:yodesarrollomx/sala-edicion#249",
    "tipo": "chinche",
    "nodos": [
-    "repo:yodesarrollomx/sala-edicion",
-    "SYS-MARKETING",
-    "SYS-PLAN-POTENCIAL",
-    "SYS-SALA"
+    "repo:yodesarrollomx/yod-portal",
+    "SYS-CONTROL",
+    "SYS-YOD-OS"
    ],
    "desde": "2026-10-10T07:45:52Z",
    "url": "https://github.com/yodesarrollomx/sala-edicion/issues/249",
-   "msg": "Chinche #249 en sala-edicion: 📌 yod-portal/os · no me deja enviar a una que aunque estaba ahorita hablando con vos y t"
+   "msg": "Chinche #249 en sala-edicion (sobre yod-portal): 📌 yod-portal/os · no me deja enviar a una que aunque estaba ahorita hablando con vos y t"
+  },
+  {
+   "clave": "cambio:yodesarrollomx/sala-edicion",
+   "tipo": "cambio",
+   "nodos": [
+    "repo:yodesarrollomx/sala-edicion"
+   ],
+   "desde": "2026-11-12T16:34:37Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/commit/55cfff2e280dd0f19650e33c034e91fae512a010",
+   "msg": "sala-edicion cambió después de armar el grafo (2026-11-11); se refleja al rehacerlo"
   },
   {
    "clave": "chinche:yodesarrollo/amalaya-board#87",
    "tipo": "chinche",
    "nodos": [
     "repo:yodesarrollo/amalaya-board",
-    "SYS-EMD",
-    "SYS-PINTARRON",
-    "SYS-PRUEBA-DOMINIO"
+    "SYS-AMALAYA"
    ],
    "desde": "2026-10-09T02:23:17Z",
    "url": "https://github.com/yodesarrollo/amalaya-board/issues/87",
@@ -91,9 +105,7 @@
    "tipo": "chinche",
    "nodos": [
     "repo:yodesarrollo/amalaya-board",
-    "SYS-EMD",
-    "SYS-PINTARRON",
-    "SYS-PRUEBA-DOMINIO"
+    "SYS-AMALAYA"
    ],
    "desde": "2026-10-07T22:10:23Z",
    "url": "https://github.com/yodesarrollo/amalaya-board/issues/78",
