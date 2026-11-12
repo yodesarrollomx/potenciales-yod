@@ -10,7 +10,7 @@ const compute=values=>JSON.parse(JSON.stringify(ctx.computar(values)));
 const copy=o=>JSON.parse(JSON.stringify(o));
 function draft(){return {inputs:copy(inputs),caso:{caso_id:'synthetic-case',nombre_caso:'Torre de prueba',palabra:'ensayo',version:1,estado:'ANÁLISIS'},escenarios:[{id:'test-base',nombre:'Base de prueba',esBase:true,inputs:copy(inputs)}],escActivo:'test-base',savedInputs:copy(inputs)};}
 function native(){const d=draft();return {ok:true,caso_id:d.caso.caso_id,revision:'revision-synthetic-1',activo:d.escActivo,escenarios:d.escenarios,estados:{[d.escActivo]:compute(inputs)},etapas:[],mercado:[],comparables:[],actualizado:'2026-10-01T00:00:00Z',libro_url:'https://docs.google.com/spreadsheets/d/synthetic-only'};}
-const mime=p=>p.endsWith('.css')?'text/css':p.endsWith('.js')?'text/javascript':p.endsWith('.png')?'image/png':p.endsWith('.svg')?'image/svg+xml':'text/html; charset=utf-8';
+const mime=p=>p.endsWith('.css')?'text/css':p.endsWith('.js')?'text/javascript':p.endsWith('.png')?'image/png':p.endsWith('.svg')?'image/svg+xml':p.endsWith('.woff2')?'font/woff2':'text/html; charset=utf-8';
 async function install(context,opts={}){
  const atlas=process.env.YOD_ATLAS_DIR||path.resolve(root,'../yod-atlas');
  const transport={posts:[],gets:[],conflict:false,listError:opts.listError,caseError:opts.caseError,caseDelay:opts.caseDelay||0,native:opts.native,model:opts.model||native()};

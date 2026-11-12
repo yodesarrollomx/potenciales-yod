@@ -33,6 +33,7 @@ Dos cosas en un mismo repo:
 - `index.html` — portal con mapa; redirige los `?open=ID` viejos al board que toca (líneas 12-14).
 - `mapa.html`, `macrolotes.html`, `mixto.html`, `unifamiliar.html`, `residencial.html`,
   `patrimonial.html` — los motores. Todos cierran con `<script src="portero.js?v=…">` (el `?v=` lo fija `versiones.json`).
+- `ppp-cadena.js` + `ppp-cadena.css` (+ `fonts/`) — el **diagrama en cadena** que va arriba de cada Plan de Potencial (hoy sólo en `mixto.html`): Se vende → Entra y sale → En el banco y prestado → Lo que queda. Sólo presentación: recibe el estado ya confirmado al final de `render()`, no calcula, no usa red ni almacenamiento; sus botones son las versiones del caso. Para instalarlo en otro motor se agrega un adaptador; contrato en `docs/ppp-cadena.md` (`CHG-PPP-CADENA-20261111`).
 - `gas/Code.gs` — el backend. **NO está en el repo público** (`.gitignore` excluye `gas/`).
 - `gas/parches/2026-09-02-canje-cache.gs` — el parche de caché del canje, ya integrado en Code.gs.
 - `.claude/launch.json` — server local `potenciales`, puerto 8765.
