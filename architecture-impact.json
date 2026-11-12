@@ -1,7 +1,7 @@
 {
   "model_revision": "2026-11-11.grafo-accesos.3",
-  "proposal_id": "CHG-GRAFO-DEC19-20261112",
-  "summary": "DEC-19 (Dirección, 12-nov-2026): el grafo de YOD OS deja de reflejar el sistema de evaluación de personas de un cliente externo. Nueva regla «excluir» en grafo-motor/datos/reglas.json (patrones de id, componente y ruta) que refrescar.py aplica al final de cada refresco, después del atlas y de los repositorios. La base publicada no cambia en este PR: la limpia el siguiente «Rehacer grafo» (pedido tras fusionar), cuyo borrador aprueba Dirección. Sin código de producto, backend, hojas ni permisos.",
+  "proposal_id": "CHG-GRAFO-ACCESOS-20261111",
+  "summary": "Dentro de la propuesta del grafo en Accesos. DEC-19 (Dirección, 12-nov-2026): el grafo de YOD OS deja de reflejar el sistema de evaluación de personas de un cliente externo. Nueva regla «excluir» en grafo-motor/datos/reglas.json (patrones de id, componente y ruta) que refrescar.py aplica al final de cada refresco, después del atlas y de los repositorios. La base publicada no cambia en este PR: la limpia el siguiente «Rehacer grafo» (pedido tras fusionar), cuyo borrador aprueba Dirección. Sin código de producto, backend, hojas ni permisos.",
   "components": [
     "SYS-POTENCIALES"
   ],
