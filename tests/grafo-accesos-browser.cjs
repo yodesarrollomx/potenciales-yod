@@ -76,10 +76,13 @@ async function run(){
             assert.ok(crudos().some(u=>u.includes('/grafo-borrador/grafo/mapa.html')),'la lámina del borrador se trae de su rama');
             assert.ok(crudos().every(u=>u.startsWith('https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/grafo-borrador/grafo/')),'nada fuera de grafo/ del borrador');
             assert.equal(await page.evaluate(()=>localStorage.getItem('pyod_clave_v1')),'synthetic-session-never-real');
+            await page.evaluate(()=>{document.cookie='qa_galleta=sintetica; path=/';});assert.match(await page.evaluate(()=>document.cookie),/qa_galleta=sintetica/);
             const lam=await (await page.locator('#marco').elementHandle()).contentFrame();
             const intento=await lam.evaluate(()=>{const n=f=>{try{f();return 'leyó';}catch(e){return e.name;}};
-              return {origen:self.origin,propio:n(()=>localStorage.getItem('pyod_clave_v1')),sesion:n(()=>sessionStorage.length),galleta:n(()=>document.cookie),padre:n(()=>parent.localStorage.getItem('pyod_clave_v1'))};});
-            assert.deepEqual(intento,{origen:'null',propio:'SecurityError',sesion:'SecurityError',galleta:'SecurityError',padre:'SecurityError'});
+              // Chromium niega la galleta con SecurityError; WebKit la deja vacía. Cualquiera de las dos: no alcanza la de la página.
+              let galleta;try{galleta=document.cookie.includes('qa_galleta')?'leyó':'sin galleta';}catch(e){galleta='sin galleta';}
+              return {origen:self.origin,propio:n(()=>localStorage.getItem('pyod_clave_v1')),sesion:n(()=>sessionStorage.length),galleta,padre:n(()=>parent.localStorage.getItem('pyod_clave_v1'))};});
+            assert.deepEqual(intento,{origen:'null',propio:'SecurityError',sesion:'SecurityError',galleta:'sin galleta',padre:'SecurityError'});
             // …y sigue funcionando: la lámina pide a la portada ir a otra (postMessage) y la portada la trae del borrador.
             await lam.evaluate(()=>parent.postMessage({yod:2,ir:'tablero-ppp',nodo:''},'*'));
             await page.waitForFunction(()=>document.querySelector('#sel').value==='tablero-ppp');await page.frameLocator('#marco').locator('canvas').first().waitFor();
