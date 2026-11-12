@@ -1,20 +1,16 @@
 {
   "model_revision": "2026-11-11.grafo-accesos.3",
   "proposal_id": "CHG-GRAFO-ACCESOS-20261111",
-  "summary": "accesos.html agrega al final la sección «Grafo del sistema» (sólo admin) con sus controles. El motor del grafo vive en grafo-motor/ (base pública, generador determinista de láminas, refresco desde los repositorios públicos y el atlas). «Rehacer grafo» abre un pedido; el flujo «Grafo · rehacer» comprueba el permiso de quien lo pide, rehace, pide a OpenAI y a Claude a la vez la explicación del cambio (sólo si hay claves como secretos del flujo) y deja el resultado como borrador en la rama grafo-borrador con su PR: fusionarlo es aprobar. «Grafo · estado» revisa cada hora flujos, chinches, cambios y páginas (sólo lectura), escribe en la rama de datos grafo-datos y abre una chinche por cada falla. El grafo publicado es la versión completa que eligió Dirección (identificadores y pestañas de hojas y el plan propuesto); nunca lleva repositorios privados, clientes externos, hallazgos de seguridad, nombres de personas ni de tratos, correos, claves ni identificadores completos de /exec. Cada grafo aprobado publica el contrato del plan y las recetas por audiencia que leen las presentaciones. Sin cambios en portero.js, backend, hojas ni permisos; ningún flujo escribe en la rama principal.",
+  "summary": "Sólo pruebas. La prueba de navegador del grafo en Accesos (tests/grafo-accesos-browser.cjs) sembraba la sesión sintética en cada documento del contexto, también en los marcos: al apagarse el grafo su marco se vacía y pasa por about:blank, el guion de la prueba devolvía la llave recién quitada y la página se volvía a encender sola, así que el paso «sin sesión todo se apaga» fallaba a ratos (falló una vez en la rama principal tras fusionar el PR 61 y pasó al repetir el trabajo). Ahora la sesión se siembra una sola vez y sólo en la página, y la prueba comprueba además que el grafo se queda apagado. La página se comportaba bien: se apagaba en unas décimas de segundo; nada de esto pasa fuera de la prueba. No cambia accesos.html, el motor del grafo, los flujos ni nada publicado.",
   "components": [
     "SYS-POTENCIALES",
     "SYS-CONTROL"
   ],
   "tests": [
-    "python -m unittest discover -s grafo-motor/pruebas -p 'prueba_*.py' (recetas contra el contrato del plan, carrera de las dos IA con servidores locales, refresco sobre un repositorio sintético, versiones, registro de impacto del borrador, avisos con y sin PR, láminas deterministas).",
-    "Prueba «LoPublicado» del motor: la base publicada no trae correos, claves, folios de tratos, repositorios privados, hallazgos de seguridad ni identificadores completos de /exec.",
-    "node --test tests/grafo-estado.test.cjs tests/grafo-control.test.cjs (vigilante con API de mentira, puesta al día del aviso de borrador, controles pintados y escapados, sin claves).",
-    "node --test tests/access-gates.cjs tests/accesos-admin-session.test.cjs; node scripts/versiones.cjs --check; git diff --check.",
-    "Rama de datos con dos flujos escribiendo a la vez contra un remoto local: se conservan las líneas de ambos.",
-    "Borrador simulado contra un remoto local: verificar-impacto del atlas fijado lo da por válido y sus láminas son las que genera su base.",
-    "node tests/grafo-accesos-browser.cjs (en «Verificar acceso PPP»): Accesos con sesión de admin sintética en 1280 y 390 px, con y sin borrador, vista previa sin publicar, pedido de rehacer y apagado sin sesión; sin escrituras ni errores de JavaScript.",
-    "Trabajo «ensayo» de «Grafo · rehacer» en este PR. Pendiente de comprobar en producción tras fusionar: pedido → flujo → borrador, primera corrida de «Grafo · estado» y publicación de Pages."
+    "node tests/grafo-accesos-browser.cjs: 10 corridas seguidas correctas en local (antes fallaba alrededor de una de cada tres). En «Verificar acceso PPP» corre con Chromium y WebKit reales.",
+    "Contraprueba: con la siembra anterior y las comprobaciones nuevas la prueba falla siempre (4 de 4), así que ahora sí detecta el problema.",
+    "tests/salud-accesos-browser.cjs revisada: ahí el marco del grafo no llega a cargarse y no le afecta (8 corridas correctas, sin cambios).",
+    "Comprobado en producción tras fusionar el PR 61 (12-nov-2026): Pages publicó accesos.html y portero.js byte a byte con el commit 60774eb y «Grafo · estado» creó la rama grafo-datos con su primer estado."
   ],
-  "rollback": "Revertir el merge, desactivar los flujos «Grafo · rehacer» y «Grafo · estado» y borrar las ramas grafo-datos y grafo-borrador. grafo/ y grafo-motor/ son archivos estáticos sin efecto en el Portero."
+  "rollback": "Revertir este commit: sólo regresa la prueba a como estaba."
 }

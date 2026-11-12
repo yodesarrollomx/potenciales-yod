@@ -24,7 +24,13 @@ async function run(){
       try{
         for(const modo of ['admin','sin-admin']){
           const ctx=await browser.newContext({viewport});ctx.setDefaultTimeout(20000);
-          await ctx.addInitScript(()=>{localStorage.setItem('pyod_clave_v1','synthetic-session-never-real');window.__abiertos=[];window.open=u=>{window.__abiertos.push(String(u));return null;};});
+          // Este guion corre en CADA documento del contexto, también en los marcos y en about:blank. La sesión sintética se siembra
+          // una sola vez y sólo en la página: si se sembrara siempre, al apagarse el grafo (su marco se vacía y pasa por about:blank)
+          // el guion devolvería la llave que la prueba acaba de quitar y la página volvería a encenderse sola.
+          await ctx.addInitScript(()=>{
+            if(window.top===window&&!localStorage.getItem('qa_sesion_sembrada')){localStorage.setItem('qa_sesion_sembrada','1');localStorage.setItem('pyod_clave_v1','synthetic-session-never-real');}
+            window.__abiertos=[];window.open=u=>{window.__abiertos.push(String(u));return null;};
+          });
           const page=await ctx.newPage(),errores=[],pedidos=[];const mundo={borrador:{}};
           // WebKit reporta así cuando la librería de dibujo (vis-network) ajusta su lienzo dentro del mismo cuadro: el navegador
           // sólo difiere el aviso al cuadro siguiente. No es una falla de la página; cualquier otro error sí cuenta.
@@ -98,6 +104,12 @@ async function run(){
             await page.evaluate(()=>localStorage.removeItem('pyod_clave_v1'));
             await page.waitForFunction(()=>document.querySelector('#grafo-sistema').hidden);
             assert.equal(await caja.textContent(),'');assert.equal(await page.locator('#grafoMarco').getAttribute('src'),null);
+            // …y se queda apagado: pasado el vaciado del marco nadie devuelve la sesión ni vuelve a pedir el grafo.
+            const antes=pedidos.length;await page.waitForTimeout(900);
+            assert.equal(await page.evaluate(()=>localStorage.getItem('pyod_clave_v1')),null,'nadie vuelve a sembrar la sesión');
+            assert.equal(await page.evaluate(()=>document.querySelector('#grafo-sistema').hidden),true);assert.equal(await caja.textContent(),'');
+            assert.equal(await page.locator('#grafoMarco').getAttribute('src'),null);
+            assert.deepEqual(pedidos.slice(antes).filter(p=>p.url.startsWith('https://synthetic.invalid/')).map(p=>p.url),[],'sin sesión no se vuelve a llamar al Portero');
           }
           assert.deepEqual(errores,[]);assert.ok(pedidos.every(p=>p.metodo==='GET'));
           assert.ok(pedidos.every(p=>!p.url.includes('synthetic-session')||p.url.startsWith('https://synthetic.invalid/')),'la sesión sólo viaja al Portero');
