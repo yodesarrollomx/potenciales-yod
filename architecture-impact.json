@@ -1,13 +1,14 @@
 {
   "model_revision": "2026-11-11.grafo-accesos.3",
   "proposal_id": "CHG-GRAFO-ACCESOS-20261111",
-  "summary": "Dentro de la propuesta del grafo en Accesos. DEC-19 (Dirección, 12-nov-2026): el grafo de YOD OS deja de reflejar el sistema de evaluación de personas de un cliente externo. Nueva regla «excluir» en grafo-motor/datos/reglas.json (patrones de id, componente y ruta) que refrescar.py aplica al final de cada refresco, después del atlas y de los repositorios. La base publicada no cambia en este PR: la limpia el siguiente «Rehacer grafo» (pedido tras fusionar), cuyo borrador aprueba Dirección. Sin código de producto, backend, hojas ni permisos.",
+  "summary": "Grafo del sistema rehecho a pedido: versión G-20261112-1056 (la aprobada era G-20261111-2354). Cambian sólo los datos del grafo (grafo-motor/datos/base.json) y lo que se genera de ellos en grafo/: láminas, registro de versiones y datos para presentaciones. Sin código, backend, hojas ni permisos. Fusionar este cambio es aprobar el grafo; cerrarlo lo descarta.",
   "components": [
     "SYS-POTENCIALES"
   ],
   "tests": [
-    "grafo-motor/pruebas/prueba_motor.py: nueva test_sin_sistemas_de_clientes_externos (la regla quita 7 piezas de prueba por id, componente y ruta, con sus flechas; y vigila la base publicada en cuanto se arme después de la decisión).",
+    "Láminas generadas por grafo-motor/laminas.py desde la base de este mismo cambio (determinista).",
+    "Recetas de presentación comprobadas contra el contrato del Plan de Potencial al rehacer.",
     "verificar-impacto contra el atlas fijado."
   ],
-  "rollback": "Revertir el merge y quitar la regla «excluir» de reglas.json; el grafo publicado no se toca en este cambio."
+  "rollback": "Cerrar el PR del borrador, o revertir su merge: el grafo aprobado anterior sigue publicado."
 }
