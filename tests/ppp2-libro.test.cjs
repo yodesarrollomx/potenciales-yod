@@ -51,8 +51,32 @@ test('el resumen que lee el servidor trae edad, versión mostrada y lo que recib
   assert.ok(String(resumen('plan.siguiente_pregunta')).length > 10);
 });
 
+test('la edad sólo pasa a árbol si la última sesión del consejo aprueba la versión vigente (5 de 7, sin veto)', () => {
+  /* tests/fixtures/ppp2-consejo-edad.json sale de ppp2/libro/consejo_edad.py: la plantilla real con
+     la V2 del plan inventado vigente y distintos votos, recalculada por LibreOffice. */
+  const E = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/ppp2-consejo-edad.json'), 'utf8'));
+  const edad = (n) => { const e = E.find((x) => x.escenario === n); assert.ok(e, 'falta el escenario ' + n); return e; };
+  const esperado = {
+    'sin consejo': 'plántula',
+    'regresa 7 de 7': 'plántula',
+    'aprueba 5 de 7': 'árbol',
+    'aprueba 4 de 7': 'plántula',
+    'aprueba 6 con veto': 'plántula',
+    'aprobó y luego regresó': 'plántula',
+    'aprobó otra versión': 'plántula',
+    'versión escrita como 2': 'árbol',
+  };
+  for (const [n, ed] of Object.entries(esperado)) assert.equal(edad(n).edad, ed, n);
+  assert.match(edad('regresa 7 de 7').consejo, /aprueban 0 de 7\. La regresa/);
+  assert.match(edad('regresa 7 de 7').falta, /Que el consejo de planes la apruebe \(5 de 7, sin veto\)/);
+  assert.match(edad('aprueba 6 con veto').consejo, /con veto\. La regresa/);
+  assert.match(edad('aprobó y luego regresó').consejo, /^Última sesión CP-2/);
+  assert.equal(edad('sin consejo').consejo, 'El consejo todavía no se reúne.');
+});
+
 test('la plantilla no trae datos de planes reales', () => {
-  for (const f of ['ppp2/libro/generar.py', 'ppp2/libro/ejemplo-plan.json', 'tests/fixtures/ppp2-libro-ejemplo.json']) {
+  for (const f of ['ppp2/libro/generar.py', 'ppp2/libro/ejemplo-plan.json', 'ppp2/libro/consejo_edad.py',
+    'tests/fixtures/ppp2-libro-ejemplo.json', 'tests/fixtures/ppp2-consejo-edad.json']) {
     const t = fs.readFileSync(path.join(RAIZ, f), 'utf8');
     assert.doesNotMatch(t, /Mor[eé]o|Avermont|Morelos|Colinas del Bachoco|aurumarquitectos/i, f);
   }

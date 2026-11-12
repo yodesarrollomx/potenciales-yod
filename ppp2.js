@@ -17,7 +17,7 @@
   var EDADES = {
     semilla: { icono: 'ti-seedling', texto: 'Semilla', que: 'La idea con sus primeros datos.' },
     'plántula': { icono: 'ti-plant-2', texto: 'Plántula', que: 'Ya calcula una versión.' },
-    'árbol': { icono: 'ti-tree', texto: 'Árbol', que: 'Versión aprobada por Dirección y votada por el consejo.' },
+    'árbol': { icono: 'ti-tree', texto: 'Árbol', que: 'Versión vigente de Dirección, aprobada por el consejo de planes.' },
     flor: { icono: 'ti-flower', texto: 'Flor', que: 'Candados cerrados: listo para presentar.' },
     fruto: { icono: 'ti-apple', texto: 'Fruto', que: 'Acuerdo firmado con el dueño.' }
   };

@@ -38,5 +38,9 @@ repositorio; `ejemplo-plan.json` es inventado.
 python3 ppp2/libro/generar.py /tmp/ejemplo.xlsx --plan ppp2/libro/ejemplo-plan.json
 soffice --headless --calc --convert-to xlsx --outdir /tmp/calc /tmp/ejemplo.xlsx
 python3 ppp2/libro/fixture.py /tmp/calc/ejemplo.xlsx /tmp/ejemplo.xlsx tests/fixtures/ppp2-libro-ejemplo.json
+(cd ppp2/libro && python3 consejo_edad.py ../../tests/fixtures/ppp2-consejo-edad.json)
 node --test tests/ppp2-libro.test.cjs tests/ppp2-servidor.test.cjs
 ```
+
+`consejo_edad.py` comprueba la regla de la edad con votos de prueba: el plan sólo llega a árbol
+cuando la **última** sesión del consejo aprueba la versión vigente (5 de 7, sin veto).

@@ -995,6 +995,28 @@ def hoja_preguntas(wb, plan, catalogo):
     return ws, n
 
 
+def consejo_partes(ver_ref):
+    """La última sesión del consejo (las filas se agregan en orden): cuántas filas hay, qué sesión,
+    sobre qué versión, cuántos jueces aprueban, si hubo veto, cuántos votaron y si la sesión fue sobre
+    la versión `ver_ref` (acepta «V2», «v2» o «2»)."""
+    n = "COUNTA(Consejo!$A$5:$A$500)"
+    ses = f"INDEX(Consejo!$B$5:$B$500,{n})"
+    ver = f"INDEX(Consejo!$C$5:$C$500,{n})"
+    si = f"COUNTIFS(Consejo!$B$5:$B$500,{ses},Consejo!$E$5:$E$500,\"aprueba\")"
+    veto = f"COUNTIFS(Consejo!$B$5:$B$500,{ses},Consejo!$E$5:$E$500,\"veto\")"
+    total = f"COUNTIF(Consejo!$B$5:$B$500,{ses})"
+    misma = f"SUBSTITUTE(UPPER({ver}&\"\"),\"V\",\"\")={ver_ref}&\"\""
+    return n, ses, ver, si, veto, total, misma
+
+
+def resumen_consejo(ws):
+    """Consejo!A3: lo que decidió la última sesión, en palabras. Lo calcula el libro."""
+    n, ses, ver, si, veto, total, _ = consejo_partes("Plan!$B$6")
+    celda(ws, "A3", f"=IF({n}=0,\"El consejo todavía no se reúne.\",\"Última sesión \"&{ses}&\" sobre la V\"&SUBSTITUTE(UPPER({ver}&\"\"),\"V\",\"\")"
+                    f"&\": aprueban \"&{si}&\" de \"&{total}&IF({veto}>0,\", con veto\",\"\")&\". \"&IF(AND({si}>=5,{veto}=0),\"La aprueba.\",\"La regresa.\"))",
+          Font(name="Arial", size=10, bold=True, color=TINTA))
+
+
 def hoja_plan(wb, plan, npreg):
     ws = wb.create_sheet("Plan", 0)
     g = lambda c: f"INDEX(Versiones!$C${VER_FILA[c]}:$E${VER_FILA[c]},1,$B$6)"
@@ -1003,13 +1025,15 @@ def hoja_plan(wb, plan, npreg):
     celda(ws, "A4", "Edad del plan", F_SECCION)
     calcula = f"ISNUMBER(INDEX(Versiones!$C${VER_FILA['ganancia']}:$E${VER_FILA['ganancia']},1,$B$6))"
     vig = f"COUNTIF(Versiones!$C${VER_FILA['estado']}:$E${VER_FILA['estado']},\"vigente\")>0"
-    consejo = "COUNTA(Consejo!$A$5:$A$500)>0"
+    n_c, _, _, si_c, veto_c, _, misma_c = consejo_partes("$B$6")
+    # el consejo cuenta sólo si su ÚLTIMA sesión aprobó la versión que se muestra: 5 de 7 y sin veto
+    consejo = f"IF({n_c}=0,FALSE,AND({si_c}>=5,{veto_c}=0,{misma_c}))"
     candados = "AND(COUNTA(Candados!$A$5:$A$60)>0,COUNTIF(Candados!$D$5:$D$60,\"abierto\")+COUNTIF(Candados!$D$5:$D$60,\"en revisión\")=0)"
     fruto = f"{D('acuerdo.firmado')}=\"sí\""
     celda(ws, "B4", f"=IF({fruto},\"fruto\",IF(AND({vig},{consejo},{candados}),\"flor\",IF(AND({vig},{consejo}),\"árbol\",IF({calcula},\"plántula\",\"semilla\"))))", F_GRANDE)
     celda(ws, "A5", "Para crecer falta", F_SECCION)
     falta = (f"=IF(B4=\"semilla\",IF(Productos!$B${PT}=0,\"Capturar al menos un producto. \",\"\")&\"Que la versión base calcule: faltan \"&COUNTIFS(Datos!$K$5:$K$200,\"sí\",Datos!$C$5:$C$200,\"\")&\" datos para calcular.\","
-             f"IF(B4=\"plántula\",IF(NOT({vig}),\"Que Dirección apruebe una versión. \",\"\")&IF(NOT({consejo}),\"Que vote el consejo de planes. \",\"\")&\"Datos sin resolver: \"&$B$22&\".\","
+             f"IF(B4=\"plántula\",IF(NOT({vig}),\"Que Dirección apruebe una versión. \",\"\")&IF(NOT({consejo}),IF({n_c}=0,\"Que el consejo de planes revise la versión. \",\"Que el consejo de planes la apruebe (5 de 7, sin veto). \"&Consejo!$A$3&\" \"),\"\")&\"Datos sin resolver: \"&$B$22&\".\","
              f"IF(B4=\"árbol\",\"Cerrar los candados: \"&$B$23&\" abiertos.\",IF(B4=\"flor\",\"Firmar el acuerdo con el dueño.\",\"Plan cumplido.\"))))")
     celda(ws, "B5", falta, align=ENVOLVER)
     celda(ws, "A6", "Versión que se muestra", F_SECCION)
@@ -1118,10 +1142,11 @@ def construir(plan=None, catalogo=None):
                ["Fecha", "Tema", "Hallazgo", "Fuente", "Confianza", "Mueve", "Estado", "Quién", "Nota"],
                {"A": 11, "B": 18, "C": 60, "D": 40, "E": 10, "F": 18, "G": 12, "H": 14, "I": 30},
                (plan or {}).get("hallazgos", []), {"E": ["alta", "media", "baja"], "G": ESTADOS_HALLAZGO})
-    hoja_tabla(wb, "Consejo", "Las sesiones del consejo de planes: cada juez vota con su razón. Aprueba con 5 de 7; Alejandro virtual puede vetar por un candado.",
+    ws_consejo = hoja_tabla(wb, "Consejo", "Las sesiones del consejo de planes: cada juez vota con su razón. Aprueba con 5 de 7 y sin veto; Alejandro virtual puede vetar por un candado. Cuenta la última sesión.",
                ["Fecha", "Sesión", "Versión", "Juez", "Voto", "Razón", "Condición para aprobar"],
                {"A": 11, "B": 12, "C": 9, "D": 26, "E": 10, "F": 60, "G": 50},
                (plan or {}).get("consejo", []), {"E": VOTOS})
+    resumen_consejo(ws_consejo)
     hoja_tabla(wb, "Bitácora", "Cada cambio queda aquí: quién, qué, antes y después, de dónde salió.",
                ["Fecha", "Actor", "Acción", "Pestaña", "Clave o celda", "Antes", "Después", "Fuente", "Revisión base", "request_id"],
                {"A": 17, "B": 16, "C": 40, "D": 12, "E": 18, "F": 16, "G": 16, "H": 36, "I": 12, "J": 16},

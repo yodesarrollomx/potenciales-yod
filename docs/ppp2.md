@@ -28,7 +28,7 @@ se empieza por el primer plan real.
 |---|---|
 | Semilla | Tiene nombre y datos iniciales, todavía no calcula |
 | Plántula | La versión que se muestra calcula |
-| Árbol | Dirección aprobó una versión vigente y el consejo de planes votó |
+| Árbol | Dirección aprobó una versión vigente y la última sesión del consejo de planes la aprobó (5 de 7, sin veto) |
 | Flor | Además, todos los candados están cerrados |
 | Fruto | Hay acuerdo firmado con el dueño |
 
@@ -47,7 +47,10 @@ La edad la calcula el libro (pestaña Plan); nadie la escribe a mano.
 
 Jueces del oficio: Alejandro virtual (veto por candado), dueño de la tierra virtual, inversionista
 virtual, desarrollador-financiero, arquitecto de norma y cabida, broker de campo y Hormozi (la
-oferta). Aprueba con 5 de 7. Sus votos quedan en la pestaña `Consejo` del libro. El consejo
+oferta). Aprueba con 5 de 7 y sin veto. Sus votos quedan en la pestaña `Consejo` del libro (una fila por
+juez, en orden); el libro sólo cuenta la **última sesión** y sólo si fue sobre la versión vigente, y lo
+resume en `Consejo!A3`. Que el consejo vote no basta: si regresa la versión, el plan sigue en plántula
+(prueba: `tests/fixtures/ppp2-consejo-edad.json`, generado con `ppp2/libro/consejo_edad.py`). El consejo
 opina; **sólo Dirección vuelve vigente una versión**.
 
 ## Invariantes
