@@ -195,3 +195,15 @@ Al final de `accesos.html` (sólo admin) vive el grafo de YOD OS con sus control
 - **Las presentaciones leen el grafo aprobado** (`grafo/versiones.json` y `grafo/datos/<id>.json`). Cambiar `grafo-motor/recetas.json` cambia lo que cuentan; las recetas no llevan cifras.
 - **Dónde se pinta un error:** en el repositorio donde pasó y en los tableros que viven en él (`grafo/mapa-ids.json`); no en sus vecinos de fila. Comprobado en vivo el 12-nov-2026: rehacer a pedido, el PR del borrador abierto por el flujo, aprobar (los dos toques) y descartar; el detalle, en `docs/grafo.md`, «Comprobado en producción».
 - Pruebas: `python -m unittest discover -s grafo-motor/pruebas -p 'prueba_*.py'` y `node --test tests/grafo-estado.test.cjs tests/grafo-control.test.cjs`.
+
+
+## 12-nov-2026 · PPP 2, el vivero de planes (`CHG-PPP2-20261112`)
+
+Portal **aparte** del PPP actual: `ppp2.html` + `ppp2.js` + `ppp2.css`, servidor en `server/ppp2/`, plantilla en `ppp2/libro/`. Detalle en **docs/ppp2.md**. No toca los motores, `portero.js`, `accesos.html` ni el Apps Script del Portero.
+
+- **El cálculo vive en el libro de cada plan** (Google Sheets, plantilla `ppp2-libro-v1`): tres versiones con el mismo motor de flujo, revisión para fondos, reparto, preguntas, candados, hallazgos, consejo, pruebas y bitácora. La edad (semilla → plántula → árbol → flor → fruto) la calcula el libro. **Nunca** escribir fórmulas financieras en `ppp2.js` ni en `PPP2.gs`.
+- **Servidor:** Apps Script «PPP 2 · servidor», ligado a la hoja «PPP 2 · Vivero (registro)» de la carpeta «PPP 2 · Vivero» del Drive de Dirección. Versión 1 desplegada el 12-nov-2026 (12:40). Su primera implementación fue «Nueva implementación» por ser proyecto nuevo; **de aquí en adelante siempre «Nueva versión» sobre la misma** (cambiar la URL deja a `ppp2.js` sin servidor). La URL vive en `ENDPOINT` de `ppp2.js`. Instalación y reversión: `server/ppp2/INSTALAR.md`. Sólo lectura sin tocar código: hoja `Config`, `pausa = sí`.
+- **Permisos:** el servidor canjea la sesión con el Portero (`board=PT`). `admin` aprueba versiones; `admin` y `editor` capturan; quien tiene `PT` lee. La página nunca borra `pyod_clave_v1`.
+- **Repo público:** ni nombres de planes, ni cifras, ni IDs de libros en código, pruebas o docs. El plan de `ppp2/libro/ejemplo-plan.json` y su accesorio son inventados; los datos de planes reales se preparan fuera del repo.
+- **Pruebas:** `node --test tests/ppp2-servidor.test.cjs tests/ppp2-libro.test.cjs` y `node tests/ppp2-browser.cjs` (corren en `verificar-ppp.yml`).
+- **Menú:** «PPP 2» en `yod-portal/os/catalogo.js` (código `PT`, después de Mercado).

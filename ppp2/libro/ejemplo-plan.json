@@ -1,0 +1,42 @@
+{
+  "_nota": "Plan INVENTADO para pruebas y para mostrar el formato. Los datos de planes reales viven fuera del repositorio.",
+  "datos": {
+    "plan.nombre": {"valor": "Proyecto Ejemplo", "estado": "confirmado", "fuente": "Dato inventado", "quien": "Pruebas", "fecha": "2026-01-15"},
+    "plan.ubicacion": {"valor": "Ciudad Ejemplo", "estado": "confirmado", "fuente": "Dato inventado", "quien": "Pruebas", "fecha": "2026-01-15"},
+    "plan.tipo": {"valor": "Mixto vertical de prueba", "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "plan.objetivo": {"valor": "Probar el libro de PPP 2", "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "terreno.m2": {"valor": 3000, "estado": "por confirmar", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "tierra.valor": {"valor": 30, "estado": "en conflicto", "fuente": "Dato inventado: dos cifras", "quien": "Pruebas"},
+    "lamina.ventas": {"valor": 500, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "lamina.costo_total": {"valor": 410, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "costo.obra_directa": {"valor": "=OBRA", "estado": "derivado", "fuente": "Derivado de la lámina inventada", "quien": "Modelo"},
+    "cal.ventas_meses": {"valor": 24, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "cal.obra_inicio": {"valor": 8, "estado": "por confirmar", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "cal.obra_duracion": {"valor": 20, "estado": "por confirmar", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "din.capital": {"valor": 120, "estado": "por confirmar", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "din.tiie": {"valor": 0.07, "estado": "por confirmar", "fuente": "Dato inventado", "quien": "Pruebas"}
+  },
+  "productos": [
+    {"nombre": "Producto A", "unidades": 40, "m2": 3000, "precio_m2": 70000, "durante_obra": 0, "estado": "supuesto", "fuente": "Inventado"},
+    {"nombre": "Producto B", "unidades": 60, "m2": 4000, "precio_m2": 50000, "durante_obra": 0, "estado": "supuesto", "fuente": "Inventado"},
+    {"nombre": "Producto C", "unidades": 10, "m2": 1000, "precio_m2": "=CUADRAR", "durante_obra": 0, "estado": "derivado", "fuente": "Cuadra la lámina inventada"}
+  ],
+  "versiones": [
+    {"nombre": "Base", "estado": "base", "que_cambia": "Lo que dicen los datos, sin banco.", "propuesta_por": "Pruebas", "palancas": {"usa_banco": 0, "caja_pct": 0, "devolver_con_obra": 0}},
+    {"nombre": "Con banco", "estado": "propuesta", "que_cambia": "Obra en el mes 12, banco y capital menor.", "propuesta_por": "Pruebas", "palancas": {"obra_inicio": 12, "individualizar": 1, "capital": 60, "durante_obra_1": 0.2}},
+    {"nombre": "Temprana", "estado": "alterna", "que_cambia": "Obra en el mes 9.", "propuesta_por": "Pruebas", "palancas": {"obra_inicio": 9}}
+  ],
+  "candados": [
+    ["tenencia", "Tenencia", "Escritura vista", "abierto", "", "Pruebas", "", "flor", ""],
+    ["agua", "Agua", "Factibilidad", "abierto", "", "Pruebas", "", "flor", ""]
+  ],
+  "preguntas": {
+    "M01.Q01": {"estado": "respondida", "respuesta": "Proyecto Ejemplo", "fuente": "Inventado"}
+  },
+  "hallazgos": [
+    ["2026-01-15", "Prueba", "Hallazgo inventado para las pruebas.", "Ninguna", "baja", "tierra.valor", "propuesto", "Pruebas", ""]
+  ],
+  "bitacora": [
+    ["2026-01-15", "Pruebas", "Creó el libro de ejemplo", "todas", "", "", "", "Inventado", "", "ejemplo-1"]
+  ]
+}

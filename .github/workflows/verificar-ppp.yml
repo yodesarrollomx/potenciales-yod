@@ -65,6 +65,9 @@ jobs:
           node --test tests/ppp-session-guard.test.cjs
           node --test tests/ppp-cargador.test.cjs
           node --test tests/ppp-cierre-cargador.test.cjs
+          node --check ppp2.js
+          node -e "const fs=require('node:fs'),vm=require('node:vm');new vm.Script(fs.readFileSync('server/ppp2/PPP2.gs','utf8'),{filename:'server/ppp2/PPP2.gs'});"
+          node --test tests/ppp2-servidor.test.cjs tests/ppp2-libro.test.cjs
           git diff --check
       - name: Instalar navegadores
         run: |
@@ -107,6 +110,7 @@ jobs:
           node tests/patrimonial-drafts-browser.cjs
           node tests/ppp-cargador-browser.cjs
           node tests/ppp-paridad-cargador-browser.cjs
+          node tests/ppp2-browser.cjs
       - name: Comprobar archivos publicados
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
@@ -116,7 +120,7 @@ jobs:
           const fs=require('node:fs'),crypto=require('node:crypto');
           const digest=b=>crypto.createHash('sha256').update(b).digest('hex');
           (async()=>{
-            const paths=['ppp-intake.js','ppp-intake.css','ppp-stages.js','ppp-stages.css','residencial.html','unifamiliar.html','index.html','ppp-projects.js','ppp-home.css','ppp-catalog.js','ppp-catalog.css','mapa.html','ppp-ui.js','ppp-cadena.js','ppp-cadena.css','ppp-version-bridge.js','ppp-volumes.js','ppp-volumes.css','ppp-volumes-native.js','tests/fixtures/departamentos-volumenes.html','mixto.html','macrolotes.html','patrimonial.html','ppp-case-opening.js','portero.js'];
+            const paths=['ppp-intake.js','ppp-intake.css','ppp-stages.js','ppp-stages.css','residencial.html','unifamiliar.html','index.html','ppp-projects.js','ppp-home.css','ppp-catalog.js','ppp-catalog.css','mapa.html','ppp-ui.js','ppp-cadena.js','ppp-cadena.css','ppp-version-bridge.js','ppp-volumes.js','ppp-volumes.css','ppp-volumes-native.js','tests/fixtures/departamentos-volumenes.html','mixto.html','macrolotes.html','patrimonial.html','ppp-case-opening.js','portero.js','ppp2.html','ppp2.js','ppp2.css'];
             for(const path of paths){
               const expected=digest(fs.readFileSync(path));let verified=false;
               for(let attempt=0;attempt<6;attempt++){

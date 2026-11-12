@@ -1,16 +1,19 @@
 {
-  "model_revision": "2026-11-11.grafo-accesos.3",
-  "proposal_id": "CHG-GRAFO-ACCESOS-20261111",
-  "summary": "Accesos ya no esconde el grafo cuando sólo falla la lista de usuarios. Visto en vivo el 12-nov-2026 con la sesión de Dirección: el Portero confirmó el rol de administrador, pero «accesos-lista» tardó más de 20 s, la página llamaba a limpiarVista y apagaba todo, también el grafo y el estado de los sistemas. Ahora, si la lectura de la lista se corta por tiempo (AbortError) o por red (TypeError), accesos.html borra lo privado (lista, matriz y contador), deshabilita el alta y deja de considerar admin para escrituras, pero deja el grafo y la salud, que son archivos estáticos. Cualquier otra falla (respuesta inesperada, sesión de Google caducada) y todo rechazo del Portero siguen limpiando todo. No cambia portero.js, backend, hojas ni permisos.",
+  "model_revision": "2026-11-12.ppp2.1",
+  "proposal_id": "CHG-PPP2-20261112",
+  "summary": "PPP 2: un portal nuevo del Plan de Potencial que empieza de cero sin tocar el PPP actual. ppp2/libro genera la plantilla ppp2-libro-v1: un Google Sheets por plan con todas las fórmulas (tres versiones con el mismo motor de flujo mensual, revisión para fondos de nueve pruebas, cinco esquemas de reparto con el dueño, las 96 preguntas del oficio, candados, hallazgos, consejo, pruebas de estrés y bitácora; la edad semilla→fruto la calcula el libro). server/ppp2/PPP2.gs es un Apps Script aparte, ligado al registro del vivero: valida la sesión con el Portero (board PT), escribe sólo celdas permitidas con revisión, request_id y bitácora, y no calcula finanzas. Ya está desplegado (versión 1), y las lecturas con la sesión de Dirección se comprobaron el 12-nov. ppp2.html/js/css muestran el vivero y el plan vivo con lo que recibe el dueño primero. El workflow fija el atlas con CHG-PPP2 y suma las pruebas de PPP 2 a la verificación de la interfaz. No cambian los motores actuales, portero.js, accesos.html ni el Apps Script del Portero.",
   "components": [
     "SYS-POTENCIALES",
-    "SYS-CONTROL"
+    "SYS-PPP2",
+    "GAS-PPP2",
+    "SHEET-PPP2"
   ],
   "tests": [
-    "node tests/grafo-accesos-browser.cjs (Chromium y WebKit móvil): caso nuevo «lista-falla»: el Portero confirma admin y la lista no llega; el grafo queda visible con el aprobado y su lámina, el alta deshabilitada y «Reintentar validación» disponible. Sin el arreglo, el caso falla.",
-    "node --test tests/accesos-admin-session.test.cjs: prueba nueva: con la lista vencida no queda nada privado ni se puede escribir; reintentar vuelve a canjear y un rechazo limpia todo. Sin el arreglo, falla. Las 47 anteriores siguen en verde.",
-    "tests/salud-accesos-browser.cjs y tests/access-gates.cjs sin cambios y en verde.",
-    "verificar-impacto contra el atlas fijado."
+    "node --test tests/ppp2-servidor.test.cjs: 20 en verde. Cubren el canje con board=PT y el respaldo sólo ante una falla, los permisos por rol, los rangos y las claves inventadas, la revisión vieja, el request_id repetido, las palancas y los renglones calculados, la aprobación sólo de Dirección, preguntas y pedidos, los candados con evidencia, el estrés que restablece, sembrar y la pausa.",
+    "node --test tests/ppp2-libro.test.cjs: 5 en verde (el libro de ejemplo, recalculado por una hoja de cálculo, cuadra flujo, cobranza, unidades, ganancia y reparto).",
+    "node tests/ppp2-browser.cjs: 9 recorridos en verde. Sin servidor, sin sesión, sesión rechazada sin borrar la credencial, vivero → plan, escrituras con revisión, aprobación sólo admin, lector sin controles, teléfono sin desborde y sin datos reales en la página.",
+    "En vivo (12-nov-2026): ppp2-meta, rechazo de una liga inválida vía canje, y lecturas de vivero y plan con la sesión de Dirección. El primer libro, recalculado por Google Sheets, cuadra con el borrador previo (comparación privada).",
+    "node scripts/versiones.cjs --check · git diff --check · verificar-impacto contra el atlas fijado."
   ],
-  "rollback": "Revertir el merge: si la lista de usuarios tarda, Accesos vuelve a apagar todo, incluido el grafo."
+  "rollback": "Revertir el merge quita la página, el servidor del repositorio y las pruebas. El Apps Script «PPP 2 · servidor» queda en sólo lectura con Config!pausa = sí, o se regresa a la versión anterior de su misma implementación. Los libros y el registro del vivero no se borran."
 }

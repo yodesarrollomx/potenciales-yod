@@ -1,0 +1,57 @@
+[
+ {
+  "escenario": "plantilla vacía",
+  "edad": "semilla",
+  "muestra": false,
+  "falta": "Capturar al menos un producto. Que la versión base calcule: faltan 8 datos para calcular.",
+  "consejo": "El consejo todavía no se reúne."
+ },
+ {
+  "escenario": "sin consejo",
+  "edad": "plántula",
+  "falta": "Que el consejo de planes revise la versión. Datos sin resolver: 6.",
+  "consejo": "El consejo todavía no se reúne."
+ },
+ {
+  "escenario": "regresa 7 de 7",
+  "edad": "plántula",
+  "falta": "Que el consejo de planes la apruebe (5 de 7, sin veto). Última sesión CP-1 sobre la V2: aprueban 0 de 7. La regresa. Datos sin resolver: 6.",
+  "consejo": "Última sesión CP-1 sobre la V2: aprueban 0 de 7. La regresa."
+ },
+ {
+  "escenario": "aprueba 5 de 7",
+  "edad": "árbol",
+  "falta": "Cerrar los candados: 2 abiertos.",
+  "consejo": "Última sesión CP-1 sobre la V2: aprueban 5 de 7. La aprueba."
+ },
+ {
+  "escenario": "aprueba 4 de 7",
+  "edad": "plántula",
+  "falta": "Que el consejo de planes la apruebe (5 de 7, sin veto). Última sesión CP-1 sobre la V2: aprueban 4 de 7. La regresa. Datos sin resolver: 6.",
+  "consejo": "Última sesión CP-1 sobre la V2: aprueban 4 de 7. La regresa."
+ },
+ {
+  "escenario": "aprueba 6 con veto",
+  "edad": "plántula",
+  "falta": "Que el consejo de planes la apruebe (5 de 7, sin veto). Última sesión CP-1 sobre la V2: aprueban 6 de 7, con veto. La regresa. Datos sin resolver: 6.",
+  "consejo": "Última sesión CP-1 sobre la V2: aprueban 6 de 7, con veto. La regresa."
+ },
+ {
+  "escenario": "aprobó y luego regresó",
+  "edad": "plántula",
+  "falta": "Que el consejo de planes la apruebe (5 de 7, sin veto). Última sesión CP-2 sobre la V2: aprueban 0 de 7. La regresa. Datos sin resolver: 6.",
+  "consejo": "Última sesión CP-2 sobre la V2: aprueban 0 de 7. La regresa."
+ },
+ {
+  "escenario": "aprobó otra versión",
+  "edad": "plántula",
+  "falta": "Que el consejo de planes la apruebe (5 de 7, sin veto). Última sesión CP-1 sobre la V3: aprueban 7 de 7. La aprueba. Datos sin resolver: 6.",
+  "consejo": "Última sesión CP-1 sobre la V3: aprueban 7 de 7. La aprueba."
+ },
+ {
+  "escenario": "versión escrita como 2",
+  "edad": "árbol",
+  "falta": "Cerrar los candados: 2 abiertos.",
+  "consejo": "Última sesión CP-1 sobre la V2: aprueban 5 de 7. La aprueba."
+ }
+]
