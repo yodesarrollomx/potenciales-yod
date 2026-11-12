@@ -327,7 +327,8 @@
   "motivo": "Decisión de Dirección (DEC-19, 12-nov-2026): el grafo no refleja sistemas hechos para clientes externos, aunque el atlas o yod-portal publiquen su descripción saneada. Se quitan la pieza, sus contratos, procesos, hojas, almacenes y los archivos que la envuelven.",
   "ids": [
    "^(SYS|GAS|SHEET|STORE|CTR|PROC|N|X|R|SK)-EMD(?:$|-|·)",
-   "(?i)^(ls|sec|ss):emd"
+   "(?i)^(ls|sec|ss):emd",
+   "^PROP-(?:CHG-)?EMD(?:$|-|·)"
   ],
   "rutas": [
    "(^|/)emd/",
@@ -335,6 +336,52 @@
   ],
   "comp": [
    "^(SYS|GAS|SHEET|STORE)-EMD(?:$|-)"
+  ],
+  "textos": [
+   "\\bEMD\\b"
   ]
- }
+ },
+ "publicos_motivo": "Repositorios que el grafo puede nombrar: todos son públicos (comprobado el 12-nov-2026). Lo que no está aquí no se publica, ni sus piezas ni su nombre en los textos (refrescar.py, solo_publicos). Al sumar un repositorio al grafo se agrega aquí, sólo si es público; rehacer.py lo lee sin credencial y, si no contesta, no abre borrador.",
+ "publicos": [
+  "alexpueblag/alquimia-urbana",
+  "alexpueblag/aurum-board",
+  "alexpueblag/aurum-experiencia",
+  "alexpueblag/board-aurum",
+  "alexpueblag/board-flujo-yod",
+  "alexpueblag/Co-desarrolladores-Yod",
+  "alexpueblag/codesarrolladores-libre",
+  "alexpueblag/crokiss",
+  "alexpueblag/interiores-aurum",
+  "alexpueblag/pintarron",
+  "alexpueblag/pizarron-claude-yodbot",
+  "alexpueblag/plan-potencial",
+  "alexpueblag/potenciales-yod",
+  "alexpueblag/real-miramar-board",
+  "alexpueblag/sala-edicion",
+  "alexpueblag/yod-portal",
+  "alexpueblag/yod-terreno-dormido",
+  "alexpueblag/yod-terreno-si",
+  "alexpueblag/yodesarrollo-board",
+  "aurumarquitectos/aurumarquitectos.github.io",
+  "aurumarquitectos/experiencia",
+  "yodesarrollo/amalaya-board",
+  "yodesarrollomx/alquimia-urbana",
+  "yodesarrollomx/aurum-board",
+  "yodesarrollomx/aurum-experiencia",
+  "yodesarrollomx/board-aurum",
+  "yodesarrollomx/board-flujo-yod",
+  "yodesarrollomx/Co-desarrolladores-Yod",
+  "yodesarrollomx/crokiss",
+  "yodesarrollomx/interiores-aurum",
+  "yodesarrollomx/pintarron",
+  "yodesarrollomx/plan-potencial",
+  "yodesarrollomx/potenciales-yod",
+  "yodesarrollomx/prueba-dominio",
+  "yodesarrollomx/real-miramar-board",
+  "yodesarrollomx/sala-edicion",
+  "yodesarrollomx/yod-despacho",
+  "yodesarrollomx/yod-portal",
+  "yodesarrollomx/yodesarrollo-board",
+  "yodesarrollomx/yodesarrollomx.github.io"
+ ]
 }

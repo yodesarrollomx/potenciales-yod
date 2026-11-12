@@ -54,6 +54,7 @@ lista = [[i, t, s, p] for s, i, t, n, m, tam, p in resumen] + [[i, t, s, p] for 
 lista.sort(key=lambda x: ORDEN.index(x[2]))
 PORT = """<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+__NO_INDEXAR__
 <title>YOD OS en Graphify</title>
 <style>
   :root { color-scheme: light dark; --bg: #ffffff; --fg: #1c1c1e; --bd: #d9dee5; --m: #6b7280; }
@@ -123,7 +124,7 @@ if True:
         ids_repo[f"{r['owner']}/{r['repo']}"] = dict(nodos=[rn] + sis, commit=r['commit'], flujos={N[w]['ruta']: w for w in D.ARCH_DE.get(tag, []) if capa(w) == 'workflow'})
     json.dump(dict(repos=ids_repo, armado=ARMADO), open(f'{SAL_DIR}/mapa-ids.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 cuenta = f"{len(N):,} piezas públicas · {len(lista)} láminas"
-open(f'{SAL_DIR}/index.html', 'w', encoding='utf-8').write(PORT.replace('__LISTA__', W.js_seguro(lista)).replace('__CUENTA__', cuenta))
+open(f'{SAL_DIR}/index.html', 'w', encoding='utf-8').write(PORT.replace('__NO_INDEXAR__', W.NO_INDEXAR).replace('__LISTA__', W.js_seguro(lista)).replace('__CUENTA__', cuenta))
 json.dump(dict(armado=ARMADO, laminas=[[i, t, s, p] for i, t, s, p in lista], piezas=len(N), flechas=len(F)), open(f'{SAL_DIR}/laminas.json', 'w', encoding='utf-8'), ensure_ascii=False)
 tot = sum(os.path.getsize(f'{SAL_DIR}/{f}') for f in os.listdir(SAL_DIR))
 print(f'{len(resumen)} láminas + {len(extra)} vistas · {len(os.listdir(SAL_DIR))} archivos · {tot / 1e6:.1f} MB')

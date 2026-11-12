@@ -6,6 +6,7 @@ from graphify.exporters.html import to_html
 from lam_base import *
 
 VERSION = importlib.metadata.version('graphifyy')
+NO_INDEXAR = '<meta name="robots" content="noindex,nofollow,noarchive">'
 # El estado en vivo lo escribe cada hora el flujo «Grafo · estado» en la rama de datos (la principal está protegida).
 ESTADO_URL = 'https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/grafo-datos/estado.json'
 PADX, PADY = 28, 30
@@ -356,5 +357,7 @@ def html_lamina(lam, A, titulos, salida):
     html = html.replace(ancla, JS + '\n' + ancla, 1)
     html = re.sub(r'<title>[^<]*</title>', '<title>%s · YOD OS en Graphify</title>' % H_.escape(lam.titulo), html, 1)
     html = html.replace('<meta charset="UTF-8">', '<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">', 1) if 'name="viewport"' not in html else html
+    assert '<meta charset="UTF-8">' in html, 'cambió la plantilla de Graphify (charset)'
+    html = html.replace('<meta charset="UTF-8">', '<meta charset="UTF-8">\n' + NO_INDEXAR, 1)    # el repositorio es público: que los buscadores no lo guarden
     open(destino, 'w', encoding='utf-8').write(html)
     return len(A['nodos']), len(A['ar']), len(html)

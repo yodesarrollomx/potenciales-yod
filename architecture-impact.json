@@ -1,14 +1,16 @@
 {
   "model_revision": "2026-11-12.ppp2.1",
   "proposal_id": "CHG-GRAFO-ACCESOS-20261111",
-  "summary": "Grafo del sistema rehecho a pedido: versión G-20261112-1420 (la aprobada era G-20261112-1203). Cambian sólo los datos del grafo (grafo-motor/datos/base.json) y lo que se genera de ellos en grafo/: láminas, registro de versiones y datos para presentaciones. Sin código, backend, hojas ni permisos. Fusionar este cambio es aprobar el grafo; cerrarlo lo descarta.",
+  "summary": "Grafo: lo publicado sólo nombra repositorios públicos y lo excluido por DEC-19 tampoco entra por textos ni propuestas del atlas. El motor toma la lista de repositorios públicos de reglas.json (publicos) y quita lo que no está en ella, piezas y menciones; de los repositorios no públicos que conoce el atlas guarda sólo su huella. rehacer.py lee cada repositorio de la lista sin credencial y no abre borrador si alguno no contesta o el atlas lo marca como no público. filtra_atlas también filtra propuestas y textos. Las láminas llevan noindex. Se limpian nombres en la documentación, comentarios y pruebas. Se sanea la base aprobada (seis textos) y se regeneran las láminas; no cambian piezas, ligas, versiones, accesos.html, grafo-control.js, el Portero ni ningún backend.",
   "components": [
     "SYS-POTENCIALES"
   ],
   "tests": [
-    "Láminas generadas por grafo-motor/laminas.py desde la base de este mismo cambio (determinista).",
-    "Recetas de presentación comprobadas contra el contrato del Plan de Potencial al rehacer.",
+    "python3 -m unittest discover -s grafo-motor/pruebas -p 'prueba_*.py' (LoPublicado ampliada: sólo repositorios de la lista y ninguna huella de no público en lo publicado; textos de lo excluido salvo las cuatro notas pendientes; noindex; SoloPublicos; bloqueo sin clon).",
+    "node --test tests/grafo-estado.test.cjs tests/grafo-control.test.cjs",
+    "node tests/grafo-accesos-browser.cjs",
+    "Láminas publicadas idénticas a las que genera la base (python3 grafo-motor/rehacer.py inicial).",
     "verificar-impacto contra el atlas fijado."
   ],
-  "rollback": "Cerrar el PR del borrador, o revertir su merge: el grafo aprobado anterior sigue publicado."
+  "rollback": "Revertir el merge de este PR: vuelven la base, las láminas y el motor anteriores; no hay datos, hojas ni backend que deshacer."
 }
