@@ -1,0 +1,44 @@
+{
+ "esquema": 1,
+ "aprobado": "G-20261111-2354",
+ "actualizado": "2026-11-11T23:54:15-07:00",
+ "versiones": [
+  {
+   "id": "G-20261111-2354",
+   "armado": "2026-11-11T23:54:15-07:00",
+   "fecha": "11-nov 23:54",
+   "estado": "aprobado",
+   "huella": "1582bc4f3dbb",
+   "piezas": 3202,
+   "ligas": 10665,
+   "repos": {
+    "yodesarrollomx/yod-portal": "ed19f0b",
+    "yodesarrollomx/potenciales-yod": "1e8ae56",
+    "yodesarrollomx/yodesarrollo-board": "9f93328",
+    "yodesarrollomx/yod-despacho": "d89b151",
+    "yodesarrollomx/board-aurum": "93bf624",
+    "yodesarrollomx/board-flujo-yod": "e9d122f",
+    "yodesarrollomx/real-miramar-board": "9db34a9",
+    "yodesarrollomx/interiores-aurum": "8bcdfc3",
+    "yodesarrollomx/aurum-board": "e3dd428",
+    "yodesarrollomx/sala-edicion": "07a7076",
+    "yodesarrollomx/plan-potencial": "9f036c7",
+    "yodesarrollomx/crokiss": "7a7a557",
+    "yodesarrollomx/Co-desarrolladores-Yod": "bdaf46b",
+    "yodesarrollomx/alquimia-urbana": "0c0da90",
+    "yodesarrollomx/aurum-experiencia": "70c63b3",
+    "yodesarrollomx/pintarron": "0979d3f",
+    "yodesarrollomx/prueba-dominio": "715c6c7",
+    "yodesarrollomx/yodesarrollomx.github.io": "a5680f2",
+    "alexpueblag/pizarron-claude-yodbot": "31593a1",
+    "yodesarrollo/amalaya-board": "e3f94e6",
+    "aurumarquitectos/experiencia": "89d29e8",
+    "aurumarquitectos/aurumarquitectos.github.io": "d33f765",
+    "alexpueblag/codesarrolladores-libre": "96d26c5",
+    "alexpueblag/yod-terreno-si": "09f75f4",
+    "alexpueblag/yod-terreno-dormido": "1159ca5"
+   },
+   "nota": "Primera versión del grafo dentro del repositorio."
+  }
+ ]
+}

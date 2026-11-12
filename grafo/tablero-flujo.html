@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tablero · Flujo · YOD OS en Graphify</title>
+<script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
+        integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"
+        crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #0f0f1a; --panel: #1a1a2e; --border: #2a2a4e; --input-border: #3a3a5e;
+    --text: #e0e0e0; --text-2: #aaa; --text-3: #ccc; --muted: #555; --count: #666;
+    --neighbor-border: #333; --node-label: #ffffff;
+  }
+  [data-theme="light"] {
+    --bg: #ffffff; --panel: #f8f9fa; --border: #d9dee5; --input-border: #c3cad4;
+    --text: #222222; --text-2: #666666; --text-3: #333333; --muted: #888888; --count: #777777;
+    --neighbor-border: #ccc; --node-label: #222222;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  #graph { flex: 1; }
+  #sidebar { width: 280px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  #search-wrap { padding: 12px; border-bottom: 1px solid var(--border); }
+  #search { width: 100%; background: var(--bg); border: 1px solid var(--input-border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+  #search:focus { border-color: #4E79A7; }
+  #search-results { max-height: 140px; overflow-y: auto; padding: 4px 12px; border-bottom: 1px solid var(--border); display: none; }
+  .search-item { padding: 4px 6px; cursor: pointer; border-radius: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-item:hover { background: var(--border); }
+  #info-panel { padding: 14px; border-bottom: 1px solid var(--border); min-height: 140px; }
+  #info-panel h3 { font-size: 13px; color: var(--text-2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #info-content { font-size: 13px; color: var(--text-3); line-height: 1.6; }
+  #info-content .field { margin-bottom: 5px; }
+  #info-content .field b { color: var(--text); }
+  #info-content .empty { color: var(--muted); font-style: italic; }
+  .neighbor-link { display: block; padding: 2px 6px; margin: 2px 0; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--neighbor-border); }
+  .neighbor-link:hover { background: var(--border); }
+  #neighbors-list { max-height: 160px; overflow-y: auto; margin-top: 4px; }
+  #legend-wrap { flex: 1; overflow-y: auto; padding: 12px; }
+  #legend-wrap h3 { font-size: 13px; color: var(--text-2); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
+  .legend-item:hover { background: var(--border); padding-left: 4px; }
+  .legend-item.dimmed { opacity: 0.35; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-count { color: var(--count); font-size: 11px; }
+  #stats { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  #legend-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 4px 0; }
+  #legend-controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-2); user-select: none; }
+  #legend-controls label:hover { color: var(--text); }
+  .legend-cb, #select-all-cb { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid var(--input-border); border-radius: 3px; background: var(--bg); cursor: pointer; position: relative; flex-shrink: 0; }
+  .legend-cb:checked, #select-all-cb:checked { background: #4E79A7; border-color: #4E79A7; }
+  .legend-cb:checked::after, #select-all-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  #select-all-cb:indeterminate { background: #4E79A7; border-color: #4E79A7; }
+  #select-all-cb:indeterminate::after { content: ''; position: absolute; left: 2px; top: 5px; width: 8px; height: 2px; background: #fff; border: none; transform: none; }
+  #theme-wrap { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  #theme-wrap button { flex: 1; background: var(--bg); color: var(--text-2); border: 1px solid var(--input-border); border-radius: 4px; padding: 3px 0; font-size: 11px; cursor: pointer; }
+  #theme-wrap button:hover { color: var(--text); }
+  #theme-wrap button[aria-pressed="true"] { background: #4E79A7; border-color: #4E79A7; color: #fff; }
+</style>
+<script id="graphify-theme-init">
+// Apply the saved theme before first paint (#3894). No saved choice keeps the
+// historical dark look; "system" follows prefers-color-scheme.
+(function () {
+  var pref = null;
+  try { pref = localStorage.getItem('graphify-theme'); } catch (e) {}
+  var t = pref === 'light' ? 'light'
+    : pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light'
+    : window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<style id="yod-capa">
+  #graph { position: relative; }
+  #yod-barra { position: fixed; top: 8px; left: 8px; right: 296px; z-index: 5; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+  #yod-barra button, #yod-barra a, #yod-barra select { pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; font: 500 12px system-ui, -apple-system, sans-serif; text-decoration: none;
+    color: var(--text); background: var(--panel); border: 1px solid var(--input-border); border-radius: 999px; padding: 5px 10px; min-height: 30px; cursor: pointer; }
+  #yod-barra button[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+  #yod-barra select { max-width: 150px; appearance: auto; }
+  #yod-barra i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  #yod-barra .yod-fuerte { font-weight: 650; }
+  #yod-barra .yod-c { display: none; }
+  .neighbor-link { white-space: normal !important; overflow-wrap: anywhere; line-height: 1.35; padding: 5px 6px !important; }
+  #neighbors-list { max-height: 260px !important; }
+  #info-content .field { overflow-wrap: anywhere; }
+  #info-content a { color: #4E79A7; }
+  [data-theme="dark"] #info-content a { color: #8FB8E8; }
+  .yod-tipo { color: var(--text-2); font-size: 12px; }
+  .yod-ev { color: var(--text-2); font-size: 11.5px; }
+  .yod-alerta { color: #C8102E; } [data-theme="dark"] .yod-alerta { color: #FF7B8A; }
+  .yod-entrar { display: block; margin: 8px 0; padding: 9px 11px; border-radius: 8px; background: #4E79A7; color: #fff !important; font-weight: 600; text-decoration: none; font-size: 13px; }
+  .yod-abrir { display: inline-block; margin: 2px 0 6px; font-size: 12px; }
+  .yod-lista { margin: 6px 0; font-size: 12px; } .yod-lista summary { cursor: pointer; color: var(--text-2); padding: 3px 0; }
+  .yod-lista div { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 0; } .yod-lista span { border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font: 11.5px ui-monospace, Menlo, monospace; }
+  .yod-tb { font-size: 12px; line-height: 1.7; }
+  #yod-simbolos { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 3px 10px; }
+  #yod-simbolos b { font-weight: 400; }
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    #graph { flex: 1 1 auto; min-height: 54vh; }
+    #sidebar { display: block; width: auto; max-height: 46vh; overflow-y: auto; border-left: 0; border-top: 1px solid var(--border); }
+    #theme-wrap { display: none; }
+    #info-panel { min-height: 0; }
+    #legend-wrap { overflow: visible; }
+    #yod-barra { right: 8px; gap: 4px; }
+    #yod-barra button, #yod-barra a, #yod-barra select { font-size: 11px; padding: 4px 8px; min-height: 28px; }
+    #yod-barra .yod-l { display: none; } #yod-barra .yod-c { display: inline; }
+    #yod-barra select { max-width: 112px; }
+    #yod-barra a.yod-fuerte { max-width: 150px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: inline-block; line-height: 20px; }
+  }
+</style>
+<script id="yod-datos">window.YOD = {"id":"tablero-flujo","titulo":"Tablero · Flujo","sub":"Flujo por dentro. Arriba, la pantalla que propongo y sus zonas; en medio, lo que existe hoy; abajo, lo que corre solo. Las flechas punteadas son propuesta; las rojas, lo que falta.","padre":["mapa.html","Mapa general"],"nodos":{"MENU-dinero":{"x":351,"y":74,"nombre":"Menú · Dinero","forma":"star","tam":13,"color":"#EDC948","tipo":"Menú por pregunta","celda":"Propuesta · Pantalla","lbl":"Menú · Dinero","estado":"Propuesta de este análisis","nota":"¿Alcanza la caja y cuánto le toca a cada quien?","ev":"propuesta del 11-nov-2026","tb":[["pantalla-dinero.html","Pantalla · Dinero"],["organizacion.html","Organización propuesta"]]},"PAN-dinero":{"x":541,"y":74,"nombre":"Pantalla · Dinero","forma":"box","tam":0,"color":"#F1CE63","tipo":"Pantalla propuesta","celda":"Propuesta · Pantalla","lbl":"<b>Pantalla · Dinero<\/b>","caja":160,"estado":"Propuesta de este análisis","nota":"¿Alcanza la caja y cuándo entra dinero?","ev":"propuesta del 11-nov-2026","lt":"Quién ve qué","lista":["Dirección ve todo y autoriza","Administración captura y concilia","El inversionista ve sólo sus aportaciones y su calendario, desde su puerta","El socio de la alianza ve la caja de los proyectos compartidos"],"dentro":["pantalla-dinero.html","Pantalla · Dinero"],"tb":[["personas.html","Personas y puertas"],["plan.html","Plan por tablero"],["organizacion.html","Organización propuesta"]]},"ZON-dinero-1":{"x":351,"y":162,"nombre":"Caja hoy y piso","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"Propuesta · Pantalla","lbl":"1 · Caja hoy y piso","caja":160,"bc":"#C99A12","estado":"El dato existe, falta conectarlo","nota":"Saldo del día, el piso de caja (5% del costo de obra en curso) y cuántas semanas alcanza. De dónde sale: Saldos del Flujo. El piso todavía no está escrito en ningún lado.","ev":"propuesta del 11-nov-2026","tb":[["pantalla-dinero.html","Pantalla · Dinero"],["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"ZON-dinero-2":{"x":541,"y":162,"nombre":"Próximas 8 semanas","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"Propuesta · Pantalla","lbl":"2 · Próximas 8 semanas","caja":160,"bc":"#2E7D32","estado":"El dato existe y ya se lee","nota":"Lo que entra y lo que sale por semana, con la semana en que la caja toca el piso marcada en rojo. De dónde sale: Pagos planificados e ingresos esperados; la gráfica ya existe.","ev":"propuesta del 11-nov-2026","tb":[["pantalla-dinero.html","Pantalla · Dinero"],["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"ZON-dinero-3":{"x":351,"y":250,"nombre":"Caja por proyecto","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"Propuesta · Pantalla","lbl":"3 · Caja por proyecto","caja":160,"bc":"#C99A12","estado":"El dato existe, falta conectarlo","nota":"Una ficha por proyecto: aportado, gastado y lo que falta. Hoy son bolsas con nombre escrito a mano. De dónde sale: Bolsas y movimientos, con folio en lugar de texto.","ev":"propuesta del 11-nov-2026","tb":[["pantalla-dinero.html","Pantalla · Dinero"],["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"ZON-dinero-4":{"x":541,"y":250,"nombre":"Por cobrar y por aportar","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"Propuesta · Pantalla","lbl":"4 · Por cobrar y por aportar","caja":160,"bc":"#C99A12","estado":"El dato existe, falta conectarlo","nota":"Un solo calendario: aportaciones de inversionistas, pagos de compradores y honorarios, de Por gestionar a Cobrado. De dónde sale: Hoy son tres listas: ingresos esperados del Flujo, aportaciones del portal de inversionistas y pagos del módulo del comprador.","ev":"propuesta del 11-nov-2026","tb":[["pantalla-dinero.html","Pantalla · Dinero"],["libro-co-desarrolladores-yod.html","Libro · Co-desarrolladores-Yod"],["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"ZON-dinero-5":{"x":351,"y":338,"nombre":"Por pagar","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"Propuesta · Pantalla","lbl":"5 · Por pagar","caja":160,"bc":"#C99A12","estado":"El dato existe, falta conectarlo","nota":"Pagos por fecha límite y prioridad. Los que nacen de una estimación autorizada en obra llegan solos. De dónde sale: Pagos planificados; la liga con los avances autorizados en obra no existe.","ev":"propuesta del 11-nov-2026","tb":[["pantalla-dinero.html","Pantalla · Dinero"],["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"ZON-dinero-6":{"x":541,"y":338,"nombre":"Reportado contra banco","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"Propuesta · Pantalla","lbl":"6 · Reportado contra banco","caja":160,"bc":"#C99A12","estado":"El dato existe, falta conectarlo","nota":"Lo que alguien reportó como pagado o cobrado y todavía no aparece en el banco. De dónde sale: Saldos reportados, cuadre y el monto reportado de cada aportación.","ev":"propuesta del 11-nov-2026","tb":[["pantalla-dinero.html","Pantalla · Dinero"],["libro-co-desarrolladores-yod.html","Libro · Co-desarrolladores-Yod"],["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"ZON-dinero-7":{"x":351,"y":426,"nombre":"Dudas por acomodar","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"Propuesta · Pantalla","lbl":"7 · Dudas por acomodar","caja":160,"bc":"#2E7D32","estado":"El dato existe y ya se lee","nota":"Movimientos que llegaron del grupo de WhatsApp y el asistente no supo a qué proyecto cargar. De dónde sale: Mensajes y pendientes del Flujo.","ev":"propuesta del 11-nov-2026","tb":[["pantalla-dinero.html","Pantalla · Dinero"],["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"ZON-dinero-8":{"x":541,"y":426,"nombre":"Reparto a la fecha","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"Propuesta · Pantalla","lbl":"8 · Reparto a la fecha","caja":160,"bc":"#C8102E","estado":"Hoy no existe","nota":"Por proyecto: cuánto le toca a la tierra, a la alianza y al capital con el esquema acordado, y cuánto se ha entregado. De dónde sale: Modelo de reparto; falta guardar qué esquema se acordó en cada proyecto.","ev":"propuesta del 11-nov-2026","tb":[["pantalla-dinero.html","Pantalla · Dinero"]]},"PUERTA-ALIANZA":{"x":114,"y":74,"nombre":"Puerta · Alianza desarrolladora","forma":"star","tam":12,"color":"#EDC948","tipo":"Puerta por rol","celda":"Propuesta · Quién","lbl":"Puerta · Alianza\ndesarrolladora","estado":"No existe","nota":"Los proyectos compartidos y su caja","ev":"propuesta del 11-nov-2026","tb":[["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["personas.html","Personas y puertas"],["organizacion.html","Organización propuesta"]]},"PUERTA-DIRECCION":{"x":114,"y":162,"nombre":"Puerta · Dirección","forma":"star","tam":12,"color":"#EDC948","tipo":"Puerta por rol","celda":"Propuesta · Quién","lbl":"Puerta · Dirección","estado":"Vivo","nota":"Todo, con decisiones primero","ev":"propuesta del 11-nov-2026","tb":[["tablero-despacho.html","Tablero · El Despacho"],["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["tablero-control.html","Tablero · Control, cabina y Portero"],["personas.html","Personas y puertas"],["organizacion.html","Organización propuesta"]]},"PUERTA-INVERSIONISTA":{"x":114,"y":250,"nombre":"Puerta · Inversionista","forma":"star","tam":12,"color":"#EDC948","tipo":"Puerta por rol","celda":"Propuesta · Quién","lbl":"Puerta ·\nInversionista","estado":"Existe fuera del menú","nota":"Aportaciones, avance y retorno","ev":"propuesta del 11-nov-2026","tb":[["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["tablero-obra.html","Tablero · Obra en vivo"],["personas.html","Personas y puertas"],["organizacion.html","Organización propuesta"]]},"P-ALIANZA":{"x":114,"y":574,"nombre":"Alianza desarrolladora","forma":"dot","tam":15,"color":"#B07AA1","tipo":"Quién","celda":"Hoy · Quién","lbl":"Alianza\ndesarrolladora","estado":"Declarado en el atlas","nota":"Yodesarrollo, un proyecto y un proyecto. La otra mitad de la utilidad.","ev":"memoria-de-conversaciones","tb":[["mapa.html","Mapa general"],["tablero-mercado.html","Tablero · Mercado Hermosillo"],["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["pantalla-mercado.html","Pantalla · Mercado"],["pantalla-cartera-proyectos.html","Pantalla · Cartera · Proyectos"],["pantalla-dinero.html","Pantalla · Dinero"],["personas.html","Personas y puertas"],["organizacion.html","Organización propuesta"]]},"P-CONSTRUCTOR":{"x":114,"y":662,"nombre":"Constructor","forma":"dot","tam":15,"color":"#B07AA1","tipo":"Quién","celda":"Hoy · Quién","lbl":"Constructor","estado":"Visto en el código","nota":"Obra en vivo ya trabaja por roles: captura, verifica, autoriza.","ev":"memoria-de-conversaciones","tb":[["mapa.html","Mapa general"],["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["tablero-aurum.html","Tablero · AURUM"],["tablero-obra.html","Tablero · Obra en vivo"],["pantalla-cartera-proyectos.html","Pantalla · Cartera · Proyectos"],["pantalla-interiores.html","Pantalla · Interiores · AURUM"],["pantalla-obra.html","Pantalla · Obra · Avance"],["personas.html","Personas y puertas"],["","y 1 más"]]},"P-DIRECCION":{"x":114,"y":750,"nombre":"Dirección","forma":"dot","tam":15,"color":"#B07AA1","tipo":"Quién","celda":"Hoy · Quién","lbl":"Dirección","estado":"Vivo · leído el 11-nov","nota":"un proyecto como Master Developer.","ev":"memoria-de-conversaciones","tb":[["mapa.html","Mapa general"],["tablero-despacho.html","Tablero · El Despacho"],["tablero-ppp.html","Tablero · PPP"],["tablero-mercado.html","Tablero · Mercado Hermosillo"],["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["tablero-moac.html","Tablero · MOAC"],["tablero-aurum.html","Tablero · AURUM"],["tablero-brokers.html","Tablero · Masterbrokers"],["","y 16 más"]]},"P-EQUIPO":{"x":114,"y":838,"nombre":"Equipo interno","forma":"dot","tam":15,"color":"#B07AA1","tipo":"Quién","celda":"Hoy · Quién","lbl":"Equipo interno","estado":"Vivo · leído el 11-nov","nota":"un proyecto, un proyecto, un proyecto, un proyecto.","ev":"memoria-de-conversaciones","tb":[["mapa.html","Mapa general"],["tablero-despacho.html","Tablero · El Despacho"],["tablero-moac.html","Tablero · MOAC"],["tablero-embudo.html","Tablero · Embudo y Sala"],["tablero-obra.html","Tablero · Obra en vivo"],["tablero-control.html","Tablero · Control, cabina y Portero"],["pantalla-hoy.html","Pantalla · Hoy"],["pantalla-equipo.html","Pantalla · Equipo · MOAC"],["","y 6 más"]]},"P-INVERSIONISTA":{"x":114,"y":926,"nombre":"Inversionista","forma":"dot","tam":15,"color":"#B07AA1","tipo":"Quién","celda":"Hoy · Quién","lbl":"Inversionista","estado":"Visto en el código","nota":"Costo financiero que sale antes de la utilidad. Su portal existe, fuera del menú.","ev":"memoria-de-conversaciones","tb":[["mapa.html","Mapa general"],["tablero-ppp.html","Tablero · PPP"],["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["tablero-obra.html","Tablero · Obra en vivo"],["pantalla-cartera-ppp.html","Pantalla · Cartera · PPP"],["pantalla-cartera-proyectos.html","Pantalla · Cartera · Proyectos"],["pantalla-dinero.html","Pantalla · Dinero"],["pantalla-obra.html","Pantalla · Obra · Avance"],["","y 2 más"]]},"SYS-FLUJO":{"x":351,"y":574,"nombre":"Flujo (Tesorería)","forma":"square","tam":15,"color":"#59A14F","tipo":"Tablero de hoy","celda":"Hoy · Pantalla","lbl":"Flujo (Tesorería)","estado":"Visto en el código","nota":"Controlar bolsas, movimientos y compromisos de caja Hoy se ve: Pestañas Bolsas, Movimientos, Planificación e Historial. Gráficas: saldo en el tiempo, ingresos contra egresos, flujo por bolsa, distribución de egresos y próximas 8 semanas. Alertas, dudas por acomodar, transferencias y préstamos entre bolsas, y una pregunta al asistente. Su guía anota que el nivel más fino es la bolsa: no hay concepto ni categoría.","ev":"yod-portal/docs/arquitectura/modelo.json","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/os/catalogo.js#L21","al":[["HAL-10","Autorizar en obra no mueve la caja"]],"tb":[["mapa.html","Mapa general"],["pantalla-dinero.html","Pantalla · Dinero"],["personas.html","Personas y puertas"],["hallazgos.html","Hallazgos"],["plan.html","Plan por tablero"],["organizacion.html","Organización propuesta"],["propuestas.html","Propuestas del atlas"]]},"board-flujo-yod::index_html_inline":{"x":541,"y":574,"nombre":"index.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"Hoy · Pantalla","lbl":"index.html","ev":"board-flujo-yod/index.html · 1095 líneas","url":"https://github.com/yodesarrollomx/board-flujo-yod/blob/e9d122f090/index.html","lt":"Funciones y símbolos (78)","lista":["MESES  · L383","DB  · L388","credencial()  · L401","_pyodCerrar()  · L404","_pyodAviso()  · L405","credencialRechazada()  · L412","api()  · L413","_b64aBytes()  · L438","descifrarRespaldo()  · L444","cargarRespaldoCifrado()  · L461","intenta()  · L470","cargarRespaldoLocal()  · L492","loadAll()  · L496","logout()  · L526","quien()  · L527","escHtml()  · L530","fmt()  · L531","fmt0()  · L532","mesDe()  · L533","bolsasCalc()  · L534","SALUD_TXT  · L557","SALUD_COL  · L558","donut()  · L559","diasDeCaja()  · L567","conciliacion()  · L573","renderAll()  · L586","nuevaBolsa()  · L588","proyChange()  · L601","fillSelects()  · L602","renderDash()  · L613","_MESN  · L678","_fechaCorta()  · L679","_mesKey()  · L680","_mesLabel()  · L681","_dinero()  · L682","setChart()  · L683","temaVar()  · L684","proyeccion8()  · L688","renderChart()  · L699","renderSaldoChart()  · L741","resolverDuda()  · L758","esTransfer()  · L773","openTransfer()  · L774","saveTransfer()  · L786","openUnify()  · L814","saveUnify()  · L823","openPrestamos()  · L831","verBolsa()  · L854","renderMovs()  · L886","toggleFact()  · L907","clearFilters()  · L916","renderPlan()  · L918","marcarPagado()  · L957","renderHist()  · L975","go()  · L981","closeM()  · L983","openMov()  · L984","fToast()  · L997","saveMov()  · L998","openPago()  · L1014","savePago()  · L1015","openIngreso()  · L1023","saveIngreso()  · L1024","now()  · L1032","CHAT_DATA  · L1035","aiHistory  · L1037","toggleLock()  · L1039","checkLock()  · L1040","openAI()  · L1041","closeAI()  · L1042","… y 8 más"],"tb":[["pantalla-dinero.html","Pantalla · Dinero"],["codigo-board-flujo-yod.html","Código · board-flujo-yod"]]},"repo:yodesarrollomx/board-flujo-yod":{"x":778,"y":574,"nombre":"yodesarrollomx/board-flujo-yod","forma":"hexagon","tam":13,"color":"#79706E","tipo":"Repositorio","celda":"Hoy · Código","lbl":"yodesarrollomx/boa\nrd-flujo-yod","nota":"YOD OS · publico · commit e9d122f · 10 archivos: 0 de código, 1 de Apps Script, 1 páginas, 1 pruebas, 1 flujos, 3 documentos, 2 de datos, 0 medios","ev":"board-flujo-yod/","url":"https://github.com/yodesarrollomx/board-flujo-yod","dentro":["codigo-board-flujo-yod.html","Código · board-flujo-yod"],"tb":[["mapa.html","Mapa general"],["casa-vieja.html","Casa vieja y copias"]]},"GAS-FLUJO":{"x":1006,"y":574,"nombre":"Motor · Tesorería","forma":"diamond","tam":14,"color":"#F28E2B","tipo":"Motor (Apps Script o servicio)","celda":"Hoy · Motor","lbl":"Motor · Tesorería","estado":"Visto en el código","nota":"Servir el contrato de Tesorería · Su código de Apps Script no está en ningún repo: vive sólo en el editor de Google. En producción: Versión 15 desplegada en la implementación existente y fuente contrastada por API. Correcciones acotadas probadas con dobles; recorrido real de negocio por rol pendiente.","ev":"yod-portal/docs/arquitectura/modelo.json","url":"https://github.com/yodesarrollomx/board-flujo-yod/blob/e9d122f090/apps-script/portero-auth.gs#L36","al":[["HAL-04","Trece motores viven sólo en el editor de Google"],["HAL-31","13 de 22 motores no tienen su código en Git"]],"tb":[["mapa.html","Mapa general"],["hallazgos.html","Hallazgos"]]},"gas:AKfycbxbQpBn":{"x":1006,"y":662,"nombre":"Tesorería · AKfycbxbQpBn…","forma":"diamond","tam":10,"color":"#FFBE7D","tipo":"Despliegue de Apps Script","celda":"Hoy · Motor","lbl":"Tesorería ·\nAKfycbxbQpBn…","estado":"Visto en el código","nota":"Despliegue /exec de Apps Script. Aquí sólo va su prefijo; el identificador completo está en el archivo y línea de cada referencia.","ev":"apps-script/despliegues","tb":[["codigo-board-flujo-yod.html","Código · board-flujo-yod"],["codigo-yod-portal.html","Código · yod-portal"],["codigo-yod-portal-os.html","Código · yod-portal · os/"]]},"board-flujo-yod::apps_script_portero_auth_gs":{"x":1006,"y":750,"nombre":"portero-auth.gs","forma":"diamond","tam":8,"color":"#FFBE7D","tipo":"Archivo de Apps Script","celda":"Hoy · Motor","lbl":"portero-auth.gs","ev":"board-flujo-yod/apps-script/portero-auth.gs · 58 líneas","url":"https://github.com/yodesarrollomx/board-flujo-yod/blob/e9d122f090/apps-script/portero-auth.gs","lt":"Funciones y símbolos (1)","lista":["credencialValida_()  · L36"],"tb":[["codigo-board-flujo-yod.html","Código · board-flujo-yod"]]},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk":{"x":1234,"y":574,"nombre":"YOD_Flujo_2026","forma":"triangle","tam":14,"color":"#4E79A7","tipo":"Libro de Google Sheets","celda":"Hoy · Libro","lbl":"YOD_Flujo_2026","estado":"Vivo · leído el 11-nov","nota":"La lee el código de: board-flujo-yod.","ev":"Google Sheets","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","dentro":["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"],"tb":[["mapa.html","Mapa general"],["tablero-despacho.html","Tablero · El Despacho"],["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["tablero-aurum.html","Tablero · AURUM"],["tablero-obra.html","Tablero · Obra en vivo"],["pantalla-hoy.html","Pantalla · Hoy"],["pantalla-cartera-proyectos.html","Pantalla · Cartera · Proyectos"],["pantalla-dinero.html","Pantalla · Dinero"],["","y 3 más"]]},"tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:PagosPlanificados":{"x":1462,"y":574,"nombre":"PagosPlanificados · Flujo","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Hoy · Pestañas","lbl":"PagosPlanificados\n· Flujo","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD_Flujo_2026»","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","lt":"Columnas (fila 1, leída el 11-nov)","lista":["id","concepto","monto","fechaLimite","tipoPago","prioridad","proyecto","estado","timestamp","historial"],"tb":[["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["tablero-aurum.html","Tablero · AURUM"],["tablero-obra.html","Tablero · Obra en vivo"],["pantalla-cartera-proyectos.html","Pantalla · Cartera · Proyectos"],["pantalla-dinero.html","Pantalla · Dinero"],["pantalla-interiores.html","Pantalla · Interiores · AURUM"],["pantalla-obra.html","Pantalla · Obra · Avance"],["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"],["","y 1 más"]]},"tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Bolsas":{"x":1634,"y":574,"nombre":"Bolsas · Flujo","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Hoy · Pestañas","lbl":"Bolsas · Flujo","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD_Flujo_2026»","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","lt":"Columnas (fila 1, leída el 11-nov)","lista":["nombre","presupuesto"],"al":[["HAL-21","Tesorería, tareas y obra llevan «proyecto» en una columna de texto"]],"tb":[["pantalla-dinero.html","Pantalla · Dinero"],["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"],["folio.html","Folio · una clave por proyecto"],["hallazgos.html","Hallazgos"]]},"tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Movimientos":{"x":1806,"y":574,"nombre":"Movimientos · Flujo","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Hoy · Pestañas","lbl":"Movimientos ·\nFlujo","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD_Flujo_2026»","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","lt":"Columnas (fila 1, leída el 11-nov)","lista":["id","fecha","tipo","monto","beneficiario","proyecto","notas","capturadoPor","timestamp","borrada","facturado","linkComprobante","historial"],"al":[["HAL-21","Tesorería, tareas y obra llevan «proyecto» en una columna de texto"]],"tb":[["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["pantalla-cartera-proyectos.html","Pantalla · Cartera · Proyectos"],["pantalla-dinero.html","Pantalla · Dinero"],["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"],["folio.html","Folio · una clave por proyecto"],["hallazgos.html","Hallazgos"]]},"tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:IngresosEsperados":{"x":1462,"y":662,"nombre":"IngresosEsperados · Flujo","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Hoy · Pestañas","lbl":"IngresosEsperados\n· Flujo","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD_Flujo_2026»","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","lt":"Columnas (fila 1, leída el 11-nov)","lista":["id","concepto","monto","fechaEsperada","estatus","proyecto","timestamp"],"tb":[["pantalla-dinero.html","Pantalla · Dinero"],["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"],["folio.html","Folio · una clave por proyecto"]]},"tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Saldos":{"x":1634,"y":662,"nombre":"Saldos · Flujo","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Hoy · Pestañas","lbl":"Saldos · Flujo","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD_Flujo_2026»","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","lt":"Columnas (fila 1, leída el 11-nov)","lista":["ts","monto"],"tb":[["tablero-despacho.html","Tablero · El Despacho"],["pantalla-hoy.html","Pantalla · Hoy"],["pantalla-dinero.html","Pantalla · Dinero"],["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Pendientes":{"x":1806,"y":662,"nombre":"Pendientes · Flujo","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Hoy · Pestañas","lbl":"Pendientes · Flujo","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD_Flujo_2026»","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","lt":"Columnas (fila 1, leída el 11-nov)","lista":["id","tipo","pendiente","monto","desde","fuente","estado","siguiente paso"],"tb":[["pantalla-dinero.html","Pantalla · Dinero"],["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Saldos reportados":{"x":1462,"y":750,"nombre":"Saldos reportados · Flujo","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Hoy · Pestañas","lbl":"Saldos reportados\n· Flujo","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD_Flujo_2026»","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","tb":[["pantalla-dinero.html","Pantalla · Dinero"],["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Config":{"x":1634,"y":750,"nombre":"Config · Flujo","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Hoy · Pestañas","lbl":"Config · Flujo","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD_Flujo_2026»","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","tb":[["pantalla-dinero.html","Pantalla · Dinero"],["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Cuadre":{"x":1806,"y":750,"nombre":"Cuadre · Flujo","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Hoy · Pestañas","lbl":"Cuadre · Flujo","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD_Flujo_2026»","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","tb":[["pantalla-dinero.html","Pantalla · Dinero"],["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Mensajes":{"x":1462,"y":838,"nombre":"Mensajes · Flujo","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Hoy · Pestañas","lbl":"Mensajes · Flujo","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD_Flujo_2026»","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","tb":[["pantalla-dinero.html","Pantalla · Dinero"],["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Historial":{"x":1634,"y":838,"nombre":"Historial · Flujo","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Hoy · Pestañas","lbl":"Historial · Flujo","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD_Flujo_2026»","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","lt":"Columnas (fila 1, leída el 11-nov)","lista":["ts","usuario","accion","detalle"],"tb":[["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Bitácora":{"x":1806,"y":838,"nombre":"Bitácora · Flujo","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Hoy · Pestañas","lbl":"Bitácora · Flujo","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD_Flujo_2026»","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","tb":[["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Drive":{"x":1462,"y":926,"nombre":"Drive · Flujo","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Hoy · Pestañas","lbl":"Drive · Flujo","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD_Flujo_2026»","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","tb":[["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Lineamientos":{"x":1634,"y":926,"nombre":"Lineamientos · Flujo","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Hoy · Pestañas","lbl":"Lineamientos ·\nFlujo","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD_Flujo_2026»","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","tb":[["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Movs Excel (respaldo)":{"x":1806,"y":926,"nombre":"Movs Excel (respaldo) · Flujo","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Hoy · Pestañas","lbl":"Movs Excel\n(respaldo) · Flujo","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD_Flujo_2026»","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","tb":[["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Resumen":{"x":1462,"y":1014,"nombre":"Resumen · Flujo","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Hoy · Pestañas","lbl":"Resumen · Flujo","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD_Flujo_2026»","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","tb":[["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Resumen 2026":{"x":1634,"y":1014,"nombre":"Resumen 2026 · Flujo","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Hoy · Pestañas","lbl":"Resumen 2026 ·\nFlujo","estado":"Vivo · leído el 11-nov","ev":"Libro «YOD_Flujo_2026»","url":"https://docs.google.com/spreadsheets/d/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk/edit","tb":[["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"]]},"X-FLUJO-WA":{"x":1234,"y":74,"nombre":"Grupo «Yod: Flujo 2026»","forma":"dot","tam":10,"color":"#FF9DA7","tipo":"Servicio externo","celda":"Propuesta · Libro","lbl":"Grupo «Yod: Flujo\n2026»","estado":"Vivo · leído el 11-nov","nota":"WhatsApp desde donde se cargan movimientos al flujo con /flujo.","ev":"memoria-de-conversaciones","tb":[["pantalla-dinero.html","Pantalla · Dinero"]]},"hoja:11DiE789WIVqIybKTPapayS5XEWHtcAXUiUA11KBQUQc":{"x":1234,"y":162,"nombre":"Co-desarrolladores-Yod","forma":"triangle","tam":14,"color":"#4E79A7","tipo":"Libro de Google Sheets","celda":"Propuesta · Libro","lbl":"Co-desarrolladores\n-Yod","estado":"Vivo · leído el 11-nov","nota":"La lee el código de: Co-desarrolladores-Yod.","ev":"Google Sheets","url":"https://docs.google.com/spreadsheets/d/11DiE789WIVqIybKTPapayS5XEWHtcAXUiUA11KBQUQc/edit","dentro":["libro-co-desarrolladores-yod.html","Libro · Co-desarrolladores-Yod"],"tb":[["mapa.html","Mapa general"],["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["pantalla-dinero.html","Pantalla · Dinero"],["libros.html","Libros de Google Sheets"]]},"N-FOLIO":{"x":1234,"y":250,"nombre":"Folio único del proyecto","forma":"triangle","tam":11,"color":"#86A9CF","tipo":"Almacén según el atlas","celda":"Propuesta · Libro","lbl":"Folio único del\nproyecto","estado":"Propuesto en el atlas","nota":"Una sola clave por terreno, de la captación al reparto. No hay que inventarla: project_id (PRJ-…) ya vive en el Control Maestro, en el catálogo de la cabina, en la app de obra y en el módulo del comprador. Falta sembrarla en 13 pestañas.","ev":"yod-os/propuesta","al":[["HAL-09","La capa de agentes crece más rápido que los datos de abajo"]],"dentro":["folio.html","Folio · una clave por proyecto"],"tb":[["tablero-ppp.html","Tablero · PPP"],["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["tablero-brokers.html","Tablero · Masterbrokers"],["tablero-embudo.html","Tablero · Embudo y Sala"],["tablero-obra.html","Tablero · Obra en vivo"],["pantalla-cartera-ppp.html","Pantalla · Cartera · PPP"],["pantalla-cartera-proyectos.html","Pantalla · Cartera · Proyectos"],["pantalla-dinero.html","Pantalla · Dinero"],["","y 12 más"]]},"N-REPARTO":{"x":1234,"y":338,"nombre":"Reparto de la alianza","forma":"diamond","tam":14,"color":"#F28E2B","tipo":"Motor (Apps Script o servicio)","celda":"Propuesta · Libro","lbl":"Reparto de la\nalianza","estado":"Propuesto en el atlas","nota":"Ya existe como libro desde el 11-nov: compara cinco esquemas de reparto (A a E) sobre un proyecto y un proyecto y calcula cuántas veces el valor de su tierra recibe el dueño. Falta conectarlo al PPP y guardar qué esquema se acordó en cada proyecto.","ev":"yod-os/propuesta","al":[["HAL-09","La capa de agentes crece más rápido que los datos de abajo"]],"dentro":["pantalla-cartera-ppp.html","Pantalla · Cartera · PPP"],"tb":[["mapa.html","Mapa general"],["tablero-ppp.html","Tablero · PPP"],["pantalla-dinero.html","Pantalla · Dinero"],["personas.html","Personas y puertas"],["hallazgos.html","Hallazgos"]]},"tab:11DiE789WIVqIybKTPapayS5XEWHtcAXUiUA11KBQUQc:Aportaciones":{"x":1462,"y":74,"nombre":"Aportaciones · Codesarrolladores","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Propuesta · Pestañas","lbl":"Aportaciones ·\nCodesarrolladores","estado":"Vivo · leído el 11-nov","ev":"Libro «Co-desarrolladores-Yod»","url":"https://docs.google.com/spreadsheets/d/11DiE789WIVqIybKTPapayS5XEWHtcAXUiUA11KBQUQc/edit","lt":"Columnas (fila 1, leída el 11-nov)","lista":["id","folio","numeroPago","totalPagos","concepto","fechaProgramada","monto","fechaRecibida","estado","comprobanteUrl","referencia","fechaReporte","creado","montoReportado"],"tb":[["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["pantalla-dinero.html","Pantalla · Dinero"],["libro-co-desarrolladores-yod.html","Libro · Co-desarrolladores-Yod"],["folio.html","Folio · una clave por proyecto"]]},"ls:pyod_rol":{"x":351,"y":1162,"nombre":"pyod_rol","forma":"dot","tam":7,"color":"#9C755F","tipo":"Llave o secreto (sólo el nombre)","celda":"Corre solo · Pantalla","lbl":"pyod_rol","estado":"Visto en el código","nota":"Llave de sessionStorage en el navegador.","ev":"navegador/almacen","tb":[["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["tablero-moac.html","Tablero · MOAC"],["tablero-aurum.html","Tablero · AURUM"],["tablero-brokers.html","Tablero · Masterbrokers"],["tablero-embudo.html","Tablero · Embudo y Sala"],["tablero-control.html","Tablero · Control, cabina y Portero"]]},"ls:yodflujo-user":{"x":541,"y":1162,"nombre":"yodflujo-user","forma":"dot","tam":7,"color":"#9C755F","tipo":"Llave o secreto (sólo el nombre)","celda":"Corre solo · Pantalla","lbl":"yodflujo-user","estado":"Visto en el código","nota":"Llave de localStorage en el navegador.","ev":"navegador/almacen"},"board-flujo-yod::github_workflows_arquitectura":{"x":778,"y":1162,"nombre":"Arquitectura YOD","forma":"hexagon","tam":9,"color":"#86BCB6","tipo":"Flujo de GitHub","celda":"Corre solo · Código","lbl":"Arquitectura YOD","nota":"a mano · al hacer push · en cada PR","ev":"board-flujo-yod/.github/workflows/arquitectura.yml · 97 líneas","url":"https://github.com/yodesarrollomx/board-flujo-yod/blob/e9d122f090/.github/workflows/arquitectura.yml","lt":"Funciones y símbolos (44)","lista":["name  · L1","on  · L3","pull_request  · L4","push  · L5","branches  · L6","workflow_dispatch  · L7","inputs  · L8","base_sha  · L9","description  · L10","required  · L11","type  · L12","head_sha  · L13","description  · L14","required  · L15","type  · L16","permissions  · L18","contents  · L19","jobs  · L21","impacto  · L22","name  · L23","runs-on  · L24","steps  · L25","name  · L26","env  · L27","BASE_INPUT  · L28","HEAD_INPUT  · L29","EVENT_SHA  · L30","run  · L31","uses  · L39","with  · L40","fetch-depth  · L41","persist-credentials  · L42","ref  · L43","repository  · L47","path  · L49","sparse-checkout-cone-mode  · L51","sparse-checkout  · L52","node-version  · L57","id  · L59","EVENT_NAME  · L61","PR_BASE  · L62","PUSH_BASE  · L63","BASE_SHA  · L92","HEAD_SHA  · L93"],"tb":[["codigo-board-flujo-yod.html","Código · board-flujo-yod"]]},"EXT-ACTIONS":{"x":1234,"y":1162,"nombre":"GitHub Actions","forma":"dot","tam":10,"color":"#FF9DA7","tipo":"Servicio externo","celda":"Corre solo · Libro","lbl":"GitHub Actions","estado":"Propuesto en el atlas","nota":"Dependencia externa de procesos YOD OS","ev":"yod-portal/docs/arquitectura/modelo.json","al":[["HAL-05","Hay 23 relojes corriendo"]],"tb":[["tablero-despacho.html","Tablero · El Despacho"],["tablero-ppp.html","Tablero · PPP"],["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["tablero-moac.html","Tablero · MOAC"],["tablero-aurum.html","Tablero · AURUM"],["tablero-brokers.html","Tablero · Masterbrokers"],["tablero-embudo.html","Tablero · Embudo y Sala"],["tablero-control.html","Tablero · Control, cabina y Portero"],["","y 5 más"]]},"lib:Chart.js":{"x":1234,"y":1250,"nombre":"Chart.js","forma":"dot","tam":8,"color":"#D4A6C8","tipo":"Servicio o biblioteca","celda":"Corre solo · Libro","lbl":"Chart.js","estado":"Vivo · leído el 11-nov","nota":"Librería cargada desde un CDN.","ev":"librerias-externas"},"svc:Cloudflare":{"x":1234,"y":1338,"nombre":"Cloudflare","forma":"dot","tam":8,"color":"#D4A6C8","tipo":"Servicio o biblioteca","celda":"Corre solo · Libro","lbl":"Cloudflare","estado":"Visto en el código","nota":"Servicio externo llamado desde el código.","ev":"servicios-externos","tb":[["tablero-embudo.html","Tablero · Embudo y Sala"],["tablero-control.html","Tablero · Control, cabina y Portero"]]},"gss:Caché del script":{"x":1234,"y":1426,"nombre":"Caché del script (Apps Script)","forma":"dot","tam":8,"color":"#D4A6C8","tipo":"Servicio o biblioteca","celda":"Corre solo · Libro","lbl":"Caché del script\n(Apps Script)","estado":"Visto en el código","nota":"Servicio integrado de Apps Script.","ev":"apps-script/servicios","tb":[["tablero-moac.html","Tablero · MOAC"],["tablero-aurum.html","Tablero · AURUM"],["tablero-obra.html","Tablero · Obra en vivo"]]},"gss:Llamadas externas":{"x":1234,"y":1514,"nombre":"Llamadas externas (Apps Script)","forma":"dot","tam":8,"color":"#D4A6C8","tipo":"Servicio o biblioteca","celda":"Corre solo · Libro","lbl":"Llamadas externas\n(Apps Script)","estado":"Visto en el código","nota":"Servicio integrado de Apps Script.","ev":"apps-script/servicios","tb":[["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["tablero-moac.html","Tablero · MOAC"],["tablero-embudo.html","Tablero · Embudo y Sala"],["tablero-obra.html","Tablero · Obra en vivo"]]}},"flechas":{"GAS-FLUJO>gas:AKfycbxbQpBn":{"f":"inferida","r":"está desplegado en","ev":"codigo","nota":"Por el nombre de la constante y el archivo que lo llama."},"board-flujo-yod::index_html_inline>gas:AKfycbxbQpBn":{"f":"viva","r":"llama al Apps Script","ev":"board-flujo-yod/index.html L381"},"ZON-dinero-6>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Saldos reportados":{"f":"propuesta","r":"sale de","nota":"Saldos reportados, cuadre y el monto reportado de cada aportación"},"ZON-dinero-6>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Cuadre":{"f":"propuesta","r":"sale de","nota":"Saldos reportados, cuadre y el monto reportado de cada aportación"},"ZON-dinero-6>tab:11DiE789WIVqIybKTPapayS5XEWHtcAXUiUA11KBQUQc:Aportaciones":{"f":"propuesta","r":"sale de","nota":"Saldos reportados, cuadre y el monto reportado de cada aportación"},"board-flujo-yod::index_html_inline>ls:pyod_rol":{"f":"viva","r":"usa la llave del navegador","ev":"board-flujo-yod/index.html L404"},"P-ALIANZA>N-REPARTO":{"f":"propuesta","r":"Acuerda la fórmula","ev":"yod-os/propuesta"},"P-ALIANZA>PAN-dinero":{"f":"propuesta","r":"entra a","nota":"ve la caja de los proyectos compartidos"},"P-ALIANZA>PUERTA-ALIANZA":{"f":"hueco","r":"entra por"},"SYS-FLUJO>repo:yodesarrollomx/board-flujo-yod":{"f":"viva","r":"vive en","ev":"yod-portal/docs/arquitectura/modelo.json"},"SYS-FLUJO>GAS-FLUJO":{"f":"viva","r":"Consume contrato del backend","ev":"yod-portal/docs/arquitectura/modelo.json"},"SYS-FLUJO>board-flujo-yod::github_workflows_arquitectura":{"f":"viva","r":"se implementa en","ev":"yod-portal/docs/arquitectura/modelo.json"},"SYS-FLUJO>board-flujo-yod::apps_script_portero_auth_gs":{"f":"viva","r":"se implementa en","ev":"yod-portal/docs/arquitectura/modelo.json"},"SYS-FLUJO>board-flujo-yod::index_html_inline":{"f":"viva","r":"se implementa en","ev":"yod-portal/docs/arquitectura/modelo.json"},"N-REPARTO>SYS-FLUJO":{"f":"propuesta","r":"Calendario de pagos y piso de caja","ev":"yod-os/propuesta"},"P-CONSTRUCTOR>SYS-FLUJO":{"f":"hueco","r":"Estimación autorizada debería volverse pago programado","ev":"memoria-de-conversaciones"},"X-FLUJO-WA>SYS-FLUJO":{"f":"viva","r":"Carga a mano con /flujo","ev":"memoria-de-conversaciones"},"SYS-FLUJO>PAN-dinero":{"f":"propuesta","r":"se convierte en"},"SYS-FLUJO>MENU-dinero":{"f":"propuesta","r":"se agrupa en"},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Config":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk"},"ZON-dinero-1>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Config":{"f":"propuesta","r":"sale de","nota":"Saldos del Flujo. El piso todavía no está escrito en ningún lado"},"board-flujo-yod::index_html_inline>ls:yodflujo-user":{"f":"viva","r":"usa la llave del navegador","ev":"board-flujo-yod/index.html L527"},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Saldos reportados":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk"},"ZON-dinero-1>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Saldos reportados":{"f":"propuesta","r":"sale de","nota":"Saldos del Flujo. El piso todavía no está escrito en ningún lado"},"board-flujo-yod::github_workflows_arquitectura>EXT-ACTIONS":{"f":"viva","r":"corre en","ev":"board-flujo-yod/.github/workflows/arquitectura.yml"},"ZON-dinero-8>N-REPARTO":{"f":"hueco","r":"sale de","nota":"Modelo de reparto; falta guardar qué esquema se acordó en cada proyecto"},"hoja:11DiE789WIVqIybKTPapayS5XEWHtcAXUiUA11KBQUQc>tab:11DiE789WIVqIybKTPapayS5XEWHtcAXUiUA11KBQUQc:Aportaciones":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/11DiE789WIVqIybKTPapayS5XEWHtcAXUiUA11KBQUQc"},"ZON-dinero-4>tab:11DiE789WIVqIybKTPapayS5XEWHtcAXUiUA11KBQUQc:Aportaciones":{"f":"propuesta","r":"sale de","nota":"Hoy son tres listas: ingresos esperados del Flujo, aportaciones del portal de inversionistas y pagos del módulo del comprador"},"ZON-dinero-1>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Saldos":{"f":"propuesta","r":"sale de","nota":"Saldos del Flujo. El piso todavía no está escrito en ningún lado"},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:PagosPlanificados":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk"},"ZON-dinero-2>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:PagosPlanificados":{"f":"viva","r":"sale de","nota":"Pagos planificados e ingresos esperados; la gráfica ya existe"},"ZON-dinero-5>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:PagosPlanificados":{"f":"propuesta","r":"sale de","nota":"Pagos planificados; la liga con los avances autorizados en obra no existe"},"GAS-FLUJO>repo:yodesarrollomx/board-flujo-yod":{"f":"viva","r":"vive en","ev":"yod-portal/docs/arquitectura/modelo.json"},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Movs Excel (respaldo)":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk"},"P-EQUIPO>PAN-dinero":{"f":"propuesta","r":"entra a","nota":"administración captura y concilia"},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Saldos":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk"},"ZON-dinero-3>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Bolsas":{"f":"propuesta","r":"sale de","nota":"Bolsas y movimientos, con folio en lugar de texto"},"ZON-dinero-3>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Movimientos":{"f":"propuesta","r":"sale de","nota":"Bolsas y movimientos, con folio en lugar de texto"},"ZON-dinero-3>N-FOLIO":{"f":"propuesta","r":"sale de","nota":"Bolsas y movimientos, con folio en lugar de texto"},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Cuadre":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk"},"ZON-dinero-7>X-FLUJO-WA":{"f":"viva","r":"sale de","nota":"Mensajes y pendientes del Flujo"},"PUERTA-ALIANZA>PAN-dinero":{"f":"propuesta","r":"ve"},"N-FOLIO>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Bolsas":{"f":"propuesta","r":"habría que sembrarlo en","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk Bolsas"},"P-INVERSIONISTA>PAN-dinero":{"f":"propuesta","r":"entra a","nota":"ve sólo sus aportaciones"},"P-INVERSIONISTA>PUERTA-INVERSIONISTA":{"f":"propuesta","r":"entra por"},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Resumen 2026":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk"},"P-DIRECCION>PAN-dinero":{"f":"propuesta","r":"entra a","nota":"ve todo y autoriza"},"PUERTA-DIRECCION>PAN-dinero":{"f":"propuesta","r":"ve"},"PUERTA-INVERSIONISTA>PAN-dinero":{"f":"propuesta","r":"ve"},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Pendientes":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk"},"ZON-dinero-7>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Pendientes":{"f":"viva","r":"sale de","nota":"Mensajes y pendientes del Flujo"},"ZON-dinero-2>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:IngresosEsperados":{"f":"viva","r":"sale de","nota":"Pagos planificados e ingresos esperados; la gráfica ya existe"},"board-flujo-yod::index_html_inline>lib:Chart.js":{"f":"viva","r":"carga el script","ev":"board-flujo-yod/index.html L374"},"board-flujo-yod::index_html_inline>svc:Cloudflare":{"f":"viva","r":"usa el servicio","ev":"board-flujo-yod/index.html L374"},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:IngresosEsperados":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk"},"ZON-dinero-4>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:IngresosEsperados":{"f":"propuesta","r":"sale de","nota":"Hoy son tres listas: ingresos esperados del Flujo, aportaciones del portal de inversionistas y pagos del módulo del comprador"},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Resumen":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk"},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Bitácora":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk"},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Lineamientos":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk"},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Mensajes":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk"},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Drive":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk"},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Movimientos":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk"},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Bolsas":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk"},"hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Historial":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk"},"board-flujo-yod::apps_script_portero_auth_gs>gss:Caché del script":{"f":"viva","r":"usa","ev":"board-flujo-yod/apps-script/portero-auth.gs L40"},"board-flujo-yod::apps_script_portero_auth_gs>gss:Llamadas externas":{"f":"viva","r":"usa","ev":"board-flujo-yod/apps-script/portero-auth.gs L48"},"ZON-dinero-7>tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Mensajes":{"f":"viva","r":"sale de","nota":"Mensajes y pendientes del Flujo"},"P-DIRECCION>PUERTA-DIRECCION":{"f":"viva","r":"entra por"}},"familias":{"viva":{"corto":"Visto","nombre":"Visto en código u hoja","color":"#5B6470","ancho":1.3,"opacidad":0.75,"punteada":false},"inferida":{"corto":"Atlas","nombre":"Del atlas o deducido","color":"#9AA1AB","ancho":1.0,"opacidad":0.6,"punteada":false},"propuesta":{"corto":"Propuesta","nombre":"Propuesta","color":"#C99A12","ancho":1.6,"opacidad":0.9,"punteada":[7,5]},"hueco":{"corto":"Falta","nombre":"Falta o hallazgo","color":"#C8102E","ancho":1.7,"opacidad":0.9,"punteada":[3,5]}},"usadas":["viva","inferida","propuesta","hueco"],"rejilla":{"cols":[{"x":0,"w":228,"nombre":"Quién"},{"x":228,"w":436,"nombre":"Pantalla"},{"x":664,"w":228,"nombre":"Código"},{"x":892,"w":228,"nombre":"Motor"},{"x":1120,"w":228,"nombre":"Libro"},{"x":1348,"w":572,"nombre":"Pestañas"}],"filas":[{"y":0,"h":500,"nombre":"Propuesta"},{"y":500,"h":588,"nombre":"Hoy"},{"y":1088,"h":500,"nombre":"Corre solo"}]},"eje_x":"Recorrido: de la persona al dato","eje_y":"De la propuesta a lo que corre solo","estado":"https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/grafo-datos/estado.json","simbolos":[["■","#59A14F","Tablero o página"],["▭","#F1CE63","Pantalla propuesta"],["◆","#F28E2B","Motor"],["⬢","#79706E","Repositorio o código"],["▲","#4E79A7","Libro"],["▼","#A0CBE8","Pestaña"],["●","#B07AA1","Quién"],["★","#EDC948","Propuesta"],["★","#E15759","Hallazgo o clave"]],"pie":"55 nodos · 68 flechas · Tablero · Flujo · Graphify 0.9.106"};</script>
+</head>
+<body>
+<div id="graph"></div>
+<div id="sidebar">
+  <div id="theme-wrap" role="group" aria-label="Theme">
+    <button type="button" data-theme-choice="light">Claro</button>
+    <button type="button" data-theme-choice="dark">Oscuro</button>
+    <button type="button" data-theme-choice="system">Sistema</button>
+  </div>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Buscar…" autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div id="info-panel">
+    <h3>Detalle</h3>
+    <div id="info-content"><span class="empty">Toca un nodo para ver su detalle</span></div>
+  </div>
+  <div id="legend-wrap">
+    <h3>Grupos</h3>
+    <div id="legend-controls">
+      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">Todos</label>
+    </div>
+    <div id="legend"></div>
+  </div>
+  <div id="stats">55 nodes &middot; 68 edges &middot; 13 communities</div>
+</div>
+<script>
+const RAW_NODES = [{"id": "MENU-dinero", "label": "Men\u00fa \u00b7 Dinero", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Men\u00fa \u00b7 Dinero", "community": 0, "community_name": "Propuesta \u00b7 Pantalla", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 1}, {"id": "PAN-dinero", "label": "Pantalla \u00b7 Dinero", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 24.1, "font": {"size": 12, "color": "#ffffff"}, "title": "Pantalla \u00b7 Dinero", "community": 0, "community_name": "Propuesta \u00b7 Pantalla", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 8}, {"id": "ZON-dinero-1", "label": "Caja hoy y piso", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Caja hoy y piso", "community": 0, "community_name": "Propuesta \u00b7 Pantalla", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 3}, {"id": "ZON-dinero-2", "label": "Pr\u00f3ximas 8 semanas", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Pr\u00f3ximas 8 semanas", "community": 0, "community_name": "Propuesta \u00b7 Pantalla", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 2}, {"id": "ZON-dinero-3", "label": "Caja por proyecto", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Caja por proyecto", "community": 0, "community_name": "Propuesta \u00b7 Pantalla", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 3}, {"id": "ZON-dinero-4", "label": "Por cobrar y por aportar", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Por cobrar y por aportar", "community": 0, "community_name": "Propuesta \u00b7 Pantalla", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 2}, {"id": "ZON-dinero-5", "label": "Por pagar", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Por pagar", "community": 0, "community_name": "Propuesta \u00b7 Pantalla", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 1}, {"id": "ZON-dinero-6", "label": "Reportado contra banco", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Reportado contra banco", "community": 0, "community_name": "Propuesta \u00b7 Pantalla", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 3}, {"id": "ZON-dinero-7", "label": "Dudas por acomodar", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Dudas por acomodar", "community": 0, "community_name": "Propuesta \u00b7 Pantalla", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 3}, {"id": "ZON-dinero-8", "label": "Reparto a la fecha", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Reparto a la fecha", "community": 0, "community_name": "Propuesta \u00b7 Pantalla", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 1}, {"id": "PUERTA-ALIANZA", "label": "Puerta \u00b7 Alianza desarrolladora", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Puerta \u00b7 Alianza desarrolladora", "community": 1, "community_name": "Propuesta \u00b7 Qui\u00e9n", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 2}, {"id": "PUERTA-DIRECCION", "label": "Puerta \u00b7 Direcci\u00f3n", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Puerta \u00b7 Direcci\u00f3n", "community": 1, "community_name": "Propuesta \u00b7 Qui\u00e9n", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 2}, {"id": "PUERTA-INVERSIONISTA", "label": "Puerta \u00b7 Inversionista", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Puerta \u00b7 Inversionista", "community": 1, "community_name": "Propuesta \u00b7 Qui\u00e9n", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 2}, {"id": "P-ALIANZA", "label": "Alianza desarrolladora", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Alianza desarrolladora", "community": 2, "community_name": "Hoy \u00b7 Qui\u00e9n", "source_file": "memoria-de-conversaciones", "file_type": "concept", "degree": 3}, {"id": "P-CONSTRUCTOR", "label": "Constructor", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Constructor", "community": 2, "community_name": "Hoy \u00b7 Qui\u00e9n", "source_file": "memoria-de-conversaciones", "file_type": "concept", "degree": 1}, {"id": "P-DIRECCION", "label": "Direcci\u00f3n", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Direcci\u00f3n", "community": 2, "community_name": "Hoy \u00b7 Qui\u00e9n", "source_file": "memoria-de-conversaciones", "file_type": "concept", "degree": 2}, {"id": "P-EQUIPO", "label": "Equipo interno", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Equipo interno", "community": 2, "community_name": "Hoy \u00b7 Qui\u00e9n", "source_file": "memoria-de-conversaciones", "file_type": "concept", "degree": 1}, {"id": "P-INVERSIONISTA", "label": "Inversionista", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Inversionista", "community": 2, "community_name": "Hoy \u00b7 Qui\u00e9n", "source_file": "memoria-de-conversaciones", "file_type": "concept", "degree": 2}, {"id": "SYS-FLUJO", "label": "Flujo (Tesorer\u00eda)", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 27.6, "font": {"size": 12, "color": "#ffffff"}, "title": "Flujo (Tesorer\u00eda)", "community": 3, "community_name": "Hoy \u00b7 Pantalla", "source_file": "yod-portal/docs/arquitectura/modelo.json", "file_type": "concept", "degree": 10}, {"id": "board-flujo-yod::index_html_inline", "label": "index.html", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 20.6, "font": {"size": 12, "color": "#ffffff"}, "title": "index.html", "community": 3, "community_name": "Hoy \u00b7 Pantalla", "source_file": "board-flujo-yod/index.html \u00b7 1095 l\u00edneas", "file_type": "code", "degree": 6}, {"id": "repo:yodesarrollomx/board-flujo-yod", "label": "yodesarrollomx/board-flujo-yod", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "yodesarrollomx/board-flujo-yod", "community": 4, "community_name": "Hoy \u00b7 C\u00f3digo", "source_file": "board-flujo-yod/", "file_type": "concept", "degree": 2}, {"id": "GAS-FLUJO", "label": "Motor \u00b7 Tesorer\u00eda", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Motor \u00b7 Tesorer\u00eda", "community": 5, "community_name": "Hoy \u00b7 Motor", "source_file": "yod-portal/docs/arquitectura/modelo.json", "file_type": "concept", "degree": 3}, {"id": "gas:AKfycbxbQpBn", "label": "Tesorer\u00eda \u00b7 AKfycbxbQpBn\u2026", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Tesorer\u00eda \u00b7 AKfycbxbQpBn\u2026", "community": 5, "community_name": "Hoy \u00b7 Motor", "source_file": "apps-script/despliegues", "file_type": "code", "degree": 2}, {"id": "board-flujo-yod::apps_script_portero_auth_gs", "label": "portero-auth.gs", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "portero-auth.gs", "community": 5, "community_name": "Hoy \u00b7 Motor", "source_file": "board-flujo-yod/apps-script/portero-auth.gs \u00b7 58 l\u00edneas", "file_type": "code", "degree": 3}, {"id": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "label": "YOD_Flujo_2026", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "YOD_Flujo_2026", "community": 6, "community_name": "Hoy \u00b7 Libro", "source_file": "Google Sheets", "file_type": "document", "degree": 17}, {"id": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:PagosPlanificados", "label": "PagosPlanificados \u00b7 Flujo", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "PagosPlanificados \u00b7 Flujo", "community": 7, "community_name": "Hoy \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abYOD_Flujo_2026\u00bb", "file_type": "document", "degree": 3}, {"id": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Bolsas", "label": "Bolsas \u00b7 Flujo", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Bolsas \u00b7 Flujo", "community": 7, "community_name": "Hoy \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abYOD_Flujo_2026\u00bb", "file_type": "document", "degree": 3}, {"id": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Movimientos", "label": "Movimientos \u00b7 Flujo", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Movimientos \u00b7 Flujo", "community": 7, "community_name": "Hoy \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abYOD_Flujo_2026\u00bb", "file_type": "document", "degree": 2}, {"id": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:IngresosEsperados", "label": "IngresosEsperados \u00b7 Flujo", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "IngresosEsperados \u00b7 Flujo", "community": 7, "community_name": "Hoy \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abYOD_Flujo_2026\u00bb", "file_type": "document", "degree": 3}, {"id": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Saldos", "label": "Saldos \u00b7 Flujo", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Saldos \u00b7 Flujo", "community": 7, "community_name": "Hoy \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abYOD_Flujo_2026\u00bb", "file_type": "document", "degree": 2}, {"id": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Pendientes", "label": "Pendientes \u00b7 Flujo", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Pendientes \u00b7 Flujo", "community": 7, "community_name": "Hoy \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abYOD_Flujo_2026\u00bb", "file_type": "document", "degree": 2}, {"id": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Saldos reportados", "label": "Saldos reportados \u00b7 Flujo", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Saldos reportados \u00b7 Flujo", "community": 7, "community_name": "Hoy \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abYOD_Flujo_2026\u00bb", "file_type": "document", "degree": 3}, {"id": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Config", "label": "Config \u00b7 Flujo", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Config \u00b7 Flujo", "community": 7, "community_name": "Hoy \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abYOD_Flujo_2026\u00bb", "file_type": "document", "degree": 2}, {"id": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Cuadre", "label": "Cuadre \u00b7 Flujo", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Cuadre \u00b7 Flujo", "community": 7, "community_name": "Hoy \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abYOD_Flujo_2026\u00bb", "file_type": "document", "degree": 2}, {"id": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Mensajes", "label": "Mensajes \u00b7 Flujo", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Mensajes \u00b7 Flujo", "community": 7, "community_name": "Hoy \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abYOD_Flujo_2026\u00bb", "file_type": "document", "degree": 2}, {"id": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Historial", "label": "Historial \u00b7 Flujo", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Historial \u00b7 Flujo", "community": 7, "community_name": "Hoy \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abYOD_Flujo_2026\u00bb", "file_type": "document", "degree": 1}, {"id": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Bit\u00e1cora", "label": "Bit\u00e1cora \u00b7 Flujo", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Bit\u00e1cora \u00b7 Flujo", "community": 7, "community_name": "Hoy \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abYOD_Flujo_2026\u00bb", "file_type": "document", "degree": 1}, {"id": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Drive", "label": "Drive \u00b7 Flujo", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Drive \u00b7 Flujo", "community": 7, "community_name": "Hoy \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abYOD_Flujo_2026\u00bb", "file_type": "document", "degree": 1}, {"id": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Lineamientos", "label": "Lineamientos \u00b7 Flujo", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Lineamientos \u00b7 Flujo", "community": 7, "community_name": "Hoy \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abYOD_Flujo_2026\u00bb", "file_type": "document", "degree": 1}, {"id": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Movs Excel (respaldo)", "label": "Movs Excel (respaldo) \u00b7 Flujo", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Movs Excel (respaldo) \u00b7 Flujo", "community": 7, "community_name": "Hoy \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abYOD_Flujo_2026\u00bb", "file_type": "document", "degree": 1}, {"id": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Resumen", "label": "Resumen \u00b7 Flujo", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Resumen \u00b7 Flujo", "community": 7, "community_name": "Hoy \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abYOD_Flujo_2026\u00bb", "file_type": "document", "degree": 1}, {"id": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Resumen 2026", "label": "Resumen 2026 \u00b7 Flujo", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Resumen 2026 \u00b7 Flujo", "community": 7, "community_name": "Hoy \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abYOD_Flujo_2026\u00bb", "file_type": "document", "degree": 1}, {"id": "X-FLUJO-WA", "label": "Grupo \u00abYod: Flujo 2026\u00bb", "color": {"background": "#9C755F", "border": "#9C755F", "highlight": {"background": "#ffffff", "border": "#9C755F"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Grupo \u00abYod: Flujo 2026\u00bb", "community": 8, "community_name": "Propuesta \u00b7 Libro", "source_file": "memoria-de-conversaciones", "file_type": "concept", "degree": 2}, {"id": "hoja:11DiE789WIVqIybKTPapayS5XEWHtcAXUiUA11KBQUQc", "label": "Co-desarrolladores-Yod", "color": {"background": "#9C755F", "border": "#9C755F", "highlight": {"background": "#ffffff", "border": "#9C755F"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Co-desarrolladores-Yod", "community": 8, "community_name": "Propuesta \u00b7 Libro", "source_file": "Google Sheets", "file_type": "document", "degree": 1}, {"id": "N-FOLIO", "label": "Folio \u00fanico del proyecto", "color": {"background": "#9C755F", "border": "#9C755F", "highlight": {"background": "#ffffff", "border": "#9C755F"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Folio \u00fanico del proyecto", "community": 8, "community_name": "Propuesta \u00b7 Libro", "source_file": "yod-os/propuesta", "file_type": "concept", "degree": 2}, {"id": "N-REPARTO", "label": "Reparto de la alianza", "color": {"background": "#9C755F", "border": "#9C755F", "highlight": {"background": "#ffffff", "border": "#9C755F"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Reparto de la alianza", "community": 8, "community_name": "Propuesta \u00b7 Libro", "source_file": "yod-os/propuesta", "file_type": "concept", "degree": 3}, {"id": "tab:11DiE789WIVqIybKTPapayS5XEWHtcAXUiUA11KBQUQc:Aportaciones", "label": "Aportaciones \u00b7 Codesarrolladores", "color": {"background": "#BAB0AC", "border": "#BAB0AC", "highlight": {"background": "#ffffff", "border": "#BAB0AC"}}, "size": 15.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Aportaciones \u00b7 Codesarrolladores", "community": 9, "community_name": "Propuesta \u00b7 Pesta\u00f1as", "source_file": "Libro \u00abCo-desarrolladores-Yod\u00bb", "file_type": "document", "degree": 3}, {"id": "ls:pyod_rol", "label": "pyod_rol", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "pyod_rol", "community": 10, "community_name": "Corre solo \u00b7 Pantalla", "source_file": "navegador/almacen", "file_type": "concept", "degree": 1}, {"id": "ls:yodflujo-user", "label": "yodflujo-user", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "yodflujo-user", "community": 10, "community_name": "Corre solo \u00b7 Pantalla", "source_file": "navegador/almacen", "file_type": "concept", "degree": 1}, {"id": "board-flujo-yod::github_workflows_arquitectura", "label": "Arquitectura YOD", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 13.5, "font": {"size": 0, "color": "#ffffff"}, "title": "Arquitectura YOD", "community": 11, "community_name": "Corre solo \u00b7 C\u00f3digo", "source_file": "board-flujo-yod/.github/workflows/arquitectura.yml \u00b7 97 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "EXT-ACTIONS", "label": "GitHub Actions", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "GitHub Actions", "community": 12, "community_name": "Corre solo \u00b7 Libro", "source_file": "yod-portal/docs/arquitectura/modelo.json", "file_type": "concept", "degree": 1}, {"id": "lib:Chart.js", "label": "Chart.js", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Chart.js", "community": 12, "community_name": "Corre solo \u00b7 Libro", "source_file": "librerias-externas", "file_type": "concept", "degree": 1}, {"id": "svc:Cloudflare", "label": "Cloudflare", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Cloudflare", "community": 12, "community_name": "Corre solo \u00b7 Libro", "source_file": "servicios-externos", "file_type": "concept", "degree": 1}, {"id": "gss:Cach\u00e9 del script", "label": "Cach\u00e9 del script (Apps Script)", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Cach\u00e9 del script (Apps Script)", "community": 12, "community_name": "Corre solo \u00b7 Libro", "source_file": "apps-script/servicios", "file_type": "concept", "degree": 1}, {"id": "gss:Llamadas externas", "label": "Llamadas externas (Apps Script)", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 11.8, "font": {"size": 0, "color": "#ffffff"}, "title": "Llamadas externas (Apps Script)", "community": 12, "community_name": "Corre solo \u00b7 Libro", "source_file": "apps-script/servicios", "file_type": "concept", "degree": 1}];
+const RAW_EDGES = [{"from": "SYS-FLUJO", "to": "MENU-dinero", "label": "se agrupa en", "title": "se agrupa en [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "P-ALIANZA", "to": "PAN-dinero", "label": "entra a", "title": "entra a [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "SYS-FLUJO", "to": "PAN-dinero", "label": "se convierte en", "title": "se convierte en [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "P-EQUIPO", "to": "PAN-dinero", "label": "entra a", "title": "entra a [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "PUERTA-ALIANZA", "to": "PAN-dinero", "label": "ve", "title": "ve [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "P-INVERSIONISTA", "to": "PAN-dinero", "label": "entra a", "title": "entra a [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "P-DIRECCION", "to": "PAN-dinero", "label": "entra a", "title": "entra a [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "PUERTA-DIRECCION", "to": "PAN-dinero", "label": "ve", "title": "ve [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "PUERTA-INVERSIONISTA", "to": "PAN-dinero", "label": "ve", "title": "ve [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-dinero-1", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Config", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-dinero-1", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Saldos reportados", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-dinero-1", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Saldos", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-dinero-2", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:PagosPlanificados", "label": "sale de", "title": "sale de [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "ZON-dinero-2", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:IngresosEsperados", "label": "sale de", "title": "sale de [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "ZON-dinero-3", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Bolsas", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-dinero-3", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Movimientos", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-dinero-3", "to": "N-FOLIO", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-dinero-4", "to": "tab:11DiE789WIVqIybKTPapayS5XEWHtcAXUiUA11KBQUQc:Aportaciones", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-dinero-4", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:IngresosEsperados", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-dinero-5", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:PagosPlanificados", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-dinero-6", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Saldos reportados", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-dinero-6", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Cuadre", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-dinero-6", "to": "tab:11DiE789WIVqIybKTPapayS5XEWHtcAXUiUA11KBQUQc:Aportaciones", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-dinero-7", "to": "X-FLUJO-WA", "label": "sale de", "title": "sale de [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "ZON-dinero-7", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Pendientes", "label": "sale de", "title": "sale de [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "ZON-dinero-7", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Mensajes", "label": "sale de", "title": "sale de [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "ZON-dinero-8", "to": "N-REPARTO", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "P-ALIANZA", "to": "PUERTA-ALIANZA", "label": "entra por", "title": "entra por [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "P-DIRECCION", "to": "PUERTA-DIRECCION", "label": "entra por", "title": "entra por [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "P-INVERSIONISTA", "to": "PUERTA-INVERSIONISTA", "label": "entra por", "title": "entra por [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "P-ALIANZA", "to": "N-REPARTO", "label": "Acuerda la f\u00f3rmula", "title": "Acuerda la f\u00f3rmula [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "P-CONSTRUCTOR", "to": "SYS-FLUJO", "label": "Estimaci\u00f3n autorizada deber\u00eda volverse pago programado", "title": "Estimaci\u00f3n autorizada deber\u00eda volverse pago programado [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "SYS-FLUJO", "to": "repo:yodesarrollomx/board-flujo-yod", "label": "vive en", "title": "vive en [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "SYS-FLUJO", "to": "GAS-FLUJO", "label": "Consume contrato del backend", "title": "Consume contrato del backend [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "SYS-FLUJO", "to": "board-flujo-yod::github_workflows_arquitectura", "label": "se implementa en", "title": "se implementa en [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "SYS-FLUJO", "to": "board-flujo-yod::apps_script_portero_auth_gs", "label": "se implementa en", "title": "se implementa en [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "SYS-FLUJO", "to": "board-flujo-yod::index_html_inline", "label": "se implementa en", "title": "se implementa en [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "N-REPARTO", "to": "SYS-FLUJO", "label": "Calendario de pagos y piso de caja", "title": "Calendario de pagos y piso de caja [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "X-FLUJO-WA", "to": "SYS-FLUJO", "label": "Carga a mano con /flujo", "title": "Carga a mano con /flujo [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "board-flujo-yod::index_html_inline", "to": "gas:AKfycbxbQpBn", "label": "llama al Apps Script", "title": "llama al Apps Script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "board-flujo-yod::index_html_inline", "to": "ls:pyod_rol", "label": "usa la llave del navegador", "title": "usa la llave del navegador [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "board-flujo-yod::index_html_inline", "to": "ls:yodflujo-user", "label": "usa la llave del navegador", "title": "usa la llave del navegador [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "board-flujo-yod::index_html_inline", "to": "lib:Chart.js", "label": "carga el script", "title": "carga el script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "board-flujo-yod::index_html_inline", "to": "svc:Cloudflare", "label": "usa el servicio", "title": "usa el servicio [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "GAS-FLUJO", "to": "repo:yodesarrollomx/board-flujo-yod", "label": "vive en", "title": "vive en [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "GAS-FLUJO", "to": "gas:AKfycbxbQpBn", "label": "est\u00e1 desplegado en", "title": "est\u00e1 desplegado en [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "board-flujo-yod::apps_script_portero_auth_gs", "to": "gss:Cach\u00e9 del script", "label": "usa", "title": "usa [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "board-flujo-yod::apps_script_portero_auth_gs", "to": "gss:Llamadas externas", "label": "usa", "title": "usa [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Config", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Saldos reportados", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:PagosPlanificados", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Movs Excel (respaldo)", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Saldos", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Cuadre", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Resumen 2026", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Pendientes", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:IngresosEsperados", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Resumen", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Bit\u00e1cora", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Lineamientos", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Mensajes", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Drive", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Movimientos", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Bolsas", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Historial", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "N-FOLIO", "to": "tab:1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk:Bolsas", "label": "habr\u00eda que sembrarlo en", "title": "habr\u00eda que sembrarlo en [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "hoja:11DiE789WIVqIybKTPapayS5XEWHtcAXUiUA11KBQUQc", "to": "tab:11DiE789WIVqIybKTPapayS5XEWHtcAXUiUA11KBQUQc:Aportaciones", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "board-flujo-yod::github_workflows_arquitectura", "to": "EXT-ACTIONS", "label": "corre en", "title": "corre en [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}];
+const LEGEND = [{"cid": 0, "color": "#4E79A7", "label": "Propuesta \u00b7 Pantalla", "count": 10}, {"cid": 1, "color": "#F28E2B", "label": "Propuesta \u00b7 Qui\u00e9n", "count": 3}, {"cid": 2, "color": "#E15759", "label": "Hoy \u00b7 Qui\u00e9n", "count": 5}, {"cid": 3, "color": "#76B7B2", "label": "Hoy \u00b7 Pantalla", "count": 2}, {"cid": 4, "color": "#59A14F", "label": "Hoy \u00b7 C\u00f3digo", "count": 1}, {"cid": 5, "color": "#EDC948", "label": "Hoy \u00b7 Motor", "count": 3}, {"cid": 6, "color": "#B07AA1", "label": "Hoy \u00b7 Libro", "count": 1}, {"cid": 7, "color": "#FF9DA7", "label": "Hoy \u00b7 Pesta\u00f1as", "count": 17}, {"cid": 8, "color": "#9C755F", "label": "Propuesta \u00b7 Libro", "count": 4}, {"cid": 9, "color": "#BAB0AC", "label": "Propuesta \u00b7 Pesta\u00f1as", "count": 1}, {"cid": 10, "color": "#4E79A7", "label": "Corre solo \u00b7 Pantalla", "count": 2}, {"cid": 11, "color": "#F28E2B", "label": "Corre solo \u00b7 C\u00f3digo", "count": 1}, {"cid": 12, "color": "#E15759", "label": "Corre solo \u00b7 Libro", "count": 5}];
+
+// HTML-escape helper — prevents XSS when injecting graph data into innerHTML
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Build vis datasets
+const nodesDS = new vis.DataSet(RAW_NODES.map((n, i) => ({
+  id: n.id, label: n.label, color: n.color, size: n.size,
+  font: n.font, title: n.title,
+  // Fermat/golden-angle spiral seed positions (#3699): spreading nodes out
+  // before physics runs keeps avoidOverlap from computing near-zero-distance
+  // repulsion that blows the BarnesHut recursion into a stack overflow on large
+  // graphs. `i` is the map index — physics still settles small graphs identically.
+  x: 30 * Math.sqrt(i) * Math.cos(i * 2.4),
+  y: 30 * Math.sqrt(i) * Math.sin(i * 2.4),
+  community: n.community, community_name: n.community_name,
+  source_file: n.source_file, file_type: n.file_type, degree: n.degree,
+  member_count: n.member_count,
+})));
+
+const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({
+  id: i, from: e.from, to: e.to,
+  label: '',
+  title: e.title,
+  dashes: e.dashes,
+  width: e.width,
+  color: e.color,
+  arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+})));
+
+const container = document.getElementById('graph');
+const network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, {
+  physics: {
+    enabled: false,
+    solver: 'forceAtlas2Based',
+    forceAtlas2Based: {
+      gravitationalConstant: -60,
+      centralGravity: 0.005,
+      springLength: 120,
+      springConstant: 0.08,
+      damping: 0.4,
+      avoidOverlap: 0.8,
+    },
+    stabilization: { iterations: 200, fit: true },
+  },
+  interaction: {
+    hover: true,
+    tooltipDelay: 100,
+    hideEdgesOnDrag: true,
+    navigationButtons: false,
+    keyboard: false,
+  },
+  nodes: { shape: 'dot', borderWidth: 1.5 },
+  edges: { smooth: { type: 'continuous', roundness: 0.2 }, selectionWidth: 3 },
+});
+
+// Theme toggle (#3894): Light / Dark / System, persisted in localStorage.
+const THEME_KEY = 'graphify-theme';
+const themeMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+let themeLabelColor = '#ffffff';  // matches the per-node font color set in Python
+function themePref() {
+  let p = null;
+  try { p = localStorage.getItem(THEME_KEY); } catch (e) {}
+  return (p === 'light' || p === 'dark' || p === 'system') ? p : null;
+}
+function applyTheme(pref) {
+  const t = pref === 'light' ? 'light' : (pref === 'system' && themeMQ && themeMQ.matches) ? 'light' : 'dark';
+  const root = document.documentElement;
+  if (!root) return;
+  root.setAttribute('data-theme', t);
+  document.querySelectorAll('[data-theme-choice]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.themeChoice === (pref || 'system')));
+  });
+  const labelColor = getComputedStyle(root).getPropertyValue('--node-label').trim();
+  if (labelColor && labelColor !== themeLabelColor) {
+    themeLabelColor = labelColor;
+    nodesDS.update(nodesDS.get().map(n => ({ id: n.id, font: Object.assign({}, n.font, { color: labelColor }) })));
+  }
+}
+document.querySelectorAll('[data-theme-choice]').forEach(b => {
+  b.addEventListener('click', () => {
+    const pref = b.dataset.themeChoice;
+    try { localStorage.setItem(THEME_KEY, pref); } catch (e) {}
+    applyTheme(pref);
+  });
+});
+if (themeMQ) {
+  const onSchemeChange = () => { if (themePref() === 'system') applyTheme('system'); };
+  if (themeMQ.addEventListener) themeMQ.addEventListener('change', onSchemeChange);
+  else if (themeMQ.addListener) themeMQ.addListener(onSchemeChange);
+}
+applyTheme(themePref() || 'system');
+
+
+// ── YOD: acomodo fijo en cuadrante sobre el visor de Graphify. Los nodos y las flechas son los que exportó Graphify. ──
+(function () {
+  const Y = window.YOD;
+  // Cuando la portada enseña un borrador, trae la lámina como texto: los enlaces a otras láminas se le piden a ella.
+  const SUELTA = location.protocol === 'about:';
+  const yodIr = h => { const m = String(h).match(/^([A-Za-z0-9._-]+)\.html(?:#(.*))?$/);
+    if (SUELTA && m) { try { parent.postMessage({ yod: 2, ir: m[1], nodo: m[2] ? decodeURIComponent(m[2]) : '' }, '*'); } catch (e) {} } else location.href = h; };
+  if (SUELTA) document.addEventListener('click', e => { const a = e.target && e.target.closest ? e.target.closest('a[href]') : null; if (!a || a.target === '_blank') return;
+    const h = a.getAttribute('href') || ''; if (/^[A-Za-z0-9._-]+\.html(#.*)?$/.test(h)) { e.preventDefault(); yodIr(h); } }, true);
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const esc2 = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const fuente = p => p.forma === 'box'
+    ? { size: 13, color: '#1d1d1f', face: 'system-ui, -apple-system, sans-serif', multi: 'html', align: 'left', bold: { color: '#111111', size: 14, face: 'system-ui, -apple-system, sans-serif' } }
+    : { size: 14, color: css('--node-label') || '#222', face: 'system-ui, -apple-system, sans-serif', strokeWidth: 3, strokeColor: css('--bg') || '#fff' };
+  const estiloNodo = (n, apagado) => {
+    const p = Y.nodos[n.id] || {};
+    const o = { id: n.id, x: p.x, y: p.y, label: p.lbl, shape: p.forma, size: p.tam, opacity: apagado ? 0.14 : 1, title: undefined,
+      color: { background: p.color, border: p.al ? '#C8102E' : (p.bc || p.color), highlight: { background: p.color, border: '#111' }, hover: { background: p.color, border: '#111' } },
+      borderWidth: p.al ? 2.6 : (p.bc ? 2.4 : 1), borderWidthSelected: 3.5, font: fuente(p) };
+    if (p.forma === 'box') { o.widthConstraint = { minimum: p.caja, maximum: p.caja }; o.margin = 9; o.shapeProperties = { borderRadius: 7 }; }
+    return o;
+  };
+  const ocultas = new Set();
+  let foco = null;
+  const recto = RAW_EDGES.length > 380;
+  const det = r => Y.flechas[r.from + '>' + r.to] || Y.flechas[r.to + '>' + r.from] || {};
+  const estiloArista = e => {
+    const r = RAW_EDGES[e.id], fl = det(r), f = Y.familias[fl.f] || Y.familias.inferida;
+    const con = !foco || foco.aristas.has(e.id);
+    return { id: e.id, hidden: ocultas.has(fl.f || 'inferida'), width: con && foco ? f.ancho + 1.3 : f.ancho, title: undefined,
+             color: { color: f.color, opacity: con ? f.opacidad : 0.05, highlight: f.color, hover: f.color },
+             dashes: f.punteada, arrows: { to: { enabled: true, scaleFactor: 0.55 } }, smooth: recto ? false : { type: 'curvedCW', roundness: 0.12 } };
+  };
+  const pintar = () => {
+    nodesDS.update(nodesDS.get().map(n => estiloNodo(n, foco && !foco.nodos.has(n.id))));
+    edgesDS.update(edgesDS.get().map(estiloArista));
+  };
+  pintar();
+  network.setOptions({ physics: { enabled: false }, nodes: { labelHighlightBold: false, scaling: { label: { drawThreshold: 5, maxVisible: 44 } } },
+                       interaction: { hover: true, tooltipDelay: 150, zoomSpeed: 0.8, hideEdgesOnDrag: RAW_EDGES.length > 250, hideEdgesOnZoom: RAW_EDGES.length > 600 } });
+  new MutationObserver(() => setTimeout(pintar, 30)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  const enfocar = id => { foco = { nodos: new Set([id, ...network.getConnectedNodes(id)]), aristas: new Set(network.getConnectedEdges(id)) }; pintar(); };
+  network.on('selectNode', p => enfocar(p.nodes[0]));
+  network.on('deselectNode', () => { foco = null; pintar(); });
+
+  // barra: subir, familias de flecha y «Ver todo»
+  const barra = document.createElement('div');
+  barra.id = 'yod-barra';
+  barra.innerHTML = (Y.padre ? `<a class="yod-fuerte" href="${Y.padre[0]}">↑ ${esc2(Y.padre[1])}</a>` : '') +
+    Object.entries(Y.familias).filter(([k]) => Y.usadas.includes(k)).map(([k, f]) =>
+      `<button type="button" data-fam="${k}" aria-pressed="true" title="${f.nombre}"><i style="background:${f.color}"></i><span class="yod-l">${f.nombre}</span><span class="yod-c">${f.corto}</span></button>`).join('') +
+    '<button type="button" id="yod-todo" class="yod-fuerte">Ver todo</button>';
+  document.body.appendChild(barra);
+  barra.addEventListener('click', ev => {
+    const b = ev.target.closest('button'); if (!b) return;
+    if (b.id === 'yod-todo') { foco = null; network.unselectAll(); pintar(); ajustar(true); inicio(); return; }
+    const k = b.dataset.fam; if (ocultas.has(k)) ocultas.delete(k); else ocultas.add(k);
+    b.setAttribute('aria-pressed', String(!ocultas.has(k))); pintar();
+  });
+
+  // rejilla del cuadrante: los títulos crecen al alejarse para que siempre se lean
+  const g = Y.rejilla, W = g.cols.reduce((s, c) => s + c.w, 0), Ht = g.filas.reduce((s, f) => s + f.h, 0);
+  const MS = Math.max(70, Math.min(150, Ht * 0.07));
+  const letra = (ctx, t) => { ctx.font = '600 ' + t + 'px system-ui, -apple-system, sans-serif'; };
+  network.on('beforeDrawing', ctx => {
+    const sc = network.getScale() || 1;
+    const linea = css('--border') || '#ccc', texto = css('--text-2') || '#666', fondo = css('--panel') || '#f6f6f6';
+    ctx.save();
+    g.filas.forEach((f, i) => { if (i % 2 === 0) { ctx.fillStyle = fondo; ctx.globalAlpha = 0.6; ctx.fillRect(0, f.y, W, f.h); } });
+    ctx.globalAlpha = 1; ctx.strokeStyle = linea; ctx.lineWidth = 1.5 / Math.min(1, sc * 1.6);
+    g.cols.forEach(c => { ctx.beginPath(); ctx.moveTo(c.x, -MS); ctx.lineTo(c.x, Ht); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(W, -MS); ctx.lineTo(W, Ht); ctx.stroke();
+    g.filas.forEach(f => { ctx.beginPath(); ctx.moveTo(0, f.y); ctx.lineTo(W, f.y); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(0, Ht); ctx.lineTo(W, Ht); ctx.stroke();
+    ctx.fillStyle = texto; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'center';
+    g.cols.forEach(c => {
+      let t = Math.max(20, Math.min(15 / sc, MS * 0.62)); letra(ctx, t);
+      while (t > 11 && ctx.measureText(c.nombre).width > c.w - 14) { t -= 1; letra(ctx, t); }
+      if (ctx.measureText(c.nombre).width > c.w - 14) { const p = c.nombre.split(' '), m = Math.ceil(p.length / 2); ctx.fillText(p.slice(0, m).join(' '), c.x + c.w / 2, -t - 14); ctx.fillText(p.slice(m).join(' '), c.x + c.w / 2, -10); }
+      else ctx.fillText(c.nombre, c.x + c.w / 2, -12);
+    });
+    ctx.textAlign = 'left';
+    g.filas.forEach(f => {
+      let t = Math.max(17, Math.min(14 / sc, f.h * 0.4)); letra(ctx, t);
+      while (t > 12 && ctx.measureText(f.nombre).width > W - 20) { t -= 2; letra(ctx, t); }
+      ctx.globalAlpha = t > 30 ? 0.42 : 0.8; ctx.fillText(f.nombre, 9, f.y + t + 5);
+    });
+    ctx.globalAlpha = 1; ctx.restore();
+  });
+  const marco = (x0, y0, x1, y1, animar) => {
+    const el = document.getElementById('graph'), w = el.clientWidth, h = el.clientHeight;
+    const arriba = (document.getElementById('yod-barra') || { offsetHeight: 0 }).offsetHeight + 12;
+    const s = Math.max(0.04, Math.min((w - 10) / (x1 - x0), (h - arriba - 8) / (y1 - y0), 1.5));
+    network.moveTo({ position: { x: (x0 + x1) / 2, y: (y0 + y1) / 2 - arriba / 2 / s }, scale: s, animation: animar ? { duration: 350, easingFunction: 'easeInOutQuad' } : false });
+  };
+  const ajustar = animar => marco(-14, -MS - 6, W + 14, Ht + 12, animar);
+  const aFila = f => { const el = document.getElementById('graph'), r = el.clientWidth / Math.max(200, el.clientHeight - 60); marco(-10, f.y - 10, Math.min(W + 10, Math.max(540, (f.h + 20) * r)) - 10, f.y + f.h + 10, true); };
+  const aCol = c => { const el = document.getElementById('graph'), r = Math.max(200, el.clientHeight - 60) / el.clientWidth; marco(c.x - 12, -MS, c.x + c.w + 12, Math.min(Ht + 10, Math.max(420, (c.w + 24) * r) - MS), true); };
+  let tocado = false;
+  const cont = document.getElementById('graph');
+  ['pointerdown', 'wheel', 'touchstart'].forEach(ev => cont.addEventListener(ev, () => { tocado = true; }, { passive: true }));
+  network.once('afterDrawing', () => { if (!foco) ajustar(false); });
+  [60, 250, 700, 1500].forEach(ms => setTimeout(() => { if (!foco && !tocado) ajustar(false); }, ms));
+  window.addEventListener('resize', () => setTimeout(() => { if (!foco) ajustar(false); }, 80));
+  const ir = document.createElement('select'); ir.id = 'yod-ir'; ir.setAttribute('aria-label', 'Acercar a una fila o columna');
+  ir.innerHTML = '<option value="">Acercar a…</option><optgroup label="Filas">' + g.filas.map((f, i) => `<option value="f${i}">${esc2(f.nombre)}</option>`).join('') +
+    '</optgroup><optgroup label="Columnas">' + g.cols.map((c, i) => `<option value="c${i}">${esc2(c.nombre)}</option>`).join('') + '</optgroup>';
+  barra.insertBefore(ir, barra.querySelector('button'));
+  ir.addEventListener('change', () => { const v = ir.value; if (!v) return; tocado = true; if (v[0] === 'f') aFila(g.filas[+v.slice(1)]); else aCol(g.cols[+v.slice(1)]); ir.value = ''; });
+
+  // panel de detalle
+  const enlace = (t, id) => t[0] ? `<a href="${t[0]}#${encodeURIComponent(id)}">${esc2(t[1])}</a>` : esc2(t[1]);
+  window.showInfo = function (nodeId) {
+    const p = Y.nodos[nodeId]; if (!p) return;
+    const eds = network.getConnectedEdges(nodeId);
+    const vecinos = eds.map(eid => {
+      const r = RAW_EDGES[eid], otro = r.from === nodeId ? r.to : r.from, fl = det(r), q = Y.nodos[otro] || {};
+      return `<span class="neighbor-link" style="border-left-color:${esc2((Y.familias[fl.f] || {}).color || '#888')}" data-nid="${esc2(otro)}">${r.from === nodeId ? '→' : '←'} ${esc2(q.nombre || otro)} <i style="opacity:.72">· ${esc2(fl.r || '')}</i></span>`;
+    }).join('');
+    let h = `<div class="field"><b>${esc2(p.nombre)}</b></div><div class="field yod-tipo">${esc2(p.tipo)}${p.estado ? ' · ' + esc2(p.estado) : ''}</div>`;
+    if (p.dentro) h += `<a class="yod-entrar" href="${p.dentro[0]}">Entrar a ${esc2(p.dentro[1])} →</a>`;
+    if (p.nota) h += `<div class="field">${esc2(p.nota)}</div>`;
+    if (p.err) h += p.err.map(x => `<div class="field yod-alerta"><b>${x.tipo === 'cambio' ? 'Cambió' : 'Error'}</b> · ${esc2(x.msg)}${x.desde ? ' · desde ' + esc2(String(x.desde).slice(0, 10)) : ''}${x.url ? ` · <a href="${esc2(x.url)}" target="_blank" rel="noopener" style="color:inherit">ver</a>` : ''}</div>`).join('');
+    if (p.al) h += p.al.map(a => `<div class="field yod-alerta"><b>Hallazgo</b> · <a href="hallazgos.html#${encodeURIComponent(a[0])}" style="color:inherit">${esc2(a[1])}</a></div>`).join('');
+    if (p.lista) h += `<details class="yod-lista"${p.lista.length <= 24 ? ' open' : ''}><summary>${esc2(p.lt)}</summary><div>${p.lista.map(x => `<span>${esc2(x)}</span>`).join('')}</div></details>`;
+    if (p.ev) h += `<div class="field yod-ev">Evidencia: ${esc2(p.ev)}</div>`;
+    if (p.url) h += `<a class="yod-abrir" href="${esc2(p.url)}" target="_blank" rel="noopener">Abrir la fuente ↗</a>`;
+    if (p.tb && p.tb.length) h += `<div class="field yod-tb">También aparece en: ${p.tb.map(t => enlace(t, nodeId)).join(' · ')}</div>`;
+    h += `<div class="field yod-ev">Celda: ${esc2(p.celda)}</div>`;
+    if (eds.length) h += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Conexiones (${eds.length})</div><div id="neighbors-list">${vecinos}</div>`;
+    document.getElementById('info-content').innerHTML = h;
+  };
+  window.focusNode = function (id) {
+    const p = Y.nodos[id] || {}, el = document.getElementById('graph');
+    const s = p.forma === 'box' ? Math.min(1, (el.clientWidth - 24) / ((p.caja || 300) + 40)) : Math.min(0.9, Math.max(0.6, el.clientWidth / 520));
+    network.focus(id, { scale: s, animation: true }); network.selectNodes([id]); showInfo(id); enfocar(id);
+  };
+  const inicio = () => { const c = document.getElementById('info-content');
+    if (c) c.innerHTML = `<div class="field"><b>${esc2(Y.titulo)}</b></div><div class="field">${esc2(Y.sub)}</div><div class="field yod-ev">Toca un nodo para ver qué es, de dónde le llega y a dónde va. Con «Acercar a…» saltas a una fila o a una columna.</div>`; };
+  inicio();
+  network.on('click', p => {
+    if (p.nodes.length) return;
+    if (p.edges.length) {
+      const r = RAW_EDGES[p.edges[0]], fl = det(r), a = Y.nodos[r.from] || {}, b = Y.nodos[r.to] || {};
+      document.getElementById('info-content').innerHTML = `<div class="field"><b>${esc2(a.nombre)} → ${esc2(b.nombre)}</b></div><div class="field">${esc2(fl.r || '')}</div>` +
+        `<div class="field yod-tipo">${esc2((Y.familias[fl.f] || {}).nombre || '')}</div>` + (fl.nota ? `<div class="field">${esc2(fl.nota)}</div>` : '') +
+        (fl.ev ? `<div class="field yod-ev">Evidencia: ${esc2(fl.ev)}</div>` : '') +
+        `<span class="neighbor-link" data-nid="${esc2(r.from)}">← ${esc2(a.nombre)}</span><span class="neighbor-link" data-nid="${esc2(r.to)}">→ ${esc2(b.nombre)}</span>`;
+      return;
+    }
+    const c = p.pointer.canvas;
+    if (c.y < 0 && c.y > -MS - 30) { const col = g.cols.find(k => c.x >= k.x && c.x <= k.x + k.w); if (col) { aCol(col); return; } }
+    inicio();
+  });
+  network.on('doubleClick', p => { const d = p.nodes.length && Y.nodos[p.nodes[0]] && Y.nodos[p.nodes[0]].dentro; if (d) yodIr(d[0]); });
+
+  // textos del visor en español
+  const tx = (sel, t) => { const el = document.querySelector(sel); if (el) el.textContent = t; };
+  tx('#info-panel h3', 'Detalle'); tx('#legend-wrap h3', 'Celdas de esta lámina');
+  const inp = document.getElementById('search'); if (inp) inp.placeholder = 'Buscar en esta lámina…';
+  const lbl = document.querySelector('#legend-controls label'); if (lbl) lbl.lastChild.textContent = 'Todas';
+  document.querySelectorAll('[data-theme-choice]').forEach(b => { b.textContent = { light: 'Claro', dark: 'Oscuro', system: 'Sistema' }[b.dataset.themeChoice] || b.textContent; });
+  const st = document.getElementById('stats'); if (st) st.textContent = Y.pie;
+  const sim = document.createElement('div'); sim.id = 'yod-simbolos';
+  sim.innerHTML = Y.simbolos.map(s => `<b><span style="color:${s[1]}">${s[0]}</span> ${esc2(s[2])}</b>`).join('');
+  if (st && st.parentNode) st.parentNode.insertBefore(sim, st);
+
+  // errores en vivo: estado.json lo escribe cada hora el flujo «Grafo · estado» del repositorio
+  fetch(Y.estado || 'estado.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(E => {
+    if (!E || !E.errores) return; let n = 0;
+    E.errores.forEach(x => (x.nodos || []).forEach(id => { const p = Y.nodos[id]; if (!p) return; (p.err = p.err || []).push(x); if (x.tipo !== 'cambio') { p.al = p.al || []; p.bc = '#C8102E'; } else if (!p.bc) p.bc = '#C99A12'; n++; }));
+    if (n) { pintar(); const st2 = document.getElementById('stats'); if (st2) st2.textContent = Y.pie + ' · estado del ' + (E.generado || '').slice(0, 16).replace('T', ' ') + ' UTC'; }
+  }).catch(() => {});
+  // llegar con un nodo señalado en la liga, y avisar a la portada qué lámina es
+  const abrir = () => { let id = ''; try { id = window.YOD_FOCO || decodeURIComponent(location.hash.slice(1)); } catch (e) {} if (Y.nodos[id]) focusNode(id); };
+  if (window.YOD_FOCO || location.hash.length > 1) setTimeout(abrir, 280);
+  window.addEventListener('hashchange', abrir);
+  try { if (window.parent && window.parent !== window) window.parent.postMessage({ yod: 1, id: Y.id }, '*'); } catch (e) {}
+})();
+
+network.once('stabilizationIterationsDone', () => {
+  network.setOptions({ physics: { enabled: false } });
+});
+
+function showInfo(nodeId) {
+  const n = nodesDS.get(nodeId);
+  if (!n) return;
+  const neighborIds = network.getConnectedNodes(nodeId);
+  const neighborItems = neighborIds.map(nid => {
+    const nb = nodesDS.get(nid);
+    const color = nb ? nb.color.background : '#555';
+    return `<span class="neighbor-link" style="border-left-color:${esc(color)}" data-nid="${esc(nid)}">${esc(nb ? nb.label : nid)}</span>`;
+  }).join('');
+  const isMetaNode = !n.file_type && !n.source_file;
+  let html = `<div class="field"><b>${esc(n.label)}</b></div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Type: ${esc(n.file_type || 'unknown')}</div>`;
+  }
+  html += `<div class="field">Community: ${esc(n.community_name || '')}</div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Source: ${esc(n.source_file || '-')}</div>`;
+  } else if (n.member_count !== undefined && n.member_count !== null) {
+    html += `<div class="field">Members: ${esc(n.member_count)}</div>`;
+  }
+  html += `<div class="field">Degree: ${n.degree}</div>`;
+  if (neighborIds.length) {
+    html += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Neighbors (${neighborIds.length})</div><div id="neighbors-list">${neighborItems}</div>`;
+  }
+  document.getElementById('info-content').innerHTML = html;
+}
+
+function focusNode(nodeId) {
+  network.focus(nodeId, { scale: 1.4, animation: true });
+  network.selectNodes([nodeId]);
+  showInfo(nodeId);
+}
+
+// Neighbor links use a data attribute + one delegated listener rather than an
+// inline onclick. A node id/label sourced from a document or a scraped URL
+// (graphify add) can contain a double-quote; dropping the stringified id
+// unescaped into a quoted onclick both broke every link and allowed a hostile
+// source to inject an event handler into the local report (stored XSS, #1838).
+// esc() on data-nid keeps the value inside the attribute; the listener reads it
+// back verbatim. Bound to document so it survives the innerHTML rebuild that
+// recreates #neighbors-list on each showInfo().
+document.addEventListener('click', e => {
+  const el = e.target.closest('.neighbor-link');
+  if (el && el.dataset.nid !== undefined) focusNode(el.dataset.nid);
+});
+
+// Sidebar tooltips reuse vis-network's .vis-tooltip style and 100ms tooltipDelay.
+// Names get one only when CSS ellipsis truncates them (the full text is still in
+// the DOM); counts always get one, to say what the number is. Text is set with
+// textContent only (labels are untrusted). Delegated on document so rows rebuilt
+// later (search results, showInfo()) are covered.
+const sidebarTip = document.createElement('div');
+sidebarTip.className = 'vis-tooltip';
+sidebarTip.style.cssText = 'white-space: normal; max-width: 360px; overflow-wrap: break-word;';
+document.body.appendChild(sidebarTip);
+let sidebarTipTimer = null;
+let sidebarTipEl = null;    // element whose text the tooltip shows
+let sidebarTipZone = null;  // element the pointer must leave to hide it
+function hideSidebarTip() {
+  clearTimeout(sidebarTipTimer);
+  sidebarTip.style.visibility = 'hidden';
+  sidebarTip.textContent = '';
+  sidebarTipEl = sidebarTipZone = null;
+}
+document.addEventListener('mouseover', e => {
+  const zone = e.target.closest && e.target.closest('.legend-count, .legend-item, .search-item, .neighbor-link');
+  // Anywhere on a legend row except its count (dot, checkbox, gaps, padding)
+  // stands for the row's name, so moving within the row never re-triggers it.
+  const el = zone && zone.classList.contains('legend-item') ? zone.querySelector('.legend-label') : zone;
+  if (!el || el === sidebarTipEl) return;
+  hideSidebarTip();
+  const isCount = el.classList.contains('legend-count');
+  if (!isCount && el.scrollWidth <= el.clientWidth) return;
+  const text = isCount ? `${el.textContent} ${el.textContent === '1' ? 'nodo' : 'nodos'}` : el.textContent;
+  sidebarTipEl = el;
+  sidebarTipZone = zone;
+  const x = e.clientX, y = e.clientY;
+  sidebarTipTimer = setTimeout(() => {
+    sidebarTip.textContent = text;
+    sidebarTip.style.left = sidebarTip.style.top = '0px';  // measure at full max-width
+    sidebarTip.style.visibility = 'visible';
+    const w = sidebarTip.offsetWidth, h = sidebarTip.offsetHeight;
+    sidebarTip.style.left = Math.max(4, Math.min(x + 12, window.innerWidth - w - 4)) + 'px';
+    sidebarTip.style.top = (y + 16 + h > window.innerHeight ? Math.max(4, y - h - 8) : y + 16) + 'px';
+  }, 100);
+});
+document.addEventListener('mouseout', e => {
+  if (sidebarTipZone && !sidebarTipZone.contains(e.relatedTarget)) hideSidebarTip();
+});
+// A click rebuilds or hides the row (showInfo(), search pick) without a mouseout.
+document.addEventListener('mousedown', hideSidebarTip);
+
+// Track hovered node — hover detection is more reliable than click params
+let hoveredNodeId = null;
+network.on('hoverNode', params => {
+  hoveredNodeId = params.node;
+  container.style.cursor = 'pointer';
+});
+network.on('blurNode', () => {
+  hoveredNodeId = null;
+  container.style.cursor = 'default';
+});
+container.addEventListener('click', () => {
+  if (hoveredNodeId !== null) {
+    showInfo(hoveredNodeId);
+    network.selectNodes([hoveredNodeId]);
+  }
+});
+network.on('click', params => {
+  if (params.nodes.length > 0) {
+    showInfo(params.nodes[0]);
+  } else if (hoveredNodeId === null) {
+    document.getElementById('info-content').innerHTML = '<span class="empty">Toca un nodo para ver su detalle</span>';
+  }
+});
+
+const searchInput = document.getElementById('search');
+const searchResults = document.getElementById('search-results');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  searchResults.innerHTML = '';
+  if (!q) { searchResults.style.display = 'none'; return; }
+  const matches = RAW_NODES.filter(n => n.label.toLowerCase().includes(q)).slice(0, 20);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.style.display = 'block';
+  matches.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'search-item';
+    el.textContent = n.label;
+    el.style.borderLeft = `3px solid ${n.color.background}`;
+    el.style.paddingLeft = '8px';
+    el.onclick = () => {
+      network.focus(n.id, { scale: 1.5, animation: true });
+      network.selectNodes([n.id]);
+      showInfo(n.id);
+      searchResults.style.display = 'none';
+      searchInput.value = '';
+    };
+    searchResults.appendChild(el);
+  });
+});
+document.addEventListener('click', e => {
+  if (!searchResults.contains(e.target) && e.target !== searchInput)
+    searchResults.style.display = 'none';
+});
+
+const hiddenCommunities = new Set();
+
+const selectAllCb = document.getElementById('select-all-cb');
+
+function updateSelectAllState() {
+  const total = LEGEND.length;
+  const hidden = hiddenCommunities.size;
+  selectAllCb.checked = hidden === 0;
+  selectAllCb.indeterminate = hidden > 0 && hidden < total;
+}
+
+function toggleAllCommunities(hide) {
+  document.querySelectorAll('.legend-item').forEach(item => {
+    hide ? item.classList.add('dimmed') : item.classList.remove('dimmed');
+  });
+  document.querySelectorAll('.legend-cb').forEach(cb => {
+    cb.checked = !hide;
+  });
+  LEGEND.forEach(c => {
+    if (hide) hiddenCommunities.add(c.cid); else hiddenCommunities.delete(c.cid);
+  });
+  const updates = RAW_NODES.map(n => ({ id: n.id, hidden: hide }));
+  nodesDS.update(updates);
+  updateSelectAllState();
+}
+
+const legendEl = document.getElementById('legend');
+LEGEND.forEach(c => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.className = 'legend-cb';
+  cb.checked = true;
+  cb.addEventListener('change', (e) => {
+    e.stopPropagation();
+    if (cb.checked) {
+      hiddenCommunities.delete(c.cid);
+      item.classList.remove('dimmed');
+    } else {
+      hiddenCommunities.add(c.cid);
+      item.classList.add('dimmed');
+    }
+    const updates = RAW_NODES
+      .filter(n => n.community === c.cid)
+      .map(n => ({ id: n.id, hidden: !cb.checked }));
+    nodesDS.update(updates);
+    updateSelectAllState();
+  });
+  item.innerHTML = `<div class="legend-dot" style="background:${c.color}"></div>
+    <span class="legend-label">${c.label}</span>
+    <span class="legend-count">${c.count}</span>`;
+  item.prepend(cb);
+  item.onclick = (e) => {
+    if (e.target === cb) return;
+    cb.checked = !cb.checked;
+    cb.dispatchEvent(new Event('change'));
+  };
+  legendEl.appendChild(item);
+});
+</script>
+<script>
+// Render hyperedges as shaded regions
+const hyperedges = [];
+// afterDrawing passes ctx already transformed to network coordinate space.
+// Draw node positions raw — no manual pan/zoom/DPR math needed.
+
+// Andrew's monotone chain. Returns the hull in counter-clockwise order, which
+// is what the perimeter must be traced in. Collinear and duplicate points
+// collapse to the extremes, so degenerate member sets render as a segment
+// rather than a zero-area crossed path.
+function convexHull(pts) {
+    const p = pts.slice().sort((a, b) => (a.x - b.x) || (a.y - b.y));
+    if (p.length < 3) return p;
+    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const build = seq => {
+        const out = [];
+        for (const q of seq) {
+            while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+            out.push(q);
+        }
+        out.pop();
+        return out;
+    };
+    const hull = build(p).concat(build(p.slice().reverse()));
+    return hull.length >= 3 ? hull : p;
+}
+network.on('afterDrawing', function(ctx) {
+    hyperedges.forEach(h => {
+        // Legend toggles only set `hidden` on nodes; getPositions() still
+        // returns them, so skip hidden members or their hull lingers.
+        const positions = h.nodes
+            .filter(nid => { const n = nodesDS.get(nid); return n && n.hidden !== true; })
+            .map(nid => network.getPositions([nid])[nid])
+            .filter(p => p !== undefined);
+        if (positions.length < 2) return;
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#6366f1';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Centroid and expanded hull in network coordinates.
+        // The perimeter must follow hull order, not h.nodes order: tracing the
+        // raw member order self-intersects whenever the layout does not happen
+        // to place members in angular order, filling as crossed wedges.
+        const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length;
+        const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length;
+        const hull = convexHull(positions);
+        const expanded = hull.map(p => ({
+            x: cx + (p.x - cx) * 1.15,
+            y: cy + (p.y - cy) * 1.15
+        }));
+        ctx.moveTo(expanded[0].x, expanded[0].y);
+        expanded.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+        // Label
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#4f46e5';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(h.label, cx, cy - 5);
+        ctx.restore();
+    });
+});
+</script>
+</body>
+</html>

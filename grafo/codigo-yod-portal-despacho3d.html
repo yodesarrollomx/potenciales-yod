@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Código · yod-portal · despacho3d/ · YOD OS en Graphify</title>
+<script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
+        integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"
+        crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #0f0f1a; --panel: #1a1a2e; --border: #2a2a4e; --input-border: #3a3a5e;
+    --text: #e0e0e0; --text-2: #aaa; --text-3: #ccc; --muted: #555; --count: #666;
+    --neighbor-border: #333; --node-label: #ffffff;
+  }
+  [data-theme="light"] {
+    --bg: #ffffff; --panel: #f8f9fa; --border: #d9dee5; --input-border: #c3cad4;
+    --text: #222222; --text-2: #666666; --text-3: #333333; --muted: #888888; --count: #777777;
+    --neighbor-border: #ccc; --node-label: #222222;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  #graph { flex: 1; }
+  #sidebar { width: 280px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  #search-wrap { padding: 12px; border-bottom: 1px solid var(--border); }
+  #search { width: 100%; background: var(--bg); border: 1px solid var(--input-border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+  #search:focus { border-color: #4E79A7; }
+  #search-results { max-height: 140px; overflow-y: auto; padding: 4px 12px; border-bottom: 1px solid var(--border); display: none; }
+  .search-item { padding: 4px 6px; cursor: pointer; border-radius: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-item:hover { background: var(--border); }
+  #info-panel { padding: 14px; border-bottom: 1px solid var(--border); min-height: 140px; }
+  #info-panel h3 { font-size: 13px; color: var(--text-2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #info-content { font-size: 13px; color: var(--text-3); line-height: 1.6; }
+  #info-content .field { margin-bottom: 5px; }
+  #info-content .field b { color: var(--text); }
+  #info-content .empty { color: var(--muted); font-style: italic; }
+  .neighbor-link { display: block; padding: 2px 6px; margin: 2px 0; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--neighbor-border); }
+  .neighbor-link:hover { background: var(--border); }
+  #neighbors-list { max-height: 160px; overflow-y: auto; margin-top: 4px; }
+  #legend-wrap { flex: 1; overflow-y: auto; padding: 12px; }
+  #legend-wrap h3 { font-size: 13px; color: var(--text-2); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
+  .legend-item:hover { background: var(--border); padding-left: 4px; }
+  .legend-item.dimmed { opacity: 0.35; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-count { color: var(--count); font-size: 11px; }
+  #stats { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  #legend-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 4px 0; }
+  #legend-controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-2); user-select: none; }
+  #legend-controls label:hover { color: var(--text); }
+  .legend-cb, #select-all-cb { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid var(--input-border); border-radius: 3px; background: var(--bg); cursor: pointer; position: relative; flex-shrink: 0; }
+  .legend-cb:checked, #select-all-cb:checked { background: #4E79A7; border-color: #4E79A7; }
+  .legend-cb:checked::after, #select-all-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  #select-all-cb:indeterminate { background: #4E79A7; border-color: #4E79A7; }
+  #select-all-cb:indeterminate::after { content: ''; position: absolute; left: 2px; top: 5px; width: 8px; height: 2px; background: #fff; border: none; transform: none; }
+  #theme-wrap { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  #theme-wrap button { flex: 1; background: var(--bg); color: var(--text-2); border: 1px solid var(--input-border); border-radius: 4px; padding: 3px 0; font-size: 11px; cursor: pointer; }
+  #theme-wrap button:hover { color: var(--text); }
+  #theme-wrap button[aria-pressed="true"] { background: #4E79A7; border-color: #4E79A7; color: #fff; }
+</style>
+<script id="graphify-theme-init">
+// Apply the saved theme before first paint (#3894). No saved choice keeps the
+// historical dark look; "system" follows prefers-color-scheme.
+(function () {
+  var pref = null;
+  try { pref = localStorage.getItem('graphify-theme'); } catch (e) {}
+  var t = pref === 'light' ? 'light'
+    : pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light'
+    : window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<style id="yod-capa">
+  #graph { position: relative; }
+  #yod-barra { position: fixed; top: 8px; left: 8px; right: 296px; z-index: 5; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+  #yod-barra button, #yod-barra a, #yod-barra select { pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; font: 500 12px system-ui, -apple-system, sans-serif; text-decoration: none;
+    color: var(--text); background: var(--panel); border: 1px solid var(--input-border); border-radius: 999px; padding: 5px 10px; min-height: 30px; cursor: pointer; }
+  #yod-barra button[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+  #yod-barra select { max-width: 150px; appearance: auto; }
+  #yod-barra i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  #yod-barra .yod-fuerte { font-weight: 650; }
+  #yod-barra .yod-c { display: none; }
+  .neighbor-link { white-space: normal !important; overflow-wrap: anywhere; line-height: 1.35; padding: 5px 6px !important; }
+  #neighbors-list { max-height: 260px !important; }
+  #info-content .field { overflow-wrap: anywhere; }
+  #info-content a { color: #4E79A7; }
+  [data-theme="dark"] #info-content a { color: #8FB8E8; }
+  .yod-tipo { color: var(--text-2); font-size: 12px; }
+  .yod-ev { color: var(--text-2); font-size: 11.5px; }
+  .yod-alerta { color: #C8102E; } [data-theme="dark"] .yod-alerta { color: #FF7B8A; }
+  .yod-entrar { display: block; margin: 8px 0; padding: 9px 11px; border-radius: 8px; background: #4E79A7; color: #fff !important; font-weight: 600; text-decoration: none; font-size: 13px; }
+  .yod-abrir { display: inline-block; margin: 2px 0 6px; font-size: 12px; }
+  .yod-lista { margin: 6px 0; font-size: 12px; } .yod-lista summary { cursor: pointer; color: var(--text-2); padding: 3px 0; }
+  .yod-lista div { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 0; } .yod-lista span { border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font: 11.5px ui-monospace, Menlo, monospace; }
+  .yod-tb { font-size: 12px; line-height: 1.7; }
+  #yod-simbolos { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 3px 10px; }
+  #yod-simbolos b { font-weight: 400; }
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    #graph { flex: 1 1 auto; min-height: 54vh; }
+    #sidebar { display: block; width: auto; max-height: 46vh; overflow-y: auto; border-left: 0; border-top: 1px solid var(--border); }
+    #theme-wrap { display: none; }
+    #info-panel { min-height: 0; }
+    #legend-wrap { overflow: visible; }
+    #yod-barra { right: 8px; gap: 4px; }
+    #yod-barra button, #yod-barra a, #yod-barra select { font-size: 11px; padding: 4px 8px; min-height: 28px; }
+    #yod-barra .yod-l { display: none; } #yod-barra .yod-c { display: inline; }
+    #yod-barra select { max-width: 112px; }
+    #yod-barra a.yod-fuerte { max-width: 150px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: inline-block; line-height: 20px; }
+  }
+</style>
+<script id="yod-datos">window.YOD = {"id":"codigo-yod-portal-despacho3d","titulo":"Código · yod-portal · despacho3d/","sub":"Carpeta despacho3d/ del repositorio yod-portal.","padre":["codigo-yod-portal.html","Código · yod-portal"],"nodos":{"yod-portal::despacho3d_conversation":{"x":665,"y":72,"nombre":"conversation.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"conversation.mjs","ev":"yod-portal/despacho3d/conversation.mjs · 266 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/conversation.mjs","lt":"Funciones y símbolos (38)","lista":["text()  · L9","date()  · L10","initialState()  · L13","active  · L14","FAST_FALLBACK  · L15","FAST_NOTICES  · L16","diagnosticCodes  · L17","transientCodes  · L18","diagnosticCode()  · L19","checked()  · L20","validateSelection()  · L21","safeDocumentUrl()  · L39","sourceRows()  · L42","validateWorkspaceSources()  · L52","workspaceSourceNotice()  · L67","validateConversation()  · L83","Conversation  · L108",".constructor()  · L109",".getProfile()  · L110",".subscribeProfile()  · L111",".setProfile()  · L112",".forgetProfile()  · L113",".fastClient()  · L114",".fastPending()  · L121",".canSend()  · L122",".idleStatus()  · L128",".reconcileFast()  · L129",".recoverable()  · L137",".stoppedMessage()  · L138",".retryStopped()  · L142",".emit()  · L143",".call()  · L144",".close()  · L149",".open()  · L150",".refresh()  · L166",".sendFast()  · L192",".send()  · L220","createFrameTransport()  · L251"],"tb":[["tablero-despacho.html","Tablero · El Despacho"],["codigo-yod-portal.html","Código · yod-portal"]]},"yod-portal::despacho3d_office":{"x":831,"y":72,"nombre":"office.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"office.js","ev":"yod-portal/despacho3d/office.js · 221 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/office.js","lt":"Funciones y símbolos (57)","lista":["mount  · L23","scene  · L28","pmrem  · L29","room  · L29","overviewCamera  · L30","walkCamera  · L30","orbit  · L32","fill  · L36","sun  · L36","director  · L40","waitingFurniture  · L43","syncDirector()  · L51","preparationGate  · L55","proximity  · L55","sight  · L55","keys  · L60","last  · L60","stick  · L60","reducedMotion  · L61","pilot  · L63","council  · L64","bindPilot()  · L66","emptyScreen  · L75","observedWork  · L76","roomStates  · L76","paintWork()  · L77","bindWork()  · L89","bindRoomWork()  · L90","avatarHUD  · L101","paintAgentMarker()  · L103","isMobile()  · L110","updateAngles()  · L111","fitOverview()  · L112","resetStick()  · L113","clearMovement()  · L114","updateChrome()  · L115","setMode()  · L116","visit()  · L117","showSheet()  · L118","closeSheets()  · L119","openPanel()  · L120","movement()  · L124","followNearbyResident()  · L126","updateAgentProximity()  · L140","updateNear()  · L188","updateStick()  · L190","base  · L190","pointers  · L192","raycaster  · L192","release()  · L194","resize()  · L199","animate()  · L200","frameBudget  · L201","syncFrameBudget()  · L202","camera()  · L207","routeOffice()  · L213","agentsVisibility()  · L218"],"tb":[["tablero-despacho.html","Tablero · El Despacho"],["codigo-yod-portal.html","Código · yod-portal"]]},"yod-portal::despacho3d_agent_workspace":{"x":997,"y":72,"nombre":"agent-workspace.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"\nagent-workspace.mjs","ev":"yod-portal/despacho3d/agent-workspace.mjs · 518 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/agent-workspace.mjs","lt":"Funciones y símbolos (40)","lista":["WORKSPACE_TABS  · L18","WORKSPACE_GROUPS  · L19","workspaceGroup()  · L20","reviewPresentedGoal()  · L22","proposalState()  · L37","boardURL()  · L44","createNativeVolumeRecovery()  · L48","observe()  · L51","createReceiptQueue()  · L70","enqueue()  · L74","drain()  · L90","createWorkspace()  · L121","paintMoac()  · L126","rememberReading()  · L142","disclosure()  · L148","focusGoal()  · L219","paintWorkBoard()  · L226","paintBrief()  · L255","session()  · L271","request()  · L278","command()  · L286","paintBrowser()  · L292","postBoard()  · L301","applyProposal()  · L302","waitForReceipt()  · L313","reconcileNative()  · L318","confirmReceipt()  · L326","dispatchRequested()  · L343","paintProposals()  · L351","clearBoardHandshake()  · L383","startBoardHandshake()  · L384","mountBoard()  · L396","acceptsBoardState()  · L409","receive()  · L416","readSources()  · L473","refresh()  · L484","setTab()  · L498","openLatestMeeting()  · L504","clear()  · L512","open()  · L513"],"tb":[["tablero-despacho.html","Tablero · El Despacho"],["codigo-yod-portal.html","Código · yod-portal"]]},"yod-portal::despacho3d_goals":{"x":1163,"y":72,"nombre":"goals.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"goals.mjs","ev":"yod-portal/despacho3d/goals.mjs · 155 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/goals.mjs","lt":"Funciones y símbolos (42)","lista":["GOAL_SCOPE  · L3","DEFAULT_DURABLE_GOAL  · L4","statuses  · L5","taskStatuses  · L6","plain()  · L7","text()  · L8","id()  · L9","date()  · L10","fields()  · L11","fail()  · L12","validateGoal()  · L13","validateGoals()  · L28","notices  · L34","denied()  · L35","definitive()  · L36","goalDisplay()  · L39","taskDisplay()  · L45","goalReviewActions()  · L55","DurableGoals  · L63",".constructor()  · L64",".state()  · L65",".subscribe()  · L66",".emit()  · L67",".context()  · L68",".sync()  · L69",".reset()  · L70",".hide()  · L71",".call()  · L72",".current()  · L73",".read()  · L74",".readFresh()  · L84",".failed()  · L93",".create()  · L94",".review()  · L99",".retry()  · L105",".write()  · L106","shouldPollGoals()  · L116","watchGoals()  · L120","tick()  · L122","orderedGoals()  · L126","goalRoadmap()  · L130","goalReadView()  · L145"],"tb":[["tablero-despacho.html","Tablero · El Despacho"],["codigo-yod-portal.html","Código · yod-portal"]]},"yod-portal::despacho3d_live_voice_boot":{"x":665,"y":156,"nombre":"live-voice-boot.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"\nlive-voice-boot.mjs","ev":"yod-portal/despacho3d/live-voice-boot.mjs · 456 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/live-voice-boot.mjs","lt":"Funciones y símbolos (21)","lista":["open  · L17","present()  · L42","openBoard()  · L50","setParentTeamHidden()  · L73","visibility()  · L82","presentMeetingSlide()  · L93","renderInteractions()  · L110","openInteractionWorkspace()  · L117","renderChat()  · L147","stationMessageContext()  · L164","sendStationMessage()  · L168","receiveStationTranscript()  · L212","renderVoiceState()  · L224","renderTranscript()  · L279","openForCase()  · L294","requestBegin()  · L332","suppressEncounter()  · L345","begin()  · L349","dismiss()  · L388","prepareEntry()  · L416","bindResident()  · L422"],"tb":[["tablero-despacho.html","Tablero · El Despacho"],["codigo-yod-portal.html","Código · yod-portal"]]},"yod-portal::despacho3d_project_station":{"x":831,"y":156,"nombre":"project-station.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"\nproject-station.mjs","ev":"yod-portal/despacho3d/project-station.mjs · 138 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/project-station.mjs","lt":"Funciones y símbolos (24)","lista":["id()  · L2","pages  · L3","nativePages  · L6","observationPages  · L7","stationIdentity()  · L8","registeredBoard()  · L11","resolveBoard()  · L34","nativeBoardState()  · L45","volumeIds  · L54","volumeDerived  · L55","volumeIntegers  · L56","object()  · L57","revision()  · L58","text()  · L59","nativeVolumeCapability()  · L60","nativeVolumeCollection()  · L77","sameCollection()  · L88","drivers()  · L89","nativeVolumeProposal()  · L90","nativeVolumeReconciliation()  · L105","proposalDiscardPayload()  · L112","prewriteErrors  · L119","nativeVolumeRejection()  · L120","nativeVolumeReceipt()  · L125"],"tb":[["tablero-despacho.html","Tablero · El Despacho"],["codigo-yod-portal.html","Código · yod-portal"]]},"yod-portal::despacho3d_work_observer":{"x":997,"y":156,"nombre":"work-observer.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"work-observer.mjs","ev":"yod-portal/despacho3d/work-observer.mjs · 133 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/work-observer.mjs","lt":"Funciones y símbolos (21)","lista":["id()  · L3","plain()  · L4","txt()  · L5","stamp()  · L6","runtimePhases  · L7","count()  · L8","phases  · L9","safeWorkURL()  · L10","validateObservation()  · L11","historyEntry()  · L48","validateWorkHistory()  · L49","workHeadline()  · L67","observationCaptureKey()  · L83","validatedCapture()  · L88","createWorkObserver()  · L93","emit()  · L96","clear()  · L97","select()  · L98","later()  · L99","refresh()  · L100","history()  · L119"],"tb":[["tablero-despacho.html","Tablero · El Despacho"],["codigo-yod-portal.html","Código · yod-portal"]]},"yod-portal::despacho3d_live_voice":{"x":1163,"y":156,"nombre":"live-voice.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"live-voice.mjs","ev":"yod-portal/despacho3d/live-voice.mjs · 594 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/live-voice.mjs","lt":"Funciones y símbolos (34)","lista":["NOTICES  · L6","interactionId()  · L17","interactionRevision()  · L18","interactionTabs  · L19","interactionSections  · L20","interactionProjection()  · L21","createLiveVoice()  · L54","post()  · L77","release()  · L92","ensureCredential()  · L105","renewCredential()  · L118","prepare()  · L136","discardPreparation()  · L161","forgetCloseReceipt()  · L166","refreshCloseReceipt()  · L171","stop()  · L215","status()  · L257","sampleInput()  · L288","playAudio()  · L298","gather()  · L314","start()  · L323","retryContext()  · L460","notifyBoard()  · L475","flushBoard()  · L479","sendText()  · L491","presentSlide()  · L511","notifyInteraction()  · L521","mute()  · L539","sendAutomaticListeningIntent()  · L544","sendListeningIntent()  · L552","interrupt()  · L562","resumeAudio()  · L572","stateForCase()  · L579","abandon()  · L586"],"tb":[["tablero-despacho.html","Tablero · El Despacho"],["codigo-yod-portal.html","Código · yod-portal"]]},"yod-portal::despacho3d_agent_interaction":{"x":665,"y":240,"nombre":"agent-interaction.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"agent-interaction.\nmjs","ev":"yod-portal/despacho3d/agent-interaction.mjs · 204 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/agent-interaction.mjs","lt":"Funciones y símbolos (30)","lista":["id()  · L3","revision()  · L4","normalize()  · L5","sections  · L6","navigation  · L8","parseDirectUserCommand()  · L9","copy()  · L31","contextOf()  · L32","nativeVolumeWrite()  · L40","canonicalChange()  · L41","sameContext()  · L42","sameMutationContext()  · L46","rejectionReadback()  · L47","validReadback()  · L48","mutationReadback()  · L56","createAgentInteraction()  · L61","current()  · L65","snapshot()  · L70","emit()  · L71","patch()  · L72","pending()  · L73","bound()  · L76","invoke()  · L83","acknowledge()  · L90","execute()  · L100","run()  · L130","receive()  · L134","find()  · L155","workspacePresentationVisible()  · L177","renderInteractionCards()  · L189"],"tb":[["tablero-despacho.html","Tablero · El Despacho"]]},"yod-portal::despacho3d_office_accessible":{"x":831,"y":240,"nombre":"office-accessible.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"office-accessible.\nmjs","ev":"yod-portal/despacho3d/office-accessible.mjs · 179 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/office-accessible.mjs","lt":"Funciones y símbolos (9)","lista":["el()  · L13","label()  · L18","authorized()  · L19","coords()  · L20","svgEl()  · L21","startAccessibleOffice()  · L24","mountAccessibleView()  · L91","paint()  · L154","arrived()  · L168"],"tb":[["tablero-despacho.html","Tablero · El Despacho"]]},"yod-portal::despacho3d_knowledge_board":{"x":997,"y":240,"nombre":"knowledge-board.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"\nknowledge-board.mjs","ev":"yod-portal/despacho3d/knowledge-board.mjs · 253 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/knowledge-board.mjs","lt":"Funciones y símbolos (40)","lista":["plain()  · L2","text()  · L3","id()  · L4","revision()  · L5","date()  · L6","invalid()  · L7","phases  · L8","knowledgeSourceURL()  · L9","validateKnowledgeBoard()  · L13","validateCaptureReceipt()  · L53","validateMarkdownExport()  · L60","validateKnowledgeComparison()  · L67","validateVaultFiles()  · L77","createVaultZip()  · L88","definitive  · L104","notices  · L105","KnowledgeBoard  · L106",".constructor()  · L107",".state()  · L108",".subscribe()  · L109",".emit()  · L110",".open()  · L111",".reset()  · L112",".hide()  · L113",".current()  · L114",".fail()  · L115",".load()  · L123",".capture()  · L130",".retry()  · L135",".write()  · L136",".compare()  · L146",".exportMarkdown()  · L153","withCurrentKnowledge()  · L163","mountKnowledgeBoard()  · L168","revoke()  · L188","download()  · L189","paintComparison()  · L196","retryCapture()  · L209","references()  · L211","paint()  · L217"],"tb":[["tablero-despacho.html","Tablero · El Despacho"]]},"yod-portal::despacho3d_puesto_agente":{"x":1163,"y":240,"nombre":"puesto-agente.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"puesto-agente.mjs","ev":"yod-portal/despacho3d/puesto-agente.mjs · 156 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/puesto-agente.mjs","lt":"Funciones y símbolos (22)","lista":["PUESTO2_AGENT_IDS  · L4","PUESTO2_PILOT  · L5","identity()  · L6","presentationLocation()  · L7","isPuesto2()  · L11","labels  · L17","emptyMetrics()  · L18","number()  · L19","money()  · L20","percent()  · L21","dateLabel()  · L22","essentialCase()  · L26","mountPuestoAgente()  · L53","move()  · L58","valid()  · L59","showView()  · L60","build()  · L66","updateWorkspace()  · L97","updateStatus()  · L107","deactivate()  · L126","setSelection()  · L132","renderInteractions()  · L139"],"tb":[["tablero-despacho.html","Tablero · El Despacho"]]},"yod-portal::despacho3d_entorno":{"x":665,"y":324,"nombre":"entorno.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"entorno.mjs","ev":"yod-portal/despacho3d/entorno.mjs · 254 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/entorno.mjs","lt":"Funciones y símbolos (16)","lista":["PERMISOS  · L11","NIVELES  · L18","ESPACIOS  · L20","POR_ID  · L32","espacioDe()  · L33","puedeActuar()  · L36","QUIENES  · L42","crearRegistro()  · L44","crear()  · L60","hora()  · L71","crearEntorno()  · L73","verEntregas()  · L88","pintarEntregas()  · L97","pintar()  · L112","montarEntorno()  · L174","alTeclear()  · L190"],"tb":[["tablero-despacho.html","Tablero · El Despacho"]]},"yod-portal::despacho3d_resident_boot":{"x":831,"y":324,"nombre":"resident-boot.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"resident-boot.mjs","ev":"yod-portal/despacho3d/resident-boot.mjs · 90 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/resident-boot.mjs","lt":"Funciones y símbolos (3)","lista":["host  · L11","paint()  · L21","refreshOnWake()  · L75"],"tb":[["tablero-despacho.html","Tablero · El Despacho"]]},"mas:codigo-yod-portal-despacho3d:codigo:(esta carpeta)":{"x":997,"y":324,"nombre":"+90 archivos más","forma":"dot","tam":9,"color":"#8A8F98","tipo":"Grupo","celda":"(esta carpeta) · Código","lbl":"+90 archivos más","lt":"Incluye","lista":["resident-motion.mjs","fast-lane.mjs","office-config.mjs","office-preparation.mjs","resident-agents.mjs","agent-menu.mjs","authorized-cases.mjs","ruisenor-interaction-fixture.mjs","chinches-ui.mjs","room-work.mjs","scene.js","work-view.mjs","actividad.mjs","avatar-presence.mjs","council-model.mjs","equipo-model.mjs","equipo.mjs","office-entry.mjs","office-layout.mjs","room-work-boot.mjs","terminal-link.mjs","visitas.mjs","voice-actions.mjs","workspace-navigation.mjs","agent-proximity.mjs","biblioteca.mjs","circulo-pendientes.mjs","entorno-ruta.mjs","goal-handoff.mjs","meeting-archive.mjs","work-observer-boot.mjs","actividad-demo.mjs","authority-lease.mjs","biblioteca-boot.mjs","chinches3d.mjs","circulo.mjs","conversation-voice.mjs","core-observation.mjs","council-view.mjs","native-moac.mjs","office-boot.mjs","office-panels.mjs","office-station.mjs","permisos.mjs","project-meeting.mjs","avatar-hud.mjs","entorno-config.mjs","equipo-aceptacion.mjs","equipo-kanban.mjs","live-transcript.mjs","office-destination.mjs","office-lifecycle.mjs","office-screen.mjs","profile-work.mjs","voice-preparation.mjs","auton-status.mjs","avatar-card.mjs","circulo-datos.mjs","conversation-watch.mjs","document-drawing.mjs","document-tray.mjs","meeting-view.mjs","office-loading.mjs","office-screen-status.mjs","profile-session.mjs","resident-dock.mjs","station-ownership.mjs","voice-input-monitor.mjs","avatar-profile.mjs","case-selection-handoff.mjs","circulo-boot.mjs","entorno-boot.mjs","nearby-resident.mjs","office-entry-boot.mjs","permisos-demo.mjs","resident-opening.mjs","voice-view.mjs","agent-workspace-boot.mjs","agents.js","avatar-label-layout.mjs","circulo-config.mjs","data-continuity-boot.mjs","drive-selection.mjs","equipo-dictation.mjs","hairline-access.mjs","hairline-approved.mjs","office-overview.mjs","panels.js","frame-budget.mjs","hairline-access.bundle.mjs"]},"f:yod-portal:despacho3d/index.html":{"x":111,"y":72,"nombre":"index.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"(esta carpeta) · Páginas","lbl":"index.html","ev":"yod-portal/despacho3d/index.html · 13 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/index.html","lt":"Funciones y símbolos (1)","lista":["despacho3d/index.html.inline.js  · L1"],"tb":[["tablero-despacho.html","Tablero · El Despacho"],["pantalla-hoy.html","Pantalla · Hoy"],["codigo-yod-portal.html","Código · yod-portal"]]},"yod-portal::despacho3d_puesto_demo_html_inline":{"x":277,"y":72,"nombre":"puesto-demo.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"(esta carpeta) · Páginas","lbl":"puesto-demo.html","ev":"yod-portal/despacho3d/puesto-demo.html · 11 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/puesto-demo.html","lt":"Funciones y símbolos (6)","lista":["calls  · L4","data  · L4","selection  · L4","observer  · L5","transport  · L6","open()  · L7"],"tb":[["tablero-despacho.html","Tablero · El Despacho"],["codigo-yod-portal.html","Código · yod-portal"]]},"f:yod-portal:despacho3d/ruisenor-interaction-test.html":{"x":443,"y":72,"nombre":"ruisenor-interaction-test.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"(esta carpeta) · Páginas","lbl":"ruisenor-interacti\non-test.html","ev":"yod-portal/despacho3d/ruisenor-interaction-test.html · 3 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/ruisenor-interaction-test.html","tb":[["tablero-despacho.html","Tablero · El Despacho"],["codigo-yod-portal.html","Código · yod-portal"]]},"yod-portal::despacho3d_permisos_demo_html_inline":{"x":111,"y":156,"nombre":"permisos-demo.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"(esta carpeta) · Páginas","lbl":"permisos-demo.html","ev":"yod-portal/despacho3d/permisos-demo.html · 5 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/permisos-demo.html","tb":[["tablero-despacho.html","Tablero · El Despacho"],["codigo-yod-portal.html","Código · yod-portal"]]},"f:yod-portal:despacho3d/sala.html":{"x":277,"y":156,"nombre":"sala.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"(esta carpeta) · Páginas","lbl":"sala.html","ev":"yod-portal/despacho3d/sala.html · 2 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/sala.html","tb":[["tablero-despacho.html","Tablero · El Despacho"],["codigo-yod-portal.html","Código · yod-portal"]]},"yod-portal::despacho3d_actividad_demo_html_inline":{"x":443,"y":156,"nombre":"actividad-demo.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"(esta carpeta) · Páginas","lbl":"\nactividad-demo.html","ev":"yod-portal/despacho3d/actividad-demo.html · 8 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/actividad-demo.html","tb":[["tablero-despacho.html","Tablero · El Despacho"],["codigo-yod-portal.html","Código · yod-portal"]]},"yod-portal::despacho3d_diseno_html_inline":{"x":111,"y":240,"nombre":"diseno.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"(esta carpeta) · Páginas","lbl":"diseno.html","ev":"yod-portal/despacho3d/diseno.html · 9 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/diseno.html","lt":"Funciones y símbolos (2)","lista":["d  · L7","zones  · L7"],"tb":[["tablero-despacho.html","Tablero · El Despacho"],["codigo-yod-portal.html","Código · yod-portal"]]},"f:yod-portal:despacho3d/terreno.html":{"x":277,"y":240,"nombre":"terreno.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"(esta carpeta) · Páginas","lbl":"terreno.html","ev":"yod-portal/despacho3d/terreno.html · 1 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/terreno.html","tb":[["tablero-despacho.html","Tablero · El Despacho"],["codigo-yod-portal.html","Código · yod-portal"]]},"yod-portal::despacho3d_avatars_avatar":{"x":665,"y":468,"nombre":"avatar.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"avatars/ · Código","lbl":"avatar.mjs","ev":"yod-portal/despacho3d/avatars/avatar.mjs · 141 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/avatars/avatar.mjs","lt":"Funciones y símbolos (23)","lista":["AVATAR_VERSION  · L4","FORMS  · L5","hairs  · L6","skins  · L6","hash()  · L7","col()  · L8","colorOr()  · L9","createAvatar()  · L12","mesh()  · L29","orb()  · L30","round()  · L31","tube()  · L32","cyl()  · L33","ring()  · L34","group()  · L35","emblem()  · L36","face()  · L37","humanHead()  · L49","limbs()  · L62","tablet()  · L75","feather()  · L76","animateAvatar()  · L125","disposeAvatar()  · L140"],"tb":[["tablero-despacho.html","Tablero · El Despacho"]]},"yod-portal::despacho3d_avatars_office_residents":{"x":831,"y":468,"nombre":"office-residents.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"avatars/ · Código","lbl":"\noffice-residents.mjs","ev":"yod-portal/despacho3d/avatars/office-residents.mjs · 72 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/avatars/office-residents.mjs","lt":"Funciones y símbolos (6)","lista":["MEETING  · L7","SEATS  · L8","createOfficeResidents()  · L10","syncResidence()  · L13","reconcile()  · L22","disconnect()  · L54"]},"yod-portal::despacho3d_avatars_office_pilot":{"x":997,"y":468,"nombre":"office-pilot.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"avatars/ · Código","lbl":"office-pilot.mjs","ev":"yod-portal/despacho3d/avatars/office-pilot.mjs · 113 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/avatars/office-pilot.mjs","lt":"Funciones y símbolos (10)","lista":["createOfficePilot()  · L7","replace()  · L17","disconnect()  · L30","bind()  · L35","update()  · L45","finish()  · L57","advance()  · L64","walk()  · L74","presentations()  · L82","chooseOfficeHit()  · L101"]},"yod-portal::despacho3d_avatars_adapter":{"x":1163,"y":468,"nombre":"adapter.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"avatars/ · Código","lbl":"adapter.mjs","ev":"yod-portal/despacho3d/avatars/adapter.mjs · 33 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/avatars/adapter.mjs","lt":"Funciones y símbolos (10)","lista":["createAvatarLayer()  · L5","clear()  · L9","mount()  · L10","replaceAuthorizedProfiles()  · L18","select()  · L25","selectIntersection()  · L26","setAppearance()  · L27","setMotion()  · L28","update()  · L29","dispose()  · L30"]},"yod-portal::despacho3d_avatars_council":{"x":665,"y":552,"nombre":"council.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"avatars/ · Código","lbl":"council.mjs","ev":"yod-portal/despacho3d/avatars/council.mjs · 15 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/avatars/council.mjs","lt":"Funciones y símbolos (2)","lista":["seats  · L3","createCouncilAvatars()  · L5"]},"yod-portal::despacho3d_avatars_office_human":{"x":831,"y":552,"nombre":"office-human.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"avatars/ · Código","lbl":"office-human.mjs","ev":"yod-portal/despacho3d/avatars/office-human.mjs · 74 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/avatars/office-human.mjs","lt":"Funciones y símbolos (10)","lista":["OFFICE_HUMAN_FORMS  · L4","OFFICE_AVATAR_BUDGET  · L5","hairs  · L6","skins  · L6","hash()  · L7","safe()  · L8","createOfficeHuman()  · L9","mesh()  · L16","joint()  · L18","animateOfficeHuman()  · L56"]},"f:yod-portal:despacho3d/avatars/demo.mjs":{"x":997,"y":552,"nombre":"demo.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"avatars/ · Código","lbl":"demo.mjs","ev":"yod-portal/despacho3d/avatars/demo.mjs · 9 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/avatars/demo.mjs","lt":"Funciones y símbolos (3)","lista":["avatars/demo.mjs  · L1","renderer  · L3","camera  · L4"]},"yod-portal::despacho3d_avatars_identity":{"x":1163,"y":552,"nombre":"identity.mjs","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"avatars/ · Código","lbl":"identity.mjs","ev":"yod-portal/despacho3d/avatars/identity.mjs · 24 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/avatars/identity.mjs","lt":"Funciones y símbolos (2)","lista":["createIdentityIndex()  · L2","migrateLocalState()  · L10"]},"f:yod-portal:despacho3d/avatars/README.md":{"x":1385,"y":468,"nombre":"README.md","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"avatars/ · Documentos y datos","lbl":"README.md","ev":"yod-portal/despacho3d/avatars/README.md · 79 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/avatars/README.md","tb":[["codigo-yod-portal.html","Código · yod-portal"]]},"f:yod-portal:despacho3d/avatars/demo.html":{"x":111,"y":468,"nombre":"demo.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"avatars/ · Páginas","lbl":"demo.html","ev":"yod-portal/despacho3d/avatars/demo.html · 2 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/avatars/demo.html","tb":[["tablero-despacho.html","Tablero · El Despacho"],["codigo-yod-portal.html","Código · yod-portal"]]},"f:yod-portal:despacho3d/third-party/cubefarm/LICENSE.txt":{"x":1385,"y":696,"nombre":"LICENSE.txt","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"third-party/ · Documentos y datos","lbl":"LICENSE.txt","ev":"yod-portal/despacho3d/third-party/cubefarm/LICENSE.txt · 22 líneas","url":"https://github.com/yodesarrollomx/yod-portal/blob/6a05d2acc2/despacho3d/third-party/cubefarm/LICENSE.txt","tb":[["codigo-yod-portal.html","Código · yod-portal"]]}},"flechas":{"f:yod-portal:despacho3d/avatars/demo.html>f:yod-portal:despacho3d/avatars/demo.mjs":{"f":"viva","r":"carga el script","ev":"yod-portal/despacho3d/avatars/demo.html"},"f:yod-portal:despacho3d/index.html>yod-portal::despacho3d_resident_boot":{"f":"viva","r":"carga el script","ev":"yod-portal/despacho3d/index.html L10"},"f:yod-portal:despacho3d/index.html>yod-portal::despacho3d_live_voice_boot":{"f":"viva","r":"carga el script","ev":"yod-portal/despacho3d/index.html L11"},"yod-portal::despacho3d_agent_workspace>yod-portal::despacho3d_goals":{"f":"viva","r":"se llaman (26)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_goals>yod-portal::despacho3d_live_voice_boot":{"f":"viva","r":"se llaman (7)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_conversation>yod-portal::despacho3d_live_voice_boot":{"f":"viva","r":"se llaman (10)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_conversation>yod-portal::despacho3d_project_station":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_agent_workspace>yod-portal::despacho3d_conversation":{"f":"viva","r":"se llaman (7)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_agent_workspace>yod-portal::despacho3d_project_station":{"f":"viva","r":"se llaman (34)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_live_voice_boot>yod-portal::despacho3d_project_station":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_agent_interaction>yod-portal::despacho3d_live_voice_boot":{"f":"viva","r":"se llaman (9)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_avatars_adapter>yod-portal::despacho3d_avatars_avatar":{"f":"viva","r":"se llaman (10)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_avatars_avatar>yod-portal::despacho3d_avatars_office_human":{"f":"viva","r":"se llaman (5)","ev":"grafo de código de Graphify"},"f:yod-portal:despacho3d/avatars/demo.mjs>yod-portal::despacho3d_avatars_avatar":{"f":"viva","r":"se llaman (5)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_avatars_avatar>yod-portal::despacho3d_office":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_agent_workspace>yod-portal::despacho3d_knowledge_board":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_live_voice_boot>yod-portal::despacho3d_puesto_agente":{"f":"viva","r":"se llaman (3)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_avatars_adapter>yod-portal::despacho3d_avatars_office_pilot":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_avatars_office_pilot>yod-portal::despacho3d_avatars_office_residents":{"f":"viva","r":"se llaman (3)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_avatars_office_pilot>yod-portal::despacho3d_office":{"f":"viva","r":"se llaman (3)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_avatars_office_pilot>yod-portal::despacho3d_office_accessible":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_puesto_demo_html_inline>yod-portal::despacho3d_work_observer":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_avatars_adapter>yod-portal::despacho3d_avatars_identity":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_avatars_adapter>yod-portal::despacho3d_avatars_council":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_avatars_office_residents>yod-portal::despacho3d_office":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_avatars_office_residents>yod-portal::despacho3d_office_accessible":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_agent_workspace>yod-portal::despacho3d_puesto_agente":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_agent_workspace>yod-portal::despacho3d_puesto_demo_html_inline":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_agent_workspace>yod-portal::despacho3d_live_voice_boot":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_conversation>yod-portal::despacho3d_entorno":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_conversation>yod-portal::despacho3d_resident_boot":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_avatars_council>yod-portal::despacho3d_office":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_live_voice>yod-portal::despacho3d_live_voice_boot":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"yod-portal::despacho3d_entorno>yod-portal::despacho3d_office_accessible":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"}},"familias":{"viva":{"corto":"Visto","nombre":"Visto en código u hoja","color":"#5B6470","ancho":1.3,"opacidad":0.75,"punteada":false},"inferida":{"corto":"Atlas","nombre":"Del atlas o deducido","color":"#9AA1AB","ancho":1.0,"opacidad":0.6,"punteada":false},"propuesta":{"corto":"Propuesta","nombre":"Propuesta","color":"#C99A12","ancho":1.6,"opacidad":0.9,"punteada":[7,5]},"hueco":{"corto":"Falta","nombre":"Falta o hallazgo","color":"#C8102E","ancho":1.7,"opacidad":0.9,"punteada":[3,5]}},"usadas":["viva"],"rejilla":{"cols":[{"x":0,"w":554,"nombre":"Páginas"},{"x":554,"w":720,"nombre":"Código"},{"x":1274,"w":222,"nombre":"Documentos y datos"}],"filas":[{"y":0,"h":396,"nombre":"(esta carpeta)"},{"y":396,"h":228,"nombre":"avatars/"},{"y":624,"h":144,"nombre":"third-party/"}]},"eje_x":"Tipo de archivo","eje_y":"Carpeta","estado":"https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/grafo-datos/estado.json","simbolos":[["■","#59A14F","Tablero o página"],["▭","#F1CE63","Pantalla propuesta"],["◆","#F28E2B","Motor"],["⬢","#79706E","Repositorio o código"],["▲","#4E79A7","Libro"],["▼","#A0CBE8","Pestaña"],["●","#B07AA1","Quién"],["★","#EDC948","Propuesta"],["★","#E15759","Hallazgo o clave"]],"pie":"34 nodos · 34 flechas · Código · yod-portal · despacho3d/ · Graphify 0.9.106"};</script>
+</head>
+<body>
+<div id="graph"></div>
+<div id="sidebar">
+  <div id="theme-wrap" role="group" aria-label="Theme">
+    <button type="button" data-theme-choice="light">Claro</button>
+    <button type="button" data-theme-choice="dark">Oscuro</button>
+    <button type="button" data-theme-choice="system">Sistema</button>
+  </div>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Buscar…" autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div id="info-panel">
+    <h3>Detalle</h3>
+    <div id="info-content"><span class="empty">Toca un nodo para ver su detalle</span></div>
+  </div>
+  <div id="legend-wrap">
+    <h3>Grupos</h3>
+    <div id="legend-controls">
+      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">Todos</label>
+    </div>
+    <div id="legend"></div>
+  </div>
+  <div id="stats">34 nodes &middot; 34 edges &middot; 6 communities</div>
+</div>
+<script>
+const RAW_NODES = [{"id": "yod-portal::despacho3d_conversation", "label": "conversation.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 28.8, "font": {"size": 12, "color": "#ffffff"}, "title": "conversation.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/conversation.mjs \u00b7 266 l\u00edneas", "file_type": "code", "degree": 5}, {"id": "yod-portal::despacho3d_office", "label": "office.js", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 25.0, "font": {"size": 12, "color": "#ffffff"}, "title": "office.js", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/office.js \u00b7 221 l\u00edneas", "file_type": "code", "degree": 4}, {"id": "yod-portal::despacho3d_agent_workspace", "label": "agent-workspace.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 36.2, "font": {"size": 12, "color": "#ffffff"}, "title": "agent-workspace.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/agent-workspace.mjs \u00b7 518 l\u00edneas", "file_type": "code", "degree": 7}, {"id": "yod-portal::despacho3d_goals", "label": "goals.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "goals.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/goals.mjs \u00b7 155 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "yod-portal::despacho3d_live_voice_boot", "label": "live-voice-boot.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "live-voice-boot.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/live-voice-boot.mjs \u00b7 456 l\u00edneas", "file_type": "code", "degree": 8}, {"id": "yod-portal::despacho3d_project_station", "label": "project-station.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 21.2, "font": {"size": 12, "color": "#ffffff"}, "title": "project-station.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/project-station.mjs \u00b7 138 l\u00edneas", "file_type": "code", "degree": 3}, {"id": "yod-portal::despacho3d_work_observer", "label": "work-observer.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.8, "font": {"size": 0, "color": "#ffffff"}, "title": "work-observer.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/work-observer.mjs \u00b7 133 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "yod-portal::despacho3d_live_voice", "label": "live-voice.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.8, "font": {"size": 0, "color": "#ffffff"}, "title": "live-voice.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/live-voice.mjs \u00b7 594 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "yod-portal::despacho3d_agent_interaction", "label": "agent-interaction.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.8, "font": {"size": 0, "color": "#ffffff"}, "title": "agent-interaction.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/agent-interaction.mjs \u00b7 204 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "yod-portal::despacho3d_office_accessible", "label": "office-accessible.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 21.2, "font": {"size": 12, "color": "#ffffff"}, "title": "office-accessible.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/office-accessible.mjs \u00b7 179 l\u00edneas", "file_type": "code", "degree": 3}, {"id": "yod-portal::despacho3d_knowledge_board", "label": "knowledge-board.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.8, "font": {"size": 0, "color": "#ffffff"}, "title": "knowledge-board.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/knowledge-board.mjs \u00b7 253 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "yod-portal::despacho3d_puesto_agente", "label": "puesto-agente.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "puesto-agente.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/puesto-agente.mjs \u00b7 156 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "yod-portal::despacho3d_entorno", "label": "entorno.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "entorno.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/entorno.mjs \u00b7 254 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "yod-portal::despacho3d_resident_boot", "label": "resident-boot.mjs", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "resident-boot.mjs", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/resident-boot.mjs \u00b7 90 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "mas:codigo-yod-portal-despacho3d:codigo:(esta carpeta)", "label": "+90 archivos m\u00e1s", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "+90 archivos m\u00e1s", "community": 0, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "", "file_type": "concept", "degree": 0}, {"id": "f:yod-portal:despacho3d/index.html", "label": "index.html", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "index.html", "community": 1, "community_name": "(esta carpeta) \u00b7 P\u00e1ginas", "source_file": "yod-portal/despacho3d/index.html \u00b7 13 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "yod-portal::despacho3d_puesto_demo_html_inline", "label": "puesto-demo.html", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "puesto-demo.html", "community": 1, "community_name": "(esta carpeta) \u00b7 P\u00e1ginas", "source_file": "yod-portal/despacho3d/puesto-demo.html \u00b7 11 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "f:yod-portal:despacho3d/ruisenor-interaction-test.html", "label": "ruisenor-interaction-test.html", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "ruisenor-interaction-test.html", "community": 1, "community_name": "(esta carpeta) \u00b7 P\u00e1ginas", "source_file": "yod-portal/despacho3d/ruisenor-interaction-test.html \u00b7 3 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "yod-portal::despacho3d_permisos_demo_html_inline", "label": "permisos-demo.html", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "permisos-demo.html", "community": 1, "community_name": "(esta carpeta) \u00b7 P\u00e1ginas", "source_file": "yod-portal/despacho3d/permisos-demo.html \u00b7 5 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "f:yod-portal:despacho3d/sala.html", "label": "sala.html", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "sala.html", "community": 1, "community_name": "(esta carpeta) \u00b7 P\u00e1ginas", "source_file": "yod-portal/despacho3d/sala.html \u00b7 2 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "yod-portal::despacho3d_actividad_demo_html_inline", "label": "actividad-demo.html", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "actividad-demo.html", "community": 1, "community_name": "(esta carpeta) \u00b7 P\u00e1ginas", "source_file": "yod-portal/despacho3d/actividad-demo.html \u00b7 8 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "yod-portal::despacho3d_diseno_html_inline", "label": "diseno.html", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "diseno.html", "community": 1, "community_name": "(esta carpeta) \u00b7 P\u00e1ginas", "source_file": "yod-portal/despacho3d/diseno.html \u00b7 9 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "f:yod-portal:despacho3d/terreno.html", "label": "terreno.html", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "terreno.html", "community": 1, "community_name": "(esta carpeta) \u00b7 P\u00e1ginas", "source_file": "yod-portal/despacho3d/terreno.html \u00b7 1 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "yod-portal::despacho3d_avatars_avatar", "label": "avatar.mjs", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 25.0, "font": {"size": 12, "color": "#ffffff"}, "title": "avatar.mjs", "community": 2, "community_name": "avatars/ \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/avatars/avatar.mjs \u00b7 141 l\u00edneas", "file_type": "code", "degree": 4}, {"id": "yod-portal::despacho3d_avatars_office_residents", "label": "office-residents.mjs", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 21.2, "font": {"size": 12, "color": "#ffffff"}, "title": "office-residents.mjs", "community": 2, "community_name": "avatars/ \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/avatars/office-residents.mjs \u00b7 72 l\u00edneas", "file_type": "code", "degree": 3}, {"id": "yod-portal::despacho3d_avatars_office_pilot", "label": "office-pilot.mjs", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 25.0, "font": {"size": 12, "color": "#ffffff"}, "title": "office-pilot.mjs", "community": 2, "community_name": "avatars/ \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/avatars/office-pilot.mjs \u00b7 113 l\u00edneas", "file_type": "code", "degree": 4}, {"id": "yod-portal::despacho3d_avatars_adapter", "label": "adapter.mjs", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 25.0, "font": {"size": 12, "color": "#ffffff"}, "title": "adapter.mjs", "community": 2, "community_name": "avatars/ \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/avatars/adapter.mjs \u00b7 33 l\u00edneas", "file_type": "code", "degree": 4}, {"id": "yod-portal::despacho3d_avatars_council", "label": "council.mjs", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "council.mjs", "community": 2, "community_name": "avatars/ \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/avatars/council.mjs \u00b7 15 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "yod-portal::despacho3d_avatars_office_human", "label": "office-human.mjs", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 13.8, "font": {"size": 0, "color": "#ffffff"}, "title": "office-human.mjs", "community": 2, "community_name": "avatars/ \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/avatars/office-human.mjs \u00b7 74 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "f:yod-portal:despacho3d/avatars/demo.mjs", "label": "demo.mjs", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "demo.mjs", "community": 2, "community_name": "avatars/ \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/avatars/demo.mjs \u00b7 9 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "yod-portal::despacho3d_avatars_identity", "label": "identity.mjs", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 13.8, "font": {"size": 0, "color": "#ffffff"}, "title": "identity.mjs", "community": 2, "community_name": "avatars/ \u00b7 C\u00f3digo", "source_file": "yod-portal/despacho3d/avatars/identity.mjs \u00b7 24 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "f:yod-portal:despacho3d/avatars/README.md", "label": "README.md", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "README.md", "community": 3, "community_name": "avatars/ \u00b7 Documentos y datos", "source_file": "yod-portal/despacho3d/avatars/README.md \u00b7 79 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:yod-portal:despacho3d/avatars/demo.html", "label": "demo.html", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 13.8, "font": {"size": 0, "color": "#ffffff"}, "title": "demo.html", "community": 4, "community_name": "avatars/ \u00b7 P\u00e1ginas", "source_file": "yod-portal/despacho3d/avatars/demo.html \u00b7 2 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "f:yod-portal:despacho3d/third-party/cubefarm/LICENSE.txt", "label": "LICENSE.txt", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "LICENSE.txt", "community": 5, "community_name": "third-party/ \u00b7 Documentos y datos", "source_file": "yod-portal/despacho3d/third-party/cubefarm/LICENSE.txt \u00b7 22 l\u00edneas", "file_type": "document", "degree": 0}];
+const RAW_EDGES = [{"from": "yod-portal::despacho3d_conversation", "to": "yod-portal::despacho3d_live_voice_boot", "label": "se llaman (10)", "title": "se llaman (10) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_conversation", "to": "yod-portal::despacho3d_project_station", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_agent_workspace", "to": "yod-portal::despacho3d_conversation", "label": "se llaman (7)", "title": "se llaman (7) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_conversation", "to": "yod-portal::despacho3d_entorno", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_conversation", "to": "yod-portal::despacho3d_resident_boot", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_avatars_avatar", "to": "yod-portal::despacho3d_office", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_avatars_office_pilot", "to": "yod-portal::despacho3d_office", "label": "se llaman (3)", "title": "se llaman (3) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_avatars_office_residents", "to": "yod-portal::despacho3d_office", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_avatars_council", "to": "yod-portal::despacho3d_office", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_agent_workspace", "to": "yod-portal::despacho3d_goals", "label": "se llaman (26)", "title": "se llaman (26) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_agent_workspace", "to": "yod-portal::despacho3d_project_station", "label": "se llaman (34)", "title": "se llaman (34) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_agent_workspace", "to": "yod-portal::despacho3d_knowledge_board", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_agent_workspace", "to": "yod-portal::despacho3d_puesto_agente", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_agent_workspace", "to": "yod-portal::despacho3d_puesto_demo_html_inline", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_agent_workspace", "to": "yod-portal::despacho3d_live_voice_boot", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_goals", "to": "yod-portal::despacho3d_live_voice_boot", "label": "se llaman (7)", "title": "se llaman (7) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "f:yod-portal:despacho3d/index.html", "to": "yod-portal::despacho3d_live_voice_boot", "label": "carga el script", "title": "carga el script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_live_voice_boot", "to": "yod-portal::despacho3d_project_station", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_agent_interaction", "to": "yod-portal::despacho3d_live_voice_boot", "label": "se llaman (9)", "title": "se llaman (9) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_live_voice_boot", "to": "yod-portal::despacho3d_puesto_agente", "label": "se llaman (3)", "title": "se llaman (3) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_live_voice", "to": "yod-portal::despacho3d_live_voice_boot", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_puesto_demo_html_inline", "to": "yod-portal::despacho3d_work_observer", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_avatars_office_pilot", "to": "yod-portal::despacho3d_office_accessible", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_avatars_office_residents", "to": "yod-portal::despacho3d_office_accessible", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_entorno", "to": "yod-portal::despacho3d_office_accessible", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "f:yod-portal:despacho3d/index.html", "to": "yod-portal::despacho3d_resident_boot", "label": "carga el script", "title": "carga el script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_avatars_adapter", "to": "yod-portal::despacho3d_avatars_avatar", "label": "se llaman (10)", "title": "se llaman (10) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_avatars_avatar", "to": "yod-portal::despacho3d_avatars_office_human", "label": "se llaman (5)", "title": "se llaman (5) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "f:yod-portal:despacho3d/avatars/demo.mjs", "to": "yod-portal::despacho3d_avatars_avatar", "label": "se llaman (5)", "title": "se llaman (5) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_avatars_office_pilot", "to": "yod-portal::despacho3d_avatars_office_residents", "label": "se llaman (3)", "title": "se llaman (3) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_avatars_adapter", "to": "yod-portal::despacho3d_avatars_office_pilot", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_avatars_adapter", "to": "yod-portal::despacho3d_avatars_identity", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "yod-portal::despacho3d_avatars_adapter", "to": "yod-portal::despacho3d_avatars_council", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "f:yod-portal:despacho3d/avatars/demo.html", "to": "f:yod-portal:despacho3d/avatars/demo.mjs", "label": "carga el script", "title": "carga el script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}];
+const LEGEND = [{"cid": 0, "color": "#4E79A7", "label": "(esta carpeta) \u00b7 C\u00f3digo", "count": 15}, {"cid": 1, "color": "#F28E2B", "label": "(esta carpeta) \u00b7 P\u00e1ginas", "count": 8}, {"cid": 2, "color": "#E15759", "label": "avatars/ \u00b7 C\u00f3digo", "count": 8}, {"cid": 3, "color": "#76B7B2", "label": "avatars/ \u00b7 Documentos y datos", "count": 1}, {"cid": 4, "color": "#59A14F", "label": "avatars/ \u00b7 P\u00e1ginas", "count": 1}, {"cid": 5, "color": "#EDC948", "label": "third-party/ \u00b7 Documentos y datos", "count": 1}];
+
+// HTML-escape helper — prevents XSS when injecting graph data into innerHTML
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Build vis datasets
+const nodesDS = new vis.DataSet(RAW_NODES.map((n, i) => ({
+  id: n.id, label: n.label, color: n.color, size: n.size,
+  font: n.font, title: n.title,
+  // Fermat/golden-angle spiral seed positions (#3699): spreading nodes out
+  // before physics runs keeps avoidOverlap from computing near-zero-distance
+  // repulsion that blows the BarnesHut recursion into a stack overflow on large
+  // graphs. `i` is the map index — physics still settles small graphs identically.
+  x: 30 * Math.sqrt(i) * Math.cos(i * 2.4),
+  y: 30 * Math.sqrt(i) * Math.sin(i * 2.4),
+  community: n.community, community_name: n.community_name,
+  source_file: n.source_file, file_type: n.file_type, degree: n.degree,
+  member_count: n.member_count,
+})));
+
+const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({
+  id: i, from: e.from, to: e.to,
+  label: '',
+  title: e.title,
+  dashes: e.dashes,
+  width: e.width,
+  color: e.color,
+  arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+})));
+
+const container = document.getElementById('graph');
+const network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, {
+  physics: {
+    enabled: false,
+    solver: 'forceAtlas2Based',
+    forceAtlas2Based: {
+      gravitationalConstant: -60,
+      centralGravity: 0.005,
+      springLength: 120,
+      springConstant: 0.08,
+      damping: 0.4,
+      avoidOverlap: 0.8,
+    },
+    stabilization: { iterations: 200, fit: true },
+  },
+  interaction: {
+    hover: true,
+    tooltipDelay: 100,
+    hideEdgesOnDrag: true,
+    navigationButtons: false,
+    keyboard: false,
+  },
+  nodes: { shape: 'dot', borderWidth: 1.5 },
+  edges: { smooth: { type: 'continuous', roundness: 0.2 }, selectionWidth: 3 },
+});
+
+// Theme toggle (#3894): Light / Dark / System, persisted in localStorage.
+const THEME_KEY = 'graphify-theme';
+const themeMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+let themeLabelColor = '#ffffff';  // matches the per-node font color set in Python
+function themePref() {
+  let p = null;
+  try { p = localStorage.getItem(THEME_KEY); } catch (e) {}
+  return (p === 'light' || p === 'dark' || p === 'system') ? p : null;
+}
+function applyTheme(pref) {
+  const t = pref === 'light' ? 'light' : (pref === 'system' && themeMQ && themeMQ.matches) ? 'light' : 'dark';
+  const root = document.documentElement;
+  if (!root) return;
+  root.setAttribute('data-theme', t);
+  document.querySelectorAll('[data-theme-choice]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.themeChoice === (pref || 'system')));
+  });
+  const labelColor = getComputedStyle(root).getPropertyValue('--node-label').trim();
+  if (labelColor && labelColor !== themeLabelColor) {
+    themeLabelColor = labelColor;
+    nodesDS.update(nodesDS.get().map(n => ({ id: n.id, font: Object.assign({}, n.font, { color: labelColor }) })));
+  }
+}
+document.querySelectorAll('[data-theme-choice]').forEach(b => {
+  b.addEventListener('click', () => {
+    const pref = b.dataset.themeChoice;
+    try { localStorage.setItem(THEME_KEY, pref); } catch (e) {}
+    applyTheme(pref);
+  });
+});
+if (themeMQ) {
+  const onSchemeChange = () => { if (themePref() === 'system') applyTheme('system'); };
+  if (themeMQ.addEventListener) themeMQ.addEventListener('change', onSchemeChange);
+  else if (themeMQ.addListener) themeMQ.addListener(onSchemeChange);
+}
+applyTheme(themePref() || 'system');
+
+
+// ── YOD: acomodo fijo en cuadrante sobre el visor de Graphify. Los nodos y las flechas son los que exportó Graphify. ──
+(function () {
+  const Y = window.YOD;
+  // Cuando la portada enseña un borrador, trae la lámina como texto: los enlaces a otras láminas se le piden a ella.
+  const SUELTA = location.protocol === 'about:';
+  const yodIr = h => { const m = String(h).match(/^([A-Za-z0-9._-]+)\.html(?:#(.*))?$/);
+    if (SUELTA && m) { try { parent.postMessage({ yod: 2, ir: m[1], nodo: m[2] ? decodeURIComponent(m[2]) : '' }, '*'); } catch (e) {} } else location.href = h; };
+  if (SUELTA) document.addEventListener('click', e => { const a = e.target && e.target.closest ? e.target.closest('a[href]') : null; if (!a || a.target === '_blank') return;
+    const h = a.getAttribute('href') || ''; if (/^[A-Za-z0-9._-]+\.html(#.*)?$/.test(h)) { e.preventDefault(); yodIr(h); } }, true);
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const esc2 = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const fuente = p => p.forma === 'box'
+    ? { size: 13, color: '#1d1d1f', face: 'system-ui, -apple-system, sans-serif', multi: 'html', align: 'left', bold: { color: '#111111', size: 14, face: 'system-ui, -apple-system, sans-serif' } }
+    : { size: 14, color: css('--node-label') || '#222', face: 'system-ui, -apple-system, sans-serif', strokeWidth: 3, strokeColor: css('--bg') || '#fff' };
+  const estiloNodo = (n, apagado) => {
+    const p = Y.nodos[n.id] || {};
+    const o = { id: n.id, x: p.x, y: p.y, label: p.lbl, shape: p.forma, size: p.tam, opacity: apagado ? 0.14 : 1, title: undefined,
+      color: { background: p.color, border: p.al ? '#C8102E' : (p.bc || p.color), highlight: { background: p.color, border: '#111' }, hover: { background: p.color, border: '#111' } },
+      borderWidth: p.al ? 2.6 : (p.bc ? 2.4 : 1), borderWidthSelected: 3.5, font: fuente(p) };
+    if (p.forma === 'box') { o.widthConstraint = { minimum: p.caja, maximum: p.caja }; o.margin = 9; o.shapeProperties = { borderRadius: 7 }; }
+    return o;
+  };
+  const ocultas = new Set();
+  let foco = null;
+  const recto = RAW_EDGES.length > 380;
+  const det = r => Y.flechas[r.from + '>' + r.to] || Y.flechas[r.to + '>' + r.from] || {};
+  const estiloArista = e => {
+    const r = RAW_EDGES[e.id], fl = det(r), f = Y.familias[fl.f] || Y.familias.inferida;
+    const con = !foco || foco.aristas.has(e.id);
+    return { id: e.id, hidden: ocultas.has(fl.f || 'inferida'), width: con && foco ? f.ancho + 1.3 : f.ancho, title: undefined,
+             color: { color: f.color, opacity: con ? f.opacidad : 0.05, highlight: f.color, hover: f.color },
+             dashes: f.punteada, arrows: { to: { enabled: true, scaleFactor: 0.55 } }, smooth: recto ? false : { type: 'curvedCW', roundness: 0.12 } };
+  };
+  const pintar = () => {
+    nodesDS.update(nodesDS.get().map(n => estiloNodo(n, foco && !foco.nodos.has(n.id))));
+    edgesDS.update(edgesDS.get().map(estiloArista));
+  };
+  pintar();
+  network.setOptions({ physics: { enabled: false }, nodes: { labelHighlightBold: false, scaling: { label: { drawThreshold: 5, maxVisible: 44 } } },
+                       interaction: { hover: true, tooltipDelay: 150, zoomSpeed: 0.8, hideEdgesOnDrag: RAW_EDGES.length > 250, hideEdgesOnZoom: RAW_EDGES.length > 600 } });
+  new MutationObserver(() => setTimeout(pintar, 30)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  const enfocar = id => { foco = { nodos: new Set([id, ...network.getConnectedNodes(id)]), aristas: new Set(network.getConnectedEdges(id)) }; pintar(); };
+  network.on('selectNode', p => enfocar(p.nodes[0]));
+  network.on('deselectNode', () => { foco = null; pintar(); });
+
+  // barra: subir, familias de flecha y «Ver todo»
+  const barra = document.createElement('div');
+  barra.id = 'yod-barra';
+  barra.innerHTML = (Y.padre ? `<a class="yod-fuerte" href="${Y.padre[0]}">↑ ${esc2(Y.padre[1])}</a>` : '') +
+    Object.entries(Y.familias).filter(([k]) => Y.usadas.includes(k)).map(([k, f]) =>
+      `<button type="button" data-fam="${k}" aria-pressed="true" title="${f.nombre}"><i style="background:${f.color}"></i><span class="yod-l">${f.nombre}</span><span class="yod-c">${f.corto}</span></button>`).join('') +
+    '<button type="button" id="yod-todo" class="yod-fuerte">Ver todo</button>';
+  document.body.appendChild(barra);
+  barra.addEventListener('click', ev => {
+    const b = ev.target.closest('button'); if (!b) return;
+    if (b.id === 'yod-todo') { foco = null; network.unselectAll(); pintar(); ajustar(true); inicio(); return; }
+    const k = b.dataset.fam; if (ocultas.has(k)) ocultas.delete(k); else ocultas.add(k);
+    b.setAttribute('aria-pressed', String(!ocultas.has(k))); pintar();
+  });
+
+  // rejilla del cuadrante: los títulos crecen al alejarse para que siempre se lean
+  const g = Y.rejilla, W = g.cols.reduce((s, c) => s + c.w, 0), Ht = g.filas.reduce((s, f) => s + f.h, 0);
+  const MS = Math.max(70, Math.min(150, Ht * 0.07));
+  const letra = (ctx, t) => { ctx.font = '600 ' + t + 'px system-ui, -apple-system, sans-serif'; };
+  network.on('beforeDrawing', ctx => {
+    const sc = network.getScale() || 1;
+    const linea = css('--border') || '#ccc', texto = css('--text-2') || '#666', fondo = css('--panel') || '#f6f6f6';
+    ctx.save();
+    g.filas.forEach((f, i) => { if (i % 2 === 0) { ctx.fillStyle = fondo; ctx.globalAlpha = 0.6; ctx.fillRect(0, f.y, W, f.h); } });
+    ctx.globalAlpha = 1; ctx.strokeStyle = linea; ctx.lineWidth = 1.5 / Math.min(1, sc * 1.6);
+    g.cols.forEach(c => { ctx.beginPath(); ctx.moveTo(c.x, -MS); ctx.lineTo(c.x, Ht); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(W, -MS); ctx.lineTo(W, Ht); ctx.stroke();
+    g.filas.forEach(f => { ctx.beginPath(); ctx.moveTo(0, f.y); ctx.lineTo(W, f.y); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(0, Ht); ctx.lineTo(W, Ht); ctx.stroke();
+    ctx.fillStyle = texto; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'center';
+    g.cols.forEach(c => {
+      let t = Math.max(20, Math.min(15 / sc, MS * 0.62)); letra(ctx, t);
+      while (t > 11 && ctx.measureText(c.nombre).width > c.w - 14) { t -= 1; letra(ctx, t); }
+      if (ctx.measureText(c.nombre).width > c.w - 14) { const p = c.nombre.split(' '), m = Math.ceil(p.length / 2); ctx.fillText(p.slice(0, m).join(' '), c.x + c.w / 2, -t - 14); ctx.fillText(p.slice(m).join(' '), c.x + c.w / 2, -10); }
+      else ctx.fillText(c.nombre, c.x + c.w / 2, -12);
+    });
+    ctx.textAlign = 'left';
+    g.filas.forEach(f => {
+      let t = Math.max(17, Math.min(14 / sc, f.h * 0.4)); letra(ctx, t);
+      while (t > 12 && ctx.measureText(f.nombre).width > W - 20) { t -= 2; letra(ctx, t); }
+      ctx.globalAlpha = t > 30 ? 0.42 : 0.8; ctx.fillText(f.nombre, 9, f.y + t + 5);
+    });
+    ctx.globalAlpha = 1; ctx.restore();
+  });
+  const marco = (x0, y0, x1, y1, animar) => {
+    const el = document.getElementById('graph'), w = el.clientWidth, h = el.clientHeight;
+    const arriba = (document.getElementById('yod-barra') || { offsetHeight: 0 }).offsetHeight + 12;
+    const s = Math.max(0.04, Math.min((w - 10) / (x1 - x0), (h - arriba - 8) / (y1 - y0), 1.5));
+    network.moveTo({ position: { x: (x0 + x1) / 2, y: (y0 + y1) / 2 - arriba / 2 / s }, scale: s, animation: animar ? { duration: 350, easingFunction: 'easeInOutQuad' } : false });
+  };
+  const ajustar = animar => marco(-14, -MS - 6, W + 14, Ht + 12, animar);
+  const aFila = f => { const el = document.getElementById('graph'), r = el.clientWidth / Math.max(200, el.clientHeight - 60); marco(-10, f.y - 10, Math.min(W + 10, Math.max(540, (f.h + 20) * r)) - 10, f.y + f.h + 10, true); };
+  const aCol = c => { const el = document.getElementById('graph'), r = Math.max(200, el.clientHeight - 60) / el.clientWidth; marco(c.x - 12, -MS, c.x + c.w + 12, Math.min(Ht + 10, Math.max(420, (c.w + 24) * r) - MS), true); };
+  let tocado = false;
+  const cont = document.getElementById('graph');
+  ['pointerdown', 'wheel', 'touchstart'].forEach(ev => cont.addEventListener(ev, () => { tocado = true; }, { passive: true }));
+  network.once('afterDrawing', () => { if (!foco) ajustar(false); });
+  [60, 250, 700, 1500].forEach(ms => setTimeout(() => { if (!foco && !tocado) ajustar(false); }, ms));
+  window.addEventListener('resize', () => setTimeout(() => { if (!foco) ajustar(false); }, 80));
+  const ir = document.createElement('select'); ir.id = 'yod-ir'; ir.setAttribute('aria-label', 'Acercar a una fila o columna');
+  ir.innerHTML = '<option value="">Acercar a…</option><optgroup label="Filas">' + g.filas.map((f, i) => `<option value="f${i}">${esc2(f.nombre)}</option>`).join('') +
+    '</optgroup><optgroup label="Columnas">' + g.cols.map((c, i) => `<option value="c${i}">${esc2(c.nombre)}</option>`).join('') + '</optgroup>';
+  barra.insertBefore(ir, barra.querySelector('button'));
+  ir.addEventListener('change', () => { const v = ir.value; if (!v) return; tocado = true; if (v[0] === 'f') aFila(g.filas[+v.slice(1)]); else aCol(g.cols[+v.slice(1)]); ir.value = ''; });
+
+  // panel de detalle
+  const enlace = (t, id) => t[0] ? `<a href="${t[0]}#${encodeURIComponent(id)}">${esc2(t[1])}</a>` : esc2(t[1]);
+  window.showInfo = function (nodeId) {
+    const p = Y.nodos[nodeId]; if (!p) return;
+    const eds = network.getConnectedEdges(nodeId);
+    const vecinos = eds.map(eid => {
+      const r = RAW_EDGES[eid], otro = r.from === nodeId ? r.to : r.from, fl = det(r), q = Y.nodos[otro] || {};
+      return `<span class="neighbor-link" style="border-left-color:${esc2((Y.familias[fl.f] || {}).color || '#888')}" data-nid="${esc2(otro)}">${r.from === nodeId ? '→' : '←'} ${esc2(q.nombre || otro)} <i style="opacity:.72">· ${esc2(fl.r || '')}</i></span>`;
+    }).join('');
+    let h = `<div class="field"><b>${esc2(p.nombre)}</b></div><div class="field yod-tipo">${esc2(p.tipo)}${p.estado ? ' · ' + esc2(p.estado) : ''}</div>`;
+    if (p.dentro) h += `<a class="yod-entrar" href="${p.dentro[0]}">Entrar a ${esc2(p.dentro[1])} →</a>`;
+    if (p.nota) h += `<div class="field">${esc2(p.nota)}</div>`;
+    if (p.err) h += p.err.map(x => `<div class="field yod-alerta"><b>${x.tipo === 'cambio' ? 'Cambió' : 'Error'}</b> · ${esc2(x.msg)}${x.desde ? ' · desde ' + esc2(String(x.desde).slice(0, 10)) : ''}${x.url ? ` · <a href="${esc2(x.url)}" target="_blank" rel="noopener" style="color:inherit">ver</a>` : ''}</div>`).join('');
+    if (p.al) h += p.al.map(a => `<div class="field yod-alerta"><b>Hallazgo</b> · <a href="hallazgos.html#${encodeURIComponent(a[0])}" style="color:inherit">${esc2(a[1])}</a></div>`).join('');
+    if (p.lista) h += `<details class="yod-lista"${p.lista.length <= 24 ? ' open' : ''}><summary>${esc2(p.lt)}</summary><div>${p.lista.map(x => `<span>${esc2(x)}</span>`).join('')}</div></details>`;
+    if (p.ev) h += `<div class="field yod-ev">Evidencia: ${esc2(p.ev)}</div>`;
+    if (p.url) h += `<a class="yod-abrir" href="${esc2(p.url)}" target="_blank" rel="noopener">Abrir la fuente ↗</a>`;
+    if (p.tb && p.tb.length) h += `<div class="field yod-tb">También aparece en: ${p.tb.map(t => enlace(t, nodeId)).join(' · ')}</div>`;
+    h += `<div class="field yod-ev">Celda: ${esc2(p.celda)}</div>`;
+    if (eds.length) h += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Conexiones (${eds.length})</div><div id="neighbors-list">${vecinos}</div>`;
+    document.getElementById('info-content').innerHTML = h;
+  };
+  window.focusNode = function (id) {
+    const p = Y.nodos[id] || {}, el = document.getElementById('graph');
+    const s = p.forma === 'box' ? Math.min(1, (el.clientWidth - 24) / ((p.caja || 300) + 40)) : Math.min(0.9, Math.max(0.6, el.clientWidth / 520));
+    network.focus(id, { scale: s, animation: true }); network.selectNodes([id]); showInfo(id); enfocar(id);
+  };
+  const inicio = () => { const c = document.getElementById('info-content');
+    if (c) c.innerHTML = `<div class="field"><b>${esc2(Y.titulo)}</b></div><div class="field">${esc2(Y.sub)}</div><div class="field yod-ev">Toca un nodo para ver qué es, de dónde le llega y a dónde va. Con «Acercar a…» saltas a una fila o a una columna.</div>`; };
+  inicio();
+  network.on('click', p => {
+    if (p.nodes.length) return;
+    if (p.edges.length) {
+      const r = RAW_EDGES[p.edges[0]], fl = det(r), a = Y.nodos[r.from] || {}, b = Y.nodos[r.to] || {};
+      document.getElementById('info-content').innerHTML = `<div class="field"><b>${esc2(a.nombre)} → ${esc2(b.nombre)}</b></div><div class="field">${esc2(fl.r || '')}</div>` +
+        `<div class="field yod-tipo">${esc2((Y.familias[fl.f] || {}).nombre || '')}</div>` + (fl.nota ? `<div class="field">${esc2(fl.nota)}</div>` : '') +
+        (fl.ev ? `<div class="field yod-ev">Evidencia: ${esc2(fl.ev)}</div>` : '') +
+        `<span class="neighbor-link" data-nid="${esc2(r.from)}">← ${esc2(a.nombre)}</span><span class="neighbor-link" data-nid="${esc2(r.to)}">→ ${esc2(b.nombre)}</span>`;
+      return;
+    }
+    const c = p.pointer.canvas;
+    if (c.y < 0 && c.y > -MS - 30) { const col = g.cols.find(k => c.x >= k.x && c.x <= k.x + k.w); if (col) { aCol(col); return; } }
+    inicio();
+  });
+  network.on('doubleClick', p => { const d = p.nodes.length && Y.nodos[p.nodes[0]] && Y.nodos[p.nodes[0]].dentro; if (d) yodIr(d[0]); });
+
+  // textos del visor en español
+  const tx = (sel, t) => { const el = document.querySelector(sel); if (el) el.textContent = t; };
+  tx('#info-panel h3', 'Detalle'); tx('#legend-wrap h3', 'Celdas de esta lámina');
+  const inp = document.getElementById('search'); if (inp) inp.placeholder = 'Buscar en esta lámina…';
+  const lbl = document.querySelector('#legend-controls label'); if (lbl) lbl.lastChild.textContent = 'Todas';
+  document.querySelectorAll('[data-theme-choice]').forEach(b => { b.textContent = { light: 'Claro', dark: 'Oscuro', system: 'Sistema' }[b.dataset.themeChoice] || b.textContent; });
+  const st = document.getElementById('stats'); if (st) st.textContent = Y.pie;
+  const sim = document.createElement('div'); sim.id = 'yod-simbolos';
+  sim.innerHTML = Y.simbolos.map(s => `<b><span style="color:${s[1]}">${s[0]}</span> ${esc2(s[2])}</b>`).join('');
+  if (st && st.parentNode) st.parentNode.insertBefore(sim, st);
+
+  // errores en vivo: estado.json lo escribe cada hora el flujo «Grafo · estado» del repositorio
+  fetch(Y.estado || 'estado.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(E => {
+    if (!E || !E.errores) return; let n = 0;
+    E.errores.forEach(x => (x.nodos || []).forEach(id => { const p = Y.nodos[id]; if (!p) return; (p.err = p.err || []).push(x); if (x.tipo !== 'cambio') { p.al = p.al || []; p.bc = '#C8102E'; } else if (!p.bc) p.bc = '#C99A12'; n++; }));
+    if (n) { pintar(); const st2 = document.getElementById('stats'); if (st2) st2.textContent = Y.pie + ' · estado del ' + (E.generado || '').slice(0, 16).replace('T', ' ') + ' UTC'; }
+  }).catch(() => {});
+  // llegar con un nodo señalado en la liga, y avisar a la portada qué lámina es
+  const abrir = () => { let id = ''; try { id = window.YOD_FOCO || decodeURIComponent(location.hash.slice(1)); } catch (e) {} if (Y.nodos[id]) focusNode(id); };
+  if (window.YOD_FOCO || location.hash.length > 1) setTimeout(abrir, 280);
+  window.addEventListener('hashchange', abrir);
+  try { if (window.parent && window.parent !== window) window.parent.postMessage({ yod: 1, id: Y.id }, '*'); } catch (e) {}
+})();
+
+network.once('stabilizationIterationsDone', () => {
+  network.setOptions({ physics: { enabled: false } });
+});
+
+function showInfo(nodeId) {
+  const n = nodesDS.get(nodeId);
+  if (!n) return;
+  const neighborIds = network.getConnectedNodes(nodeId);
+  const neighborItems = neighborIds.map(nid => {
+    const nb = nodesDS.get(nid);
+    const color = nb ? nb.color.background : '#555';
+    return `<span class="neighbor-link" style="border-left-color:${esc(color)}" data-nid="${esc(nid)}">${esc(nb ? nb.label : nid)}</span>`;
+  }).join('');
+  const isMetaNode = !n.file_type && !n.source_file;
+  let html = `<div class="field"><b>${esc(n.label)}</b></div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Type: ${esc(n.file_type || 'unknown')}</div>`;
+  }
+  html += `<div class="field">Community: ${esc(n.community_name || '')}</div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Source: ${esc(n.source_file || '-')}</div>`;
+  } else if (n.member_count !== undefined && n.member_count !== null) {
+    html += `<div class="field">Members: ${esc(n.member_count)}</div>`;
+  }
+  html += `<div class="field">Degree: ${n.degree}</div>`;
+  if (neighborIds.length) {
+    html += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Neighbors (${neighborIds.length})</div><div id="neighbors-list">${neighborItems}</div>`;
+  }
+  document.getElementById('info-content').innerHTML = html;
+}
+
+function focusNode(nodeId) {
+  network.focus(nodeId, { scale: 1.4, animation: true });
+  network.selectNodes([nodeId]);
+  showInfo(nodeId);
+}
+
+// Neighbor links use a data attribute + one delegated listener rather than an
+// inline onclick. A node id/label sourced from a document or a scraped URL
+// (graphify add) can contain a double-quote; dropping the stringified id
+// unescaped into a quoted onclick both broke every link and allowed a hostile
+// source to inject an event handler into the local report (stored XSS, #1838).
+// esc() on data-nid keeps the value inside the attribute; the listener reads it
+// back verbatim. Bound to document so it survives the innerHTML rebuild that
+// recreates #neighbors-list on each showInfo().
+document.addEventListener('click', e => {
+  const el = e.target.closest('.neighbor-link');
+  if (el && el.dataset.nid !== undefined) focusNode(el.dataset.nid);
+});
+
+// Sidebar tooltips reuse vis-network's .vis-tooltip style and 100ms tooltipDelay.
+// Names get one only when CSS ellipsis truncates them (the full text is still in
+// the DOM); counts always get one, to say what the number is. Text is set with
+// textContent only (labels are untrusted). Delegated on document so rows rebuilt
+// later (search results, showInfo()) are covered.
+const sidebarTip = document.createElement('div');
+sidebarTip.className = 'vis-tooltip';
+sidebarTip.style.cssText = 'white-space: normal; max-width: 360px; overflow-wrap: break-word;';
+document.body.appendChild(sidebarTip);
+let sidebarTipTimer = null;
+let sidebarTipEl = null;    // element whose text the tooltip shows
+let sidebarTipZone = null;  // element the pointer must leave to hide it
+function hideSidebarTip() {
+  clearTimeout(sidebarTipTimer);
+  sidebarTip.style.visibility = 'hidden';
+  sidebarTip.textContent = '';
+  sidebarTipEl = sidebarTipZone = null;
+}
+document.addEventListener('mouseover', e => {
+  const zone = e.target.closest && e.target.closest('.legend-count, .legend-item, .search-item, .neighbor-link');
+  // Anywhere on a legend row except its count (dot, checkbox, gaps, padding)
+  // stands for the row's name, so moving within the row never re-triggers it.
+  const el = zone && zone.classList.contains('legend-item') ? zone.querySelector('.legend-label') : zone;
+  if (!el || el === sidebarTipEl) return;
+  hideSidebarTip();
+  const isCount = el.classList.contains('legend-count');
+  if (!isCount && el.scrollWidth <= el.clientWidth) return;
+  const text = isCount ? `${el.textContent} ${el.textContent === '1' ? 'nodo' : 'nodos'}` : el.textContent;
+  sidebarTipEl = el;
+  sidebarTipZone = zone;
+  const x = e.clientX, y = e.clientY;
+  sidebarTipTimer = setTimeout(() => {
+    sidebarTip.textContent = text;
+    sidebarTip.style.left = sidebarTip.style.top = '0px';  // measure at full max-width
+    sidebarTip.style.visibility = 'visible';
+    const w = sidebarTip.offsetWidth, h = sidebarTip.offsetHeight;
+    sidebarTip.style.left = Math.max(4, Math.min(x + 12, window.innerWidth - w - 4)) + 'px';
+    sidebarTip.style.top = (y + 16 + h > window.innerHeight ? Math.max(4, y - h - 8) : y + 16) + 'px';
+  }, 100);
+});
+document.addEventListener('mouseout', e => {
+  if (sidebarTipZone && !sidebarTipZone.contains(e.relatedTarget)) hideSidebarTip();
+});
+// A click rebuilds or hides the row (showInfo(), search pick) without a mouseout.
+document.addEventListener('mousedown', hideSidebarTip);
+
+// Track hovered node — hover detection is more reliable than click params
+let hoveredNodeId = null;
+network.on('hoverNode', params => {
+  hoveredNodeId = params.node;
+  container.style.cursor = 'pointer';
+});
+network.on('blurNode', () => {
+  hoveredNodeId = null;
+  container.style.cursor = 'default';
+});
+container.addEventListener('click', () => {
+  if (hoveredNodeId !== null) {
+    showInfo(hoveredNodeId);
+    network.selectNodes([hoveredNodeId]);
+  }
+});
+network.on('click', params => {
+  if (params.nodes.length > 0) {
+    showInfo(params.nodes[0]);
+  } else if (hoveredNodeId === null) {
+    document.getElementById('info-content').innerHTML = '<span class="empty">Toca un nodo para ver su detalle</span>';
+  }
+});
+
+const searchInput = document.getElementById('search');
+const searchResults = document.getElementById('search-results');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  searchResults.innerHTML = '';
+  if (!q) { searchResults.style.display = 'none'; return; }
+  const matches = RAW_NODES.filter(n => n.label.toLowerCase().includes(q)).slice(0, 20);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.style.display = 'block';
+  matches.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'search-item';
+    el.textContent = n.label;
+    el.style.borderLeft = `3px solid ${n.color.background}`;
+    el.style.paddingLeft = '8px';
+    el.onclick = () => {
+      network.focus(n.id, { scale: 1.5, animation: true });
+      network.selectNodes([n.id]);
+      showInfo(n.id);
+      searchResults.style.display = 'none';
+      searchInput.value = '';
+    };
+    searchResults.appendChild(el);
+  });
+});
+document.addEventListener('click', e => {
+  if (!searchResults.contains(e.target) && e.target !== searchInput)
+    searchResults.style.display = 'none';
+});
+
+const hiddenCommunities = new Set();
+
+const selectAllCb = document.getElementById('select-all-cb');
+
+function updateSelectAllState() {
+  const total = LEGEND.length;
+  const hidden = hiddenCommunities.size;
+  selectAllCb.checked = hidden === 0;
+  selectAllCb.indeterminate = hidden > 0 && hidden < total;
+}
+
+function toggleAllCommunities(hide) {
+  document.querySelectorAll('.legend-item').forEach(item => {
+    hide ? item.classList.add('dimmed') : item.classList.remove('dimmed');
+  });
+  document.querySelectorAll('.legend-cb').forEach(cb => {
+    cb.checked = !hide;
+  });
+  LEGEND.forEach(c => {
+    if (hide) hiddenCommunities.add(c.cid); else hiddenCommunities.delete(c.cid);
+  });
+  const updates = RAW_NODES.map(n => ({ id: n.id, hidden: hide }));
+  nodesDS.update(updates);
+  updateSelectAllState();
+}
+
+const legendEl = document.getElementById('legend');
+LEGEND.forEach(c => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.className = 'legend-cb';
+  cb.checked = true;
+  cb.addEventListener('change', (e) => {
+    e.stopPropagation();
+    if (cb.checked) {
+      hiddenCommunities.delete(c.cid);
+      item.classList.remove('dimmed');
+    } else {
+      hiddenCommunities.add(c.cid);
+      item.classList.add('dimmed');
+    }
+    const updates = RAW_NODES
+      .filter(n => n.community === c.cid)
+      .map(n => ({ id: n.id, hidden: !cb.checked }));
+    nodesDS.update(updates);
+    updateSelectAllState();
+  });
+  item.innerHTML = `<div class="legend-dot" style="background:${c.color}"></div>
+    <span class="legend-label">${c.label}</span>
+    <span class="legend-count">${c.count}</span>`;
+  item.prepend(cb);
+  item.onclick = (e) => {
+    if (e.target === cb) return;
+    cb.checked = !cb.checked;
+    cb.dispatchEvent(new Event('change'));
+  };
+  legendEl.appendChild(item);
+});
+</script>
+<script>
+// Render hyperedges as shaded regions
+const hyperedges = [];
+// afterDrawing passes ctx already transformed to network coordinate space.
+// Draw node positions raw — no manual pan/zoom/DPR math needed.
+
+// Andrew's monotone chain. Returns the hull in counter-clockwise order, which
+// is what the perimeter must be traced in. Collinear and duplicate points
+// collapse to the extremes, so degenerate member sets render as a segment
+// rather than a zero-area crossed path.
+function convexHull(pts) {
+    const p = pts.slice().sort((a, b) => (a.x - b.x) || (a.y - b.y));
+    if (p.length < 3) return p;
+    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const build = seq => {
+        const out = [];
+        for (const q of seq) {
+            while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+            out.push(q);
+        }
+        out.pop();
+        return out;
+    };
+    const hull = build(p).concat(build(p.slice().reverse()));
+    return hull.length >= 3 ? hull : p;
+}
+network.on('afterDrawing', function(ctx) {
+    hyperedges.forEach(h => {
+        // Legend toggles only set `hidden` on nodes; getPositions() still
+        // returns them, so skip hidden members or their hull lingers.
+        const positions = h.nodes
+            .filter(nid => { const n = nodesDS.get(nid); return n && n.hidden !== true; })
+            .map(nid => network.getPositions([nid])[nid])
+            .filter(p => p !== undefined);
+        if (positions.length < 2) return;
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#6366f1';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Centroid and expanded hull in network coordinates.
+        // The perimeter must follow hull order, not h.nodes order: tracing the
+        // raw member order self-intersects whenever the layout does not happen
+        // to place members in angular order, filling as crossed wedges.
+        const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length;
+        const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length;
+        const hull = convexHull(positions);
+        const expanded = hull.map(p => ({
+            x: cx + (p.x - cx) * 1.15,
+            y: cy + (p.y - cy) * 1.15
+        }));
+        ctx.moveTo(expanded[0].x, expanded[0].y);
+        expanded.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+        // Label
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#4f46e5';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(h.label, cx, cy - 5);
+        ctx.restore();
+    });
+});
+</script>
+</body>
+</html>
