@@ -1,1 +1,21 @@
-{}
+{
+ "id": "G-20261112-1147",
+ "fecha": "12-nov 11:47",
+ "creado": "2026-11-12T11:48:18-07:00",
+ "pr": 71,
+ "liga": "https://github.com/yodesarrollomx/potenciales-yod/pull/71",
+ "rama": "grafo-borrador",
+ "antes": "G-20261112-1056",
+ "piezas": 3145,
+ "ligas": 10479,
+ "titulo": "Se suman 9 componentes del sistema EMD al mapa; el resto del grafo sin cambios",
+ "resumen": "El grafo rehecho conserva el mismo tamaño de piezas (3,145) y de ligas (10,479): no se agregó ni se quitó ninguna. Lo nuevo está en el mapa de componentes, donde aparece un bloque completo llamado EMD, con nueve componentes y cinco conexiones nuevas. Además, 11 piezas cambiaron, la mayoría archivos del motor que rehace el grafo y sus pruebas, en un solo repositorio. No hay componentes que salgan, ni cambios de estado, ni propuestas pendientes.",
+ "recomendacion": "revisar",
+ "ia": "claude:claude-sonnet-5-5",
+ "audiencias": [
+  "Cliente o inversionista",
+  "Dueño del terreno",
+  "Departamentos, lotes o casas"
+ ],
+ "sin_campo": []
+}
