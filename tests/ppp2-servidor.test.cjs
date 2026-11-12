@@ -211,3 +211,15 @@ test('el código del servidor no calcula finanzas ni trae datos de tratos', () =
   assert.doesNotMatch(CODIGO, /Mor[eé]o|Avermont|Morelos/i);
   assert.doesNotMatch(CODIGO, /\bNPV\b|\bIRR\b|TIR\s*\(/);
 });
+
+test('un texto que empieza con = se guarda como texto, no como fórmula', () => {
+  const w = mundo();
+  const datos = w.libro.getSheetByName('Datos'), bit = w.libro.getSheetByName('Bitácora');
+  const r = w.post({ k: EDITOR, tipo: 'ppp2-dato', plan: PLAN, clave: 'din.capital', valor: 90, fuente: '=IMPORTXML("https://x.invalid","//a")' });
+  assert.equal(r.ok, true);
+  assert.equal(datos.v[filaDe(datos, 'din.capital') - 1][5], '\'=IMPORTXML("https://x.invalid","//a")');
+  const p = w.post({ k: EDITOR, tipo: 'ppp2-palanca', plan: PLAN, version: 3, clave: 'obra_inicio', valor: null });
+  assert.equal(p.ok, true);
+  const ultima = bit.v[bit.getLastRow() - 1];
+  assert.ok(ultima.every((c) => typeof c !== 'string' || !/^[=+@]/.test(c)), 'la bitácora no guarda fórmulas');
+});

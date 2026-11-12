@@ -62,6 +62,11 @@ function txt_(v, max) {
   var s = String(v == null ? '' : v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').trim();
   return s.length > (max || PPP2.TEXTO_MAX) ? s.slice(0, max || PPP2.TEXTO_MAX) : s;
 }
+/* Un texto que empieza con = + - @ se guardaría como fórmula: se escribe como texto literal. */
+function seguro_(v) {
+  return typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v : v;
+}
+function fila_(arr) { return arr.map(seguro_); }
 function limpio_(v) {
   if (v instanceof Date) return Utilities.formatDate(v, PPP2.TZ, 'yyyy-MM-dd');
   if (typeof v === 'string' && /^#(N\/A|REF!|VALUE!|DIV\/0!|NUM!|NAME\?|NULL!|ERROR!)/.test(v)) return null;
@@ -164,11 +169,11 @@ function revision_(libro) {
   return Math.max(0, h.getLastRow() - 4);
 }
 function bitacora_(libro, s, accion, pestana, clave, antes, despues, fuente, revBase, requestId) {
-  libro.getSheetByName('Bitácora').appendRow([ahora_(), actor_(s), txt_(accion, 300), pestana, txt_(clave, 120),
-    txt_(antes, 300), txt_(despues, 300), txt_(fuente, 500), revBase == null ? '' : revBase, txt_(requestId, 80)]);
+  libro.getSheetByName('Bitácora').appendRow(fila_([ahora_(), actor_(s), txt_(accion, 300), pestana, txt_(clave, 120),
+    txt_(antes, 300), txt_(despues, 300), txt_(fuente, 500), revBase == null ? '' : revBase, txt_(requestId, 80)]));
 }
 function bitacoraVivero_(s, accion, planId, detalle, requestId, resultado) {
-  vivero_().getSheetByName('Bitácora').appendRow([ahora_(), s ? actor_(s) : 'sistema', accion, planId || '', txt_(detalle, 500), txt_(requestId, 80), resultado || 'ok', '']);
+  vivero_().getSheetByName('Bitácora').appendRow(fila_([ahora_(), s ? actor_(s) : 'sistema', accion, planId || '', txt_(detalle, 500), txt_(requestId, 80), resultado || 'ok', '']));
 }
 
 /* ───────────────────────── lectura ───────────────────────── */
@@ -345,8 +350,8 @@ function dato_(s, libro, b, rev, rid) {
   var estado = b.estado != null ? low_(b.estado) : String(antes[2] || '');
   if (estado && ESTADOS.dato.indexOf(estado) < 0) return { ok: false, error: 'estado' };
   var fuente = b.fuente != null ? txt_(b.fuente, 500) : String(antes[3] || '');
-  if (b.valor !== undefined) h.getRange(fila, 3).setValue(valor);
-  h.getRange(fila, 5, 1, 4).setValues([[estado, fuente, hoyISO_(), actor_(s)]]);
+  if (b.valor !== undefined) h.getRange(fila, 3).setValue(seguro_(valor));
+  h.getRange(fila, 5, 1, 4).setValues([fila_([estado, fuente, hoyISO_(), actor_(s)])]);
   bitacora_(libro, s, 'Cambió un dato', 'Datos', clave, antes[0] + ' · ' + antes[2], (b.valor !== undefined ? valor : antes[0]) + ' · ' + estado, fuente, rev, rid);
   return { ok: true, hecho: 'dato', clave: clave };
 }
@@ -367,7 +372,7 @@ function producto_(s, libro, b, rev, rid) {
     else { v = numero_(c[k], tipo === 'num' ? 'MDP-libre' : tipo); if (v === null || (typeof v === 'number' && v < 0)) return { ok: false, error: 'valor' }; }
     cambios.push([col, v]);
   }
-  cambios.forEach(function (x) { h.getRange(r, x[0]).setValue(x[1]); });
+  cambios.forEach(function (x) { h.getRange(r, x[0]).setValue(seguro_(x[1])); });
   bitacora_(libro, s, 'Cambió el producto ' + i, 'Productos', Object.keys(c).join(','), antes.slice(0, 4).join(' · '), JSON.stringify(c).slice(0, 280), '', rev, rid);
   return { ok: true, hecho: 'producto', fila: i };
 }
@@ -411,7 +416,7 @@ function version_(s, libro, b, rev, rid) {
     if (antesEst === 'vigente' && est !== 'vigente' && !puede_(s, 'aprobar')) return { ok: false, error: 'permiso' };
     if (est === 'vigente') {
       for (var j = 1; j <= 3; j++) if (j !== k && low_(h.getRange(fEst, 2 + j).getValue()) === 'vigente') { h.getRange(fEst, 2 + j).setValue('alterna'); notas.push('V' + j + ' pasa a alterna'); }
-      h.getRange(filaPorClave_(h, 'aprobada_por'), col).setValue(actor_(s));
+      h.getRange(filaPorClave_(h, 'aprobada_por'), col).setValue(seguro_(actor_(s)));
       h.getRange(filaPorClave_(h, 'fecha_aprobacion'), col).setValue(hoyISO_());
     }
     h.getRange(fEst, col).setValue(est);
@@ -420,7 +425,7 @@ function version_(s, libro, b, rev, rid) {
   ['nombre', 'que_cambia', 'propuesta_por'].forEach(function (campo) {
     if (c[campo] == null) return;
     var f = filaPorClave_(h, campo), antes = h.getRange(f, col).getValue();
-    h.getRange(f, col).setValue(txt_(c[campo], campo === 'nombre' ? 80 : 800));
+    h.getRange(f, col).setValue(seguro_(txt_(c[campo], campo === 'nombre' ? 80 : 800)));
     bitacora_(libro, s, 'Cambió ' + campo + ' de V' + k, 'Versiones', campo, antes, c[campo], '', rev, rid);
   });
   return { ok: true, hecho: 'version', version: k };
@@ -435,7 +440,7 @@ function responder_(s, libro, b, rev, rid) {
   var antes = h.getRange(fila, 7, 1, 2).getValues()[0];
   var resp = b.respuesta != null ? txt_(b.respuesta, 1500) : String(antes[1] || '');
   if (est === 'respondida' && !resp) return { ok: false, error: 'respuesta' };
-  h.getRange(fila, 7, 1, 5).setValues([[est, resp, b.fuente != null ? txt_(b.fuente, 500) : h.getRange(fila, 9).getValue(), actor_(s), hoyISO_()]]);
+  h.getRange(fila, 7, 1, 5).setValues([fila_([est, resp, b.fuente != null ? txt_(b.fuente, 500) : h.getRange(fila, 9).getValue(), actor_(s), hoyISO_()])]);
   bitacora_(libro, s, est === 'no se sabe' ? 'Marcó «no se sabe»' : 'Respondió una pregunta', 'Preguntas', id, antes[0], est + (resp ? ': ' + resp : ''), b.fuente || '', rev, rid);
   return { ok: true, hecho: 'pregunta', pregunta: id };
 }
@@ -451,7 +456,7 @@ function investigar_(s, p, libro, b, rev, rid) {
   }
   var ped = vivero_().getSheetByName('Pedidos');
   if (!ped) { ped = vivero_().insertSheet('Pedidos'); ped.appendRow(['fecha', 'plan_id', 'plan', 'pregunta', 'tema', 'detalle', 'pedido_por', 'estado', 'resultado', 'request_id']); }
-  ped.appendRow([ahora_(), p.plan_id, p.nombre, id, tema, detalle, actor_(s), 'pendiente', '', rid]);
+  ped.appendRow(fila_([ahora_(), p.plan_id, p.nombre, id, tema, detalle, actor_(s), 'pendiente', '', rid]));
   bitacora_(libro, s, 'Pidió al autón que investigue', 'Preguntas', id || tema, '', 'investigando', detalle, rev, rid);
   return { ok: true, hecho: 'pedido', nota: 'El autón lo toma en su siguiente ronda y deja lo que encuentre en Hallazgos.' };
 }
@@ -477,7 +482,7 @@ function candado_(s, libro, b, rev, rid) {
   var evidencia = b.evidencia != null ? txt_(b.evidencia, 800) : String(h.getRange(fila, 5).getValue() || '');
   if (est === 'cerrado' && !evidencia) return { ok: false, error: 'evidencia' };
   var antes = h.getRange(fila, 4).getValue();
-  h.getRange(fila, 4, 1, 4).setValues([[est, evidencia, actor_(s), hoyISO_()]]);
+  h.getRange(fila, 4, 1, 4).setValues([fila_([est, evidencia, actor_(s), hoyISO_()])]);
   bitacora_(libro, s, 'Cambió un candado', 'Candados', id, antes, est, evidencia, rev, rid);
   return { ok: true, hecho: 'candado', id: id };
 }
@@ -531,7 +536,7 @@ function estres_(s, libro, b, rev, rid) {
   var fecha = ahora_(), quien = actor_(s);
   var filasLog = resultados.map(function (r) { return r.concat(['V' + k, fecha, quien]); });
   var desde = Math.max(14, pru.getLastRow() + 1);
-  pru.getRange(desde, 1, filasLog.length, 10).setValues(filasLog);
+  pru.getRange(desde, 1, filasLog.length, 10).setValues(filasLog.map(fila_));
   bitacora_(libro, s, 'Corrió ' + (resultados.length - 1) + ' pruebas de estrés sobre V' + k, 'Pruebas', b.escenario || 'estándar', '', resultados.length + ' renglones', '', rev, rid);
   return { ok: true, hecho: 'estres', version: k, resultados: filasLog };
 }
@@ -559,19 +564,19 @@ function sembrar_(s, b, rid) {
   Object.keys(poner).forEach(function (clave) {
     if (!poner[clave]) return;
     var f = filaPorClave_(h, clave);
-    if (f) h.getRange(f, 3, 1, 6).setValues([[poner[clave], 'confirmado', b.fuente ? txt_(b.fuente, 300) : 'Sembrado en PPP 2', hoyISO_(), actor_(s), '']]);
+    if (f) h.getRange(f, 3, 1, 6).setValues([fila_([poner[clave], 'confirmado', b.fuente ? txt_(b.fuente, 300) : 'Sembrado en PPP 2', hoyISO_(), actor_(s), ''])]);
   });
   if (typeof m2 === 'number' && m2 > 0) {
     var fm = filaPorClave_(h, 'terreno.m2');
-    if (fm) h.getRange(fm, 3, 1, 6).setValues([[m2, 'por confirmar', b.fuente ? txt_(b.fuente, 300) : 'Dicho al sembrar', hoyISO_(), actor_(s), 'M02.Q01']]);
+    if (fm) h.getRange(fm, 3, 1, 6).setValues([fila_([m2, 'por confirmar', b.fuente ? txt_(b.fuente, 300) : 'Dicho al sembrar', hoyISO_(), actor_(s), 'M02.Q01'])]);
   }
   var pq = libro.getSheetByName('Preguntas');
   ['M01.Q01', 'M01.Q02'].forEach(function (q) {
     var f = filaPorClave_(pq, q);
-    if (f) pq.getRange(f, 7, 1, 5).setValues([['respondida', q === 'M01.Q01' ? nombre : txt_(b.objetivo, 500), 'Al sembrar', actor_(s), hoyISO_()]]);
+    if (f) pq.getRange(f, 7, 1, 5).setValues([fila_(['respondida', q === 'M01.Q01' ? nombre : txt_(b.objetivo, 500), 'Al sembrar', actor_(s), hoyISO_()])]);
   });
   bitacora_(libro, s, 'Sembró el plan desde la plantilla', 'todas', id, '', nombre, 'PPP 2', 0, rid);
-  vivero_().getSheetByName('Planes').appendRow([id, nombre, copia.getId(), 'activo', hoyISO_(), actor_(s), txt_(b.caso_ppp, 40), cfg.esquema_libro || PPP2.LIBRO, '']);
+  vivero_().getSheetByName('Planes').appendRow(fila_([id, nombre, copia.getId(), 'activo', hoyISO_(), actor_(s), txt_(b.caso_ppp, 40), cfg.esquema_libro || PPP2.LIBRO, '']));
   bitacoraVivero_(s, 'sembrar', id, nombre, rid, 'ok');
   CacheService.getScriptCache().remove('vivero');
   return { ok: true, hecho: 'sembrar', plan_id: id };
