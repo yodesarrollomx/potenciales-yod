@@ -53,8 +53,8 @@ async function pagina(navegador, base, w, llave, opciones) {
   });
   await ctx.addInitScript(([llaveSesion, ep]) => {
     if (llaveSesion !== null) localStorage.setItem('pyod_clave_v1', llaveSesion);
-    if (ep) window.PPP2_ENDPOINT = ep;
-  }, [llave === undefined ? null : llave, op.sinServidor ? '' : ENDPOINT]);
+    window.PPP2_ENDPOINT = ep;
+  }, [llave === undefined ? null : llave, op.sinServidor ? 'https://script.google.com/macros/s/PENDIENTE/exec' : ENDPOINT]);
   const page = await ctx.newPage();
   const errores = [];
   page.on('pageerror', (e) => errores.push(e.message));

@@ -11,7 +11,7 @@
 (function () {
   'use strict';
 
-  var ENDPOINT = window.PPP2_ENDPOINT || 'https://script.google.com/macros/s/PENDIENTE/exec';
+  var ENDPOINT = window.PPP2_ENDPOINT || 'https://script.google.com/macros/s/AKfycbywqwBh7uiD6DLmpTD6OUhzBX-AhkNxePhYgjn5Up3vAYdBzbV-2JyE7a5kKF_2QnO4/exec';
   var LLAVE = 'pyod_clave_v1';
   var RECHAZOS = ['liga', 'clave', 'expirado', 'revocado', 'sin_sesion', 'unauthorized', 'forbidden'];
   var EDADES = {
