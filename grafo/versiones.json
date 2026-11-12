@@ -1,7 +1,7 @@
 {
  "esquema": 1,
- "aprobado": "G-20261112-1203",
- "actualizado": "2026-11-12T12:03:04-07:00",
+ "aprobado": "G-20261112-1420",
+ "actualizado": "2026-11-12T14:20:17-07:00",
  "versiones": [
   {
    "id": "G-20261111-2354",
@@ -172,7 +172,7 @@
    "id": "G-20261112-1203",
    "armado": "2026-11-12T12:03:04-07:00",
    "fecha": "12-nov 12:03",
-   "estado": "aprobado",
+   "estado": "anterior",
    "huella": "df60fec4df95",
    "piezas": 3145,
    "ligas": 10479,
@@ -286,6 +286,179 @@
     "por": "alexpueblag",
     "numero": 73,
     "motivo": "borrador limpio tras el PR 72 (el resumen ya no nombra lo excluido por DEC-19)"
+   }
+  },
+  {
+   "id": "G-20261112-1420",
+   "armado": "2026-11-12T14:20:17-07:00",
+   "fecha": "12-nov 14:20",
+   "estado": "aprobado",
+   "huella": "6767abefa075",
+   "piezas": 3167,
+   "ligas": 10529,
+   "repos": {
+    "yodesarrollomx/yod-portal": "f6f342b",
+    "yodesarrollomx/potenciales-yod": "15a27a2",
+    "yodesarrollomx/yodesarrollo-board": "53893b3",
+    "yodesarrollomx/yod-despacho": "d89b151",
+    "yodesarrollomx/board-aurum": "93bf624",
+    "yodesarrollomx/board-flujo-yod": "e9d122f",
+    "yodesarrollomx/real-miramar-board": "9db34a9",
+    "yodesarrollomx/interiores-aurum": "8bcdfc3",
+    "yodesarrollomx/aurum-board": "e3dd428",
+    "yodesarrollomx/sala-edicion": "55cfff2",
+    "yodesarrollomx/plan-potencial": "9f036c7",
+    "yodesarrollomx/crokiss": "7a7a557",
+    "yodesarrollomx/Co-desarrolladores-Yod": "bdaf46b",
+    "yodesarrollomx/alquimia-urbana": "0c0da90",
+    "yodesarrollomx/aurum-experiencia": "70c63b3",
+    "yodesarrollomx/pintarron": "0979d3f",
+    "yodesarrollomx/prueba-dominio": "715c6c7",
+    "yodesarrollomx/yodesarrollomx.github.io": "a5680f2",
+    "alexpueblag/pizarron-claude-yodbot": "31593a1",
+    "yodesarrollo/amalaya-board": "e3f94e6",
+    "aurumarquitectos/experiencia": "89d29e8",
+    "aurumarquitectos/aurumarquitectos.github.io": "d33f765",
+    "alexpueblag/codesarrolladores-libre": "96d26c5",
+    "alexpueblag/yod-terreno-si": "09f75f4",
+    "alexpueblag/yod-terreno-dormido": "1159ca5"
+   },
+   "cambios": {
+    "piezas_mas": {
+     "documento": 3,
+     "pagina": 1,
+     "codigo": 4,
+     "datos": 2,
+     "apps_script": 1,
+     "prueba": 6,
+     "sistema": 1,
+     "motor": 1,
+     "almacen": 1,
+     "externo": 1,
+     "contrato": 1
+    },
+    "piezas_menos": {},
+    "piezas_cambiadas": 25,
+    "ligas_mas": 51,
+    "ligas_menos": 1,
+    "piezas": 3167,
+    "ligas": 10529,
+    "ppp": {},
+    "primer_ppp": false,
+    "repos": [
+     {
+      "repo": "yodesarrollomx/potenciales-yod",
+      "de": "78c045d",
+      "a": "15a27a2",
+      "nuevos": 17,
+      "quitados": 0,
+      "cambiados": 9
+     },
+     {
+      "repo": "yodesarrollomx/yod-portal",
+      "de": "f34255b",
+      "a": "f6f342b",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 13
+     },
+     {
+      "repo": "yodesarrollomx/yodesarrollo-board",
+      "de": "888cbd0",
+      "a": "53893b3",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 0
+     }
+    ],
+    "atlas": {
+     "componentes_nuevos": [
+      "SYS-PPP2",
+      "GAS-PPP2",
+      "SHEET-PPP2",
+      "EXT-ANTHROPIC"
+     ],
+     "componentes_fuera": [],
+     "conexiones_mas": 6,
+     "conexiones_menos": 1,
+     "estados": [],
+     "propuestas": [],
+     "revision": "2026-11-12.grafo-vivo.1"
+    },
+    "sin_clon": [],
+    "sin_campo": [],
+    "notas": [
+     "potenciales-yod/ppp2.js L14: llama a un Apps Script que el grafo no conoce (AKfycbywqwBh…)"
+    ]
+   },
+   "ia": {
+    "titulo": "Nuevo módulo PPP2 con servicio externo y una conexión sin identificar",
+    "resumen": "El grafo pasó a 3,167 piezas y 10,529 ligas. Lo principal es la llegada de PPP2, un módulo nuevo con su sistema, su script de servidor, su hoja de datos y un servicio externo de inteligencia artificial (Anthropic). Se sumaron 22 piezas y 25 cambiaron en total. Las ligas subieron en 51 y bajó 1. También se tocaron archivos de accesos y de arquitectura en el portal. No se quitó ninguna pieza ni se perdió ningún campo que usen las presentaciones. Hay un aviso: PPP2 llama a un script de servidor que el grafo no reconoce.",
+    "presentaciones": "Las presentaciones para cliente o inversionista, dueño del terreno y departamentos, lotes o casas no pierden ningún campo. No se detecta nada que las rompa. Conviene confirmar que PPP2 no cambie los datos que ellas leen.",
+    "recomendacion": "revisar",
+    "cambios": [
+     {
+      "que": "Se agregó PPP2 como sistema nuevo, con su script de servidor y su hoja de datos.",
+      "donde": "Mapa de componentes del grafo y repositorio de potenciales.",
+      "importa": "Es una pieza nueva de la que dependerán otras. Conviene saber quién es su responsable y qué información guarda."
+     },
+     {
+      "que": "Aparece un servicio externo de inteligencia artificial (Anthropic) conectado a PPP2.",
+      "donde": "Componentes externos del grafo.",
+      "importa": "Es la primera vez que figura este proveedor. Hay que confirmar qué información se le envía y quién autorizó su uso."
+     },
+     {
+      "que": "Se creó un módulo de generación de libro con catálogo de preguntas, un plan de ejemplo y reglas de consejo por edad.",
+      "donde": "Carpeta del libro dentro de PPP2.",
+      "importa": "Define el contenido que PPP2 entrega. Los datos de ejemplo permiten comprobar que el resultado es consistente."
+     },
+     {
+      "que": "Se añadieron una página nueva, su código y documentación de uso e instalación.",
+      "donde": "Repositorio de potenciales y su carpeta de documentos.",
+      "importa": "Es la parte visible de PPP2. Con la guía de instalación se puede replicar o auditar el servidor."
+     },
+     {
+      "que": "Se sumaron 6 pruebas automáticas que cubren el libro, el servidor y el navegador.",
+      "donde": "Carpeta de pruebas del repositorio de potenciales.",
+      "importa": "Reducen el riesgo de fallas al publicar el módulo nuevo."
+     },
+     {
+      "que": "Se modificaron archivos de accesos y de políticas de acceso, y sus pruebas.",
+      "donde": "Pantalla de accesos de potenciales y archivos de política de acceso del portal.",
+      "importa": "Los accesos controlan quién ve qué. Los datos no muestran el detalle, así que no se sabe si cambió algún permiso."
+     },
+     {
+      "que": "Se actualizaron las fichas, mapas, contratos y el modelo de arquitectura del portal, junto con el catálogo y su reporte de salud.",
+      "donde": "Documentación de arquitectura y archivos del catálogo del portal.",
+      "importa": "Mantiene la documentación alineada con PPP2. Se esperaría que describa el módulo nuevo."
+     },
+     {
+      "que": "Se ajustaron el motor del grafo, su refresco y la verificación automática.",
+      "donde": "Motor del grafo y flujo de verificación del repositorio de potenciales.",
+      "importa": "Es la herramienta que produce este mismo reporte. Un error ahí afectaría la confianza en el grafo."
+     }
+    ],
+    "riesgos": [
+     "PPP2 llama a un script de servidor que el grafo no conoce. Puede ser un servicio no registrado o uno distinto del previsto, y hay que identificarlo.",
+     "Un proveedor externo de inteligencia artificial entra al grafo. Falta confirmar qué datos recibe y bajo qué condiciones.",
+     "Se tocaron archivos de accesos sin que los datos indiquen qué cambió en los permisos.",
+     "No hay propuestas ni estados registrados en el atlas para los componentes nuevos, así que su aprobación formal queda pendiente.",
+     "El módulo es nuevo y depende de una hoja de datos y un script, que son piezas fáciles de modificar fuera de revisión."
+    ]
+   },
+   "ia_informe": {
+    "pedidos": [
+     "claude"
+    ],
+    "gano": "claude:claude-sonnet-5-5",
+    "fallos": {},
+    "segundos": 17.7,
+    "reintentos": []
+   },
+   "pedido": {
+    "por": "alexpueblag",
+    "numero": 82,
+    "motivo": "borrador limpio tras el PR 81 (el informe del rehecho ya no nombra lo excluido por DEC-19); reemplaza al G-20261112-1351, que no se aprueba"
    }
   }
  ]
