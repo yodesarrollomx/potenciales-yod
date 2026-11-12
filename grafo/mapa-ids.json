@@ -25,7 +25,7 @@
     "repo:yodesarrollomx/potenciales-yod",
     "SYS-POTENCIALES"
    ],
-   "commit": "ec704b042a",
+   "commit": "78c045da34",
    "flujos": {
     ".github/workflows/verificar-ppp.yml": "potenciales-yod::github_workflows_verificar_ppp",
     ".github/workflows/verificar-acceso.yml": "potenciales-yod::github_workflows_verificar_acceso",
@@ -307,5 +307,5 @@
    "flujos": {}
   }
  },
- "armado": "2026-11-12T10:56:38-07:00"
+ "armado": "2026-11-12T12:03:04-07:00"
 }

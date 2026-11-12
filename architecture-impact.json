@@ -1,14 +1,14 @@
 {
   "model_revision": "2026-11-11.grafo-accesos.3",
   "proposal_id": "CHG-GRAFO-ACCESOS-20261111",
-  "summary": "Lo excluido por DEC-19 ya no aparece en el resumen de un grafo rehecho. El borrador G-20261112-1147 (PR 71, sin aprobar) dibujaba bien el grafo —ninguna pieza del sistema excluido— pero su resumen decía «Atlas: piezas nuevas SYS-EMD, GAS-EMD…» y la explicación de la IA hablaba de «un bloque EMD»: sincroniza_atlas volvía a meter esas piezas y excluye() las quitaba después. Al aprobarse, esos nombres habrían quedado publicados en grafo/versiones.json. Ahora grafo-motor/refrescar.py filtra el modelo del atlas con la misma regla «excluir» ANTES de sincronizarlo (componentes, procesos y contratos excluidos, las conexiones que los tocan y sus menciones dentro de lo que se queda). excluye() sigue corriendo después, para los archivos de repositorios. No cambia lo publicado en grafo/, ni páginas, flujos, backend, hojas o permisos.",
+  "summary": "Grafo del sistema rehecho a pedido: versión G-20261112-1203 (la aprobada era G-20261112-1056). Cambian sólo los datos del grafo (grafo-motor/datos/base.json) y lo que se genera de ellos en grafo/: láminas, registro de versiones y datos para presentaciones. Sin código, backend, hojas ni permisos. Fusionar este cambio es aprobar el grafo; cerrarlo lo descarta.",
   "components": [
     "SYS-POTENCIALES"
   ],
   "tests": [
-    "python -m unittest discover -s grafo-motor/pruebas -p 'prueba_*.py': 23 en verde; test_sin_sistemas_de_clientes_externos ampliada: filtra_atlas quita componentes, conexiones, contratos y procesos excluidos sin tocar el modelo original, y al sincronizar no reporta ninguna pieza excluida.",
-    "Ensayo real (rehacer.py rehacer --ensayo --sin-ia contra los repositorios públicos y el atlas de hoy): resumen del atlas vacío y ninguna mención del sistema excluido; antes del arreglo, el borrador G-20261112-1147 listaba 9 piezas y 5 conexiones de ese sistema.",
+    "Láminas generadas por grafo-motor/laminas.py desde la base de este mismo cambio (determinista).",
+    "Recetas de presentación comprobadas contra el contrato del Plan de Potencial al rehacer.",
     "verificar-impacto contra el atlas fijado."
   ],
-  "rollback": "Revertir el merge: el resumen vuelve a listar lo excluido como nuevo (lo dibujado no cambia)."
+  "rollback": "Cerrar el PR del borrador, o revertir su merge: el grafo aprobado anterior sigue publicado."
 }
