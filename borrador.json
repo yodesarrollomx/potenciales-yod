@@ -1,22 +1,21 @@
 {
- "id": "G-20261112-1036",
- "fecha": "12-nov 10:36",
- "creado": "2026-11-12T10:37:55-07:00",
+ "id": "G-20261112-1056",
+ "fecha": "12-nov 10:56",
+ "creado": "2026-11-12T10:58:37-07:00",
  "pr": 66,
  "liga": "https://github.com/yodesarrollomx/potenciales-yod/pull/66",
  "rama": "grafo-borrador",
  "antes": "G-20261111-2354",
- "piezas": 3211,
- "ligas": 10701,
- "titulo": "Grafo rehecho: crece la capa de presentaciones sin quitar nada existente",
- "resumen": "El grafo pasó de la versión aprobada a una nueva revisión que sólo agrega: 9 piezas nuevas (1 documento, 3 de código, 1 página, 3 pruebas y 1 contrato) y 36 conexiones nuevas, sin quitar ninguna pieza ni conexión. En total el grafo tiene 3,211 piezas y 10,701 conexiones. Se modificaron 27 piezas en cuatro repositorios. Lo más relevante está en el tablero de la desarrolladora, donde aparece una nueva página de presentaciones que leen el grafo, con su documentación y pruebas. No hay componentes nuevos ni fuera, ni cambios de estado, y no desaparece ningún campo que usen las presentaciones.",
- "recomendacion": "aprobar",
- "ia": "claude:claude-sonnet-5-5",
+ "piezas": 3145,
+ "ligas": 10479,
+ "titulo": "",
+ "resumen": "potenciales-yod (1e8ae56 → ec704b0): 10 cambiados; sala-edicion (07a7076 → 55cfff2): 6 cambiados; yod-portal (ed19f0b → f34255b): 5 cambiados",
+ "recomendacion": "",
+ "ia": null,
  "audiencias": [
   "Cliente o inversionista",
   "Dueño del terreno",
   "Departamentos, lotes o casas"
  ],
- "sin_campo": [],
- "atrasado": true
+ "sin_campo": []
 }
