@@ -386,6 +386,29 @@ CAPA_R = dict(pantallas='sistema', motores='motor', datos='almacen', externos='e
 EST = dict(ejecucion='vivo', codigo='codigo', declarado='declarado', propuesto='propuesto', pendiente='propuesto')
 
 
+def reglas_excluir():
+    with open(os.path.join(AQUI, 'datos', 'reglas.json'), encoding='utf-8') as f: return json.load(f).get('excluir') or {}
+
+
+def filtra_atlas(M, R=None):
+    """El modelo del atlas sin lo que Dirección decidió no publicar (reglas.json → "excluir"), ANTES de sincronizarlo.
+    Si entrara y excluye() lo quitara después, cada rehecho lo contaría como «piezas nuevas» en su resumen y esos nombres
+    quedarían publicados en grafo/versiones.json y en la explicación de la IA (pasó el 12-nov-2026 con el borrador
+    G-20261112-1147). Quita componentes, procesos y contratos cuyo id cumple la regla, las conexiones que los tocan y sus
+    menciones dentro de procesos y contratos que sí se quedan."""
+    R = R if R is not None else reglas_excluir()
+    pats = [re.compile(x) for x in (R.get('ids') or []) + (R.get('comp') or [])]
+    fuera = lambda i: any(p.search(str(i or '')) for p in pats)
+    if not pats or not M: return M
+    M = json.loads(json.dumps(M))
+    M['components'] = [c for c in M.get('components') or [] if not fuera(c.get('id'))]
+    M['connections'] = [c for c in M.get('connections') or [] if not (fuera(c.get('from')) or fuera(c.get('to')))]
+    M['data_contracts'] = [dict(c, components=[k for k in c.get('components') or [] if not fuera(k)]) for c in M.get('data_contracts') or [] if not fuera(c.get('id'))]
+    M['processes'] = [dict(p, steps=[dict(s, components=[k for k in s.get('components') or [] if not fuera(k)]) for s in p.get('steps') or []])
+                      for p in M.get('processes') or [] if not fuera(p.get('id'))]
+    return M
+
+
 def sincroniza_atlas(X, M):
     """Componentes, conexiones, contratos, procesos y propuestas del modelo vigente. A lo que ya existe sólo se le
        actualiza lo que el atlas declara (estado, producción, fuente, decisión); la descripción curada se respeta."""
@@ -463,7 +486,7 @@ MOTORES = dict(vertical='mixto.html', macrolotes='macrolotes.html', unifamiliar=
 def excluye(X, R=None):
     """Quita del grafo lo que Dirección decidió no publicar (reglas.json → "excluir"): piezas cuyo id o ruta cumplen los
     patrones, con sus flechas, pares y símbolos. Corre después del atlas y de los repositorios, así nada vuelve a entrar."""
-    R = R if R is not None else (json.load(open(os.path.join(AQUI, 'datos', 'reglas.json'), encoding='utf-8')).get('excluir') or {})
+    R = R if R is not None else reglas_excluir()
     ids = [re.compile(x) for x in R.get('ids') or []]; rutas = [re.compile(x) for x in R.get('rutas') or []]; comp = [re.compile(x) for x in R.get('comp') or []]
     fuera = [i for i, n in X.N.items() if any(p.search(i) for p in ids) or any(p.search(str(n.get('comp') or '')) for p in comp)
              or any(p.search(str(n.get(k) or '')) for k in ('ruta', 'source_file') for p in rutas)]
@@ -519,7 +542,7 @@ def main():
         if not os.path.isdir(os.path.join(d, '.git')): res['faltan'].append(tag); continue
         r = refresca_repo(X, tag, d, own, a.todo)
         if r: res['repos'].append(r)
-    if M: res['atlas'] = sincroniza_atlas(X, M)
+    if M: res['atlas'] = sincroniza_atlas(X, filtra_atlas(M))
     res['excluidos'] = excluye(X)
     pd = os.path.join(a.repos, 'potenciales-yod')
     if os.path.isdir(pd): B['ppp'] = contrato_ppp(pd)

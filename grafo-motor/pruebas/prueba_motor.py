@@ -71,6 +71,21 @@ class LoPublicado(unittest.TestCase):
         X = refrescar.Base(B); fuera = refrescar.excluye(X, R)
         self.assertEqual(sorted(X.N), ['SYS-EMDX', 'SYS-POTENCIALES', 'yod-portal::despacho']); self.assertEqual(len(fuera), 7)
         self.assertEqual(B['flechas'], [dict(s='SYS-POTENCIALES', t='yod-portal::despacho', r='usa')]); self.assertEqual(B['entre'], []); self.assertEqual(set(B['simbolos']), set(X.N))
+        # el atlas se filtra ANTES de sincronizarlo: lo excluido no vuelve a contarse como «piezas nuevas» en cada rehecho
+        # (12-nov-2026: el borrador G-20261112-1147 decía «entraron SYS-EMD, GAS-EMD…» y esos nombres iban a publicarse)
+        M = dict(revision='r', components=[dict(id='SYS-EMD', nombre='E', tipo='tablero', status='ejecucion'), dict(id='GAS-EMD', nombre='G', tipo='backend', status='ejecucion'),
+                                            dict(id='SYS-POTENCIALES', nombre='P', tipo='tablero', status='ejecucion'), dict(id='SYS-NUEVO', nombre='N', tipo='tablero', status='declarado')],
+                 connections=[dict(**{'from': 'SYS-EMD', 'to': 'GAS-EMD'}, label='usa', status='ejecucion'), dict(**{'from': 'SYS-NUEVO', 'to': 'SYS-POTENCIALES'}, label='lee', status='ejecucion')],
+                 data_contracts=[dict(id='CTR-EMD-DRAFTS', components=['SYS-EMD']), dict(id='CTR-PPP', components=['SYS-POTENCIALES', 'GAS-EMD'])],
+                 processes=[dict(id='PROC-EMD-LOAD', nombre='L', steps=[dict(label='a', components=['SYS-EMD'])]), dict(id='PROC-PPP', nombre='P', steps=[dict(label='a', components=['SYS-POTENCIALES', 'SYS-EMD'])])],
+                 proposals=[])
+        F = refrescar.filtra_atlas(M, R)
+        self.assertEqual([c['id'] for c in F['components']], ['SYS-POTENCIALES', 'SYS-NUEVO']); self.assertEqual([(c['from'], c['to']) for c in F['connections']], [('SYS-NUEVO', 'SYS-POTENCIALES')])
+        self.assertEqual(F['data_contracts'], [dict(id='CTR-PPP', components=['SYS-POTENCIALES'])]); self.assertEqual([p['id'] for p in F['processes']], ['PROC-PPP']); self.assertEqual(F['processes'][0]['steps'][0]['components'], ['SYS-POTENCIALES'])
+        self.assertEqual(len(M['components']), 4, 'no toca el modelo original')
+        Z = refrescar.Base(dict(nodos={'SYS-POTENCIALES': dict(capa='sistema', source_file=refrescar.ATL, label='P')}, flechas=[], simbolos={}, repos={}, entre=[]))
+        res = refrescar.sincroniza_atlas(Z, F); refrescar.excluye(Z, R)
+        self.assertEqual(res['componentes_nuevos'], ['SYS-NUEVO', 'PROC-PPP']); self.assertNotIn('EMD', json.dumps(res)); self.assertFalse([i for i in Z.N if 'EMD' in i])
         if str(self.B.get('armado') or '') >= '2026-11-12T18:00':
             Y = refrescar.Base(json.loads(json.dumps(self.B))); self.assertEqual(refrescar.excluye(Y, R), [], 'la base publicada aún trae piezas excluidas')
 
