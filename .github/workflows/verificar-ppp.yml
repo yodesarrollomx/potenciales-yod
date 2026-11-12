@@ -10,7 +10,7 @@ jobs:
     name: PPP · interfaz y contratos
     runs-on: ubuntu-latest
     container: mcr.microsoft.com/playwright:v1.55.1-noble
-    timeout-minutes: 12
+    timeout-minutes: 16
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,6 +44,8 @@ jobs:
           node --test tests/ppp-intake-copy-plan.test.cjs
           node --test tests/index-entry.test.cjs tests/ppp-intake.test.cjs tests/ppp-intake-server.test.cjs tests/ppp-stages.test.cjs tests/ppp-stages-server.test.cjs tests/ppp-stages-program.test.cjs
           node --check ppp-ui.js
+          node --check ppp-cadena.js
+          node --test tests/ppp-cadena.test.cjs
           node --check ppp-version-bridge.js
           node --check ppp-volumes.js
           node --check ppp-volumes-native.js
@@ -94,6 +96,7 @@ jobs:
           node tests/ppp-case-opening-shell-browser.cjs
           node tests/ppp-agent-receipts-browser.cjs
           node tests/ppp-browser.cjs
+          node tests/ppp-cadena-browser.cjs
           node tests/ppp-identity-browser.cjs
           node tests/ppp-terrain-browser.cjs
           node tests/ppp-versions-browser.cjs
@@ -113,7 +116,7 @@ jobs:
           const fs=require('node:fs'),crypto=require('node:crypto');
           const digest=b=>crypto.createHash('sha256').update(b).digest('hex');
           (async()=>{
-            const paths=['ppp-intake.js','ppp-intake.css','ppp-stages.js','ppp-stages.css','residencial.html','unifamiliar.html','index.html','ppp-projects.js','ppp-home.css','ppp-catalog.js','ppp-catalog.css','mapa.html','ppp-ui.js','ppp-version-bridge.js','ppp-volumes.js','ppp-volumes.css','ppp-volumes-native.js','tests/fixtures/departamentos-volumenes.html','mixto.html','macrolotes.html','patrimonial.html','ppp-case-opening.js','portero.js'];
+            const paths=['ppp-intake.js','ppp-intake.css','ppp-stages.js','ppp-stages.css','residencial.html','unifamiliar.html','index.html','ppp-projects.js','ppp-home.css','ppp-catalog.js','ppp-catalog.css','mapa.html','ppp-ui.js','ppp-cadena.js','ppp-cadena.css','ppp-version-bridge.js','ppp-volumes.js','ppp-volumes.css','ppp-volumes-native.js','tests/fixtures/departamentos-volumenes.html','mixto.html','macrolotes.html','patrimonial.html','ppp-case-opening.js','portero.js'];
             for(const path of paths){
               const expected=digest(fs.readFileSync(path));let verified=false;
               for(let attempt=0;attempt<6;attempt++){

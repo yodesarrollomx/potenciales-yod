@@ -45,3 +45,9 @@ Revertir mediante PR los archivos de presentación, los hooks mínimos de `mixto
 Las cinco tarjetas muestran dos barras cuya longitud representa las razones etiquetadas del mismo estado confirmado. Un 85% ocupa 85% de su barra; los ausentes aparecen como — y patrón discontinuo, y los excedentes conservan su cifra. Son referencias de comparación, no niveles de avance ni sensores. Macrolotes usa un índice numerado con nombre completo, Base y Activa explícitas, acciones de edición independientes y explicación de que todas las versiones corresponden al mismo proyecto. Se conservan IDs, entradas, comparador y guardado.
 
 `tests/ppp-cierre-browser.cjs` verifica proporciones, cambios, datos ausentes, ocho alternativas con nombres completos y conservación de IDs en Chromium/WebKit. Todo transporte de negocio se intercepta. No acredita una sesión real ni edición en un libro de producción.
+
+## Diagrama en cadena · 11 noviembre
+
+Arriba de las cinco tarjetas, después del encabezado de resultados, va el diagrama en cadena (`ppp-cadena.js`, propuesta `CHG-PPP-CADENA-20261111`): Se vende → Entra y sale → En el banco y prestado → Lo que queda. Lee el mismo estado que `PPPView.update`, no calcula y no escribe; sus botones son las versiones del caso y cada eslabón liga a la tarjeta y al control de donde sale. Contrato, colores, pruebas y reversión en [ppp-cadena.md](ppp-cadena.md).
+
+Con el diagrama arriba, el criterio móvil de las pruebas queda así: las cinco tarjetas cerradas conservan su bloque (< 728 px), el diagrama ocupa menos de 0.85 pantallas de 430 × 932 y el conjunto cabe en ≤ 2 pantallas. `PPPView.reveal(idDelControl)` muestra un control dentro de su tarjeta sin enfocarlo.

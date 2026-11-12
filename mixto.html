@@ -304,10 +304,11 @@
 
 #mercadoDocumento[hidden]{display:none}#mercadoDocumento table{width:100%;border-collapse:collapse;font-size:11px}#mercadoDocumento td,#mercadoDocumento th{padding:8px;border-bottom:1px solid var(--linea);text-align:left}#mercadoDocumento h3{font-size:14px}#mercadoDocumento{overflow-wrap:anywhere}#mercadoDocumento button{margin-top:10px}
 </style>
-<link rel="stylesheet" href="ppp-ui.css?v=20261031-fase1-e2">
-<link rel="stylesheet" href="ppp-volumes.css?v=20261031-fase1-e2">
-<link rel="stylesheet" href="ppp-stages.css?v=20261031-fase1-e2">
-<link rel="stylesheet" href="ppp-intake.css?v=20261031-fase1-e2">
+<link rel="stylesheet" href="ppp-ui.css?v=20261111-cadena">
+<link rel="stylesheet" href="ppp-cadena.css?v=20261111-cadena">
+<link rel="stylesheet" href="ppp-volumes.css?v=20261111-cadena">
+<link rel="stylesheet" href="ppp-stages.css?v=20261111-cadena">
+<link rel="stylesheet" href="ppp-intake.css?v=20261111-cadena">
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -545,15 +546,16 @@
 </div></div>
 
 <div id="toast"></div>
-<script src="ppp-ui.js?v=20261031-fase1-e2"></script>
-<script src="ppp-case-loader.js?v=20261031-fase1-e2"></script>
-<script src="ppp-volumes.js?v=20261031-fase1-e2"></script>
-<script src="ppp-volumes-native.js?v=20261031-fase1-e2"></script>
-<script src="ppp-stages.js?v=20261031-fase1-e2"></script>
-<script src="ppp-intake.js?v=20261031-fase1-e2"></script>
-<link rel="stylesheet" href="ppp-presentation.css?v=20261031-fase1-e2">
-<script src="ppp-presentation.js?v=20261031-fase1-e2"></script>
-<script src="ppp-version-bridge.js?v=20261031-fase1-e2"></script>
+<script src="ppp-ui.js?v=20261111-cadena"></script>
+<script src="ppp-cadena.js?v=20261111-cadena"></script>
+<script src="ppp-case-loader.js?v=20261111-cadena"></script>
+<script src="ppp-volumes.js?v=20261111-cadena"></script>
+<script src="ppp-volumes-native.js?v=20261111-cadena"></script>
+<script src="ppp-stages.js?v=20261111-cadena"></script>
+<script src="ppp-intake.js?v=20261111-cadena"></script>
+<link rel="stylesheet" href="ppp-presentation.css?v=20261111-cadena">
+<script src="ppp-presentation.js?v=20261111-cadena"></script>
+<script src="ppp-version-bridge.js?v=20261111-cadena"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -1127,7 +1129,16 @@
     filasF.push(`<tr class="tot-row"><td>Σ ${r.totalMonths} meses</td><td>${fmtM(r.revTotal)}</td><td>${fmtM(r.costTotal)}</td><td>${fmtM(r.equityUsed)}</td><td>${fmtM(r.interest+r.feeDebt)}</td><td>${fmtM(r.debt)}</td><td>${fmtM(r.cash)}</td></tr>`);
     $('flowRows').innerHTML=filasF.join('');renderProforma(r);renderLandDeal(r);renderFormulas();refreshJson();
     window.PPPView?.update(r,{native:!!sheetModel,revision:sheetModel?.revision,caseId:caso.caso_id,scenario:escActivo,scenarioName:escGet(escActivo)?.nombre,versionCount:escenarios.length,projectName:caso.nombre_caso,updated:sheetModel?.actualizado,bookUrl:sheetModel?.libro_url,site:sheetModel?.reticula,stages:sheetModel?.etapas});
+    try{window.PPPCadena?.update('vertical',r,cadenaContexto(r));}catch(err){console.error('PPPCadena',err);}
     syncVolumes();
+  }
+  // Diagrama en cadena (ppp-cadena.js): recibe este mismo estado ya confirmado y las versiones del caso.
+  // No calcula ni guarda: sus botones llaman a las funciones que ya existen en este tablero.
+  function cadenaContexto(r){
+    const ver=id=>{const d=$(id);if(!d)return;if(d.tagName==='DETAILS')d.open=true;else d.querySelector('details')?.setAttribute('open','');d.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});};
+    return{ancla:document.querySelector('.ppp-hud'),nativo:!!sheetModel,revision:sheetModel?.revision,caso:caso.caso_id,version:escActivo,
+      versiones:escenarios.map(e=>({id:e.id,nombre:e.nombre,base:!!e.esBase,activa:e.id===escActivo,estado:e.id===escActivo?r:sheetModel?sheetModel.estados?.[e.id]:computar(e.inputs)})),
+      activar:id=>escCambiar(id),abrir:id=>window.PPPView?.toggle(id,true),ajustar:id=>window.PPPView?.reveal?.(id),verVersiones:()=>ver('pppVersiones'),verTabla:()=>ver('advBoard')};
   }
   function renderProforma(r){
     const row=(label,value,klass='')=>`<tr class="${klass}"><td>${label}</td><td>${value}</td></tr>`,section=label=>`<tr class="section-row"><td colspan="2">${label}</td></tr>`,economicTotal=r.projectCost+r.interest+r.feeDebt,cashOk=Math.abs(r.cashReconciliation)<1;
@@ -1594,7 +1605,7 @@
 })();
 </script>
 <!-- El selector de motores se retiró del PPP vertical por decisión de Dirección. -->
-<script src="portero.js?v=20261031-fase1-e2"></script>
+<script src="portero.js?v=20261111-cadena"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=20261031-fase1-e2"></script>
 </body>
 </html>

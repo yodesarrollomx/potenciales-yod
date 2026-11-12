@@ -1,15 +1,19 @@
 {
-  "model_revision": "2026-11-01.mercado-f2.2",
-  "proposal_id": "CHG-MERCADO-ANCLAS-20261101",
-  "summary": "La portada de Planes de potencial (index.html) agrega un bloque destacado «Mercado Hermosillo 2020–2030» con liga al tablero de yod-portal, debajo del expediente Distrito Abasto, con la clase existente .featured-ppp. Sólo HTML; sin CSS/JS nuevos, sin versiones, sin datos privados. Atlas fijado a bd5139e de yod-portal (propuesta CHG-MERCADO-ANCLAS-20261101).",
+  "model_revision": "2026-11-11.ppp-cadena.1",
+  "proposal_id": "CHG-PPP-CADENA-20261111",
+  "summary": "Diagrama en cadena arriba del Plan de Potencial vertical (mixto.html): pieza común nueva ppp-cadena.js + ppp-cadena.css, sólo presentación, que dibuja en cuatro eslabones (Se vende → Entra y sale → En el banco y prestado → Lo que queda) el mismo estado que el tablero ya confirmó; no calcula, no usa red ni almacenamiento. Ganchos: una llamada al final de render() en mixto.html, PPPView.reveal en ppp-ui.js (muestra un control sin enfocarlo) y una línea en ppp-intake.js que vacía el diagrama al capturar un plan nuevo. Los botones del diagrama son las versiones existentes del caso (escCambiar). Criterio móvil de las pruebas restablecido por tener el diagrama arriba. Etiqueta propia 20261111-cadena: accesos.html y las demás páginas sólo cambian su etiqueta. Atlas fijado en el commit de la propuesta CHG-PPP-CADENA-20261111 de yod-portal. Sin backend, hojas, permisos ni datos de casos.",
   "components": [
-    "SYS-POTENCIALES"
+    "SYS-POTENCIALES",
+    "SYS-CONTROL"
   ],
   "tests": [
-    "node --test tests/ppp-distrito-abasto.test.cjs",
-    "git diff --check",
-    "verificar-impacto contra el atlas bd5139ebf2f16ffd78739af6089c40a69facdf25",
-    "Render real (Playwright) de index.html con el bloque visible a 390 y 1440 px"
+    "node --check ppp-cadena.js && node --test tests/ppp-cadena.test.cjs (7 pruebas: cuadre contra el motor en 11 variantes y 400 combinaciones al azar; sin red, almacenamiento ni motor)",
+    "node tests/ppp-cadena-browser.cjs (Chromium y WebKit, transporte sintético: montaje, acordeón y cuadrícula, versiones, cadena con «antes», edición viva, ligas, modelo nativo, 320/390/430/1280 px, tema oscuro, cero escrituras)",
+    "node --test tests/ppp-ui.test.cjs (motor byte a byte igual al de referencia) y las demás pruebas de nodo del flujo «Verificar interfaz PPP»",
+    "Recorridos de navegador existentes del flujo «Verificar interfaz PPP», con el criterio móvil restablecido en tests/ppp-browser.cjs y tests/ppp-terrain-browser.cjs",
+    "node scripts/versiones.cjs --check",
+    "verificar-impacto contra el atlas fijado en .github/workflows/arquitectura.yml",
+    "git diff --check"
   ],
-  "rollback": "Revertir el commit; sin cambios de backend, hojas ni permisos."
+  "rollback": "Revertir el PR: se quita el diagrama (archivos nuevos, ganchos y fuente) y vuelve el criterio móvil original de las pruebas. Sin backend, hojas, casos ni sesiones que restaurar."
 }
