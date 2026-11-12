@@ -6,7 +6,7 @@
     "SYS-CONTROL",
     "SYS-YOD-OS"
    ],
-   "commit": "f34255b676",
+   "commit": "f6f342bdcf",
    "flujos": {
     ".github/workflows/salud-online.yml": "yod-portal::github_workflows_salud_online",
     ".github/workflows/arquitectura.yml": "yod-portal::github_workflows_arquitectura",
@@ -25,7 +25,7 @@
     "repo:yodesarrollomx/potenciales-yod",
     "SYS-POTENCIALES"
    ],
-   "commit": "78c045da34",
+   "commit": "15a27a2402",
    "flujos": {
     ".github/workflows/verificar-ppp.yml": "potenciales-yod::github_workflows_verificar_ppp",
     ".github/workflows/verificar-acceso.yml": "potenciales-yod::github_workflows_verificar_acceso",
@@ -39,7 +39,7 @@
     "repo:yodesarrollomx/yodesarrollo-board",
     "SYS-INVERSION"
    ],
-   "commit": "888cbd0d61",
+   "commit": "53893b31a1",
    "flujos": {
     ".github/workflows/offer-review.yml": "yodesarrollo-board::github_workflows_offer_review",
     ".github/workflows/broker-journey.yml": "yodesarrollo-board::github_workflows_broker_journey",
@@ -307,5 +307,5 @@
    "flujos": {}
   }
  },
- "armado": "2026-11-12T12:03:04-07:00"
+ "armado": "2026-11-12T14:20:17-07:00"
 }
