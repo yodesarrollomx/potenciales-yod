@@ -115,8 +115,12 @@ if True:
     for tag, r in REPOS.items():
         rn = D.REPO_NODO.get(tag)
         if not rn: continue
-        a = area_de(rn); sis = [x for x in D.IDX[a]['sistema']] if a else []
-        ids_repo[f"{r['owner']}/{r['repo']}"] = dict(nodos=[rn] + sis[:3], commit=r['commit'], flujos={N[w]['ruta']: w for w in D.ARCH_DE.get(tag, []) if capa(w) == 'workflow'})
+        # Dónde se marca un error de este repositorio: en el propio repositorio y en los tableros que VIVEN en él (la liga
+        # «vive en» del atlas). Si en el repositorio viven tableros de varias filas del mapa (la cabina aloja varios), sólo los
+        # de su propia fila. Nunca «los primeros tableros de la fila»: eso pintaba el error en tableros que no tienen que ver.
+        viven = sorted({F[k]['s'] for k in ENT[rn] if F[k]['r'] == 'vive en' and capa(F[k]['s']) == 'sistema'}, key=lambda i: (not N[i].get('menu'), N[i].get('label') or '', i))
+        sis = [x for x in viven if area_de(x) == area_de(rn)] or viven
+        ids_repo[f"{r['owner']}/{r['repo']}"] = dict(nodos=[rn] + sis, commit=r['commit'], flujos={N[w]['ruta']: w for w in D.ARCH_DE.get(tag, []) if capa(w) == 'workflow'})
     json.dump(dict(repos=ids_repo, armado=ARMADO), open(f'{SAL_DIR}/mapa-ids.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 cuenta = f"{len(N):,} piezas públicas · {len(lista)} láminas"
 open(f'{SAL_DIR}/index.html', 'w', encoding='utf-8').write(PORT.replace('__LISTA__', W.js_seguro(lista)).replace('__CUENTA__', cuenta))

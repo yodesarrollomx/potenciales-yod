@@ -17,18 +17,80 @@ function api(rutas, pedidos = []) {
   };
 }
 
+const R = '/repos/yodesarrollomx/potenciales-yod', FALLAS = R + '/actions/runs?branch=main&status=failure';
+const corrida = (id, conclusion, extra = {}) => ({ id, workflow_id: 77, status: 'completed', conclusion, path: '.github/workflows/verificar-ppp.yml', name: 'Verificar interfaz PPP', run_started_at: '2026-11-12T10:00:00Z', html_url: 'https://github.com/x/y/actions/runs/' + id, ...extra });
+
 test('un flujo que falló sale con su trabajo y su paso, ligado a su pieza', async () => {
-  const E = crear({ mapa, fetchImpl: api({
-    '/repos/yodesarrollomx/potenciales-yod/actions/runs?': { workflow_runs: [{ id: 9, status: 'completed', conclusion: 'failure', path: '.github/workflows/verificar-ppp.yml', name: 'Verificar interfaz PPP', run_started_at: '2026-11-12T10:00:00Z', html_url: 'https://github.com/x/y/actions/runs/9' }] },
-    '/repos/yodesarrollomx/potenciales-yod/actions/runs/9/jobs': { jobs: [{ name: 'PPP · interfaz', conclusion: 'failure', steps: [{ number: 4, name: 'Controles', conclusion: 'failure' }] }] } }) });
+  const pedidos = [], E = crear({ mapa, fetchImpl: api({
+    [FALLAS]: { workflow_runs: [corrida(9, 'failure')] },
+    [R + '/actions/workflows/77/runs']: { workflow_runs: [corrida(9, 'failure')] },
+    [R + '/actions/runs/9/jobs']: { jobs: [{ name: 'PPP · interfaz', conclusion: 'failure', steps: [{ number: 4, name: 'Controles', conclusion: 'failure' }] }] } }, pedidos) });
   const e = (await E.leer()).filter(x => x.tipo === 'flujo');
   assert.equal(e.length, 1); assert.match(e[0].msg, /Verificar interfaz PPP.*PPP · interfaz.*paso 4 «Controles»/); assert.equal(e[0].nodos[0], 'flujo-ppp'); assert.equal(e[0].clave, 'flujo:yodesarrollomx/potenciales-yod:.github/workflows/verificar-ppp.yml');
+  assert.ok(pedidos.some(p => p.url.includes(R + '/actions/workflows/77/runs?branch=main&status=completed&per_page=1')), 'confirma con la última corrida de ese flujo en la principal');
 });
 
 test('sólo cuenta el último intento de cada flujo', async () => {
-  const E = crear({ mapa, fetchImpl: api({ '/repos/yodesarrollomx/potenciales-yod/actions/runs?': { workflow_runs: [
-    { id: 2, status: 'completed', conclusion: 'success', path: 'a.yml', name: 'A' }, { id: 1, status: 'completed', conclusion: 'failure', path: 'a.yml', name: 'A' }] } }) });
-  assert.equal((await E.leer()).filter(x => x.tipo === 'flujo').length, 0);
+  const E = crear({ mapa, fetchImpl: api({
+    [FALLAS]: { workflow_runs: [corrida(1, 'failure')] },
+    [R + '/actions/workflows/77/runs']: { workflow_runs: [corrida(2, 'success')] } }) });
+  assert.equal((await E.leer()).filter(x => x.tipo === 'flujo').length, 0, 'falló antes, pero su última corrida ya pasó');
+});
+
+test('una falla no se pierde por vieja ni porque otros flujos corran muchas veces después', async () => {
+  // Antes se miraban «las últimas 40 corridas» del repositorio: con el vigilante corriendo decenas de veces al día, una falla
+  // de anteayer salía de esa ventana y se daba por resuelta sola. Ahora se pregunta por las fallas y por la última de su flujo.
+  const pedidos = [], vieja = corrida(5, 'failure', { run_started_at: '2026-10-20T08:00:00Z' });
+  const E = crear({ mapa, ahora: () => '2026-11-12T12:00:00.000Z', fetchImpl: api({ [FALLAS]: { workflow_runs: [vieja, corrida(4, 'failure', { run_started_at: '2026-10-19T08:00:00Z' })] }, [R + '/actions/workflows/77/runs']: { workflow_runs: [vieja] } }, pedidos) });
+  const e = (await E.leer()).filter(x => x.tipo === 'flujo');
+  assert.equal(e.length, 1, 'una por flujo, la última'); assert.equal(e[0].desde, '2026-10-20T08:00:00Z');
+  const lista = pedidos.map(p => p.url).filter(u => u.includes(R + '/actions/runs?'));
+  assert.ok(lista.length >= 1 && lista.every(u => /[?&]status=(failure|timed_out)(&|$)/.test(u) && /[?&]branch=main(&|$)/.test(u)), 'no hay ventana de corridas recientes: se pide por fallas');
+  assert.ok(lista.every(u => u.includes('created=%3E%3D2026-09-28')), 'con tope de 45 días: un flujo que ya no existe no se queda en rojo para siempre');
+});
+
+test('lo que no se pudo leer no se da por resuelto', async () => {
+  const yo = 'yodesarrollomx/potenciales-yod', otro = 'yodesarrollomx/yod-portal';
+  const antes = [
+    { clave: `flujo:${yo}:.github/workflows/verificar-ppp.yml`, tipo: 'flujo', msg: 'Falló el flujo', desde: '2026-11-10' },
+    { clave: `chinche:${yo}#5`, tipo: 'chinche', msg: 'Chinche #5', desde: '2026-11-09' },
+    { clave: `pagina:${yo}`, tipo: 'pagina', msg: 'La página respondió 503', desde: '2026-11-11' },
+    { clave: `chinche:${otro}#8`, tipo: 'chinche', msg: 'Chinche #8', desde: '2026-11-08' }];
+  // GitHub no contesta las corridas ni las chinches de potenciales-yod, y su página no responde; yod-portal sí se lee y ya no tiene chinches.
+  const base = api({ [R + '/actions/runs?']: 404, [R + '/issues']: 404 });
+  const E = crear({ mapa, ahora: () => '2026-11-12T12:00:00.000Z', fetchImpl: async (url, opc) => { if (url === 'https://yodesarrollomx.github.io/potenciales-yod/') throw new Error('sin red'); return base(url, opc); } });
+  const { errores, sinDato } = await E.leerTodo();
+  assert.deepEqual(errores, []); assert.deepEqual([...sinDato].sort(), [`chinche:${yo}`, `flujo:${yo}`, `pagina:${yo}`]);
+  const r = E.conciliar(antes, errores, sinDato);
+  assert.deepEqual(r.resueltos.map(x => x.clave), [`chinche:${otro}#8`], 'sólo se resuelve lo que sí se leyó');
+  assert.deepEqual(r.estado.errores.map(x => x.clave).sort(), [`chinche:${yo}#5`, `flujo:${yo}:.github/workflows/verificar-ppp.yml`, `pagina:${yo}`]);
+  assert.equal(r.estado.errores.find(x => x.tipo === 'pagina').desde, '2026-11-11', 'conserva desde cuándo');
+  assert.deepEqual(r.estado.sin_dato, [`chinche:${yo}`, `flujo:${yo}`, `pagina:${yo}`]); assert.deepEqual(r.nuevos, []);
+  assert.equal('sin_dato' in E.conciliar(antes, antes.map(x => ({ ...x }))).estado, false, 'si todo se leyó, no se anota nada de más');
+});
+
+test('si no se puede saber si un repositorio cambió, ni se avisa ni se da por resuelto', async () => {
+  const cabeza = { [R + '/commits']: [{ sha: 'cccc333344ffffffffffffffffffffffffffffff', commit: { committer: { date: '2026-11-12T00:00:00Z' } }, html_url: 'c' }] };
+  const base = api(cabeza), sinComparar = crear({ mapa, fetchImpl: async (url, opc) => url.includes('/compare/') ? { ok: false, status: 503, json: async () => ({}) } : base(url, opc) });
+  const r = await sinComparar.leerTodo();
+  assert.equal(r.errores.filter(x => x.tipo === 'cambio').length, 0); assert.ok(r.sinDato.includes('cambio:yodesarrollomx/potenciales-yod'));
+});
+
+test('una chinche se pinta en el repositorio que nombra su título, no sólo en el que está abierta', async () => {
+  const E = crear({ mapa, fetchImpl: api({ '/repos/yodesarrollomx/potenciales-yod/issues': [
+    { number: 11, title: '📌 yod-portal/os · el menú no abre', labels: [], created_at: '2026-11-10T00:00:00Z', html_url: 'u11' },
+    { number: 12, title: '📌 YOD-PORTAL/tablero.html · se encima', labels: [], created_at: '2026-11-10T00:00:00Z', html_url: 'u12' },
+    { number: 13, title: '📌 amalaya · board · no me gustó', labels: [], created_at: '2026-11-10T00:00:00Z', html_url: 'u13' },
+    { number: 14, title: '📌 potenciales-yod/mixto.html · falta un dato', labels: [], created_at: '2026-11-10T00:00:00Z', html_url: 'u14' },
+    { number: 15, title: '📌 El plan no guarda', labels: [], created_at: '2026-11-10T00:00:00Z', html_url: 'u15' }] }) });
+  const e = Object.fromEntries((await E.leer()).filter(x => x.tipo === 'chinche').map(x => [x.clave.split('#')[1], x]));
+  const portal = mapa.repos['yodesarrollomx/yod-portal'].nodos, ppp = mapa.repos['yodesarrollomx/potenciales-yod'].nodos;
+  assert.deepEqual(e[11].nodos, portal); assert.match(e[11].msg, /^Chinche #11 en potenciales-yod \(sobre yod-portal\): /);
+  assert.deepEqual(e[12].nodos, portal, 'sin importar mayúsculas');
+  assert.deepEqual(e[13].nodos, ppp, 'un nombre que no es repositorio del grafo se queda donde está abierta'); assert.match(e[13].msg, /^Chinche #13 en potenciales-yod: /);
+  assert.deepEqual(e[14].nodos, ppp); assert.doesNotMatch(e[14].msg, /sobre/);
+  assert.deepEqual(e[15].nodos, ppp, 'sin la forma repositorio/vista se queda donde está abierta');
+  assert.equal(e[11].clave, 'chinche:yodesarrollomx/potenciales-yod#11', 'la clave sigue siendo la del repositorio donde está abierta');
 });
 
 test('las chinches abiertas cuentan; las que abrió el propio grafo y los PR no', async () => {
@@ -72,6 +134,15 @@ test('abre chinche sólo por flujos y páginas, en este repositorio y sin tocar 
   const post = pedidos.filter(p => p.metodo === 'POST'); assert.equal(post.length, 2);
   for (const p of post) { assert.match(p.url, /\/repos\/yodesarrollomx\/potenciales-yod\/issues$/); const b = JSON.parse(p.cuerpo); assert.match(b.title, /^📌 Grafo: /); assert.deepEqual(b.labels, ['chinche']); }
   assert.ok(pedidos.every(p => !/script\.google\.com/.test(p.url)), 'nunca toca un /exec');
+});
+
+test('no abre otra chinche si la del mismo error sigue abierta', async () => {
+  const pedidos = [], E = crear({ mapa, fetchImpl: api({ '/repos/yodesarrollomx/potenciales-yod/issues?state=open&labels=chinche': [{ number: 70, title: '📌 Grafo: Falló X' }] }, pedidos) });
+  await E.chinches([{ tipo: 'flujo', msg: 'Falló X', desde: 'd', url: 'u', nodos: ['n'] }, { tipo: 'flujo', msg: 'Falló Y', desde: 'd', url: 'u', nodos: ['n'] }, { tipo: 'flujo', msg: 'Falló Y', desde: 'd', url: 'u', nodos: ['n'] }]);
+  const post = pedidos.filter(p => p.metodo === 'POST');
+  assert.deepEqual(post.map(p => JSON.parse(p.cuerpo).title), ['📌 Grafo: Falló Y'], 'la de X ya existe y la de Y se abre una sola vez');
+  const nada = []; await crear({ mapa, fetchImpl: api({}, nada) }).chinches([{ tipo: 'chinche', msg: 'no' }, { tipo: 'cambio', msg: 'no' }]);
+  assert.deepEqual(nada, [], 'sin errores de flujo o de página no se pregunta nada');
 });
 
 /* ── el aviso de borrador se pone al día con lo que de verdad hay en GitHub ── */

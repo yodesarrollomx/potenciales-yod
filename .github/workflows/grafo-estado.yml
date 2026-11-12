@@ -1,25 +1,46 @@
 name: Grafo · estado
-# Cada hora revisa flujos, chinches, cambios y páginas de los repositorios del grafo (sólo lectura) y deja el
-# resultado en la rama de datos `grafo-datos`: la principal está protegida y no se escribe en ella.
-# También corre en cuanto se aprueba un grafo (cambia grafo/versiones.json en la principal), para no esperar a la hora.
+# Revisa flujos, chinches, cambios y páginas de los repositorios del grafo (sólo lectura) y deja el resultado en la
+# rama de datos `grafo-datos`: la principal está protegida y no se escribe en ella.
+# Cuándo corre:
+#  · por horario, dos veces cada hora. GitHub arranca los horarios cuando puede: el 12-nov-2026, recién instalado,
+#    corrió una sola vez en diez horas. Por eso no depende sólo del reloj:
+#  · en cuanto se aprueba un grafo (cambia grafo/versiones.json en la principal);
+#  · en cuanto termina en la principal una revisión de este repositorio: si falló, se pinta y se abre su chinche
+#    en ese momento; si volvió a pasar, se quita;
+#  · cuando aquí se abre, se cierra o se reabre una chinche.
 on:
   schedule:
     - cron: '17 * * * *'
+    - cron: '47 * * * *'
   push:
     branches: [main]
     paths:
       - 'grafo/versiones.json'
+  workflow_run:
+    workflows: ['Arquitectura YOD', 'Verificar acceso PPP', 'Verificar interfaz PPP']
+    types: [completed]
+    branches: [main]
+  issues:
+    types: [opened, closed, reopened]
   workflow_dispatch:
 permissions:
   contents: write
   issues: write
-concurrency:
-  group: grafo-datos
-  cancel-in-progress: false
 jobs:
   estado:
     name: Revisar errores y cambios (sólo lectura)
-    if: github.ref == 'refs/heads/main'
+    # Una revisión a la vez; si llegan varias seguidas, espera sólo la más nueva. Va en el trabajo y no en el flujo para
+    # que un aviso que se salta (un issue que no es chinche) no le quite el turno a una revisión que estaba esperando.
+    concurrency:
+      group: grafo-datos
+      cancel-in-progress: false
+    # Sólo desde la principal. De los avisos de issues, sólo las chinches; las que abre el propio grafo no avisan,
+    # porque GitHub no dispara flujos con lo que hace el robot del repositorio.
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name != 'issues' ||
+       startsWith(github.event.issue.title, '📌') ||
+       contains(join(github.event.issue.labels.*.name, ','), 'chinche'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

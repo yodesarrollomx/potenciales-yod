@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Grafo · estado. Lo corre cada hora el flujo .github/workflows/grafo-estado.yml.
+/* Grafo · estado. Lo corre el flujo .github/workflows/grafo-estado.yml: por horario y con lo que pasa en el repositorio.
    Sólo LEE (API pública de GitHub y GET a páginas estáticas): nunca toca un /exec ni una hoja.
    Escribe estado.json (lo que el grafo pinta en rojo o ámbar) y agrega a registro.jsonl cada error que aparece
    o se resuelve. La rama principal está protegida, así que los dos viven en la rama de datos `grafo-datos`:
@@ -23,68 +23,115 @@ function crear({ fetchImpl = fetch, ahora = () => new Date().toISOString(), mapa
     return r.json();
   }
   const suave = async (f, d) => { try { return await f(); } catch (e) { console.log('  aviso:', e.message); return d; } };
+  // Igual, pero dice si se pudo leer: «no hay errores» y «no se pudo saber» no son lo mismo.
+  const intento = async f => { try { return { ok: true, v: await f() }; } catch (e) { console.log('  aviso:', e.message); return { ok: false, v: null }; } };
 
   /* ¿Hubo cambios de verdad desde el commit con que se armó el grafo? Compara y descarta lo que el grafo mismo escribe. */
   async function cambio(repo, base, cabeza) {
     if (!base || cabeza.startsWith(base)) return false;
     let j;
-    try { j = await gh(`/repos/${repo}/compare/${base}...${cabeza}`); } catch (e) { return true; }   // commit desconocido: mejor avisar
+    try { j = await gh(`/repos/${repo}/compare/${base}...${cabeza}`); } catch (e) { return e.status === 404 ? true : null; }   // commit desconocido: mejor avisar · otro fallo: no se supo
     const propios = PROPIO[repo] || [], archivos = j.files || [];
     if (archivos.length >= 300) return true;
     return archivos.some(f => !propios.some(p => String(f.filename || '').startsWith(p)));
   }
 
-  async function leer() {
-    const errores = [];
+  /* Una chinche puede estar abierta en un repositorio y hablar de otro: la que se clava desde la pantalla lleva en el título
+     «📌 <repositorio>/<vista> · …» y el puente de la Sala las junta todas en el suyo. Si ese repositorio es del grafo, el error
+     se pinta ahí, que es donde pasó; si el título no nombra uno conocido, donde está abierta. */
+  function destinoChinche(titulo, repo) {
+    const m = /^\s*📌\s*([A-Za-z0-9._-]+)(?:\/[^\s·]*)?\s+·/u.exec(String(titulo || ''));
+    if (!m) return repo;
+    const nombre = m[1].toLowerCase(), dueno = repo.split('/')[0];
+    const iguales = Object.keys(mapa.repos).filter(k => k.split('/')[1].toLowerCase() === nombre);
+    return iguales.find(k => k.split('/')[0] === dueno) || iguales[0] || repo;
+  }
+
+  /* Lee todo. Regresa los errores y, aparte, lo que NO se pudo leer («tipo:repositorio»): eso no cuenta como resuelto. */
+  async function leerTodo() {
+    const errores = [], sinDato = [];
+    const desde = new Date(Date.parse(ahora()) - 45 * 864e5).toISOString().slice(0, 10);
     for (const [repo, m] of Object.entries(mapa.repos)) {
-      // 1 · flujos de GitHub cuyo último intento falló, con el paso donde tronó
-      const runs = await suave(() => gh(`/repos/${repo}/actions/runs?per_page=40&branch=main`), { workflow_runs: [] });
-      const ultimo = {};
-      for (const r of runs.workflow_runs || []) if (r.status === 'completed' && !ultimo[r.path]) ultimo[r.path] = r;
-      for (const [ruta, r] of Object.entries(ultimo)) {
+      // 1 · flujos de GitHub cuyo ÚLTIMO intento en la principal falló, con el paso donde tronó. Se pregunta por las
+      //     fallas y luego por la última corrida de ese flujo: mirar «las últimas N corridas» pierde una falla en cuanto
+      //     otros flujos corren N veces (el propio vigilante corre decenas de veces al día).
+      const candidatas = [];
+      for (const st of ['failure', 'timed_out']) {
+        const f = await intento(() => gh(`/repos/${repo}/actions/runs?branch=main&status=${st}&per_page=30&created=%3E%3D${desde}`));
+        if (!f.ok) { sinDato.push(`flujo:${repo}`); continue; }
+        candidatas.push(...((f.v && f.v.workflow_runs) || []));
+      }
+      const vistos = new Set();
+      for (const x of candidatas) {
+        const idf = String(x.workflow_id || x.path || ''); if (!idf || vistos.has(idf)) continue; vistos.add(idf);
+        let r = x;
+        if (x.workflow_id) {
+          const u = await intento(() => gh(`/repos/${repo}/actions/workflows/${x.workflow_id}/runs?branch=main&status=completed&per_page=1`));
+          if (!u.ok) { sinDato.push(`flujo:${repo}`); continue; }
+          r = ((u.v && u.v.workflow_runs) || [])[0] || x;
+        }
         if (r.conclusion !== 'failure' && r.conclusion !== 'timed_out') continue;
+        const ruta = r.path || x.path;
         const jobs = await suave(() => gh(`/repos/${repo}/actions/runs/${r.id}/jobs?per_page=30`), { jobs: [] });
-        const j = (jobs.jobs || []).find(x => x.conclusion === 'failure') || {}, paso = (j.steps || []).find(x => x.conclusion === 'failure') || {};
+        const j = (jobs.jobs || []).find(y => y.conclusion === 'failure') || {}, paso = (j.steps || []).find(y => y.conclusion === 'failure') || {};
         errores.push({ clave: `flujo:${repo}:${ruta}`, tipo: 'flujo', nodos: [m.flujos[ruta], ...m.nodos].filter(Boolean), desde: r.run_started_at, url: r.html_url,
           msg: `Falló el flujo «${r.name}» de ${repo.split('/')[1]}` + (j.name ? `, trabajo «${j.name}»` : '') + (paso.name ? `, paso ${paso.number} «${paso.name}»` : '') });
       }
       // 2 · chinches abiertas
-      const iss = await suave(() => gh(`/repos/${repo}/issues?state=open&per_page=50`), []);
-      for (const i of iss) {
+      const iss = await intento(() => gh(`/repos/${repo}/issues?state=open&per_page=100`));
+      if (!iss.ok) sinDato.push(`chinche:${repo}`);
+      for (const i of iss.v || []) {
         if (i.pull_request) continue;
         const etq = (i.labels || []).map(l => (l.name || '').toLowerCase());
         if (!etq.some(e => e.startsWith('chinche')) && !/^\s*(📌|chinche)/i.test(i.title || '')) continue;
         if (/^📌 Grafo:/.test(i.title)) continue;
-        errores.push({ clave: `chinche:${repo}#${i.number}`, tipo: 'chinche', nodos: m.nodos, desde: i.created_at, url: i.html_url, msg: `Chinche #${i.number} en ${repo.split('/')[1]}: ${String(i.title).slice(0, 110)}` });
+        const de = destinoChinche(i.title, repo);
+        errores.push({ clave: `chinche:${repo}#${i.number}`, tipo: 'chinche', nodos: mapa.repos[de].nodos, desde: i.created_at, url: i.html_url,
+          msg: `Chinche #${i.number} en ${repo.split('/')[1]}${de === repo ? '' : ` (sobre ${de.split('/')[1]})`}: ${String(i.title).slice(0, 110)}` });
       }
       // 3 · el repositorio cambió desde que se armó el grafo
-      const c = await suave(() => gh(`/repos/${repo}/commits?per_page=1`), []);
-      if (c[0] && m.commit && await cambio(repo, m.commit, c[0].sha)) errores.push({ clave: `cambio:${repo}`, tipo: 'cambio', nodos: m.nodos.slice(0, 1), desde: c[0].commit.committer.date, url: c[0].html_url,
+      const c = await intento(() => gh(`/repos/${repo}/commits?per_page=1`));
+      const cab = (c.v || [])[0], cambiado = c.ok && cab && m.commit ? await cambio(repo, m.commit, cab.sha) : false;
+      if (!c.ok || cambiado === null) sinDato.push(`cambio:${repo}`);
+      if (cambiado) errores.push({ clave: `cambio:${repo}`, tipo: 'cambio', nodos: m.nodos.slice(0, 1), desde: cab.commit.committer.date, url: cab.html_url,
         msg: `${repo.split('/')[1]} cambió después de armar el grafo (${String(mapa.armado || '').slice(0, 10)}); se refleja al rehacerlo` });
       // 4 · la página pública del repositorio responde
       const [dueno, nombre] = repo.split('/');
       if (dueno === 'yodesarrollomx' && !nombre.endsWith('.github.io')) {
         const url = `https://${dueno}.github.io/${nombre}/`;
-        const st = await suave(async () => (await fetchImpl(url, { redirect: 'follow' })).status, 0);
+        const pag = await intento(async () => (await fetchImpl(url, { redirect: 'follow' })).status), st = pag.v || 0;
+        if (!pag.ok) sinDato.push(`pagina:${repo}`);
         if (st && st !== 200 && st !== 404) errores.push({ clave: `pagina:${repo}`, tipo: 'pagina', nodos: m.nodos, desde: ahora(), url, msg: `La página de ${nombre} respondió ${st}` });
       }
     }
-    return errores;
+    return { errores, sinDato: [...new Set(sinDato)] };
   }
+  const leer = async () => (await leerTodo()).errores;
 
   /* Compara con el estado anterior: qué apareció y qué se resolvió. Regresa lo que hay que escribir. */
-  function conciliar(antes, errores) {
+  function conciliar(antes, leidos, sinDato = []) {
+    // Lo que esta vez no se pudo leer no está resuelto: sus errores de antes se conservan tal cual.
+    const sd = new Set(sinDato), deDonde = c => { const m = /^([a-z]+):([^:#]+)/.exec(String(c)); return m ? `${m[1]}:${m[2]}` : ''; };
+    const ya = new Set(leidos.map(x => x.clave)), errores = [...leidos, ...antes.filter(x => !ya.has(x.clave) && sd.has(deDonde(x.clave))).map(x => ({ ...x }))];
     const kA = new Map(antes.map(x => [x.clave, x])), kN = new Map(errores.map(x => [x.clave, x])), t = ahora();
     for (const x of errores) if (kA.has(x.clave)) x.desde = kA.get(x.clave).desde || x.desde;
     const nuevos = errores.filter(x => !kA.has(x.clave)), resueltos = antes.filter(x => !kN.has(x.clave));
     const lineas = [...nuevos.map(x => ({ cuando: t, que: 'aparece', ...x })), ...resueltos.map(x => ({ cuando: t, que: 'se resuelve', clave: x.clave, tipo: x.tipo, msg: x.msg, desde: x.desde }))];
     const igual = JSON.stringify(antes.map(x => x.clave).sort()) === JSON.stringify(errores.map(x => x.clave).sort());
-    return { nuevos, resueltos, lineas, igual, estado: { generado: t, errores } };
+    return { nuevos, resueltos, lineas, igual, estado: { generado: t, errores, ...(sd.size ? { sin_dato: [...sd].sort() } : {}) } };
   }
 
   async function chinches(nuevos) {
-    for (const x of nuevos.filter(x => x.tipo === 'flujo' || x.tipo === 'pagina')) {
-      await suave(() => gh(`/repos/${AQUI}/issues`, { method: 'POST', body: JSON.stringify({ title: '📌 Grafo: ' + x.msg.slice(0, 120), labels: ['chinche'],
+    const mios = nuevos.filter(x => x.tipo === 'flujo' || x.tipo === 'pagina');
+    if (!mios.length) return;
+    // Sin repetir: si el error se fue y volvió y su chinche sigue abierta, no se abre otra.
+    const abiertas = await suave(() => gh(`/repos/${AQUI}/issues?state=open&labels=chinche&per_page=100`), []);
+    const titulos = new Set((Array.isArray(abiertas) ? abiertas : []).map(i => String(i.title || '')));
+    for (const x of mios) {
+      const titulo = '📌 Grafo: ' + x.msg.slice(0, 120);
+      if (titulos.has(titulo)) continue;
+      titulos.add(titulo);
+      await suave(() => gh(`/repos/${AQUI}/issues`, { method: 'POST', body: JSON.stringify({ title: titulo, labels: ['chinche'],
         body: `El grafo del sistema detectó este error.\n\n- Qué: ${x.msg}\n- Desde: ${x.desde}\n- Evidencia: ${x.url}\n- Piezas del grafo: ${x.nodos.join(', ')}\n\nEn el registro del grafo queda anotado cuando el flujo vuelva a pasar.` }) }), null);
     }
   }
@@ -101,7 +148,7 @@ function crear({ fetchImpl = fetch, ahora = () => new Date().toISOString(), mapa
     }
     return { rama, pr, deRama };
   }
-  return { leer, conciliar, chinches, cambio, borradorEnGitHub };
+  return { leer, leerTodo, conciliar, chinches, cambio, borradorEnGitHub };
 }
 
 const RAMA_BORRADOR = 'grafo-borrador';
@@ -136,14 +183,15 @@ function reconciliarBorrador({ puntero, aprobado, rama, pr, deRama, repo, ahora 
 async function main() {
   const mapa = JSON.parse(fs.readFileSync(path.join(GRAFO, 'mapa-ids.json'), 'utf8'));
   const E = crear({ mapa });
-  const errores = await E.leer();
+  const { errores, sinDato } = await E.leerTodo();
   fs.mkdirSync(SALIDA, { recursive: true });
   const fEstado = path.join(SALIDA, 'estado.json'), fReg = path.join(SALIDA, 'registro.jsonl');
   const antes = (() => { try { return JSON.parse(fs.readFileSync(fEstado, 'utf8')).errores || []; } catch (e) { return []; } })();
-  const r = E.conciliar(antes, errores);
+  const r = E.conciliar(antes, errores, sinDato);
   if (r.lineas.length) fs.appendFileSync(fReg, r.lineas.map(l => JSON.stringify(l)).join('\n') + '\n');
-  if (!r.igual || !fs.existsSync(fEstado)) fs.writeFileSync(fEstado, JSON.stringify(r.estado, null, 1) + '\n');
-  console.log(`errores ${errores.length} · nuevos ${r.nuevos.length} · resueltos ${r.resueltos.length}`);
+  // Siempre se escribe: «generado» es la hora de la ÚLTIMA REVISIÓN (lo que la página enseña como «revisado»), haya o no cambios.
+  fs.writeFileSync(fEstado, JSON.stringify(r.estado, null, 1) + '\n');
+  console.log(`errores ${r.estado.errores.length} · nuevos ${r.nuevos.length} · resueltos ${r.resueltos.length} · sin dato ${sinDato.length}` + (sinDato.length ? ' (' + sinDato.join(', ') + ')' : ''));
   if (ABRIR && TOKEN) await E.chinches(r.nuevos);
   // el aviso de borrador, al día con GitHub
   const fBorr = path.join(SALIDA, 'borrador.json'), lee = f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { return null; } };
