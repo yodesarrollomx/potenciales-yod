@@ -104,12 +104,13 @@ la huella de la versión (`Resumen!v2.huella`, la que corresponda) en la columna
 evidencia de hoy (`plan.evidencia`) en la columna I de esos votos. Sólo vale si la versión no cambió
 desde entonces.
 
-**Renglones de las pestañas.** Una hoja de Google nace con 1 000 renglones. El servidor agrega los que
-necesita en `Rondas`, `Pruebas` y `Bitácora`; el plan en su forma virtual escribe votos y hallazgos
-con la API de Google Sheets, que **no** escribe debajo del último renglón. Al poner al día un libro (y
-en la plantilla que copian los planes nuevos) conviene dejar `Consejo` y `Rondas` con 5 004 renglones,
-`Pruebas` con 20 013, `Hallazgos` con 2 004 y `Bitácora` con 5 000: en Sheets, al final de la pestaña,
-«Agregar N filas». Las fórmulas del ciclo funcionan con cualquier tamaño de hoja.
+**Renglones de las pestañas.** Una hoja de Google nace con 1 000 renglones y **no hace falta
+agrandarla**. Las fórmulas del ciclo funcionan con cualquier tamaño de hoja y sólo leen los renglones
+que la hoja tiene (con más renglones vacíos cada recálculo de la ronda tarda más). El servidor agrega
+los que necesita en `Rondas`, `Pruebas` y `Bitácora`. El plan en su forma virtual escribe votos y
+hallazgos con la API de Google Sheets, que **no** escribe debajo del último renglón: con 1 000 hay lugar
+para unas 140 sesiones del consejo. Si `Consejo` o `Hallazgos` se llenan, se agregan renglones al final
+de la pestaña («Agregar N filas»).
 
 ## Revertir
 

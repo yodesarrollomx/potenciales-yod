@@ -282,7 +282,18 @@ function cicloDe(e) {
     votaron: ses ? ses.votaron : 0, aprobada: !!(ses && ses.aprobada), sin_mejora: sinMejora, paso, vigente: vig, vigente_aprobada: !!(sv && sv.aprobada),
     evidencia_sesion: ses ? ses.evidencia : '', sin_leer: sinLeer };
 }
-const TEXTO_PASO = { explorar: 'mover capital y arranque de obra para proponer algo mejor', mundo: 'conseguir lo que pidió el consejo (candados y datos): moviendo capital y arranque de obra ya no mejora' };
+/* Lo mismo que dice el libro en Plan!B39 para cada paso (ppp2/libro/generar.py, ciclo_plan). */
+const TEXTO_PASO = {
+  datos: () => 'capturar los datos que faltan para calcular',
+  explorar: () => 'mover capital y arranque de obra para proponer algo mejor',
+  proponer: () => 'armar una propuesta que pase la revisión para fondos (moviendo sólo capital y arranque de obra no alcanza)',
+  probar: (t) => 'probar la V' + t + ' contra los golpes (pruebas de estrés)',
+  consejo: (t) => 'presentar la V' + t + ' al consejo de planes',
+  direccion: (t) => 'que Dirección decida si la V' + t + ', que el consejo aprobó, queda vigente',
+  mundo: () => 'conseguir lo que pidió el consejo (candados y datos): moviendo capital y arranque de obra ya no mejora',
+  candados: () => 'cerrar los candados',
+  acuerdo: () => 'firmar el acuerdo con el dueño'
+};
 /* Además del juguete, hace lo que en el libro real hacen las fórmulas del ciclo: qué versión defiende el plan
    y cuál es su siguiente paso (cicloDe). */
 function jugueteConCiclo(libro) {
@@ -300,7 +311,10 @@ function jugueteConCiclo(libro) {
   pon('plan.consejo_sesion', c.sesion); pon('plan.consejo_aprueban', c.aprueban); pon('plan.consejo_votaron', c.votaron); pon('plan.consejo_vetos', c.vetos);
   pon('plan.consejo_aprobada', c.aprobada); pon('plan.sin_mejora', c.sin_mejora); pon('plan.evidencia_sesion', c.evidencia_sesion); pon('plan.consejo_sin_leer', c.sin_leer);
   pon('plan.paso', c.paso);
-  pon('plan.paso_texto', TEXTO_PASO[c.paso] || c.paso);
+  const texto = TEXTO_PASO[c.paso] ? TEXTO_PASO[c.paso](c.defiende) : 'nada: plan cumplido';
+  pon('plan.paso_texto', texto);
+  // «Para crecer falta» de una plántula nombra el siguiente paso (Plan!B5): se pone al día igual que en el libro
+  pon('plan.para_crecer', String(lee('plan.para_crecer') || '').replace(/Siguiente paso: .*?\. Datos sin resolver/, 'Siguiente paso: ' + texto + '. Datos sin resolver'));
 }
 
 /* «El libro real» para la ronda: tests/fixtures/ppp2-rejilla.json trae lo que la plantilla real, recalculada por

@@ -155,8 +155,8 @@ para regresarla: quien la quiera de vuelta captura esas palancas otra vez.
   libro lento no deja sin turno a los demás.
 - Una hoja de Google nace con 1 000 renglones. El servidor agrega los que le hagan falta en
   `Rondas`, `Pruebas` y `Bitácora`. `Consejo` y `Hallazgos` los escribe el plan en su forma virtual,
-  que no puede escribir debajo del último renglón de la hoja: esas pestañas deben tener renglones de
-  sobra (ver `server/ppp2/INSTALAR.md`, «Libros creados antes del ciclo»).
+  que no puede escribir debajo del último renglón de la hoja: con 1 000 renglones hay lugar para unas
+  140 sesiones; si se llenan, se agregan renglones (ver `server/ppp2/INSTALAR.md`).
 
 ## La huella: de qué números se está hablando
 
