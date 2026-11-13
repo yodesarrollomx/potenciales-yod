@@ -1,16 +1,18 @@
 {
   "model_revision": "2026-11-12.ppp2.1",
   "proposal_id": "CHG-GRAFO-ACCESOS-20261111",
-  "summary": "Grafo: se endurece la vista previa del borrador en la portada (grafo/index.html). Sólo enseña la rama grafo-borrador (cualquier otro valor de ?rama= muestra lo publicado), la lámina traída se dibuja en un marco con sandbox que no le da el origen de la página, la portada sólo escucha mensajes de su marco y la lista de láminas del borrador sólo acepta nombres de lámina. Cambia el motor (grafo-motor/laminas.py) y se regenera la portada; las láminas, los datos del grafo, accesos.html, grafo-control.js, el Portero y los backends no cambian.",
+  "summary": "Integración de las correcciones del grafo del 12-nov-2026 (equipo de agentes, auditadas por separado), en un solo cambio: (1) vista previa del borrador endurecida (PR 89); (2) el grafo sólo refleja repositorios públicos, DEC-19 también en textos y propuestas del atlas, láminas con noindex y textos sin el nombre de lo excluido (PR 90); (3) Accesos espera hasta 30 s al Portero y reintenta una vez sin mostrar nada privado (PR 88); (4) el vigilante no promete «cada hora» y no repite chinches cuando un flujo falla, pasa y vuelve a fallar (PR 87); (5) aprobar con un toque si el repositorio tiene los secretos de una GitHub App propia del grafo, inerte sin ellos (PR 86, DEC-21). Además: pasos para instalar la App, textos sin «cada hora» y la decisión de Dirección sobre claves PRJ y nombres de proyecto. Sin cambios en portero.js, backend, hojas ni permisos.",
   "components": [
-    "SYS-POTENCIALES"
+    "SYS-POTENCIALES",
+    "SYS-CONTROL"
   ],
   "tests": [
-    "python3 -m unittest discover -s grafo-motor/pruebas -p 'prueba_*.py' (nueva VistaPreviaDelBorrador: sólo la rama del borrador y marco aislado).",
-    "node --test tests/grafo-estado.test.cjs tests/grafo-control.test.cjs",
-    "node tests/grafo-accesos-browser.cjs (nuevo recorrido vista-previa en Chromium y móvil: otras ramas no piden nada crudo; en el borrador la lámina se dibuja, navega por postMessage y no alcanza el almacenamiento del navegador).",
-    "Láminas publicadas idénticas a las que genera la base (python3 grafo-motor/rehacer.py inicial).",
-    "verificar-impacto contra el atlas fijado."
+    "python3 -m unittest discover -s grafo-motor/pruebas -p 'prueba_*.py'",
+    "node --test tests/grafo-estado.test.cjs tests/grafo-control.test.cjs tests/accesos-admin-session.test.cjs tests/access-gates.cjs",
+    "node tests/grafo-accesos-browser.cjs (vista previa aislada y Portero lento incluidos)",
+    "actionlint .github/workflows/grafo-*.yml",
+    "python3 grafo-motor/rehacer.py inicial: lo publicado coincide con lo que genera el motor",
+    "verificar-impacto contra el atlas fijado (bb97266)"
   ],
-  "rollback": "Revertir el merge de este PR: la portada vuelve a la versión anterior; no hay datos, hojas ni backend que deshacer."
+  "rollback": "Revertir el PR de integración; el grafo aprobado sigue siendo G-20261112-1420 y la App no cambia nada mientras no existan sus secretos."
 }

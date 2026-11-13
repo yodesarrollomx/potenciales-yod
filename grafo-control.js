@@ -93,7 +93,7 @@
           '<p class="gc-nota">Se arman con el grafo aprobado y el plan guardado de cada caso. <a href="' + PRESENTAR + '" target="_blank" rel="noopener">Abrir presentación desde el grafo ↗</a></p></details>' +
         '<details class="gc-det"><summary>Registro</summary>' + (datos.registro.length ? '<ul class="gc-reg">' + datos.registro.map(l =>
           '<li><span>' + esc(hora(l.cuando)) + '</span> <b>' + esc(QUE[l.que] || l.que || '') + '</b> ' + esc(l.id || l.msg || '') + (l.por ? ' · ' + esc(l.por) : '') + (l.ia ? ' · IA ' + esc(l.ia) : '') + '</li>').join('') + '</ul>'
-          : '<p class="gc-nota">Aún no hay movimientos. El primero aparece cuando corra la revisión de cada hora.</p>') + '</details>';
+          : '<p class="gc-nota">Aún no hay movimientos. El primero aparece cuando corra la siguiente revisión.</p>') + '</details>';
     }
     function alClic(e) {
       const t = e.target && e.target.closest ? e.target.closest('[data-gc]') : null; if (!t) return;
