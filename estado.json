@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-13T03:00:50.784Z",
+ "generado": "2026-11-13T03:09:06.718Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -20,18 +20,6 @@
    "desde": "2026-11-13T02:10:58Z",
    "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/cdc1a4c7f1e81c1059ee6fbe1558d62d4aa8704f",
    "msg": "potenciales-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
-  },
-  {
-   "clave": "flujo:yodesarrollomx/yodesarrollo-board:.github/workflows/arquitectura.yml",
-   "tipo": "flujo",
-   "nodos": [
-    "yodesarrollo-board::github_workflows_arquitectura",
-    "repo:yodesarrollomx/yodesarrollo-board",
-    "SYS-INVERSION"
-   ],
-   "desde": "2026-11-13T01:42:00Z",
-   "url": "https://github.com/yodesarrollomx/yodesarrollo-board/actions/runs/43346847623",
-   "msg": "Falló el flujo «Arquitectura YOD» de yodesarrollo-board, trabajo «Arquitectura YOD», paso 10 «Presentación con fuente pública validada»"
   },
   {
    "clave": "cambio:yodesarrollomx/yodesarrollo-board",
