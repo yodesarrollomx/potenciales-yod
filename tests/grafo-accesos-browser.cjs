@@ -22,7 +22,7 @@ async function run(){
     for(const [nombre,tipo,viewport] of [['Chromium',chromium,{width:1280,height:800}],['WebKit móvil',webkit,{width:390,height:844}]]){
       const browser=await tipo.launch({headless:true});
       try{
-        for(const modo of ['admin','sin-admin','lista-falla']){
+        for(const modo of ['admin','sin-admin','lista-falla','vista-previa']){
           const ctx=await browser.newContext({viewport});ctx.setDefaultTimeout(20000);
           // Este guion corre en CADA documento del contexto, también en los marcos y en about:blank. La sesión sintética se siembra
           // una sola vez y sólo en la página: si se sembrara siempre, al apagarse el grafo (su marco se vacía y pasa por about:blank)
@@ -58,6 +58,42 @@ async function run(){
             assert.ok(!/script\.google\.com|openai\.com|anthropic\.com/.test(u.hostname),'destino prohibido: '+u.hostname);
             return da('',req.resourceType()==='stylesheet'?'text/css':'text/javascript');
           });
+          if(modo==='vista-previa'){
+            // La portada sólo trae de GitHub la rama del borrador; cualquier otro valor de ?rama= enseña lo publicado y no pide nada crudo.
+            const crudos=(desde=0)=>pedidos.slice(desde).filter(p=>p.url.startsWith('https://raw.githubusercontent.com/')&&!/\/grafo-datos\/estado\.json(\?|$)/.test(p.url)).map(p=>p.url);
+            for(const rama of ['main','b4c3a7a0b4c3a7a0b4c3a7a0b4c3a7a0b4c3a7a0','grafo-borrador-otra','../grafo-borrador','grafo-borrador/../main']){
+              const antes=pedidos.length;
+              await page.goto(origen+'/grafo/index.html?rama='+encodeURIComponent(rama),{waitUntil:'domcontentloaded'});
+              await page.frameLocator('#marco').locator('canvas').first().waitFor();
+              assert.equal(await page.locator('#borr').isVisible(),false,rama);assert.equal(await page.locator('#marco').getAttribute('src'),'mapa.html',rama);
+              assert.deepEqual(crudos(antes),[],'con ?rama='+rama+' no se trae nada de GitHub');
+            }
+            assert.deepEqual(crudos(),[],'sólo el borrador se trae de GitHub');
+            // El borrador: su lámina se dibuja en un marco aislado. Su código corre, pero no alcanza lo guardado por los tableros.
+            await page.goto(origen+'/grafo/index.html?rama=grafo-borrador',{waitUntil:'domcontentloaded'});
+            await page.locator('#borr').waitFor({state:'visible'});await page.frameLocator('#marco').locator('canvas').first().waitFor();
+            assert.equal(await page.locator('#marco').getAttribute('sandbox'),'allow-scripts allow-popups');
+            assert.ok(crudos().some(u=>u.includes('/grafo-borrador/grafo/mapa.html')),'la lámina del borrador se trae de su rama');
+            assert.ok(crudos().every(u=>u.startsWith('https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/grafo-borrador/grafo/')),'nada fuera de grafo/ del borrador');
+            assert.equal(await page.evaluate(()=>localStorage.getItem('pyod_clave_v1')),'synthetic-session-never-real');
+            await page.evaluate(()=>{document.cookie='qa_galleta=sintetica; path=/';});assert.match(await page.evaluate(()=>document.cookie),/qa_galleta=sintetica/);
+            const lam=await (await page.locator('#marco').elementHandle()).contentFrame();
+            const intento=await lam.evaluate(()=>{const n=f=>{try{f();return 'leyó';}catch(e){return e.name;}};
+              // Chromium niega la galleta con SecurityError; WebKit la deja vacía. Cualquiera de las dos: no alcanza la de la página.
+              let galleta;try{galleta=document.cookie.includes('qa_galleta')?'leyó':'sin galleta';}catch(e){galleta='sin galleta';}
+              return {origen:self.origin,propio:n(()=>localStorage.getItem('pyod_clave_v1')),sesion:n(()=>sessionStorage.length),galleta,padre:n(()=>parent.localStorage.getItem('pyod_clave_v1'))};});
+            assert.deepEqual(intento,{origen:'null',propio:'SecurityError',sesion:'SecurityError',galleta:'sin galleta',padre:'SecurityError'});
+            // …y sigue funcionando: la lámina pide a la portada ir a otra (postMessage) y la portada la trae del borrador.
+            await lam.evaluate(()=>parent.postMessage({yod:2,ir:'tablero-ppp',nodo:''},'*'));
+            await page.waitForFunction(()=>document.querySelector('#sel').value==='tablero-ppp');await page.frameLocator('#marco').locator('canvas').first().waitFor();
+            assert.ok(crudos().some(u=>u.includes('/grafo-borrador/grafo/tablero-ppp.html')));
+            // un mensaje que no viene de la lámina se ignora
+            await page.evaluate(()=>window.postMessage({yod:2,ir:'mapa',nodo:''},'*'));await page.waitForTimeout(300);
+            assert.equal(await page.locator('#sel').inputValue(),'tablero-ppp');
+            assert.deepEqual(errores,[]);assert.ok(pedidos.every(p=>p.metodo==='GET'));
+            assert.ok(pedidos.every(p=>!p.url.includes('synthetic-session')),'la sesión no viaja a ningún lado');
+            recorridos++;await ctx.close();continue;
+          }
           await page.goto(origen+'/accesos.html',{waitUntil:'domcontentloaded'});
           const sec=page.locator('#grafo-sistema'),caja=page.locator('#grafoControl'),marco=page.frameLocator('#grafoMarco'),lamina=marco.frameLocator('#marco');
           const cabe=()=>page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2);
@@ -123,7 +159,7 @@ async function run(){
           recorridos++;await ctx.close();
         }
       }finally{await browser.close();}
-      console.log(nombre+': aprobado, borrador con su pregunta, vista previa sin publicar, dejar en borrador, pedido de rehacer, registro, apagado sin sesión y grafo visible aunque la lista no llegue correctos');
+      console.log(nombre+': aprobado, borrador con su pregunta, vista previa sin publicar y aislada (sólo la rama del borrador), dejar en borrador, pedido de rehacer, registro, apagado sin sesión y grafo visible aunque la lista no llegue correctos');
     }
   }finally{await new Promise(r=>server.close(r));}
   console.log('GRAFO_ACCESOS: '+recorridos+' recorridos; Portero, rama de datos y borrador exclusivamente sintéticos');
