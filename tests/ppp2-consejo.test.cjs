@@ -319,3 +319,24 @@ test('la razón de prueba del mundo es larga para contar como razón', () => {
   assert.ok(RAZON_PRUEBA.length >= 20);
   assert.ok(mundo);
 });
+
+test('con mucha historia en el libro, el consejo lee las pruebas y la sesión más recientes (están al final)', () => {
+  const w = enConsejo({ ia: jueces() });
+  w.propiedades.set('ANTHROPIC_API_KEY', CLAVE);
+  const pru = w.libro.getSheetByName('Pruebas'), viejas = [];
+  const actual = pru.v[13].slice();
+  for (let i = 0; i < 1500; i++) viejas.push(['Corrida vieja ' + i, '(sin cambios)', 1, 0, 1, 1, 37, 'V2', '2026-01-01 10:00', 'Pruebas', 'h-vieja']);
+  pru.getRange(14, 1, viejas.length, 11).setValues(viejas);
+  pru.getRange(14 + viejas.length, 1, 1, 11).setValues([actual]);
+  const con = w.libro.getSheetByName('Consejo');
+  for (let i = 0; i < 800; i++) con.appendRow(['2026-01-01', 'CP-' + (1 + Math.floor(i / 7)), 'V1', 'Juez ' + (i % 7), 'regresa', 'Razón vieja de prueba suficientemente larga.', 'Vieja', 'h-vieja', 'e-vieja']);
+  w.ctx.SpreadsheetApp.flush();
+  assert.equal(w.lee('plan.paso'), 'consejo');
+  const r = convoca(w);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.sesion, 'CP-' + (Math.floor(799 / 7) + 2), 'nombre nuevo, uno más que la mayor que existe');
+  const texto = w.iaPedidos[0].cuerpo.messages[0].content[0].text;
+  const exp = JSON.parse(texto.slice(texto.indexOf('{'), texto.lastIndexOf('}') + 1));
+  assert.equal(exp.pruebas_de_estres.length, 1, 'encuentra las pruebas de estos números al final de la pestaña');
+  assert.equal(exp.sesion_anterior_del_consejo[0].sesion, 'CP-' + (Math.floor(799 / 7) + 1), 'la sesión anterior es la del último renglón');
+});

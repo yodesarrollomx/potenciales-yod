@@ -1206,18 +1206,20 @@ function jsonDe_(t) {
   if (a < 0 || b <= a) return null;
   try { return JSON.parse(t.slice(a, b + 1)); } catch (e) { return null; }
 }
-/* Lo que dice una hoja tal como se ve en el libro (con sus unidades y su formato), sin renglones vacíos. */
-function vista_(libro, nombre, fila0, ncols, filas) {
+/* Lo que dice una hoja tal como se ve en el libro (con sus unidades y su formato), sin renglones vacíos.
+   Con `desdeAbajo`, los últimos `filas` renglones: lo más reciente (pruebas, votos, rondas) está al final. */
+function vista_(libro, nombre, fila0, ncols, filas, desdeAbajo) {
   var h = libro.getSheetByName(nombre);
   if (!h) return [];
-  var n = Math.min(h.getLastRow() - fila0 + 1, filas || 400);
+  var ultima = h.getLastRow(), n = ultima - fila0 + 1;
   if (n < 1) return [];
-  return h.getRange(fila0, 1, n, Math.min(ncols, h.getMaxColumns())).getDisplayValues()
+  var cuantas = Math.min(n, filas || 2000), desde = desdeAbajo ? ultima - cuantas + 1 : fila0;
+  return h.getRange(desde, 1, cuantas, Math.min(ncols, h.getMaxColumns())).getDisplayValues()
     .map(function (f) { return f.map(function (x) { return String(x == null ? '' : x).replace(/\s+/g, ' ').trim(); }); })
     .filter(function (f) { return f.some(function (x) { return x !== ''; }); });
 }
 function pruebasDe_(libro, t, huella) {
-  return vista_(libro, 'Pruebas', 14, 11).filter(function (f) { return String(f[7]).toUpperCase() === 'V' + t && f[10] === huella; });
+  return vista_(libro, 'Pruebas', 14, 11, 1300, true).filter(function (f) { return String(f[7]).toUpperCase() === 'V' + t && f[10] === huella; });
 }
 /* El expediente que lee cada juez: lo que el libro calculó para la versión que el plan defiende (y la vigente,
    para comparar), sus pruebas de estrés con esos mismos números y la evidencia que hay hoy. */
@@ -1230,7 +1232,7 @@ function expediente_(libro, r, t, pruebas) {
     version.push(f[1] + ': V' + t + ' ' + v + (otra ? ' · V' + otra + ' (vigente) ' + w : ''));
   });
   var corta = function (x, n) { x = String(x || ''); return x.length > n ? x.slice(0, n - 1) + '…' : x; };
-  var cons = vista_(libro, 'Consejo', 5, 9), ultima = cons.length ? cons[cons.length - 1][1] : '';
+  var cons = vista_(libro, 'Consejo', 5, 9, 700, true), ultima = cons.length ? cons[cons.length - 1][1] : '';
   var exp = {
     plan: { nombre: r['plan.nombre'] || '', edad: r['plan.edad'] || '', defiende: 'V' + t, vigente: vig ? 'V' + vig : 'ninguna', paso: r['plan.paso_texto'] || '' },
     version: version,
@@ -1240,12 +1242,12 @@ function expediente_(libro, r, t, pruebas) {
     datos: vista_(libro, 'Datos', 5, 10).filter(function (f) { return /^[a-z]+\.[a-z0-9_]+$/.test(f[0]); })
       .map(function (f) { return { dato: f[1], valor: f[2] + (f[3] && f[3] !== 'texto' ? ' ' + f[3] : ''), estado: f[4], fuente: corta(f[5], 160) }; }),
     candados: vista_(libro, 'Candados', 5, 9).filter(function (f) { return f[0]; }).map(function (f) { return { candado: f[1], lo_cierra: corta(f[2], 200), estado: f[3], evidencia: corta(f[4], 200) }; }),
-    hallazgos: vista_(libro, 'Hallazgos', 5, 9).filter(function (f) { return f[1] && low_(f[6]) !== 'descartado'; })
+    hallazgos: vista_(libro, 'Hallazgos', 5, 9, 200, true).filter(function (f) { return f[1] && low_(f[6]) !== 'descartado'; })
       .map(function (f) { return { tema: f[1], hallazgo: corta(f[2], 400), fuente: corta(f[3], 160), confianza: f[4], estado: f[6] }; }),
     preguntas_respondidas: vista_(libro, 'Preguntas', 5, 9).filter(function (f) { return f[0] && f[7] && ['respondida', 'en conflicto', 'no se sabe'].indexOf(low_(f[6])) >= 0; })
       .map(function (f) { return { pregunta: f[2], estado: f[6], respuesta: corta(f[7], 300), fuente: corta(f[8], 120) }; }),
     sesion_anterior_del_consejo: cons.filter(function (f) { return f[1] === ultima; }).map(function (f) { return { sesion: f[1], version: f[2], juez: f[3], voto: f[4], razon: corta(f[5], 500), condicion: corta(f[6], 300) }; }),
-    rondas_recientes: vista_(libro, 'Rondas', 5, 11).slice(-3).map(function (f) { return { ronda: f[0], parte_de: 'V' + f[3], motivo: f[5], resultado: f[6], propuesta_en: f[7] ? 'V' + f[7] : '', que_cambia: corta(f[9], 500) }; })
+    rondas_recientes: vista_(libro, 'Rondas', 5, 11, 20, true).slice(-3).map(function (f) { return { ronda: f[0], parte_de: 'V' + f[3], motivo: f[5], resultado: f[6], propuesta_en: f[7] ? 'V' + f[7] : '', que_cambia: corta(f[9], 500) }; })
   };
   // si no cabe, primero se recortan los textos largos de la evidencia; las cifras de la versión no se tocan
   var quita = ['hallazgos', 'preguntas_respondidas', 'datos', 'reparto'];
@@ -1428,7 +1430,7 @@ function contextoPlan_(libro, r) {
 /* Investiga y anota: escribe en Hallazgos (estado «propuesto») y deja renglón en la bitácora. */
 function investigaYAnota_(s, libro, motor, temas, rev, rid, origen) {
   var r = resumen_(libro);
-  var ya = vista_(libro, 'Hallazgos', 5, 9).filter(function (f) { return f[1]; }).map(function (f) { return '- ' + f[1] + ': ' + f[2].slice(0, 160) + ' (' + f[3].slice(0, 120) + ')'; });
+  var ya = vista_(libro, 'Hallazgos', 5, 9, 200, true).filter(function (f) { return f[1]; }).map(function (f) { return '- ' + f[1] + ': ' + f[2].slice(0, 160) + ' (' + f[3].slice(0, 120) + ')'; });
   var sistema = 'Eres un plan de potencial de YoDesarrollo, una desarrolladora inmobiliaria de Hermosillo, Sonora, y te toca investigar con búsqueda en la web lo que te falta. ' +
     'Busca fuentes oficiales o primarias (gobierno municipal o estatal, boletín oficial, organismos operadores, Banco de México, bancos y publicaciones con fecha). ' +
     'De la lista de pendientes, avanza los que se puedan con información pública: normativa, requisitos y pasos de un trámite, tasas publicadas, precios publicados de la zona. Lo que sólo puede entregar una persona (escrituras, cartas firmadas, presupuestos privados) no se investiga. ' +
@@ -1460,7 +1462,7 @@ function pendientesMundo_(libro, r) {
   vista_(libro, 'Candados', 5, 9).forEach(function (f) { if (f[0] && ['cerrado', 'no aplica'].indexOf(low_(f[3])) < 0) temas.push('Candado «' + f[1] + '»: lo cierra ' + f[2].slice(0, 220)); });
   // lo que pidió el consejo en su última sesión: una condición que piden varios jueces va una sola vez, con sus nombres
   var ses = String(r['plan.consejo_sesion'] || ''), quien = {}, orden = [];
-  if (ses) vista_(libro, 'Consejo', 5, 9).forEach(function (f) {
+  if (ses) vista_(libro, 'Consejo', 5, 9, 700, true).forEach(function (f) {
     if (f[1] !== ses || !f[6]) return;
     var c = f[6].slice(0, 260);
     if (!quien[c]) { quien[c] = []; orden.push(c); }
