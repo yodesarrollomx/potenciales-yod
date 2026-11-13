@@ -226,6 +226,20 @@ test('si la columna Prueba no vuelve a su estado, la corrida no se anota', () =>
   assert.match(String(bit.v[bit.getLastRow() - 1][2]), /NO anotadas/);
 });
 
+test('cuando la pestaña Pruebas se llena, las pruebas agregan renglones en vez de tronar', () => {
+  /* Una hoja nace con 1000 renglones y getRange no la agranda. Cada corrida anota unos 13 renglones:
+     sin agregar renglones, la corrida 76 tronaba al anotar y el plan se quedaba para siempre en «probar». */
+  const w = mundo();
+  const pru = w.libro.getSheetByName('Pruebas');
+  pru.tope = pru.getLastRow() + 3;                       // caben 3 renglones más y la corrida anota más de 10
+  const tope = pru.tope;
+  const r = w.post({ k: EDITOR, tipo: 'ppp2-estres', plan: PLAN, version: 2 });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.ok(pru.tope > tope, 'la hoja creció');
+  assert.equal(pru.getLastRow(), tope - 3 + r.resultados.length, 'todos los renglones quedaron anotados');
+  assert.ok(pru.getLastRow() <= pru.tope);
+});
+
 test('una fecha con hora conserva la hora (dos corridas del mismo día no se mezclan)', () => {
   const w = mundo({ fechasReales: true });
   // la fecha se crea dentro del contexto del servidor, como la regresa Sheets

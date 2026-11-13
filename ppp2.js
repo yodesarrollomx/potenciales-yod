@@ -26,11 +26,25 @@
     revision: 'Alguien más cambió el plan mientras lo veías; ya cargué lo más reciente.', valor: 'Ese valor no es válido para este dato.',
     respuesta: 'Escribe la respuesta antes de guardarla.', evidencia: 'Para cerrar un candado escribe la evidencia.',
     pausa: 'El servidor está en mantenimiento: sólo se puede leer.', ocupado: 'El libro está ocupado; intenta en unos segundos.',
+    trabajando: 'Hay un plan corriendo una ronda o unas pruebas y el servidor atiende de uno en uno; tarda unos minutos. Vuelve a intentarlo cuando termine.',
     board: 'Tu acceso no incluye Potenciales.', portero: 'No pude validar tu sesión con el Portero; intenta de nuevo.',
     plan: 'Ese plan no existe o está archivado.', calculado: 'Ese renglón lo calcula el libro; no se captura.',
-    prueba: 'Las pruebas no se anotaron: la columna Prueba del libro no volvió a su estado. Quedó en la bitácora.'
+    prueba: 'Las pruebas no se anotaron: la columna Prueba del libro no volvió a su estado. Quedó en la bitácora.',
+    paso: 'El libro dice que ahora no toca mover capital ni arranque de obra; recarga para ver el siguiente paso.',
+    sin_lugar: 'No tengo una versión donde escribir mi propuesta: la base y la vigente no las toco, ni el trabajo de una persona si nadie me lo presta.',
+    tiempo: 'Mi libro va lento y no alcancé a probar todas las combinaciones. No cambié nada y guardé lo que llevo: vuelve a pedirme la ronda para continuar.',
+    cambio: 'Mi libro cambió mientras corría la ronda: lo que había leído ya no era cierto. No cambié nada; vuelve a pedirme la ronda.',
+    lectura: 'No pude leer mi libro bajo uno de los golpes (da un error). No cambié nada: hay que revisar el libro.',
+    rejilla: 'No hay combinaciones de capital y arranque de obra que probar alrededor de esta versión.',
+    calcula: 'La versión de partida todavía no calcula: faltan datos.',
+    modelo: 'A este libro le falta algo que la ronda necesita (las palancas de capital y de arranque de obra, o el paso de capital): hay que ponerlo al día con la plantilla.'
   };
 
+  /* El plan es el autón: no hay un agente aparte. Esta página, su libro y sus herramientas SON el plan,
+     por eso aquí habla en primera persona. Lo que dice sale de lo que calculó su libro (ciclo.paso). */
+  /* Avisos que no se quitan solos: lo que no se arregla repitiendo enseguida se queda a la vista hasta que se toque. */
+  var FIJOS = ['tiempo', 'trabajando', 'cambio', 'lectura', 'sin_lugar', 'modelo', 'rejilla', 'prueba', 'paso', 'pausa'];
+  var CICLO = [['explorar', 'Muevo capital y arranque'], ['probar', 'Me pruebo contra los golpes'], ['consejo', 'Me defiendo ante el consejo'], ['direccion', 'Dirección decide']];
   var estado = { vivero: null, plan: null, planId: '', pestana: 'versiones', version: 0, ocupado: false };
   var raiz = document.getElementById('ppp2');
 
@@ -74,6 +88,7 @@
     var el = document.getElementById('p2Toast');
     if (!el) return;
     el.textContent = t; el.hidden = false;
+    el.onclick = function () { el.hidden = true; };         // un toque lo cierra
     clearTimeout(toastT);
     if (!fijo) toastT = setTimeout(function () { el.hidden = true; }, 4200);
   }
@@ -104,7 +119,8 @@
     if (h[0] === 'plan' && /^p2[a-z0-9]{6,20}$/.test(h[1] || '')) {
       var cambio = estado.planId !== h[1];
       estado.planId = h[1];
-      estado.pestana = ['versiones', 'preguntas', 'auton', 'bitacora'].indexOf(h[2]) >= 0 ? h[2] : 'versiones';
+      var pes = h[2] === 'auton' ? 'rondas' : h[2];
+      estado.pestana = ['versiones', 'preguntas', 'rondas', 'bitacora'].indexOf(pes) >= 0 ? pes : 'versiones';
       if (cambio || !estado.plan) { estado.plan = null; estado.version = 0; cargarPlan(); } else pintarPlan();
     } else {
       estado.planId = ''; estado.plan = null;
@@ -163,11 +179,12 @@
         '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center">' + edad(p.edad) + chip('V' + p.version + ' · ' + (p.version_estado || ''), claseEstado(p.version_estado)) + '</div>' +
         '<h2>' + esc(p.nombre) + '</h2><div class="p2-tenue p2-chico">' + esc(p.ubicacion) + '</div>' +
         '<div class="p2-radiografia"><div class="p2-sobre">Lo que recibe el dueño</div>' +
-        (num(p.dueno_recibe) === null ? '<span class="p2-tenue">Todavía no calcula.</span>' :
+        (p.a_medias ? '<span class="p2-tenue">Estoy corriendo una ronda en esta versión: sus cifras están a medias. Vuelve en unos minutos.</span>' :
+          num(p.dueno_recibe) === null ? '<span class="p2-tenue">Todavía no calcula.</span>' :
           '<b>' + mdpCorto(p.dueno_recibe) + ' MDP</b> <span class="p2-tenue">en ' + (num(p.dueno_meses) || '—') + ' meses · ' + veces(p.dueno_veces) + ' su tierra</span>') + '</div>' +
         '<div class="p2-chico"><b>Para crecer:</b> ' + esc(p.para_crecer || '—') + '</div>' +
         (p.siguiente_pregunta ? '<div class="p2-chico"><b>Siguiente pregunta:</b> ' + esc(p.siguiente_pregunta) + '</div>' : '') +
-        '<div class="p2-pie">' + chip(p.revision || 'sin revisión', /^Pasa/.test(p.revision || '') ? 'verde' : (/^No/.test(p.revision || '') ? 'rojo' : 'gris')) +
+        '<div class="p2-pie">' + chip(p.a_medias ? 'en trabajo' : (p.revision || 'sin revisión'), p.a_medias ? 'ambar' : (/^Pasa/.test(p.revision || '') ? 'verde' : (/^No/.test(p.revision || '') ? 'rojo' : 'gris'))) +
         chip((p.candados_abiertos || 0) + ' candados abiertos', p.candados_abiertos ? 'rojo' : 'verde') + chip((p.preguntas_abiertas || 0) + ' preguntas abiertas', 'gris') + '</div></a>';
     }).join('');
     raiz.innerHTML =
@@ -194,10 +211,13 @@
     var p = estado.plan, r = p.resumen || {}, v = ver(), puede = p.puede || {};
     var vers = (p.versiones || []).map(function (x) {
       return '<button class="p2-vbtn" data-accion="version" data-v="' + x.numero + '" aria-pressed="' + (x.numero === estado.version) + '">' +
-        '<b>V' + x.numero + ' · ' + esc(x.nombre || '') + '</b><span>' + esc(x.estado || '') + (num(x.dueno_recibe) !== null ? ' · dueño ' + mdpCorto(x.dueno_recibe) + ' MDP' : '') + '</span></button>';
+        '<b>V' + x.numero + ' · ' + esc(x.nombre || '') + '</b><span>' + esc(x.estado || '') + (num(x.dueno_recibe) !== null ? ' · dueño ' + mdpCorto(x.dueno_recibe) + ' MDP' : '') +
+        ((p.ciclo || {}).defiende === x.numero && (p.ciclo || {}).paso ? ' · la que defiendo' : '') + '</span></button>';
     }).join('');
+    var ciclo = p.ciclo || {}, enTrabajo = (ciclo.en_ronda || ciclo.interrumpida) && ciclo.trabajo === estado.version;
     var aviso = '';
-    if (v.estado === 'propuesta') aviso = '<div class="p2-aviso">' + chip('Propuesta', 'azul') + '<span>Falta que Dirección la apruebe para que quede vigente.</span>' +
+    if (enTrabajo) aviso = '<div class="p2-aviso">' + chip('En trabajo', 'ambar') + '<span>Estas cifras están a medias: ' + (ciclo.en_ronda ? 'estoy corriendo una ronda en esta versión' : 'una ronda se interrumpió en esta versión') + '. No se puede aprobar hasta que quede como estaba.</span></div>';
+    else if (v.estado === 'propuesta') aviso = '<div class="p2-aviso">' + chip('Propuesta', 'azul') + '<span>Falta que Dirección la apruebe para que quede vigente.</span>' +
       (puede.aprobar ? '<button class="p2-btn verde" data-accion="aprobar" data-v="' + estado.version + '"><i class="ti ti-check"></i> Aprobar esta versión</button>' : '') + '</div>';
     else if (v.estado === 'vigente') aviso = '<div class="p2-aviso">' + chip('Vigente', 'verde') + '<span>Aprobada por ' + esc(v.aprobada_por || '—') + (v.fecha_aprobacion ? ' el ' + esc(v.fecha_aprobacion) : '') + '.</span></div>';
     else if (puede.aprobar && v.estado !== 'descartada') aviso = '<div class="p2-aviso">' + chip(v.estado || '', claseEstado(v.estado)) +
@@ -208,6 +228,7 @@
       '<div class="p2-cabeza"><div><h1>' + esc(r['plan.nombre'] || 'Plan') + '</h1><div class="p2-lugar">' + esc(r['plan.ubicacion'] || '') + '</div>' +
       '<div class="p2-crecer">' + edad(r['plan.edad']) + '<span class="p2-tenue"><b>Para crecer falta:</b> ' + esc(r['plan.para_crecer'] || '—') + '</span></div></div>' +
       (p.libro_url ? '<a class="p2-btn suave" href="' + esc(p.libro_url) + '" target="_blank" rel="noopener"><i class="ti ti-table"></i> Abrir el libro</a>' : '') + '</div>' +
+      voz() +
       '<div class="p2-versiones" role="group" aria-label="Versiones">' + vers + '</div>' +
       '<section class="p2-heroe" aria-label="Lo que recibe el dueño">' +
       '<div class="p2-recibe"><div class="p2-sobre">Lo que recibe el dueño · V' + estado.version + '</div>' +
@@ -223,8 +244,8 @@
       '</div></section>' +
       grafica() +
       '<nav class="p2-pestanas" aria-label="Secciones del plan">' +
-      pest('versiones', 'Versiones y reparto') + pest('preguntas', 'Preguntas y evidencia') + pest('auton', 'El autón') + pest('bitacora', 'Bitácora') + '</nav>' +
-      '<div id="p2Pestana">' + ({ versiones: pVersiones, preguntas: pPreguntas, auton: pAuton, bitacora: pBitacora }[estado.pestana] || pVersiones)() + '</div>';
+      pest('versiones', 'Versiones y reparto') + pest('preguntas', 'Preguntas y evidencia') + pest('rondas', 'Mis rondas') + pest('bitacora', 'Bitácora') + '</nav>' +
+      '<div id="p2Pestana">' + ({ versiones: pVersiones, preguntas: pPreguntas, rondas: pRondas, bitacora: pBitacora }[estado.pestana] || pVersiones)() + '</div>';
   }
   function clave(t, cifra, sub, clase) {
     return '<div class="p2-clave ' + (clase || '') + '"><div class="p2-sobre">' + esc(t) + '</div><span class="p2-cifra">' + cifra + '</span><span class="p2-tenue p2-chico">' + esc(sub || '') + '</span></div>';
@@ -282,11 +303,11 @@
     var filas = [
       ['Estado', function (x) { return chip(x.estado); }], ['Qué cambia', function (x) { return '<span class="p2-chico">' + esc(x.que_cambia || '') + '</span>'; }],
       ['El dueño recibe', function (x) { return '<b>' + mdp(x.dueno_recibe) + '</b>'; }, 'n'], ['Veces su tierra', function (x) { return veces(x.dueno_veces); }, 'n'],
-      ['En cuántos meses', function (x) { return num(x.dueno_meses) || '—'; }, 'n'], ['Ganancia real', function (x) { return mdp(x.ganancia); }, 'n'],
+      ['En cuántos meses', function (x) { return num(x.dueno_meses) === null ? '—' : esc(x.dueno_meses); }, 'n'], ['Ganancia real', function (x) { return mdp(x.ganancia); }, 'n'],
       ['Dinero ajeno máximo', function (x) { return mdp(x.max_ajeno); }, 'n'], ['Capital', function (x) { return mdp(x.capital); }, 'n'],
       ['Banco, saldo máximo', function (x) { return mdp(x.banco_max); }, 'n'], ['Respaldo que faltaría', function (x) { return mdp(x.respaldo); }, 'n'],
-      ['Costo del dinero', function (x) { return mdp(x.costo_dinero); }, 'n'], ['Obra', function (x) { return 'mes ' + (x.obra_inicio || '—') + ' a ' + (x.fin_obra || '—'); }, 'n'],
-      ['Saldos desde el mes', function (x) { return x.mes_saldos || '—'; }, 'n'], ['Revisión para fondos', function (x) { return esc(x.rv_resultado || '—'); }]
+      ['Costo del dinero', function (x) { return mdp(x.costo_dinero); }, 'n'], ['Obra', function (x) { return 'mes ' + esc(x.obra_inicio || '—') + ' a ' + esc(x.fin_obra || '—'); }, 'n'],
+      ['Saldos desde el mes', function (x) { return esc(x.mes_saldos || '—'); }, 'n'], ['Revisión para fondos', function (x) { return esc(x.rv_resultado || '—'); }]
     ];
     var cab = '<tr><th></th>' + V.map(function (x) { return '<th class="n">V' + x.numero + ' · ' + esc(x.nombre || '') + '</th>'; }).join('') + '</tr>';
     var cuerpo = filas.map(function (f) {
@@ -294,6 +315,8 @@
     }).join('');
     var acciones = '<tr><td></td>' + V.map(function (x) {
       var b = '';
+      var c = p.ciclo || {};
+      if ((c.en_ronda || c.interrumpida) && c.trabajo === x.numero) return '<td class="n"><span class="p2-tenue p2-chico">en trabajo</span></td>';
       if (puede.aprobar && x.estado !== 'vigente') b += '<button class="p2-btn verde" data-accion="aprobar" data-v="' + x.numero + '">Aprobar</button> ';
       if (puede.editar && x.estado !== 'vigente' && x.estado !== 'propuesta' && x.estado !== 'base') b += '<button class="p2-btn" data-accion="estado-version" data-v="' + x.numero + '" data-estado="propuesta">Proponer</button> ';
       if (puede.editar && x.estado !== 'vigente' && x.estado !== 'descartada' && x.estado !== 'base') b += '<button class="p2-btn suave" data-accion="estado-version" data-v="' + x.numero + '" data-estado="descartada">Descartar</button>';
@@ -393,33 +416,190 @@
     return '<section class="p2-seccion"><h2>Todas las preguntas del oficio</h2><p class="p2-tenue">Se ordenan por la edad del plan y por cuánto mueven el resultado.</p><div class="p2-panel">' + html + '</div></section>';
   }
 
-  /* pestaña: el autón */
-  function pAuton() {
-    var p = estado.plan, puede = p.puede || {};
+  /* ───────── la voz del plan ───────── */
+  function votosTxt(c) { return c.aprueban + ' de ' + c.votaron + ' aprueban' + (c.vetos > 0 ? ', con veto' : ''); }
+  function voz() {
+    var p = estado.plan, c = p.ciclo || {}, r = p.resumen || {}, puede = p.puede || {}, t = c.defiende, n = (p.rondas || []).length;
+    if (!c.paso) return '';
+    var texto = '', botones = '', nota = '', rv = String((ver(t) || {}).rv_resultado || ''), pasa = /^Pasa/.test(rv);
+    // sólo prometo hacerlo solo si mi latido de verdad corre (el servidor dice cuándo fue el último)
+    var solo = c.latido === 'activo' ? 'Si nadie me lo pide, lo hago solo en mi siguiente latido.'
+      : (c.latido === 'apagado' ? 'Mi latido está apagado: sólo lo hago cuando alguien me lo pide.'
+        : 'Todavía no tengo latido (nadie lo ha instalado, o lleva horas sin correr): sólo lo hago cuando alguien me lo pide.');
+    var regresada = !!c.sesion && c.votaron === 7 && !c.aprobada;      // una sesión completa que no la aprobó
+    var esBase = String((ver(t) || {}).estado || '') === 'base';
+    switch (c.paso) {
+      case 'datos': texto = 'Soy semilla: todavía no calculo. ' + (r['plan.para_crecer'] || ''); break;
+      case 'explorar':
+        texto = !pasa ? 'Mi V' + t + ' no pasa la revisión para fondos (' + rv.replace(/^No pasa: /, '') + '). Me toca mover capital y arranque de obra para buscar una que sí pase.'
+          : (regresada ? 'El consejo regresó mi V' + t + ' (' + votosTxt(c) + '). Me toca mover capital y arranque de obra y volver con otra propuesta.'
+            : (esBase ? 'Mi V' + t + ' es la base. Antes de probarla y defenderla me toca mover capital y arranque de obra para ver si hay algo mejor que proponer.'
+              : 'Me toca mover capital y arranque de obra desde la V' + t + ' para ver si hay algo mejor que proponer.'));
+        if (c.lugar && !c.lugar.version) {
+          var presta = c.lugar.presta || [];
+          texto += ' Pero no tengo una versión donde escribir: la base y la vigente no las toco, y no escribo encima del trabajo de una persona si nadie me lo presta.';
+          nota = presta.length ? 'Si me prestas una, lo que tiene queda anotado en mi ronda antes de que yo escriba ahí.' : 'Descarta una versión (en «Versiones y reparto») para dejarme un lugar.';
+          if (puede.editar) botones = presta.map(function (x) {
+            return '<button class="p2-btn oro" data-accion="ronda" data-usar="' + x.version + '"><i class="ti ti-refresh" aria-hidden="true"></i> ' +
+              (x.version === t ? 'Afinar la V' + x.version + ' en su lugar' : 'Prestarme la V' + x.version) + (x.nombre ? ' («' + esc(x.nombre) + '»)' : '') + '</button>';
+          }).join(' ');
+        } else {
+          nota = solo;
+          if (puede.editar) botones = '<button class="p2-btn oro" data-accion="ronda"><i class="ti ti-refresh" aria-hidden="true"></i> Correr mi ronda</button>';
+        }
+        break;
+      case 'proponer':
+        texto = 'Mi V' + t + ' no pasa la revisión para fondos (' + rv.replace(/^No pasa: /, '') + ') y, moviendo sólo capital y arranque de obra cerca de donde estoy, no encontré una que pase. ' +
+          'Necesito que alguien arme conmigo una propuesta que pase: en «Versiones y reparto», mueve las otras palancas (banco, preventa, pagos durante la obra) o da un salto más grande.';
+        if (n && estado.pestana !== 'rondas') botones = '<a class="p2-btn" href="#/plan/' + esc(estado.planId) + '/rondas">Ver lo que probé</a>';
+        break;
+      case 'probar':
+        texto = 'Mi V' + t + ' todavía no se prueba con los números que tiene hoy. Me toca probarla contra los golpes.';
+        nota = solo;
+        if (puede.editar) botones = '<button class="p2-btn oro" data-accion="probar"><i class="ti ti-bolt" aria-hidden="true"></i> Probar mi V' + t + '</button>';
+        break;
+      case 'consejo':
+        texto = c.sesion && c.votaron !== 7 ? 'La sesión ' + c.sesion + ' del consejo sobre mi V' + t + ' quedó incompleta: ' + c.votaron + ' votos, y deben votar los 7 jueces. Me toca presentarme otra vez.'
+          : (c.sesion && !c.evidencia_sesion ? 'La sesión ' + c.sesion + ' del consejo no anotó la evidencia que había ese día, así que no sé contra qué juzgó mi V' + t + '. Me toca presentarla otra vez.'
+            : (c.sesion ? 'Desde la sesión ' + c.sesion + ' cambió la evidencia (un candado, un dato confirmado, un hallazgo aceptado o una pregunta respondida). Me toca volver a presentar mi V' + t + ' al consejo.'
+              : 'Ya corrí las pruebas de estrés de mi V' + t + ' con los números que tiene hoy. Me toca defenderla ante el consejo de planes.'));
+        nota = c.revision ? 'El consejo se reúne en mi revisión programada (' + c.revision + ') o cuando hablas conmigo en un chat con Claude.'
+          : 'El consejo se reúne cuando hablas conmigo en un chat con Claude: todavía no tengo una revisión programada.';
+        break;
+      case 'direccion':
+        texto = 'El consejo aprobó mi V' + t + ' (' + votosTxt(c) + '). Falta que Dirección decida si queda vigente.';
+        if (estado.version !== t) botones = '<button class="p2-btn" data-accion="version" data-v="' + t + '">Ver la V' + t + '</button>';
+        break;
+      case 'mundo':
+        texto = 'El consejo regresó mi V' + t + ' (' + votosTxt(c) + ') y, moviendo capital y arranque de obra, ya no encontré mejora. Lo que falta lo tiene que conseguir alguien: lo pido en «Mis rondas». ' +
+          'Cuando cambie la evidencia (un candado, un dato confirmado, un hallazgo aceptado o una pregunta respondida) vuelvo a presentarme.';
+        if (estado.pestana !== 'rondas') botones = '<a class="p2-btn" href="#/plan/' + esc(estado.planId) + '/rondas">Ver lo que pido</a>';
+        break;
+      case 'candados':
+        var abiertos = Number(r['plan.candados_abiertos']) || 0;
+        texto = 'Soy árbol: Dirección y el consejo ya eligieron mi V' + t + '. ' + ((p.candados || []).length
+          ? 'Para florecer me falta cerrar ' + abiertos + (abiertos === 1 ? ' candado.' : ' candados.')
+          : 'Para florecer necesito mis candados (tenencia, uso de suelo, agua, vialidad, banco y acuerdo con los dueños) y todavía no tengo ninguno anotado: hay que registrarlos en la pestaña Candados de mi libro.');
+        break;
+      case 'acuerdo': texto = 'Soy flor: todo está resuelto. Sólo falta firmar el acuerdo con el dueño.'; break;
+      case 'cumplido': texto = 'Soy fruto: el acuerdo con el dueño está firmado.'; break;
+      default: return '';
+    }
+    var i = CICLO.map(function (x) { return x[0]; }).indexOf(c.paso);
+    var pasos = i < 0 ? '' : '<ol class="p2-ciclo" aria-label="Mi ciclo">' + CICLO.map(function (x, k) {
+      return '<li class="' + (k === i ? 'ahora' : (k < i ? 'hecho' : '')) + '"' + (k === i ? ' aria-current="step"' : '') + '>' + esc(x[1]) + '</li>';
+    }).join('') + '</ol>';
+    return '<section class="p2-voz" aria-label="Lo que dice el plan"><div class="p2-sobre">' + esc(r['plan.nombre'] || 'El plan') + (n ? ' · ' + n + (n === 1 ? ' ronda' : ' rondas') : '') + '</div>' +
+      '<p class="p2-dice">' + esc(texto) + '</p>' + pasos + (nota ? '<p class="p2-chico p2-tenue">' + esc(nota) + '</p>' : '') +
+      (c.sin_leer ? '<p class="p2-chico p2-tenue">Hay ' + c.sin_leer + (c.sin_leer === 1 ? ' voto' : ' votos') + ' del consejo que no puedo leer: les falta la huella o la versión.</p>' : '') +
+      (c.en_ronda ? '<p class="p2-chico p2-tenue">Estoy corriendo una ronda en este momento: las cifras de mi V' + c.trabajo + ' están a medias unos minutos.</p>' : '') +
+      (c.interrumpida ? '<p class="p2-chico p2-tenue">Una ronda mía se interrumpió y las cifras de mi V' + c.trabajo + ' quedaron a medias. ' +
+        (c.pausa ? 'Con la pausa puesta no puedo dejarla como estaba: lo hago en el primer cambio después de que se quite la pausa.'
+          : 'En el siguiente cambio' + (c.latido === 'activo' ? ' (o en mi siguiente latido)' : '') + ' la dejo como estaba.') + '</p>' : '') +
+      (botones ? '<div class="p2-acciones">' + botones + '</div>' : '') + '</section>';
+  }
+
+  /* pestaña: mis rondas (lo que el plan hace para salir adelante) */
+  /* La última sesión del consejo sobre esa versión con esa huella: lo mismo que cuenta el libro (Plan!B31:B36). */
+  function versionDe(x) { return Number(String(x.version === null || x.version === undefined ? '' : x.version).trim().slice(-1)) || 0; }
+  /* Los votos se leen como los lee el libro: sin distinguir mayúsculas ni espacios de más («Aprueba », «CP-1 »). */
+  function llano(v) { return String(v === null || v === undefined ? '' : v).trim().toLowerCase(); }
+  function votoDe(x) { return llano(x.voto); }
+  function sesionDe(huella, k) {
+    var votos = (estado.plan.consejo || []).filter(function (x) { return huella && String(x.huella || '').trim() === huella && versionDe(x) === k; });
+    if (!votos.length) return null;
+    var ses = votos[votos.length - 1].sesion, suyos = votos.filter(function (x) { return llano(x.sesion) === llano(ses); });
+    return { sesion: String(ses).trim(), aprueban: suyos.filter(function (x) { return votoDe(x) === 'aprueba'; }).length, total: suyos.length, veto: suyos.some(function (x) { return votoDe(x) === 'veto'; }) };
+  }
+  function huellaDe(k) { return ((estado.plan.versiones || [])[k - 1] || {}).huella || ''; }
+  function pRondas() {
+    var p = estado.plan, puede = p.puede || {}, c = p.ciclo || {};
+    var golpe = {}, concepto = {};
+    (c.golpes || []).forEach(function (g) { golpe[g.id] = g.nombre; });
+    (p.palancas || []).forEach(function (x) { concepto[x.clave] = x.concepto; });
+    // lo que pido: lo que no se arregla moviendo capital y arranque de obra
+    var cond = (p.consejo || []).filter(function (x) { return c.sesion && llano(x.sesion) === llano(c.sesion) && x.condicion && String(x.huella || '').trim() === c.huella && versionDe(x) === c.defiende; }).map(function (x) {
+      return '<li><div><b>' + esc(x.juez) + '</b><div class="p2-chico">' + esc(x.condicion) + '</div></div></li>';
+    }).join('');
+    var cand = (p.candados || []).filter(function (x) { return x.estado === 'abierto' || x.estado === 'en revisión'; }).map(function (x) {
+      return '<li><div><b>' + esc(x.candado) + '</b> ' + chip(x.estado) + '<div class="p2-chico">' + esc(x.cierra || '') + '</div>' +
+        (x.responsable ? '<div class="p2-quien">Responsable: ' + esc(x.responsable) + '</div>' : '') + '</div></li>';
+    }).join('');
+    var pido = (cond || cand) ? '<section class="p2-seccion"><h2>Lo que pido</h2><p class="p2-tenue">Lo que no puedo resolver moviendo capital y arranque de obra: alguien tiene que conseguirlo.</p>' +
+      (cond ? '<div class="p2-panel"><h3>Lo que pidió el consejo (' + esc(c.sesion) + ') para aprobar mi V' + c.defiende + '</h3><ul class="p2-lista">' + cond + '</ul></div>' : '') +
+      (cand ? '<div class="p2-panel"><h3>Candados abiertos</h3><ul class="p2-lista">' + cand + '</ul></div>' : '') + '</section>' : '';
+    // mis rondas
+    var rondas = (p.rondas || []).slice().reverse().map(function (x) {
+      var det = x.detalle || {}, cs = (det.candidatos || []).slice().sort(function (a, b) { return (a.p.obra_inicio - b.p.obra_inicio) || (a.p.capital - b.p.capital); });
+      var filas = cs.map(function (k) {
+        // el peor de los golpes leves, cada uno por separado: es una cifra del libro, aquí no se suma nada
+        var g = k.golpes, peor = '', falt = null;
+        if (g) { falt = 0; Object.keys(g).forEach(function (id) { if (num(g[id].r) > falt) { falt = g[id].r; peor = id; } }); }
+        return '<tr class="' + (k.elegido && !k.base ? 'elegida' : '') + '"><td data-et="Capital">' + mdpCorto(k.p.capital) + (k.base ? ' <span class="p2-tenue">· de partida</span>' : '') +
+          (k.elegido && !k.base ? ' <span class="p2-tenue">· la que propongo</span>' : '') + (k.cerca ? ' <span class="p2-tenue">· la más cercana</span>' : '') +
+          (k.retirada ? ' <span class="p2-tenue">· ya la propuse' + (num(k.retirada) ? ' (ronda ' + k.retirada + ')' : '') + ' y se retiró</span>' : '') + '</td>' +
+          '<td class="n" data-et="Arranque de obra">mes ' + esc(k.p.obra_inicio) + '</td><td data-et="Revisión para fondos">' + esc(k.rv || '—') + '</td>' +
+          '<td class="n" data-et="Al dueño">' + mdpCorto(k.d) + '</td><td class="n" data-et="Meses">' + (num(k.m) === null ? '—' : k.m) + '</td>' +
+          '<td data-et="Con el peor golpe leve faltaría">' + (falt === null ? '<span class="p2-tenue">' + (k.f === 0 ? 'no hizo falta probarla' : 'no pasa: no se prueba') + '</span>' : (falt > 0 ? mdpCorto(falt) + ' <span class="p2-tenue">· ' + esc((golpe[peor] || peor).toLowerCase()) + '</span>' : 'nada')) + '</td></tr>';
+      }).join('');
+      var kv = Number(x.version), ses = x.resultado === 'propuesta' ? sesionDe(x.huella, kv) : null, viva = x.resultado === 'propuesta' && x.huella && x.huella === huellaDe(kv);
+      var consejo = x.resultado !== 'propuesta' ? '' : (ses ? '<p class="p2-chico"><b>Consejo (' + esc(ses.sesion) + '):</b> ' + ses.aprueban + ' de ' + ses.total + ' aprueban' + (ses.veto ? ', con veto' : '') + (ses.total !== 7 ? ' · sesión incompleta' : '') + '.</p>'
+        : '<p class="p2-chico p2-tenue">' + (viva ? 'Esta propuesta todavía no pasa por el consejo.' : 'Esta propuesta ya cambió después de esta ronda.') + '</p>');
+      var a = det.antes, tenia = '';
+      if (a && (a.nombre || a.estado)) {
+        var fijas = (a.celdas || []).filter(function (z) { return !z[1] && z[2] !== '' && z[2] !== null; }).map(function (z) { return '<li>' + esc(concepto[z[0]] || z[0]) + ': <b>' + esc(z[2]) + '</b></li>'; }).join('');
+        tenia = '<details><summary>Lo que tenía la V' + esc(a.version) + ' antes de esta ronda: «' + esc(a.nombre || 'sin nombre') + '» (' + esc(a.estado || 'sin estado') + ')</summary>' +
+          '<p class="p2-chico p2-tenue">' + (a.propuesta_por ? 'La propuso: ' + esc(a.propuesta_por) + '. ' : '') + 'Sus palancas propias (lo demás lo tomaba de los datos):</p><ul class="p2-chico">' + (fijas || '<li>ninguna</li>') + '</ul></details>';
+      }
+      return '<div class="p2-panel"><h3>Ronda ' + esc(x.n) + ' · ' + chip(x.resultado === 'propuesta' ? 'propuse la V' + x.version : 'sin mejora', x.resultado === 'propuesta' ? 'azul' : 'gris') + '</h3>' +
+        '<div class="p2-quien">' + esc(x.fecha) + ' · ' + esc(x.quien) + (x.motivo ? ' · ' + esc(x.motivo) : '') + '</div>' +
+        '<p>' + esc(x.que_cambia || '') + '</p>' + consejo + tenia +
+        (filas ? '<details><summary>Lo que probé: ' + cs.length + (cs.length === 1 ? ' combinación' : ' combinaciones') + '</summary><div class="p2-envoltura"><table class="p2-tabla tarjetas"><thead><tr><th>Capital</th><th class="n">Arranque de obra</th><th>Revisión para fondos</th><th class="n">Al dueño</th><th class="n">Meses</th><th>Con el peor golpe leve faltaría</th></tr></thead><tbody>' + filas + '</tbody></table></div>' +
+          '<p class="p2-chico p2-tenue">Sólo propongo lo que pasa la revisión para fondos. Entre las que pasan va primero la que aguanta los golpes leves, cada uno por separado (' +
+          esc((c.golpes || []).map(function (g) { return g.nombre.toLowerCase(); }).join(', ')) + '): que con ninguno le falte dinero. Si ninguna aguanta, cuenta el peor golpe: gana la que le quita a la de partida al menos un paso entero de capital' +
+          (num(det.paso_capital) ? ' (' + mdpCorto(det.paso_capital) + ' MDP)' : '') + ' de faltante; quitarle menos no cuenta, y una a la que le falta más nunca le gana. ' +
+          'Después, la que pasa sin quedar justa, la que no le alarga el plazo al dueño, la que más le deja (a décimas de MDP) y la que usa menos capital.</p></details>' : '') + '</div>';
+    }).join('');
     var hall = (p.hallazgos || []).slice().reverse().map(function (h) {
       return '<li><div><b>' + esc(h.tema) + '</b> ' + chip(h.estado) + ' ' + chip('confianza ' + (h.confianza || '—'), 'gris') + '<div>' + esc(h.hallazgo) + '</div>' +
         '<div class="p2-quien">' + esc(h.fecha) + ' · ' + esc(h.quien) + (h.fuente ? ' · Fuente: ' + (/^https?:\/\//.test(h.fuente) ? '<a href="' + esc(h.fuente) + '" target="_blank" rel="noopener">' + esc(h.fuente) + '</a>' : esc(h.fuente)) : '') + '</div></div>' +
         (puede.editar && h.estado === 'propuesto' ? '<div class="p2-acciones"><button class="p2-btn verde" data-accion="hallazgo" data-fila="' + h.fila + '" data-estado="aceptado">Aceptar</button><button class="p2-btn suave" data-accion="hallazgo" data-fila="' + h.fila + '" data-estado="descartado">Descartar</button></div>' : '') + '</li>';
     }).join('');
     var investigando = (p.preguntas || []).filter(function (q) { return q.estado === 'investigando'; }).map(function (q) { return '<li><div>' + esc(q.texto) + '</div>' + chip('investigando') + '</li>'; }).join('');
-    var pr = p.pruebas || [], ultima = pr.length ? pr[pr.length - 1].fecha : '';
-    var tabla = pr.filter(function (x) { return x.fecha === ultima; }).map(function (x) {
+    // cómo aguanto: la última corrida de la versión que se está viendo
+    var suyas = (p.pruebas || []).filter(function (x) { return x.version === 'V' + estado.version; }), ultima = suyas.length ? suyas[suyas.length - 1].fecha : '';
+    var corrida = suyas.filter(function (x) { return x.fecha === ultima; }), alDia = corrida.length && corrida[0].huella && corrida[0].huella === huellaDe(estado.version);
+    var tabla = corrida.map(function (x) {
       return '<tr><td data-et="Escenario">' + esc(x.escenario) + '</td><td class="n" data-et="Banco">' + mdpCorto(x.banco_max) + '</td><td class="n" data-et="Faltaría">' + mdpCorto(x.respaldo) + '</td><td class="n" data-et="Costo del dinero">' + mdpCorto(x.costo_dinero) + '</td><td class="n" data-et="Ganancia">' + mdpCorto(x.ganancia) + '</td><td class="n" data-et="Reparto">' + esc(x.mes_reparto) + '</td></tr>';
     }).join('');
     var sesiones = {};
-    (p.consejo || []).forEach(function (c) { var k = (c.fecha || '') + ' · ' + (c.sesion || '') + ' · V' + String(c.version || '').replace(/^V/, ''); (sesiones[k] = sesiones[k] || []).push(c); });
+    (p.consejo || []).forEach(function (x) { var k = String(x.sesion || '').trim().toUpperCase() + ' · V' + (versionDe(x) || '?') + '\u0000' + String(x.huella || '').trim(); (sesiones[k] = sesiones[k] || []).push(x); });
     var consejo = Object.keys(sesiones).reverse().map(function (k) {
-      var votos = sesiones[k], si = votos.filter(function (x) { return x.voto === 'aprueba'; }).length, veto = votos.some(function (x) { return x.voto === 'veto'; });
-      return '<div class="p2-panel"><h3>Sesión ' + esc(k) + ' · ' + si + ' de ' + votos.length + ' aprueban' + (veto ? ' · con veto' : '') + '</h3><ul class="p2-lista">' +
-        votos.map(function (x) { return '<li><div><b>' + esc(x.juez) + '</b> ' + chip(x.voto) + '<div class="p2-chico">' + esc(x.razon) + '</div>' + (x.condicion ? '<div class="p2-chico p2-tenue">Para aprobar: ' + esc(x.condicion) + '</div>' : '') + '</div></li>'; }).join('') + '</ul></div>';
+      var votos = sesiones[k], si = votos.filter(function (x) { return votoDe(x) === 'aprueba'; }).length, veto = votos.some(function (x) { return votoDe(x) === 'veto'; });
+      var kv = versionDe(votos[0]), hv = String(votos[0].huella || '').trim(), vieja = !(hv && hv === huellaDe(kv));
+      var jueces = {};
+      votos.forEach(function (x) { jueces[llano(x.juez)] = 1; });
+      var repetido = Object.keys(jueces).length < votos.length;
+      return '<div class="p2-panel"><h3>Sesión ' + esc((votos[0].fecha ? votos[0].fecha + ' · ' : '') + k.split('\u0000')[0]) + ' · ' + si + ' de ' + votos.length + ' aprueban' + (veto ? ' · con veto' : '') + '</h3>' +
+        (!hv || !kv ? '<p class="p2-chico p2-tenue">A estos votos les falta la huella o la versión: no los puedo contar.</p>'
+          : (vieja ? '<p class="p2-chico p2-tenue">Votaron sobre números que esta versión ya no tiene: estos votos ya no cuentan.</p>'
+            : (votos.length !== 7 ? '<p class="p2-chico p2-tenue">Sesión incompleta: deben votar los 7 jueces para que cuente.</p>'
+              : (repetido ? '<p class="p2-chico p2-tenue">Un juez aparece más de una vez. Mi libro cuenta renglones, no jueces: esta sesión hay que rehacerla con los siete, uno por juez.</p>' : '')))) + '<ul class="p2-lista">' +
+        votos.map(function (x) { return '<li><div><b>' + esc(x.juez) + '</b> ' + chip(votoDe(x)) + '<div class="p2-chico">' + esc(x.razon) + '</div>' + (x.condicion ? '<div class="p2-chico p2-tenue">Para aprobar: ' + esc(x.condicion) + '</div>' : '') + '</div></li>'; }).join('') + '</ul></div>';
     }).join('');
-    return '<section class="p2-seccion"><h2>El autón: el plan que investiga</h2><p class="p2-tenue">El plan trabaja solo: busca lo que falta, prueba qué pasa si algo sale peor y propone versiones. Nada de lo que encuentra cambia un dato hasta que alguien lo acepta.</p>' +
-      '<div class="p2-panel"><h3>Hallazgos</h3><ul class="p2-lista">' + (hall || '<li>Todavía no hay hallazgos.</li>') + '</ul></div>' +
-      (investigando ? '<div class="p2-panel"><h3>Lo que está investigando</h3><ul class="p2-lista">' + investigando + '</ul></div>' : '') + '</section>' +
-      '<section class="p2-seccion"><h2>Pruebas de estrés</h2><p class="p2-tenue">El libro recalcula cada escenario en su columna de prueba y vuelve a dejarla como estaba.' + (ultima ? ' Última corrida: ' + esc(ultima) + '.' : '') + '</p>' +
-      (puede.editar ? '<p><button class="p2-btn oro" data-accion="estres"><i class="ti ti-bolt"></i> Correr pruebas sobre la V' + estado.version + '</button></p>' : '') +
-      (tabla ? '<div class="p2-panel p2-envoltura"><table class="p2-tabla tarjetas"><thead><tr><th>Escenario</th><th class="n">Banco máx.</th><th class="n">Faltaría</th><th class="n">Costo del dinero</th><th class="n">Ganancia real</th><th class="n">Mes de reparto</th></tr></thead><tbody>' + tabla + '</tbody></table></div>' : '<div class="p2-vacio">Todavía no se corren pruebas.</div>') + '</section>' +
-      '<section class="p2-seccion"><h2>El consejo de planes</h2><p class="p2-tenue">Jueces del oficio revisan cada versión antes de que Dirección decida: aprueba con 5 de 7 y un candado abierto puede vetar.</p>' + (consejo || '<div class="p2-vacio">El consejo todavía no se reúne para este plan.</div>') + '</section>';
+    return pido +
+      '<section class="p2-seccion"><h2>Mis rondas</h2><p class="p2-tenue">Cuando el consejo me regresa una versión, o cuando la que defiendo no pasa la revisión para fondos, muevo capital y arranque de obra en una versión de trabajo, ' +
+      'mi libro recalcula cada combinación y propongo sólo lo que pasa la revisión. La base y la vigente no las toco, ni escribo encima del trabajo de una persona si nadie me lo presta; sólo Dirección vuelve vigente una versión.</p>' +
+      (rondas || '<div class="p2-vacio">Todavía no corro ninguna ronda.</div>') + '</section>' +
+      '<section class="p2-seccion"><h2>Cómo aguanto los golpes</h2><p class="p2-tenue">Mi libro recalcula cada escenario en su columna de prueba y la deja como estaba. ' +
+      (ultima ? 'Última corrida sobre la V' + estado.version + ': ' + esc(ultima) + '.' : '') + '</p>' +
+      (tabla && !alDia ? '<p class="p2-chico p2-tenue">Estas pruebas son de antes de que cambiaran los números de esta versión.</p>' : '') +
+      (puede.editar ? '<p><button class="p2-btn' + (tabla && alDia ? ' suave' : ' oro') + '" data-accion="estres"><i class="ti ti-bolt"></i> Correr pruebas sobre la V' + estado.version + '</button></p>' : '') +
+      (tabla ? '<div class="p2-panel p2-envoltura"><table class="p2-tabla tarjetas"><thead><tr><th>Escenario</th><th class="n">Banco máx.</th><th class="n">Faltaría</th><th class="n">Costo del dinero</th><th class="n">Ganancia real</th><th class="n">Mes de reparto</th></tr></thead><tbody>' + tabla + '</tbody></table></div>' : '<div class="p2-vacio">Todavía no me pruebo con la V' + estado.version + '.</div>') + '</section>' +
+      '<section class="p2-seccion"><h2>Cómo me defendí ante el consejo</h2><p class="p2-tenue">Siete jueces del oficio revisan cada versión antes de que Dirección decida: aprueba con 5 de 7 y un candado puede vetar. Cada voto vale para los números que juzgó: si la versión cambia, deja de contar.</p>' + (consejo || '<div class="p2-vacio">Todavía no me presento ante el consejo.</div>') + '</section>' +
+      '<section class="p2-seccion"><h2>Lo que encontré</h2><p class="p2-tenue">Lo que investigo o encuentra el equipo. Nada de esto cambia un dato hasta que alguien lo acepta.</p>' +
+      '<div class="p2-panel"><ul class="p2-lista">' + (hall || '<li>Todavía no hay hallazgos.</li>') + '</ul></div>' +
+      (investigando ? '<div class="p2-panel"><h3>Lo que estoy investigando</h3><ul class="p2-lista">' + investigando + '</ul></div>' : '') + '</section>';
   }
 
   function pBitacora() {
@@ -444,28 +624,28 @@
   }
   function cerrarDialogo() { var d = document.getElementById('p2Dialogo'); if (d) d.remove(); }
 
-  function enviar(cuerpo, mensaje, ms) {
+  function enviar(cuerpo, mensaje, ms, espera) {
     if (estado.ocupado) return Promise.resolve();
     estado.ocupado = true;
     if (estado.plan) { cuerpo.plan = estado.planId; cuerpo.rev = estado.plan.rev; }
     // lo que tarda (las pruebas de estrés: el libro recalcula cada escenario) deja el aviso puesto hasta terminar
-    if (ms > 60000) toast('Corriendo en el libro… tarda cerca de un minuto; no cierres la página.', true);
+    if (ms > 60000) toast(espera || 'Corriendo en el libro… tarda cerca de un minuto; no cierres la página.', true);
     else toast('Guardando en el libro…');
     return escribir(cuerpo, ms).then(function (r) {
       estado.ocupado = false;
       if (!r || !r.ok) {
         var e = (r && r.error) || 'red';
         if (RECHAZOS.indexOf(e) >= 0) { fallo(r); return r; }
-        toast(ERRORES[e] || 'No se pudo guardar.');
-        if (e === 'revision' && estado.planId) cargarPlan(true);
+        toast(r && r.recuperado ? 'Una ronda mía había quedado a medias: ya dejé la versión como estaba y no hice tu cambio. Revisa las cifras y vuelve a intentarlo.' : (ERRORES[e] || 'No se pudo guardar.'), !!(r && r.recuperado) || FIJOS.indexOf(e) >= 0);
+        if ((e === 'revision' || e === 'sin_lugar' || e === 'paso' || e === 'cambio') && estado.planId) cargarPlan(true);
         return r;
       }
-      toast(mensaje || 'Guardado: el libro recalculó.');
+      toast((r && r.nota) || mensaje || 'Guardado: el libro recalculó.', !!(r && r.nota));
       cerrarDialogo();
       if (cuerpo.tipo === 'ppp2-sembrar') { estado.vivero = null; location.hash = '#/plan/' + r.plan_id; return r; }
       if (estado.planId) return cargarPlan(true).then(function () { return r; });
       return r;
-    }, function () { estado.ocupado = false; toast('Sin respuesta del servidor; tu cambio puede no haberse guardado. Recarga para revisar.'); });
+    }, function () { estado.ocupado = false; toast('Sin respuesta del servidor; tu cambio puede no haberse guardado. Recarga para revisar.', true); });
   }
 
   function editarDato(claveDato) {
@@ -522,6 +702,32 @@
     if (a === 'editar-dato') { editarDato(b.getAttribute('data-clave')); return; }
     if (a === 'candado') { dialogoCandado(b.getAttribute('data-id')); return; }
     if (a === 'hallazgo') { enviar({ tipo: 'ppp2-hallazgo', fila: Number(b.getAttribute('data-fila')), estado: b.getAttribute('data-estado') }); return; }
+    if (a === 'ronda') {
+      if (estado.ocupado) return;
+      b.disabled = true;
+      b.innerHTML = '<i class="ti ti-loader-2" aria-hidden="true"></i> Corriendo mi ronda…';
+      var cuerpo = { tipo: 'ppp2-ronda' }, usar = Number(b.getAttribute('data-usar'));
+      if (usar) cuerpo.usar = usar;                 // una persona le presta esa versión al plan
+      enviar(cuerpo, 'Ronda lista.', 330000, 'Estoy moviendo capital y arranque de obra: mi libro recalcula cada combinación. Tarda unos minutos; no cierres la página.').then(function (r) {
+        if (!r || !r.ok) { if (estado.plan && estado.planId) pintarPlan(); return; }      // el botón no se queda «corriendo»
+        if (r.resultado !== 'propuesta') { toast('Moví capital y arranque de obra y no encontré nada mejor que proponer. Lo anoté en «Mis rondas».'); return; }
+        estado.version = r.version;
+        return enviar({ tipo: 'ppp2-estres', version: r.version }, 'Propuesta lista y probada: ahora le toca al consejo.', 300000,
+          'Ya tengo propuesta en la V' + r.version + '. Ahora la pruebo contra los golpes; tarda cerca de un minuto.')
+          .then(function (r2) { if ((!r2 || !r2.ok) && estado.plan && estado.planId) pintarPlan(); });
+      });
+      return;
+    }
+    if (a === 'probar') {
+      if (estado.ocupado) return;
+      var t = (estado.plan.ciclo || {}).defiende;
+      b.disabled = true;
+      estado.version = t || estado.version;
+      b.innerHTML = '<i class="ti ti-loader-2" aria-hidden="true"></i> Probándome…';
+      enviar({ tipo: 'ppp2-estres', version: t }, 'Pruebas listas: ahora le toca al consejo.', 300000, 'Me estoy probando contra los golpes; tarda cerca de un minuto. No cierres la página.')
+        .then(function (r) { if ((!r || !r.ok) && estado.plan && estado.planId) pintarPlan(); });
+      return;
+    }
     if (a === 'estres') {
       if (estado.ocupado) return;
       b.disabled = true;
@@ -539,7 +745,7 @@
     if (a === 'nose') { enviar({ tipo: 'ppp2-responder', pregunta: q, estado: 'no se sabe' }, 'Anotado: no se sabe todavía.'); return; }
     if (a === 'investigar') {
       var preg = (estado.plan.preguntas || []).filter(function (x) { return x.id === q; })[0] || {};
-      enviar({ tipo: 'ppp2-investigar', pregunta: q, tema: preg.texto || q, detalle: (document.querySelector('[data-respuesta="' + q + '"]') || {}).value || '' }, 'El autón lo investiga y deja lo que encuentre en Hallazgos.');
+      enviar({ tipo: 'ppp2-investigar', pregunta: q, tema: preg.texto || q, detalle: (document.querySelector('[data-respuesta="' + q + '"]') || {}).value || '' }, 'Quedó pedido.');
     }
   });
 

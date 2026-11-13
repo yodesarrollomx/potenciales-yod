@@ -1,0 +1,5001 @@
+{
+ "_generador": "4f11dd23f45d740a9957ab0a0c3470672dfe6a5007b665585022707a74075179",
+ "escenarios": [
+  {
+   "edad": "semilla",
+   "muestra": false,
+   "falta": "Capturar al menos un producto. Que la versión base calcule: faltan 8 datos para calcular.",
+   "paso": "datos",
+   "paso_texto": "capturar los datos que faltan para calcular",
+   "defiende": 1,
+   "consejo": "El consejo todavía no se reúne sobre la V1 con sus números de hoy.",
+   "sesion": "",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 0,
+   "aprobada": false,
+   "probada": false,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d0_h0_p0",
+   "evidencia_sesion": "",
+   "paso_capital": null,
+   "revision": [
+    "Falta calcular",
+    "Falta calcular",
+    "Falta calcular"
+   ],
+   "huellas": [
+    "",
+    "",
+    ""
+   ],
+   "escenario": "plantilla vacía",
+   "entradas": {
+    "estados": [
+     "base",
+     "",
+     ""
+    ],
+    "pruebas": [],
+    "consejo": [],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: probar la V2 contra los golpes (pruebas de estrés). Datos sin resolver: 6.",
+   "paso": "probar",
+   "paso_texto": "probar la V2 contra los golpes (pruebas de estrés)",
+   "defiende": 2,
+   "consejo": "El consejo todavía no se reúne sobre la V2 con sus números de hoy.",
+   "sesion": "",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 0,
+   "aprobada": false,
+   "probada": false,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "propuesta sin probar",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [],
+    "consejo": [],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: presentar la V2 al consejo de planes. Datos sin resolver: 6.",
+   "paso": "consejo",
+   "paso_texto": "presentar la V2 al consejo de planes",
+   "defiende": 2,
+   "consejo": "El consejo todavía no se reúne sobre la V2 con sus números de hoy.",
+   "sesion": "",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 0,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "probada, falta el consejo",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: probar la V2 contra los golpes (pruebas de estrés). Datos sin resolver: 6.",
+   "paso": "probar",
+   "paso_texto": "probar la V2 contra los golpes (pruebas de estrés)",
+   "defiende": 2,
+   "consejo": "El consejo todavía no se reúne sobre la V2 con sus números de hoy.",
+   "sesion": "",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 0,
+   "aprobada": false,
+   "probada": false,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "pruebas de otros números",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "hotra"
+     ]
+    ],
+    "consejo": [],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: mover capital y arranque de obra para proponer algo mejor. Datos sin resolver: 6.",
+   "paso": "explorar",
+   "paso_texto": "mover capital y arranque de obra para proponer algo mejor",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 0 de 7. La regresa.",
+   "sesion": "CP-1",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "el consejo la regresa",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: conseguir lo que pidió el consejo (candados y datos): moviendo capital y arranque de obra ya no mejora. Datos sin resolver: 6.",
+   "paso": "mundo",
+   "paso_texto": "conseguir lo que pidió el consejo (candados y datos): moviendo capital y arranque de obra ya no mejora",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 0 de 7. La regresa.",
+   "sesion": "CP-1",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": true,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "regresada y sin mejora por palancas",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": [
+     [
+      2,
+      "2026-01-15 11:00",
+      "El plan",
+      2,
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "Motivo de prueba",
+      "sin mejora",
+      "",
+      "",
+      "",
+      15,
+      "{}",
+      ""
+     ]
+    ]
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: mover capital y arranque de obra para proponer algo mejor. Datos sin resolver: 6.",
+   "paso": "explorar",
+   "paso_texto": "mover capital y arranque de obra para proponer algo mejor",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 0 de 7. La regresa.",
+   "sesion": "CP-1",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "sin mejora desde otros números",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": [
+     [
+      2,
+      "2026-01-15 11:00",
+      "El plan",
+      2,
+      "hotra",
+      "Motivo de prueba",
+      "sin mejora",
+      "",
+      "",
+      "",
+      15,
+      "{}",
+      ""
+     ]
+    ]
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: que Dirección decida si la V2, que el consejo aprobó, queda vigente. Datos sin resolver: 6.",
+   "paso": "direccion",
+   "paso_texto": "que Dirección decida si la V2, que el consejo aprobó, queda vigente",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 5 de 7. La aprueba.",
+   "sesion": "CP-1",
+   "aprueban": 5,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": true,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "el consejo aprueba la propuesta",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: mover capital y arranque de obra para proponer algo mejor. Datos sin resolver: 6.",
+   "paso": "explorar",
+   "paso_texto": "mover capital y arranque de obra para proponer algo mejor",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 4 de 7. La regresa.",
+   "sesion": "CP-1",
+   "aprueban": 4,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "aprueban 4 de 7",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "árbol",
+   "muestra": true,
+   "falta": "Cerrar los candados: 2 abiertos.",
+   "paso": "candados",
+   "paso_texto": "cerrar los candados",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 5 de 7. La aprueba.",
+   "sesion": "CP-1",
+   "aprueban": 5,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": true,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "vigente y aprobada",
+   "entradas": {
+    "estados": [
+     "base",
+     "vigente",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "árbol",
+   "muestra": true,
+   "falta": "Cerrar los candados: 2 abiertos.",
+   "paso": "candados",
+   "paso_texto": "cerrar los candados",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 5 de 7. La aprueba.",
+   "sesion": "CP-1",
+   "aprueban": 5,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": true,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "vigente y aprobada, versión escrita como 2",
+   "entradas": {
+    "estados": [
+     "base",
+     "vigente",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "2",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "2",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "2",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "2",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "2",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "2",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: presentar la V2 al consejo de planes. Datos sin resolver: 6.",
+   "paso": "consejo",
+   "paso_texto": "presentar la V2 al consejo de planes",
+   "defiende": 2,
+   "consejo": "El consejo todavía no se reúne sobre la V2 con sus números de hoy.",
+   "sesion": "",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 0,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "vigente con votos de otros números",
+   "entradas": {
+    "estados": [
+     "base",
+     "vigente",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: mover capital y arranque de obra para proponer algo mejor. Datos sin resolver: 6.",
+   "paso": "explorar",
+   "paso_texto": "mover capital y arranque de obra para proponer algo mejor",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 6 de 7, con veto. La regresa.",
+   "sesion": "CP-1",
+   "aprueban": 6,
+   "vetos": 1,
+   "votaron": 7,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "vigente con veto",
+   "entradas": {
+    "estados": [
+     "base",
+     "vigente",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "veto",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: presentar la V2 al consejo de planes. Datos sin resolver: 6.",
+   "paso": "consejo",
+   "paso_texto": "presentar la V2 al consejo de planes",
+   "defiende": 2,
+   "consejo": "El consejo todavía no se reúne sobre la V2 con sus números de hoy.",
+   "sesion": "",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 0,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "vigente sin consejo",
+   "entradas": {
+    "estados": [
+     "base",
+     "vigente",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: probar la V3 contra los golpes (pruebas de estrés). Datos sin resolver: 6.",
+   "paso": "probar",
+   "paso_texto": "probar la V3 contra los golpes (pruebas de estrés)",
+   "defiende": 3,
+   "consejo": "El consejo todavía no se reúne sobre la V3 con sus números de hoy.",
+   "sesion": "",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 0,
+   "aprobada": false,
+   "probada": false,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "Pasa"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382"
+   ],
+   "escenario": "vigente regresada y propuesta nueva en la V3",
+   "entradas": {
+    "estados": [
+     "base",
+     "vigente",
+     "propuesta"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": [
+     [
+      2,
+      "2026-01-15 11:00",
+      "El plan",
+      2,
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "Motivo de prueba",
+      "propuesta",
+      3,
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "",
+      15,
+      "{}",
+      ""
+     ]
+    ]
+   }
+  },
+  {
+   "edad": "árbol",
+   "muestra": true,
+   "falta": "Cerrar los candados: 2 abiertos.",
+   "paso": "explorar",
+   "paso_texto": "mover capital y arranque de obra para proponer algo mejor",
+   "defiende": 3,
+   "consejo": "Última sesión sobre la V3 con sus números de hoy: CP-2: aprueban 0 de 7. La regresa.",
+   "sesion": "CP-2",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "Pasa"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382"
+   ],
+   "escenario": "vigente aprobada y propuesta nueva regresada",
+   "entradas": {
+    "estados": [
+     "base",
+     "vigente",
+     "propuesta"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ],
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V3",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V3",
+      "Juez 1",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V3",
+      "Juez 2",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V3",
+      "Juez 3",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V3",
+      "Juez 4",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V3",
+      "Juez 5",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V3",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V3",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: mover capital y arranque de obra para proponer algo mejor. Datos sin resolver: 6.",
+   "paso": "explorar",
+   "paso_texto": "mover capital y arranque de obra para proponer algo mejor",
+   "defiende": 1,
+   "consejo": "El consejo todavía no se reúne sobre la V1 con sus números de hoy.",
+   "sesion": "",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 0,
+   "aprobada": false,
+   "probada": false,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "sólo la base",
+   "entradas": {
+    "estados": [
+     "base",
+     "alterna",
+     "alterna"
+    ],
+    "pruebas": [],
+    "consejo": [],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: armar una propuesta que pase la revisión para fondos (moviendo sólo capital y arranque de obra no alcanza). Datos sin resolver: 6.",
+   "paso": "proponer",
+   "paso_texto": "armar una propuesta que pase la revisión para fondos (moviendo sólo capital y arranque de obra no alcanza)",
+   "defiende": 1,
+   "consejo": "El consejo todavía no se reúne sobre la V1 con sus números de hoy.",
+   "sesion": "",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 0,
+   "aprobada": false,
+   "probada": false,
+   "sin_mejora": true,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "la base sin mejora y no pasa",
+   "entradas": {
+    "estados": [
+     "base",
+     "alterna",
+     "alterna"
+    ],
+    "pruebas": [],
+    "consejo": [],
+    "rondas": [
+     [
+      1,
+      "2026-01-15 11:00",
+      "El plan",
+      1,
+      "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+      "Motivo de prueba",
+      "sin mejora",
+      "",
+      "",
+      "",
+      15,
+      "{}",
+      ""
+     ]
+    ]
+   }
+  },
+  {
+   "edad": "flor",
+   "muestra": true,
+   "falta": "Firmar el acuerdo con el dueño.",
+   "paso": "acuerdo",
+   "paso_texto": "firmar el acuerdo con el dueño",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 7 de 7. La aprueba.",
+   "sesion": "CP-1",
+   "aprueban": 7,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": true,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c2_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "árbol con candados cerrados",
+   "entradas": {
+    "estados": [
+     "base",
+     "vigente",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "fruto",
+   "muestra": true,
+   "falta": "Plan cumplido.",
+   "paso": "cumplido",
+   "paso_texto": "nada: plan cumplido",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 7 de 7. La aprueba.",
+   "sesion": "CP-1",
+   "aprueban": 7,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": true,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c2_d3_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "acuerdo firmado",
+   "entradas": {
+    "estados": [
+     "base",
+     "vigente",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: mover capital y arranque de obra para proponer algo mejor. Datos sin resolver: 6.",
+   "paso": "explorar",
+   "paso_texto": "mover capital y arranque de obra para proponer algo mejor",
+   "defiende": 2,
+   "consejo": "El consejo todavía no se reúne sobre la V2 con sus números de hoy.",
+   "sesion": "",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 0,
+   "aprobada": false,
+   "probada": false,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "No pasa: 3 de 9 pruebas",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_40000_157560_209378_31186_58814_59407_36000_11000_171_327",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "la propuesta no pasa la revisión",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [],
+    "consejo": [],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: armar una propuesta que pase la revisión para fondos (moviendo sólo capital y arranque de obra no alcanza). Datos sin resolver: 6.",
+   "paso": "proponer",
+   "paso_texto": "armar una propuesta que pase la revisión para fondos (moviendo sólo capital y arranque de obra no alcanza)",
+   "defiende": 2,
+   "consejo": "El consejo todavía no se reúne sobre la V2 con sus números de hoy.",
+   "sesion": "",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 0,
+   "aprobada": false,
+   "probada": false,
+   "sin_mejora": true,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "No pasa: 3 de 9 pruebas",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_40000_157560_209378_31186_58814_59407_36000_11000_171_327",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "la propuesta no pasa y ya no hay mejora",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [],
+    "consejo": [],
+    "rondas": [
+     [
+      2,
+      "2026-01-15 11:00",
+      "El plan",
+      2,
+      "h500000_380000_30000_40000_157560_209378_31186_58814_59407_36000_11000_171_327",
+      "Motivo de prueba",
+      "sin mejora",
+      "",
+      "",
+      "",
+      15,
+      "{}",
+      ""
+     ]
+    ]
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: mover capital y arranque de obra para proponer algo mejor. Datos sin resolver: 6.",
+   "paso": "explorar",
+   "paso_texto": "mover capital y arranque de obra para proponer algo mejor",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 7 de 7. La aprueba.",
+   "sesion": "CP-1",
+   "aprueban": 7,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": true,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "No pasa: 3 de 9 pruebas",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_40000_157560_209378_31186_58814_59407_36000_11000_171_327",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "la propuesta no pasa aunque tenga pruebas y votos",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_40000_157560_209378_31186_58814_59407_36000_11000_171_327"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_40000_157560_209378_31186_58814_59407_36000_11000_171_327",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_40000_157560_209378_31186_58814_59407_36000_11000_171_327",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_40000_157560_209378_31186_58814_59407_36000_11000_171_327",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_40000_157560_209378_31186_58814_59407_36000_11000_171_327",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_40000_157560_209378_31186_58814_59407_36000_11000_171_327",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_40000_157560_209378_31186_58814_59407_36000_11000_171_327",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_40000_157560_209378_31186_58814_59407_36000_11000_171_327",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: presentar la V2 al consejo de planes. Datos sin resolver: 6.",
+   "paso": "consejo",
+   "paso_texto": "presentar la V2 al consejo de planes",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 0 de 4. Sesión incompleta: deben votar 7 jueces.",
+   "sesion": "CP-1",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 4,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "sesión incompleta: votaron 4",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: presentar la V2 al consejo de planes. Datos sin resolver: 6.",
+   "paso": "consejo",
+   "paso_texto": "presentar la V2 al consejo de planes",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 7 de 14. Sesión incompleta: deben votar 7 jueces.",
+   "sesion": "CP-1",
+   "aprueban": 7,
+   "vetos": 0,
+   "votaron": 14,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "la misma sesión dos veces: 14 votos",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: mover capital y arranque de obra para proponer algo mejor. Datos sin resolver: 6.",
+   "paso": "explorar",
+   "paso_texto": "mover capital y arranque de obra para proponer algo mejor",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 0 de 7. La regresa.",
+   "sesion": "CP-1",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "mismo nombre de sesión: aprobó números viejos y regresa los de hoy",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: mover capital y arranque de obra para proponer algo mejor. Datos sin resolver: 6.",
+   "paso": "explorar",
+   "paso_texto": "mover capital y arranque de obra para proponer algo mejor",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 0 de 7. La regresa.",
+   "sesion": "CP-1",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "vigente: mismo nombre de sesión aprobó números viejos y regresa los de hoy",
+   "entradas": {
+    "estados": [
+     "base",
+     "vigente",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "hotra",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: mover capital y arranque de obra para proponer algo mejor. Datos sin resolver: 6.",
+   "paso": "explorar",
+   "paso_texto": "mover capital y arranque de obra para proponer algo mejor",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 0 de 7. La regresa.",
+   "sesion": "CP-1",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "Pasa"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382"
+   ],
+   "escenario": "vigente: la misma sesión aprobó la V3 y regresa la V2",
+   "entradas": {
+    "estados": [
+     "base",
+     "vigente",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V3",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V3",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V3",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V3",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V3",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V3",
+      "Juez 6",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V3",
+      "Juez 7",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: que Dirección decida si la V2, que el consejo aprobó, queda vigente. Datos sin resolver: 6.",
+   "paso": "direccion",
+   "paso_texto": "que Dirección decida si la V2, que el consejo aprobó, queda vigente",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 5 de 7. La aprueba.",
+   "sesion": "CP-1",
+   "aprueban": 5,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": true,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "votos escritos con espacios",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2 ",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382 ",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      " V2",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382 ",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V 2",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382 ",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "v2",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382 ",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "2",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382 ",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      " 2 ",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382 ",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "Versión 2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382 ",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: presentar la V2 al consejo de planes. Datos sin resolver: 6.",
+   "paso": "consejo",
+   "paso_texto": "presentar la V2 al consejo de planes",
+   "defiende": 2,
+   "consejo": "El consejo todavía no se reúne sobre la V2 con sus números de hoy.",
+   "sesion": "",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 0,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 7,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "votos sin huella",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: presentar la V2 al consejo de planes. Datos sin resolver: 6.",
+   "paso": "consejo",
+   "paso_texto": "presentar la V2 al consejo de planes",
+   "defiende": 2,
+   "consejo": "El consejo todavía no se reúne sobre la V2 con sus números de hoy.",
+   "sesion": "",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 0,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 7,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "votos sin versión",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "",
+      "Juez 6",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "",
+      "Juez 7",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: presentar la V2 al consejo de planes. Datos sin resolver: 6.",
+   "paso": "consejo",
+   "paso_texto": "presentar la V2 al consejo de planes",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 0 de 7. La regresa.",
+   "sesion": "CP-1",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": true,
+   "sin_leer": 0,
+   "evidencia": "c2_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "regresada, sin mejora y cambió la evidencia",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": [
+     [
+      2,
+      "2026-01-15 11:00",
+      "El plan",
+      2,
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "Motivo de prueba",
+      "sin mejora",
+      "",
+      "",
+      "",
+      15,
+      "{}",
+      ""
+     ]
+    ]
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: conseguir lo que pidió el consejo (candados y datos): moviendo capital y arranque de obra ya no mejora. Datos sin resolver: 6.",
+   "paso": "mundo",
+   "paso_texto": "conseguir lo que pidió el consejo (candados y datos): moviendo capital y arranque de obra ya no mejora",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-2: aprueban 0 de 7. La regresa.",
+   "sesion": "CP-2",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": true,
+   "sin_leer": 0,
+   "evidencia": "c2_d2_h0_p1",
+   "evidencia_sesion": "c2_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "regresada, sin mejora, y se volvió a presentar con la evidencia nueva",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V2",
+      "Juez 1",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V2",
+      "Juez 2",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V2",
+      "Juez 3",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V2",
+      "Juez 4",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V2",
+      "Juez 5",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V2",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c2_d2_h0_p1"
+     ]
+    ],
+    "rondas": [
+     [
+      2,
+      "2026-01-15 11:00",
+      "El plan",
+      2,
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "Motivo de prueba",
+      "sin mejora",
+      "",
+      "",
+      "",
+      15,
+      "{}",
+      ""
+     ]
+    ]
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: presentar la V2 al consejo de planes. Datos sin resolver: 6.",
+   "paso": "consejo",
+   "paso_texto": "presentar la V2 al consejo de planes",
+   "defiende": 2,
+   "consejo": "Última sesión sobre la V2 con sus números de hoy: CP-1: aprueban 0 de 7. La regresa.",
+   "sesion": "CP-1",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": true,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "regresada, sin mejora, votos sin evidencia anotada",
+   "entradas": {
+    "estados": [
+     "base",
+     "propuesta",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      ""
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      ""
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      ""
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      ""
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      ""
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      ""
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      ""
+     ]
+    ],
+    "rondas": [
+     [
+      2,
+      "2026-01-15 11:00",
+      "El plan",
+      2,
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "Motivo de prueba",
+      "sin mejora",
+      "",
+      "",
+      "",
+      15,
+      "{}",
+      ""
+     ]
+    ]
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: mover capital y arranque de obra para proponer algo mejor. Datos sin resolver: 6.",
+   "paso": "explorar",
+   "paso_texto": "mover capital y arranque de obra para proponer algo mejor",
+   "defiende": 1,
+   "consejo": "El consejo todavía no se reúne sobre la V1 con sus números de hoy.",
+   "sesion": "",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 0,
+   "aprobada": false,
+   "probada": false,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "",
+   "paso_capital": 10,
+   "revision": [
+    "Pasa (aportación justa)",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "la base pasa: primero explora",
+   "entradas": {
+    "estados": [
+     "base",
+     "alterna",
+     "alterna"
+    ],
+    "pruebas": [],
+    "consejo": [],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: mover capital y arranque de obra para proponer algo mejor. Datos sin resolver: 6.",
+   "paso": "explorar",
+   "paso_texto": "mover capital y arranque de obra para proponer algo mejor",
+   "defiende": 1,
+   "consejo": "Última sesión sobre la V1 con sus números de hoy: CP-1: aprueban 7 de 7. La aprueba.",
+   "sesion": "CP-1",
+   "aprueban": 7,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": true,
+   "probada": true,
+   "sin_mejora": false,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "Pasa (aportación justa)",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "la base pasa con pruebas y votos pero sin haber explorado",
+   "entradas": {
+    "estados": [
+     "base",
+     "alterna",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V1",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V1",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V1",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V1",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V1",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V1",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V1",
+      "Juez 6",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V1",
+      "Juez 7",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": []
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: probar la V1 contra los golpes (pruebas de estrés). Datos sin resolver: 6.",
+   "paso": "probar",
+   "paso_texto": "probar la V1 contra los golpes (pruebas de estrés)",
+   "defiende": 1,
+   "consejo": "El consejo todavía no se reúne sobre la V1 con sus números de hoy.",
+   "sesion": "",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 0,
+   "aprobada": false,
+   "probada": false,
+   "sin_mejora": true,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "",
+   "paso_capital": 10,
+   "revision": [
+    "Pasa (aportación justa)",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "la base pasa y ya exploró sin mejora: se prueba",
+   "entradas": {
+    "estados": [
+     "base",
+     "alterna",
+     "alterna"
+    ],
+    "pruebas": [],
+    "consejo": [],
+    "rondas": [
+     [
+      1,
+      "2026-01-15 11:00",
+      "El plan",
+      1,
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "Motivo de prueba",
+      "sin mejora",
+      "",
+      "",
+      "",
+      15,
+      "{}",
+      ""
+     ]
+    ]
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: presentar la V1 al consejo de planes. Datos sin resolver: 6.",
+   "paso": "consejo",
+   "paso_texto": "presentar la V1 al consejo de planes",
+   "defiende": 1,
+   "consejo": "El consejo todavía no se reúne sobre la V1 con sus números de hoy.",
+   "sesion": "",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 0,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": true,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "",
+   "paso_capital": 10,
+   "revision": [
+    "Pasa (aportación justa)",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "la base pasa, exploró y se probó: al consejo",
+   "entradas": {
+    "estados": [
+     "base",
+     "alterna",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V1",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [],
+    "rondas": [
+     [
+      1,
+      "2026-01-15 11:00",
+      "El plan",
+      1,
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "Motivo de prueba",
+      "sin mejora",
+      "",
+      "",
+      "",
+      15,
+      "{}",
+      ""
+     ]
+    ]
+   }
+  },
+  {
+   "edad": "plántula",
+   "muestra": true,
+   "falta": "Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: que Dirección decida si la V1, que el consejo aprobó, queda vigente. Datos sin resolver: 6.",
+   "paso": "direccion",
+   "paso_texto": "que Dirección decida si la V1, que el consejo aprobó, queda vigente",
+   "defiende": 1,
+   "consejo": "Última sesión sobre la V1 con sus números de hoy: CP-1: aprueban 6 de 7. La aprueba.",
+   "sesion": "CP-1",
+   "aprueban": 6,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": true,
+   "probada": true,
+   "sin_mejora": true,
+   "sin_leer": 0,
+   "evidencia": "c0_d2_h0_p1",
+   "evidencia_sesion": "c0_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "Pasa (aportación justa)",
+    "Pasa (aportación justa)",
+    "No pasa: 1 de 9 pruebas"
+   ],
+   "huellas": [
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_120000_124213_244213_40037_49963_54981_34000_9000_366_255"
+   ],
+   "escenario": "la base pasa, exploró y el consejo la aprueba: decide Dirección",
+   "entradas": {
+    "estados": [
+     "base",
+     "alterna",
+     "alterna"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V1",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V1",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V1",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V1",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V1",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V1",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V1",
+      "Juez 6",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V1",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c0_d2_h0_p1"
+     ]
+    ],
+    "rondas": [
+     [
+      1,
+      "2026-01-15 11:00",
+      "El plan",
+      1,
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "Motivo de prueba",
+      "sin mejora",
+      "",
+      "",
+      "",
+      15,
+      "{}",
+      ""
+     ]
+    ]
+   }
+  },
+  {
+   "edad": "flor",
+   "muestra": true,
+   "falta": "Firmar el acuerdo con el dueño.",
+   "paso": "mundo",
+   "paso_texto": "conseguir lo que pidió el consejo (candados y datos): moviendo capital y arranque de obra ya no mejora",
+   "defiende": 3,
+   "consejo": "Última sesión sobre la V3 con sus números de hoy: CP-2: aprueban 0 de 7. La regresa.",
+   "sesion": "CP-2",
+   "aprueban": 0,
+   "vetos": 0,
+   "votaron": 7,
+   "aprobada": false,
+   "probada": true,
+   "sin_mejora": true,
+   "sin_leer": 0,
+   "evidencia": "c2_d2_h0_p1",
+   "evidencia_sesion": "c2_d2_h0_p1",
+   "paso_capital": 10,
+   "revision": [
+    "No pasa: 2 de 9 pruebas",
+    "Pasa (aportación justa)",
+    "Pasa"
+   ],
+   "huellas": [
+    "h500000_380000_30000_120000_0_226889_33518_56482_58241_33000_8000_366_209",
+    "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+    "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382"
+   ],
+   "escenario": "flor con una propuesta nueva regresada y sin mejora",
+   "entradas": {
+    "estados": [
+     "base",
+     "vigente",
+     "propuesta"
+    ],
+    "pruebas": [
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V2",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382"
+     ],
+     [
+      "Base de la versión",
+      "(sin cambios)",
+      1,
+      0,
+      1,
+      1,
+      30,
+      "V3",
+      "2026-01-15 10:00",
+      "Pruebas",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382"
+     ]
+    ],
+    "consejo": [
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 1",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 2",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 3",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 4",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 5",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 6",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-1",
+      "V2",
+      "Juez 7",
+      "aprueba",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_60000_146457_206457_31078_58922_59461_37000_12000_220_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V3",
+      "Juez 1",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V3",
+      "Juez 2",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V3",
+      "Juez 3",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V3",
+      "Juez 4",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V3",
+      "Juez 5",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V3",
+      "Juez 6",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c2_d2_h0_p1"
+     ],
+     [
+      "2026-01-15",
+      "CP-2",
+      "V3",
+      "Juez 7",
+      "regresa",
+      "Razón de prueba",
+      "",
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "c2_d2_h0_p1"
+     ]
+    ],
+    "rondas": [
+     [
+      3,
+      "2026-01-15 11:00",
+      "El plan",
+      3,
+      "h500000_380000_30000_80000_124460_204460_31910_58090_59045_37000_12000_268_382",
+      "Motivo de prueba",
+      "sin mejora",
+      "",
+      "",
+      "",
+      15,
+      "{}",
+      ""
+     ]
+    ]
+   }
+  }
+ ]
+}
