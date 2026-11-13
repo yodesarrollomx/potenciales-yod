@@ -54,3 +54,4 @@
 {"cuando":"2026-11-13T01:35:47.937Z","que":"se resuelve","clave":"cambio:yodesarrollomx/sala-edicion","tipo":"cambio","msg":"sala-edicion cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo","desde":"2026-11-13T00:59:09Z"}
 {"cuando":"2026-11-13T01:43:34.991Z","que":"aparece","clave":"cambio:yodesarrollomx/yodesarrollo-board","tipo":"cambio","nodos":["repo:yodesarrollomx/yodesarrollo-board"],"desde":"2026-11-13T01:41:57Z","url":"https://github.com/yodesarrollomx/yodesarrollo-board/commit/25de9093896f1f72d067d2cfc3ce69dc302b6848","msg":"yodesarrollo-board cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"}
 {"cuando": "2026-11-12T19:01:52-07:00", "que": "grafo rehecho (borrador)", "id": "G-20261112-1900", "pr": 97, "ia": "claude:claude-sonnet-5-5", "por": "alexpueblag"}
+{"cuando": "2026-11-12T19:03:21-07:00", "que": "grafo aprobado", "id": "G-20261112-1900", "pr": 97, "por": "alexpueblag"}
