@@ -1,6 +1,6 @@
 name: Grafo · estado
-# Revisa flujos, chinches, cambios y páginas de los repositorios del grafo (sólo lectura) y deja el resultado en la
-# rama de datos `grafo-datos`: la principal está protegida y no se escribe en ella.
+# Revisa flujos, chinches, cambios y páginas de los repositorios del grafo (lee GitHub y las páginas), deja el resultado
+# en la rama de datos `grafo-datos` y abre chinches; nunca escribe en la principal (está protegida) ni toca ningún /exec.
 # Cuándo corre:
 #  · por horario: pide dos por hora, pero GitHub arranca los horarios cuando puede (con carga alta los retrasa y
 #    descarta algunos). Medido del 8 al 12-nov-2026 en esta organización: cada línea de horario corre unas tres veces

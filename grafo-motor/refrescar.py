@@ -17,6 +17,7 @@ La capa curada (pantallas propuestas, plan, hallazgos, pestañas y columnas de l
 
 Uso: python3 grafo-motor/refrescar.py --repos <carpeta de clones> [--base base.json] [--salida base.json]
      [--cambios cambios.json] [--todo]   (--todo trata cada repositorio como cambiado por completo)
+     [--tapar dueño/nombre ...]         (repositorios de la lista que hoy no contestaron: se tapan en los textos)
 """
 import argparse, collections, functools, hashlib, json, os, re, shutil, subprocess, sys, tempfile, urllib.parse
 
@@ -443,9 +444,12 @@ def filtra_atlas(M, R=None):
 # ── sólo repositorios públicos ──────────────────────────────────────────────────────────────────────
 # reglas.json → "publicos" es la lista de los repositorios que el grafo puede nombrar, revisada a mano y vigilada por
 # LoPublicado. Lo que no está ahí no se publica: ni sus piezas ni su nombre en los textos. Los nombres de los repositorios
-# NO públicos no se guardan nunca en este repositorio (es público): se guarda sólo su huella (base.json → "no_publicos"),
-# sacada del atlas en cada refresco, y con ella se reconoce el nombre en cualquier texto. La visibilidad real la comprueba
-# rehacer.py, que lee cada repositorio de la lista sin credencial y no abre borrador si alguno no contesta.
+# NO públicos no se escriben en este repositorio (es público), y tampoco se guardan sus huellas: una huella sin clave deja
+# confirmar el nombre a quien lo adivine (dictamen del PR 90, H1). En cada refresco se sacan del atlas, sólo en memoria, y
+# con ellas se reconoce y se tapa el nombre en cualquier texto. Si el atlas deja de nombrar un repositorio no público, su
+# nombre corto ya no se reconoce; el «dueño/nombre» completo se sigue tapando porque no está en la lista. La visibilidad
+# real la comprueba rehacer.py: lee sin credencial cada repositorio de la lista; si uno que el grafo rastrea no contesta,
+# no abre borrador; si no contesta uno que sólo sale en textos, se tapa su nombre completo (--tapar) y sigue.
 REPO_PRIVADO = 'un repositorio privado'
 TROZO = re.compile(r'[A-Za-z0-9._/-]+')
 
@@ -464,7 +468,8 @@ def nombra_privado(trozo, H):
 
 def huellas_no_publicos(M, publicos):
     """Huellas de los repositorios que el atlas nombra y que no son públicos: los que él marca así y los que no están en la
-    lista. Se guarda el nombre completo y, si no choca con el de un repositorio público, también el corto."""
+    lista. Del nombre completo y, si no choca con el de un repositorio público, también del corto. Se usan y se tiran: no
+    se guardan en la base."""
     pub = {p.lower() for p in publicos}; cortos = {p.split('/', 1)[-1] for p in pub}; otros = set()
     for r in (M or {}).get('repositories') or []:
         n = str(r.get('repo') or '')
@@ -661,6 +666,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--repos', required=True); ap.add_argument('--base', default=os.path.join(AQUI, 'datos', 'base.json'))
     ap.add_argument('--salida'); ap.add_argument('--cambios'); ap.add_argument('--todo', action='store_true'); ap.add_argument('--hoy', default='')
+    ap.add_argument('--tapar', action='append', default=[], help='dueño/nombre de la lista de públicos que hoy no contestó: se tapa en los textos')
     a = ap.parse_args()
     B = json.load(open(a.base, encoding='utf-8')); A = json.loads(json.dumps(B)); X = Base(B)
     res = dict(repos=[], faltan=[], atlas=None, notas=X.nota)
@@ -676,12 +682,17 @@ def main():
     if M: res['atlas'] = sincroniza_atlas(X, filtra_atlas(M))
     res['excluidos'] = excluye(X)
     res['excluidos_en_informe'] = filtra_cambios(res)
-    publicos = reglas_publicos(); pub = {p.lower() for p in publicos}
+    # --tapar: repositorios de la lista que hoy no contestaron sin credencial y que el grafo no rastrea (sólo salen en
+    # textos). Por esta vez cuentan como no públicos: se tapa su «dueño/nombre» completo. El corto no, porque casi siempre es
+    # también el de un repositorio público que sí contestó (las casas viejas) y podría ser una palabra común.
+    tapar = {n.lower() for n in a.tapar}
+    publicos = [p for p in reglas_publicos() if p.lower() not in tapar]; pub = {p.lower() for p in publicos}
     H, marcados = huellas_no_publicos(M, publicos) if M else (set(), [])
-    H = (H | set(B.get('no_publicos') or [])) - {huella_nombre(p) for p in pub} - {huella_nombre(p.split('/', 1)[-1]) for p in pub}
+    H |= {huella_nombre(n) for n in tapar}
+    H -= {huella_nombre(p) for p in pub} | {huella_nombre(p.split('/', 1)[-1]) for p in pub | tapar}
     res['no_publicos'] = solo_publicos(X, publicos, H)
     res['marcados_no_publicos'] = marcados             # en la lista de públicos, pero el atlas dice que no lo son: rehacer no abre borrador
-    B['no_publicos'] = sorted(H)
+    B.pop('no_publicos', None)                         # las huellas no se guardan (las bases anteriores al 13-nov-2026 las traían)
     pd = os.path.join(a.repos, 'potenciales-yod')
     if os.path.isdir(pd): B['ppp'] = contrato_ppp(pd)
     if a.hoy: B['armado'] = a.hoy

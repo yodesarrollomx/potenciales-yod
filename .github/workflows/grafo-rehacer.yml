@@ -75,6 +75,8 @@ jobs:
         run: |
           set -o pipefail
           python grafo-motor/rehacer.py rehacer --ensayo --sin-ia --aqui . --informe "$RUNNER_TEMP/informe.json" | tail -60
+          # Un ensayo bloqueado regresa antes de refrescar: no probó el motor. Sale como aviso en el resumen de la corrida.
+          python grafo-motor/aviso.py ensayo "$RUNNER_TEMP/informe.json"
       - name: Claves de IA disponibles en este repositorio (sólo sí o no)
         env:
           HAY_OPENAI: ${{ secrets.OPENAI_API_KEY != '' }}

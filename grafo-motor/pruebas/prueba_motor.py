@@ -20,7 +20,8 @@ def corre(m, *a, env=None):
 
 # Las pruebas no salen a la red: los repositorios que no están en la carpeta de clones «no contestan», y se permite
 # rehacer así (en el flujo real eso no abre borrador; lo comprueba test_sin_leer_un_repositorio_publico_no_hay_borrador).
-SIN_RED = {'GRAFO_CLONA_DE': 'file:///grafo-sin-red/', 'GRAFO_PERMITE_SIN_CLON': '1'}
+# Sin pausa entre el primer intento y el segundo.
+SIN_RED = {'GRAFO_CLONA_DE': 'file:///grafo-sin-red/', 'GRAFO_PERMITE_SIN_CLON': '1', 'GRAFO_PAUSA_REINTENTO': '0'}
 
 
 def jl(p):
@@ -35,6 +36,28 @@ def repo_de_mentira(carpeta, archivos):
     g = lambda *x: subprocess.run(['git', '-C', carpeta, '-c', 'user.name=prueba', '-c', 'user.email=prueba@example.invalid'] + list(x), check=True, capture_output=True)
     g('init', '-q'); g('add', '-A'); g('commit', '-q', '-m', 'prueba')
     return carpeta
+
+
+def motor_de_mentira(publicos, nodos=None):
+    """Copia del motor con una base pequeña y una lista de públicos de mentira. El grafo rastrea un solo repositorio,
+    dueno/uno, que se lee de una fuente local (file://) en vez de GitHub. Regresa (carpeta, motor, fuente)."""
+    d, m = copia_motor()
+    p = os.path.join(m, 'datos', 'reglas.json'); R = jl(p); R['publicos'] = publicos
+    with open(p, 'w', encoding='utf-8') as f: json.dump(R, f, ensure_ascii=False)
+    B = dict(esquema=1, armado='2026-11-12T09:00:00-07:00', nodos=dict({'repo:dueno/uno': dict(capa='repo', repo='uno', label='dueno/uno')}, **(nodos or {})),
+             flechas=[], simbolos={}, entre=[], ppp={}, repos={'uno': dict(owner='dueno', repo='uno', commit='0000000000', papel='Prueba', vis='publico')})
+    with open(os.path.join(m, 'datos', 'base.json'), 'w', encoding='utf-8') as f: json.dump(B, f, ensure_ascii=False)
+    fuente = os.path.join(d, 'fuente')
+    repo_de_mentira(os.path.join(fuente, 'dueno', 'uno.git'), {'index.html': '<html><script>function hola(){ return 1; }</script></html>\n'})
+    return d, m, fuente
+
+
+def rehace_de_mentira(d, m, fuente, env=None):
+    """rehacer.py en ensayo contra la fuente local, sin el permiso de las pruebas para seguir sin clones. Regresa el informe."""
+    inf = os.path.join(d, 'informe.json')
+    corre(m, 'rehacer.py', 'rehacer', '--ensayo', '--sin-ia', '--clones', os.path.join(d, 'clones'), '--salida', os.path.join(d, 'grafo'), '--informe', inf,
+          env=dict({'GRAFO_CLONA_DE': 'file://' + fuente + '/', 'GRAFO_PERMITE_SIN_CLON': '', 'GRAFO_PAUSA_REINTENTO': '0'}, **(env or {})))
+    return jl(inf)
 
 
 class LoPublicado(unittest.TestCase):
@@ -132,6 +155,22 @@ class LoPublicado(unittest.TestCase):
                 malos += [(f,)] * dice(t)
         self.assertEqual(malos, [])
 
+    def test_el_patron_de_textos_atrapa_cualquier_forma_y_no_las_casualidades(self):
+        """El patrón de textos de DEC-19 no distingue mayúsculas, atrapa la palabra en rutas y pegada a otra, y se lleva lo
+        pegado; no atrapa palabras que sólo la contienen por casualidad (dictamen del PR 90, H5). El nombre sale de la regla."""
+        import refrescar
+        R = refrescar.reglas_excluir(); pats = [re.compile(p) for p in R['textos']]
+        Z_ = re.match(r'\^\(SYS\|GAS\|SHEET\|STORE\)-([A-Z0-9]+)\(', R['comp'][0]).group(1); z = Z_.lower(); Zc = Z_.capitalize()
+        dice = lambda s: any(p.search(s) for p in pats)
+        for s in (Z_, z, Zc, f'{Z_}evaluacion360', f'{z}/index.html', f'docs/arquitectura/{z}-contratos.md', f'llave_{z}_borrador', f'yod-{z}', f'({Z_})',
+                  f'abrir{Z_}', f'cargar{Zc}'):
+            self.assertTrue(dice(s), s)
+        for s in (f'h{z}ale', f'r{z}esivir', f'H{Z_}ALE', f'7{z}x', 'tiempo', 'Ninguna mención'):
+            self.assertFalse(dice(s), s)
+        F = refrescar.filtra_atlas(dict(components=[dict(id='SYS-POTENCIALES', proposito=f'Lee {z}/datos.json y {Z_}evaluacion360, y abre cargar{Zc}; la h{z}ale no')],
+                                        connections=[], proposals=[]), R)
+        self.assertEqual(F['components'][0]['proposito'], 'Lee otro sistema/datos.json y otro sistema, y abre cargarotro sistema; la ' + f'h{z}ale no')
+
     def texto_publicado(self):
         """Todo lo que se publica del grafo: la base, sus reglas y recetas, y lo generado en grafo/. De las láminas se omite
         el texto de las cajas («lbl»): es el nombre de la pieza partido en renglones, y el nombre entero ya está en la base."""
@@ -143,8 +182,9 @@ class LoPublicado(unittest.TestCase):
 
     def test_solo_repositorios_publicos(self):
         """El grafo sólo nombra repositorios de reglas.json → "publicos" (comprobados públicos). No se fía del campo «vis»
-        que la base declara de sí misma. Los nombres de los NO públicos no se escriben en ninguna parte: la base guarda su
-        huella (sacada del atlas) y con ella se busca el nombre en todo lo publicado (dictamen GRAFO-05, M1 y B5)."""
+        que la base declara de sí misma. Los nombres de los NO públicos no se escriben en ninguna parte, y tampoco sus huellas:
+        una huella sin clave deja confirmar el nombre a quien lo adivine (dictamen del PR 90, H1). Cómo se tapan con las
+        huellas sacadas del atlas en cada refresco lo comprueba SoloPublicos con nombres de mentira (dictamen GRAFO-05, M1 y B5)."""
         import refrescar
         P = refrescar.reglas_publicos(); pub = {p.lower() for p in P}
         self.assertTrue(P and len(pub) == len(P) and all(re.fullmatch(r'[A-Za-z0-9-]+/[A-Za-z0-9._-]+', p) for p in P))
@@ -157,10 +197,8 @@ class LoPublicado(unittest.TestCase):
         duenos = sorted({p.split('/')[0] for p in pub})
         citados = {f'{o}/{r}'.lower() for o, r in re.findall(r'(?<![A-Za-z0-9._-])(' + '|'.join(map(re.escape, duenos)) + r')/([A-Za-z0-9._-]*[A-Za-z0-9_-])', T, re.I)}
         self.assertEqual(citados - pub, set(), 'se cita un dueño/repositorio que no está en la lista de públicos')
-        H = set(self.B.get('no_publicos') or [])
-        self.assertTrue(H, 'la base guarda la huella de los repositorios no públicos que nombra el atlas')
-        self.assertEqual(H & {refrescar.huella_nombre(p) for p in pub} | H & {refrescar.huella_nombre(p.split('/')[1]) for p in pub}, set())
-        self.assertEqual(sorted(t for t in set(refrescar.TROZO.findall(T)) if refrescar.nombra_privado(t.rstrip('./-_'), H)), [], 'lo publicado nombra un repositorio no público')
+        self.assertNotIn('no_publicos', self.B, 'la base no guarda huellas de los repositorios no públicos')
+        self.assertEqual(re.findall(r'"[0-9a-f]{16}"', self.texto), [], 'ni sueltas: una huella sin clave confirma el nombre a quien lo adivine')
 
     def test_las_laminas_no_se_indexan(self):
         G = os.path.join(MOTOR, '..', 'grafo'); html = [f for f in os.listdir(G) if f.endswith('.html')]
@@ -208,6 +246,39 @@ class SoloPublicos(unittest.TestCase):
                          'el nombre corto de un no público que coincide con uno público no se tapa: sólo el completo')
         self.assertTrue(refrescar.nombra_privado('dueno/oculto-x/server', H)); self.assertTrue(refrescar.nombra_privado('otro/publico', H))
         self.assertFalse(refrescar.nombra_privado('dueno/publico', H)); self.assertFalse(refrescar.nombra_privado('publico', H))
+
+    def test_el_refresco_saca_las_huellas_del_atlas_y_no_las_guarda(self):
+        """refrescar.py con un atlas de mentira: tapa el nombre corto de un repositorio que el atlas marca privado, y la base
+        que escribe no guarda huellas (dictamen del PR 90, H1). Tampoco el informe del refresco."""
+        import refrescar
+        d, m, fuente = motor_de_mentira(['dueno/uno'], {'SYS-X': dict(capa='sistema', label='X', nota='Lee lo que deja oculto-x cada noche')})
+        self.addCleanup(shutil.rmtree, d, True)
+        clones = os.path.join(d, 'clones'); subprocess.run(['git', 'clone', '-q', os.path.join(fuente, 'dueno', 'uno.git'), os.path.join(clones, 'uno')], check=True, capture_output=True)
+        at = os.path.join(clones, 'yod-portal', 'docs', 'arquitectura'); os.makedirs(at)
+        with open(os.path.join(at, 'modelo.json'), 'w', encoding='utf-8') as f:
+            json.dump(dict(revision='r', components=[], connections=[], repositories=[dict(repo='dueno/uno', visibility='public'), dict(repo='dueno/oculto-x', visibility='private')]), f)
+        with open(os.path.join(m, 'datos', 'base.json'), encoding='utf-8') as f: B = json.load(f)
+        B['no_publicos'] = ['0123456789abcdef']; sal = os.path.join(d, 'sal.json'); cam = os.path.join(d, 'cam.json')
+        with open(os.path.join(m, 'datos', 'base.json'), 'w', encoding='utf-8') as f: json.dump(B, f)
+        corre(m, 'refrescar.py', '--repos', clones, '--salida', sal, '--cambios', cam, env={'PYTHONHASHSEED': '0'})
+        S = jl(sal)
+        self.assertEqual(S['nodos']['SYS-X']['nota'], 'Lee lo que deja un repositorio privado cada noche')
+        self.assertNotIn('no_publicos', S, 'una base anterior que traía huellas las pierde al refrescar')
+        with open(sal, encoding='utf-8') as f, open(cam, encoding='utf-8') as g: texto = f.read() + g.read()
+        for h in (refrescar.huella_nombre('oculto-x'), refrescar.huella_nombre('dueno/oculto-x'), '0123456789abcdef'): self.assertNotIn(h, texto)
+        self.assertNotIn('oculto-x', texto)
+
+    def test_tapar_lo_que_no_contesto_tapa_el_nombre_completo_y_no_el_corto(self):
+        """--tapar (lo pasa rehacer.py con los repositorios de la lista que el grafo no rastrea y que no contestaron): se tapa
+        su «dueño/nombre»; el nombre corto no, porque suele ser también el de un repositorio público (dictamen del PR 90, H3)."""
+        d, m, fuente = motor_de_mentira(['dueno/uno', 'viejo/uno', 'viejo/casa'], {'SYS-X': dict(capa='sistema', label='X', nota='Antes en viejo/uno y viejo/casa; la casa y uno siguen')})
+        self.addCleanup(shutil.rmtree, d, True)
+        clones = os.path.join(d, 'clones'); subprocess.run(['git', 'clone', '-q', os.path.join(fuente, 'dueno', 'uno.git'), os.path.join(clones, 'uno')], check=True, capture_output=True)
+        sal = os.path.join(d, 'sal.json')
+        corre(m, 'refrescar.py', '--repos', clones, '--salida', sal, '--tapar', 'viejo/uno', '--tapar', 'viejo/casa', env={'PYTHONHASHSEED': '0'})
+        self.assertEqual(jl(sal)['nodos']['SYS-X']['nota'], 'Antes en un repositorio privado y un repositorio privado; la casa y uno siguen')
+        corre(m, 'refrescar.py', '--repos', clones, '--salida', sal, env={'PYTHONHASHSEED': '0'})
+        self.assertEqual(jl(sal)['nodos']['SYS-X']['nota'], 'Antes en viejo/uno y viejo/casa; la casa y uno siguen', 'sin --tapar no se toca')
 
 
 class Recetas(unittest.TestCase):
@@ -483,14 +554,57 @@ class Versiones(unittest.TestCase):
         repo_de_mentira(os.path.join(clones, 'pintarron'), {'index.html': '<html><script>function hola(){ return 1; }</script></html>\n'})
         corre(m, 'rehacer.py', 'inicial', '--salida', G)
         with open(os.path.join(m, 'datos', 'base.json'), 'rb') as f: base = f.read()
-        corre(m, 'rehacer.py', 'rehacer', '--sin-ia', '--clones', clones, '--salida', G, '--informe', inf, env={'GRAFO_CLONA_DE': SIN_RED['GRAFO_CLONA_DE'], 'GRAFO_PERMITE_SIN_CLON': ''})
-        I = jl(inf)
+        corre(m, 'rehacer.py', 'rehacer', '--sin-ia', '--clones', clones, '--salida', G, '--informe', inf, env=dict(SIN_RED, GRAFO_PERMITE_SIN_CLON=''))
+        I = jl(inf); B = jl(os.path.join(m, 'datos', 'base.json'))
         self.assertFalse(I['cambio']); self.assertEqual(I['bloqueado'], 'sin_clon')
-        self.assertEqual(len(I['sin_clon']), len(refrescar.reglas_publicos()) - 1, 'se tocan todos los de la lista, también las casas viejas')
+        rastreados = {f"{r['owner']}/{r['repo']}".lower() for r in B['repos'].values()}
+        self.assertEqual(len(I['sin_clon']), len(rastreados) - 1, 'frenan los que el grafo rastrea')
+        self.assertEqual(sorted(I['sin_respuesta']), sorted(p for p in refrescar.reglas_publicos() if p.lower() not in rastreados), 'las casas viejas también se tocan')
         self.assertNotIn('yodesarrollomx/pintarron', I['sin_clon'])
         self.assertEqual(len(jl(os.path.join(G, 'versiones.json'))['versiones']), 1)
         with open(os.path.join(m, 'datos', 'base.json'), 'rb') as f: self.assertEqual(f.read(), base, 'la base no cambia')
         c = aviso.comentario(I, '', 0); self.assertIn('no se pudieron leer sin credencial', c.lower()); self.assertIn('No se abrió ningún borrador', c)
+        # el ensayo de cada PR lo enseña como aviso en el resumen de la corrida, en vez de quedar en verde callado (dictamen del PR 90, H4)
+        comandos, md = aviso.anotar_ensayo(I)
+        self.assertTrue(comandos[0].startswith('::warning title=Ensayo bloqueado%2C no probó el motor::No se pudieron leer sin credencial')); self.assertIn('Ensayo bloqueado', md)
+        self.assertTrue(all('\n' not in x for x in comandos)); self.assertIn('Repositorios de la lista sin respuesta', md)
+        self.assertEqual(aviso.anotar_ensayo(dict(cambio=True, sin_respuesta=[])), ([], ''), 'un ensayo que sí probó el motor no avisa nada')
+        resumen = os.path.join(d, 'resumen.md')
+        r = subprocess.run([sys.executable, os.path.join(m, 'aviso.py'), 'ensayo', inf], capture_output=True, text=True, env=dict(os.environ, GITHUB_STEP_SUMMARY=resumen), check=True)
+        self.assertIn('::warning title=Ensayo bloqueado', r.stdout)
+        with open(resumen, encoding='utf-8') as f: self.assertIn('### ⚠️ Ensayo bloqueado', f.read())
+
+    def test_un_tropiezo_de_red_no_frena_el_borrador(self):
+        """Cada lectura sin credencial tiene dos intentos: un repositorio que falla una vez y luego contesta no frena el
+        borrador (dictamen del PR 90, H2). Un git de mentira hace fallar el primer intento."""
+        d, m, fuente = motor_de_mentira(['dueno/uno']); self.addCleanup(shutil.rmtree, d, True)
+        envuelto = os.path.join(d, 'bin'); os.makedirs(envuelto); marca = os.path.join(d, 'ya-fallo')
+        with open(os.path.join(envuelto, 'git'), 'w', encoding='utf-8') as f:
+            f.write('#!/bin/sh\nfor x in "$@"; do case "$x" in *uno.git) if [ ! -e "$GRAFO_PRUEBA_MARCA" ]; then : > "$GRAFO_PRUEBA_MARCA"; '
+                    'echo "fatal: tropiezo de prueba" >&2; exit 128; fi;; esac; done\nexec "$GRAFO_PRUEBA_GIT" "$@"\n')
+        os.chmod(os.path.join(envuelto, 'git'), 0o755)
+        I = rehace_de_mentira(d, m, fuente, env=dict(PATH=envuelto + os.pathsep + os.environ.get('PATH', ''), GRAFO_PRUEBA_MARCA=marca, GRAFO_PRUEBA_GIT=shutil.which('git')))
+        self.assertTrue(os.path.exists(marca), 'el primer intento sí falló')
+        self.assertNotIn('bloqueado', I); self.assertTrue(I['cambio'], 'abriría el borrador'); self.assertEqual(I['resumen']['sin_clon'], [])
+
+    def test_lo_que_solo_sale_en_textos_y_no_contesta_se_tapa_y_sigue(self):
+        """Un repositorio de la lista que el grafo no rastrea (una casa vieja) y no contesta ni al segundo intento ya no frena:
+        su nombre se tapa en los textos, se sigue y el pedido lo avisa. Uno rastreado que no contesta sigue frenando
+        (dictamen del PR 90, H3)."""
+        import aviso
+        d, m, fuente = motor_de_mentira(['dueno/uno', 'viejo/casa'], {'SYS-X': dict(capa='sistema', label='X', nota='Antes vivía en viejo/casa')})
+        self.addCleanup(shutil.rmtree, d, True)
+        I = rehace_de_mentira(d, m, fuente)
+        self.assertNotIn('bloqueado', I); self.assertTrue(I['cambio']); self.assertEqual(I['sin_respuesta'], ['viejo/casa'])
+        self.assertEqual(I['resumen']['sin_respuesta'], 1, 'lo que se guarda en grafo/versiones.json es cuántos, no cuáles')
+        c = aviso.comentario(I, 'https://github.com/x/y/pull/12', 12)
+        self.assertIn('`viejo/casa`', c); self.assertIn('se tapó en los textos', c); self.assertIn('descarta este borrador', c)
+        self.assertNotIn('viejo/casa', aviso.cuerpo_pr(dict(I, id='G-x', piezas=1, ligas=0)))
+        self.assertIn('El pedido dice cuáles', aviso.cuerpo_pr(dict(I, id='G-x', piezas=1, ligas=0)))
+        self.assertIn('no hay nada que hacer', aviso.comentario(dict(I, cambio=False, mensaje='El grafo ya está al día.'), '', 0))
+        shutil.rmtree(os.path.join(d, 'clones')); shutil.rmtree(os.path.join(fuente, 'dueno'))
+        I = rehace_de_mentira(d, m, fuente)
+        self.assertEqual((I['bloqueado'], I['sin_clon'], I['sin_respuesta']), ('sin_clon', ['dueno/uno'], ['viejo/casa']))
 
     def test_las_laminas_salen_iguales_cada_vez(self):
         a, b = tempfile.mkdtemp(), tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, a, True); self.addCleanup(shutil.rmtree, b, True)

@@ -338,10 +338,12 @@
    "^(SYS|GAS|SHEET|STORE)-EMD(?:$|-)"
   ],
   "textos": [
-   "\\bEMD\\b"
-  ]
+   "(?<![^\\W_])[Ee][Mm][Dd]\\w*",
+   "(?<=[a-zñáéíóúü])E(?:MD|md)\\w*"
+  ],
+  "textos_nota": "Primero: la palabra en cualquier mayúscula, sola, en una ruta o pegada a la que le sigue, con todo lo pegado. Segundo: pegada detrás de otra palabra en camelCase. No atrapa palabras que sólo la contienen por casualidad (minúsculas después de otra letra, o todo en mayúsculas después de otra letra). Revisado contra el atlas el 13-nov-2026: ninguna palabra la contiene por casualidad."
  },
- "publicos_motivo": "Repositorios que el grafo puede nombrar: todos son públicos (comprobado el 12-nov-2026). Lo que no está aquí no se publica, ni sus piezas ni su nombre en los textos (refrescar.py, solo_publicos). Al sumar un repositorio al grafo se agrega aquí, sólo si es público; rehacer.py lo lee sin credencial y, si no contesta, no abre borrador.",
+ "publicos_motivo": "Repositorios que el grafo puede nombrar: todos son públicos (comprobado el 12-nov-2026). Lo que no está aquí no se publica, ni sus piezas ni su nombre en los textos (refrescar.py, solo_publicos). Al sumar un repositorio al grafo se agrega aquí, sólo si es público. rehacer.py lee cada uno sin credencial, con dos intentos: si el grafo lo rastrea y no contesta, no abre borrador; si sólo sale en textos (las casas viejas), tapa su nombre completo, sigue y lo avisa en el pedido.",
  "publicos": [
   "alexpueblag/alquimia-urbana",
   "alexpueblag/aurum-board",

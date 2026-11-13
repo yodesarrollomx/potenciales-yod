@@ -169,7 +169,7 @@
 
   <section class="card" id="grafo-sistema" hidden aria-label="Grafo del sistema">
     <h2>🕸️ Grafo del sistema <span id="grafoEstado" style="color:var(--muted);font-weight:400;font-size:12px;text-transform:none;letter-spacing:0"></span></h2>
-    <p style="font-size:12px;color:var(--muted);margin:-2px 0 12px">Cada tablero, motor, libro y archivo de YOD OS, y cómo se conectan. El borde rojo marca una pieza con error abierto; el ámbar, un repositorio que cambió desde que se armó el grafo. Se revisa con cada cambio del sistema y, por horario, cuando GitHub lo arranca (varias veces al día); «revisado» dice la hora de la última revisión. Rehacerlo deja un borrador: las presentaciones siguen con el aprobado hasta que lo apruebes.</p>
+    <p style="font-size:12px;color:var(--muted);margin:-2px 0 12px">Cada tablero, motor, libro y archivo de YOD OS, y cómo se conectan. El borde rojo marca una pieza con error abierto; el ámbar, un repositorio que cambió desde que se armó el grafo. Se revisa cuando cambia este repositorio o se aprueba un grafo, y por horario cuando GitHub lo arranca (unas cuantas veces al día, con retraso); «revisado» dice la hora de la última revisión. Rehacerlo deja un borrador: las presentaciones siguen con el aprobado hasta que lo apruebes.</p>
     <div id="grafoControl" class="gc" aria-live="polite"></div>
     <iframe id="grafoMarco" title="Grafo de YOD OS en el visor de Graphify" loading="lazy" style="width:100%;height:min(82vh,860px);min-height:520px;border:1px solid var(--line,#ddd);border-radius:10px;background:transparent"></iframe>
   </section>
@@ -213,7 +213,7 @@
   }
   // El Portero ya confirmó que es admin (canje) y lo que falló es sólo traer la lista, por tiempo o por red: se borra lo
   // privado y no se deja escribir, pero el grafo y la salud se quedan (son archivos estáticos que no dependen de esa
-  // lista). Antes se apagaba todo: el 12-nov-2026 el Portero tardó más de 20 s y el grafo desapareció de Accesos.
+  // lista). Antes se apagaba todo: el 12-nov-2026 el Portero tardó más de lo que se esperaba y el grafo desapareció de Accesos.
   function listaSinCargar(mensaje){
     admin=false;listado++;
     $('lista').innerHTML='<p class="u-meta">'+esc(mensaje)+'</p>';
