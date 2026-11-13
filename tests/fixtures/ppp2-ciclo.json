@@ -1,10 +1,10 @@
 {
- "_generador": "4f11dd23f45d740a9957ab0a0c3470672dfe6a5007b665585022707a74075179",
+ "_generador": "da1fa7ecea4d003c20fb2d8eee6713f95a41a245650adeca4b03fa075b9a8a9d",
  "escenarios": [
   {
    "edad": "semilla",
    "muestra": false,
-   "falta": "Capturar al menos un producto. Que la versión base calcule: faltan 8 datos para calcular.",
+   "falta": "Capturar al menos un producto. Que la versión base calcule: faltan 7 datos para calcular.",
    "paso": "datos",
    "paso_texto": "capturar los datos que faltan para calcular",
    "defiende": 1,

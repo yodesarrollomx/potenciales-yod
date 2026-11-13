@@ -138,6 +138,21 @@ hallazgos a mano con la API de Google Sheets **no** puede escribir debajo del ú
 hay lugar para unas 140 sesiones del consejo. Si `Consejo` o `Hallazgos` se llenan, se agregan renglones
 al final de la pestaña («Agregar N filas»).
 
+## Libros creados antes del tope de capital (13-nov-2026)
+
+El tope de capital (1/3 de las ventas, sólo aviso; ver `docs/ppp2.md`, «El tope de capital») necesita
+en cada libro, y en la plantilla:
+
+- `Datos!din.capital`: concepto «Tope de capital: 1/3 de las ventas (aviso)» y, en el valor, la fórmula
+  de 1/3 del total de `Productos` (columna E, renglón Total), redondeada a dos decimales. Si el libro ya
+  tenía la cifra a mano y es la misma, nada cambia de número.
+- `Versiones`: al final, después de las comprobaciones, un renglón en blanco, la sección «AVISOS» y el
+  renglón `capital_sobre_tope` (capital de la versión menos el tope, nunca menos de cero).
+- `Resumen`: al final, `v1.capital_sobre_tope`, `v2.capital_sobre_tope` y `v3.capital_sobre_tope`.
+
+Las fórmulas se copian de un libro generado con `ppp2/libro/generar.py` (con «;» en un libro con coma
+decimal). Sin estos renglones el servidor y la página siguen igual: sólo no hay aviso.
+
 ## Revertir
 
 Administrar implementaciones → lápiz → elegir la versión anterior → Implementar. Para dejar el

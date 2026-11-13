@@ -57,9 +57,9 @@ nadie lo escribe a mano. La página y el servidor (también cuando convoca al co
 El plan parte de la versión que defiende y prueba hasta 15 combinaciones: cinco de **capital** (dos
 pasos abajo y dos arriba) por tres de **arranque de obra** (un mes antes, igual, un mes después).
 El tamaño del paso de capital lo da el libro (`Resumen!plan.paso_capital`: 3% del costo con tierra,
-a una cifra). El tope de capital es el mayor entre el disponible en los datos y el que la versión de
-partida ya usa: si la de partida usa más que el disponible, se prueban capitales hasta ése; nunca
-prueba capital negativo. El libro recalcula cada combinación y el servidor sólo compara las cifras
+a una cifra). El tope de capital es el mayor entre el tope de los datos (`din.capital`: 1/3 de las
+ventas, ver «El tope de capital») y el que la versión de partida ya usa: si la de partida usa más que
+el tope, se prueban capitales hasta ése; nunca prueba capital negativo. El libro recalcula cada combinación y el servidor sólo compara las cifras
 que el libro devolvió: no calcula ningún resultado, sólo escoge qué valores probar (la rejilla) y
 cuenta en pasos lo que el libro midió.
 
@@ -76,8 +76,8 @@ este orden:
    pasa en el orden de las reglas 2 a 5;
 2. la que pasa sin «aportación justa»;
 3. la que no le alarga el plazo al dueño frente a la de partida;
-4. la que le deja más al dueño (a décimas de MDP);
-5. la que usa menos capital.
+4. la que usa menos capital (Dirección, 13-nov-2026: «entre menos se requiera, mejor para el negocio»);
+5. la que le deja más al dueño (a décimas de MDP).
 
 Si la mejor es la de partida, o ninguna pasa, no propone nada (**sin mejora**) y todo queda
 exactamente como estaba. Cuando ninguna pasa, la ronda anota cuál quedó más cerca, sólo para
@@ -89,6 +89,19 @@ elegida o la más cercana), pero nunca lo que tenía la versión donde escribió
 versión (misma huella) y hoy esa propuesta ya no existe —alguien la descartó o la cambió—, no la
 vuelve a proponer: la marca como retirada y escoge entre las demás. Si cambian los números de la
 versión de partida, todo vuelve a considerarse.
+
+### El tope de capital (sólo aviso)
+
+El capital no es dinero «disponible» esperando: es lo más que puede soportar el proyecto, y **entre
+menos se requiera, mejor para el negocio** (Dirección, 13-nov-2026). El libro lo calcula en
+`Datos!din.capital` como **1/3 de las ventas de los productos** (`Productos`, total); si alguien escribe
+otra cifra, manda esa. La versión base lo usa, la ronda nunca propone más (salvo que la de partida ya
+use más) y, entre opciones que pasan y aguantan igual, prefiere la que usa menos capital (regla 4).
+
+Pasarse **sólo da aviso**: `Versiones!capital_sobre_tope` dice cuántos MDP se pasa cada versión (0 si
+está dentro) y la página lo marca («Pasa del tope»), pero la revisión para fondos no cambia ni la huella
+tampoco. El Resumen trae `v1.capital_sobre_tope`… al final, después de las claves que ya leían los libros
+vivos.
 
 ### Dónde escribe
 

@@ -839,9 +839,11 @@ function sanarPrueba_(mod) {
         vecina gana sólo si le quita al menos un paso entero de faltante; quitarle menos no cuenta, y una a
         la que le falta más que a la de partida nunca le gana;
      2) pasa sin «aportación justa»;      3) no alarga el plazo del dueño frente a la de partida;
-     4) le deja más al dueño (a décimas de MDP);      5) usa menos capital.
+     4) usa menos capital (Dirección, 13-nov-2026: «entre menos se requiera, mejor para el negocio»);
+     5) le deja más al dueño (a décimas de MDP).
    Si la mejor es la de partida, o ninguna pasa, no propone («sin mejora») y todo queda como estaba.
    (Si la de partida no pasa la revisión, el punto 1 se mide contra la primera que sí pasa en el orden 2 a 5.)
+   El capital nunca pasa del tope de los datos (din.capital: 1/3 de las ventas), salvo que la de partida ya use más.
 
    Aquí no se calcula ningún resultado financiero: el servidor escoge qué valores probar (la rejilla: el capital
    de partida más o menos pasos, y un mes de arranque) y compara cifras que calculó el libro. Hasta el tamaño
@@ -1017,9 +1019,9 @@ function ronda_(s, p, libro, b, rev, rid) {
   if (!filaDe.capital || !filaDe.obra_inicio || !(pasoCap > 0)) return { ok: false, error: 'modelo' };
   var colB = 4 + kb, col = 4 + ks, huellaPartida = String(r0['plan.huella'] || r0['v' + kb + '.huella'] || '');
   var capBase = r3_(mod.getRange(filaDe.capital, colB).getValue()), obraBase = num_(mod.getRange(filaDe.obra_inicio, colB).getValue());
-  var capDatos = r3_(mod.getRange(filaDe.capital, 4).getValue());       // el capital disponible que dicen los datos
+  var capDatos = r3_(mod.getRange(filaDe.capital, 4).getValue());       // el tope de capital que dicen los datos (1/3 de las ventas)
   if (capBase === null || obraBase === null || !huellaPartida) return { ok: false, error: 'modelo' };
-  var tope = Math.max(capDatos === null ? capBase : capDatos, capBase); // nunca más capital que el disponible… ni que el que ya usa
+  var tope = Math.max(capDatos === null ? capBase : capDatos, capBase); // nunca más capital que el tope… ni que el que ya usa
   var etiquetas = {};
   ['capital', 'obra_inicio'].forEach(function (c) { etiquetas[c] = String(mod.getRange(filaDe[c], 2).getValue() || c); });
 
@@ -1127,7 +1129,7 @@ function ronda_(s, p, libro, b, rev, rid) {
       return Math.floor(Math.max(d, 0) / pasoCap + 1e-9);
     };
     var mideAguante = function (x, ref) { x.cae = aguanta(x) ? 0 : 1; x.ka = aguanta(x) ? 0 : 0 - pasosMejor(x, ref); };
-    var aptas = leidos.filter(function (x) { return x.f === 0 && !x.retirada; }).sort(function (a, b2) { return compara_(a, b2, ['j', 'mas', 'nd', 'cap']); });
+    var aptas = leidos.filter(function (x) { return x.f === 0 && !x.retirada; }).sort(function (a, b2) { return compara_(a, b2, ['j', 'mas', 'cap', 'nd']); });
     if (!incompleta && aptas.length) {
       var ref = base.f === 0 ? base : aptas[0];                 // contra quién se mide el aguante
       if (!alcanza(ref)) incompleta = true; else golpea(ref);
@@ -1142,7 +1144,7 @@ function ronda_(s, p, libro, b, rev, rid) {
           mideAguante(x, ref);
           if (x.cae === 0) { elegido = x; break; }              // la primera que aguanta todo es la mejor: las que siguen son menos deseables
         }
-        if (!elegido && !incompleta && !ilegible) elegido = aptas.slice().sort(function (a, b2) { return compara_(a, b2, ['cae', 'ka', 'j', 'mas', 'nd', 'cap']); })[0];
+        if (!elegido && !incompleta && !ilegible) elegido = aptas.slice().sort(function (a, b2) { return compara_(a, b2, ['cae', 'ka', 'j', 'mas', 'cap', 'nd']); })[0];
       }
     }
     if (ilegible) {
@@ -1160,7 +1162,7 @@ function ronda_(s, p, libro, b, rev, rid) {
     if (!elegido) {
       // ninguna pasa la revisión: no hay propuesta. Se anota la que quedó más cerca, sólo para informar.
       elegido = base;
-      cerca = leidos.filter(function (x) { return !x.base && !x.retirada && x.f < base.f; }).sort(function (a, b2) { return compara_(a, b2, ['f', 'mas', 'nd', 'cap']); })[0] || null;
+      cerca = leidos.filter(function (x) { return !x.base && !x.retirada && x.f < base.f; }).sort(function (a, b2) { return compara_(a, b2, ['f', 'mas', 'cap', 'nd']); })[0] || null;
     }
 
     var limpia = function (x) {
