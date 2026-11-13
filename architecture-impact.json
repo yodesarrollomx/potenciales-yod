@@ -1,18 +1,14 @@
 {
   "model_revision": "2026-11-12.ppp2.1",
   "proposal_id": "CHG-GRAFO-ACCESOS-20261111",
-  "summary": "Integración de las correcciones del grafo del 12-nov-2026 (equipo de agentes, auditadas por separado), en un solo cambio: (1) vista previa del borrador endurecida (PR 89); (2) el grafo sólo refleja repositorios públicos, DEC-19 también en textos y propuestas del atlas, láminas con noindex y textos sin el nombre de lo excluido (PR 90); (3) Accesos espera hasta 30 s al Portero y reintenta una vez sin mostrar nada privado (PR 88); (4) el vigilante no promete «cada hora» y no repite chinches cuando un flujo falla, pasa y vuelve a fallar (PR 87); (5) aprobar con un toque si el repositorio tiene los secretos de una GitHub App propia del grafo, inerte sin ellos (PR 86, DEC-21). Además: pasos para instalar la App, textos sin «cada hora» y la decisión de Dirección sobre claves PRJ y nombres de proyecto. Sin cambios en portero.js, backend, hojas ni permisos. Correcciones de la auditoría del PR 90: la base ya no guarda huellas de repositorios privados; un reintento por repositorio; las casas viejas que no contestan se tapan y no frenan; el ensayo avisa cuando quedó bloqueado; el patrón de DEC-19 no distingue mayúsculas. Textos de Accesos y del vigilante corregidos (30 s, cuándo se revisa y qué escribe).",
+  "summary": "Grafo del sistema rehecho a pedido: versión G-20261112-1823 (la aprobada era G-20261112-1420). Cambian sólo los datos del grafo (grafo-motor/datos/base.json) y lo que se genera de ellos en grafo/: láminas, registro de versiones y datos para presentaciones. Sin código, backend, hojas ni permisos. Fusionar este cambio es aprobar el grafo; cerrarlo lo descarta.",
   "components": [
-    "SYS-POTENCIALES",
-    "SYS-CONTROL"
+    "SYS-POTENCIALES"
   ],
   "tests": [
-    "python3 -m unittest discover -s grafo-motor/pruebas -p 'prueba_*.py'",
-    "node --test tests/grafo-estado.test.cjs tests/grafo-control.test.cjs tests/accesos-admin-session.test.cjs tests/access-gates.cjs",
-    "node tests/grafo-accesos-browser.cjs (vista previa aislada y Portero lento incluidos)",
-    "actionlint .github/workflows/grafo-*.yml",
-    "python3 grafo-motor/rehacer.py inicial: lo publicado coincide con lo que genera el motor",
-    "verificar-impacto contra el atlas fijado (bb97266)"
+    "Láminas generadas por grafo-motor/laminas.py desde la base de este mismo cambio (determinista).",
+    "Recetas de presentación comprobadas contra el contrato del Plan de Potencial al rehacer.",
+    "verificar-impacto contra el atlas fijado."
   ],
-  "rollback": "Revertir el PR de integración; el grafo aprobado sigue siendo G-20261112-1420 y la App no cambia nada mientras no existan sus secretos."
+  "rollback": "Cerrar el PR del borrador, o revertir su merge: el grafo aprobado anterior sigue publicado."
 }
