@@ -78,7 +78,7 @@
               '<div class="gc-fila"><button type="button" class="btn mini" data-gc="ver">' + (viendoBorrador ? 'Ver el aprobado' : 'Ver el borrador') + '</button>' +
               '<a class="btn mini" data-gc="aprobar" href="' + esc(b.liga) + '" target="_blank" rel="noopener">Aprobar ya ↗</a>' +
               '<button type="button" class="btn mini" data-gc="plegar">Dejar en borrador</button></div>' +
-              '<p class="gc-nota">' + (b.conPR ? 'Para aprobar, en esa página: si GitHub muestra «Approve workflows to run», tócalo primero (sólo deja correr las pruebas); cuando queden en verde, toca «Merge pull request». Cerrar el PR sin fusionar lo descarta.'
+              '<p class="gc-nota">' + (b.conPR ? 'Para aprobar, en esa página: si GitHub muestra «Approve workflows to run», tócalo primero (sólo deja correr las pruebas; con la App del grafo no sale); cuando queden en verde, toca «Merge pull request». Cerrar el PR sin fusionar lo descarta.'
                 : 'Para aprobar, en esa página toca «Create pull request» y luego «Merge pull request».') + '</p></div>' : '') +
         '<div class="gc-fila"><button type="button" class="btn mini" data-gc="rehacer">' + (b ? 'Rehacer otra vez' : 'Rehacer grafo') + '</button>' +
           (R.conCambio && !b ? '<span class="gc-nota">' + R.conCambio + (R.conCambio === 1 ? ' repositorio cambió' : ' repositorios cambiaron') + ' desde que se armó.</span>' : '') + '</div>' +
@@ -93,7 +93,7 @@
           '<p class="gc-nota">Se arman con el grafo aprobado y el plan guardado de cada caso. <a href="' + PRESENTAR + '" target="_blank" rel="noopener">Abrir presentación desde el grafo ↗</a></p></details>' +
         '<details class="gc-det"><summary>Registro</summary>' + (datos.registro.length ? '<ul class="gc-reg">' + datos.registro.map(l =>
           '<li><span>' + esc(hora(l.cuando)) + '</span> <b>' + esc(QUE[l.que] || l.que || '') + '</b> ' + esc(l.id || l.msg || '') + (l.por ? ' · ' + esc(l.por) : '') + (l.ia ? ' · IA ' + esc(l.ia) : '') + '</li>').join('') + '</ul>'
-          : '<p class="gc-nota">Aún no hay movimientos. El primero aparece cuando corra la revisión de cada hora.</p>') + '</details>';
+          : '<p class="gc-nota">Aún no hay movimientos. El primero aparece cuando corra la siguiente revisión.</p>') + '</details>';
     }
     function alClic(e) {
       const t = e.target && e.target.closest ? e.target.closest('[data-gc]') : null; if (!t) return;

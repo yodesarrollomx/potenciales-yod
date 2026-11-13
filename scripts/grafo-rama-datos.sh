@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Rama de datos del grafo (`grafo-datos`): estado en vivo, registro y el aviso de borrador.
-# La rama principal está protegida, así que lo que cambia cada hora no se escribe ahí.
+# La rama principal está protegida, así que lo que cambia con cada revisión no se escribe ahí.
 #   traer            deja la rama en $RUNNER_TEMP/grafo-datos (la crea vacía la primera vez)
 #   guardar <texto>  confirma y sube lo que cambió; si otro flujo subió antes, se pone encima y reintenta
 # Dos flujos pueden escribir a la vez. El registro sólo crece por el final, así que sus líneas se unen

@@ -6,7 +6,8 @@ from graphify.exporters.html import to_html
 from lam_base import *
 
 VERSION = importlib.metadata.version('graphifyy')
-# El estado en vivo lo escribe cada hora el flujo «Grafo · estado» en la rama de datos (la principal está protegida).
+NO_INDEXAR = '<meta name="robots" content="noindex,nofollow,noarchive">'
+# El estado en vivo lo escribe el flujo «Grafo · estado» (por cambios y cuando GitHub arranca su horario) en la rama de datos (la principal está protegida).
 ESTADO_URL = 'https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/grafo-datos/estado.json'
 PADX, PADY = 28, 30
 ICONO = {'hay': '●', 'parcial': '◐', 'falta': '○'}
@@ -297,7 +298,7 @@ JS = r"""
   sim.innerHTML = Y.simbolos.map(s => `<b><span style="color:${s[1]}">${s[0]}</span> ${esc2(s[2])}</b>`).join('');
   if (st && st.parentNode) st.parentNode.insertBefore(sim, st);
 
-  // errores en vivo: estado.json lo escribe cada hora el flujo «Grafo · estado» del repositorio
+  // errores en vivo: estado.json lo escribe el flujo «Grafo · estado» del repositorio
   fetch(Y.estado || 'estado.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(E => {
     if (!E || !E.errores) return; let n = 0;
     E.errores.forEach(x => (x.nodos || []).forEach(id => { const p = Y.nodos[id]; if (!p) return; (p.err = p.err || []).push(x); if (x.tipo !== 'cambio') { p.al = p.al || []; p.bc = '#C8102E'; } else if (!p.bc) p.bc = '#C99A12'; n++; }));
@@ -356,5 +357,7 @@ def html_lamina(lam, A, titulos, salida):
     html = html.replace(ancla, JS + '\n' + ancla, 1)
     html = re.sub(r'<title>[^<]*</title>', '<title>%s · YOD OS en Graphify</title>' % H_.escape(lam.titulo), html, 1)
     html = html.replace('<meta charset="UTF-8">', '<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">', 1) if 'name="viewport"' not in html else html
+    assert '<meta charset="UTF-8">' in html, 'cambió la plantilla de Graphify (charset)'
+    html = html.replace('<meta charset="UTF-8">', '<meta charset="UTF-8">\n' + NO_INDEXAR, 1)    # el repositorio es público: que los buscadores no lo guarden
     open(destino, 'w', encoding='utf-8').write(html)
     return len(A['nodos']), len(A['ar']), len(html)

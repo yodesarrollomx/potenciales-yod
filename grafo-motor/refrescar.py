@@ -10,13 +10,16 @@ que cambió desde la última vez:
   · comprueba que cada liga «vista en código» de un archivo cambiado siga escrita en él, y si no la quita.
 Además sincroniza componentes, conexiones, contratos, procesos y propuestas con el atlas vigente y saca el
 contrato del Plan de Potencial (entradas y resultados guardados de cada tipo), que es lo que leen las presentaciones.
+Al final quita lo excluido por Dirección (reglas.json → "excluir") y todo lo que no es de un repositorio de la lista de
+públicos (reglas.json → "publicos"), también su nombre en los textos.
 
 La capa curada (pantallas propuestas, plan, hallazgos, pestañas y columnas de las hojas) no se toca aquí.
 
 Uso: python3 grafo-motor/refrescar.py --repos <carpeta de clones> [--base base.json] [--salida base.json]
      [--cambios cambios.json] [--todo]   (--todo trata cada repositorio como cambiado por completo)
+     [--tapar dueño/nombre ...]         (repositorios de la lista que hoy no contestaron: se tapan en los textos)
 """
-import argparse, collections, json, os, re, shutil, subprocess, sys, tempfile, urllib.parse
+import argparse, collections, functools, hashlib, json, os, re, shutil, subprocess, sys, tempfile, urllib.parse
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 ATL = 'yod-portal/docs/arquitectura/modelo.json'
@@ -386,27 +389,139 @@ CAPA_R = dict(pantallas='sistema', motores='motor', datos='almacen', externos='e
 EST = dict(ejecucion='vivo', codigo='codigo', declarado='declarado', propuesto='propuesto', pendiente='propuesto')
 
 
-def reglas_excluir():
-    with open(os.path.join(AQUI, 'datos', 'reglas.json'), encoding='utf-8') as f: return json.load(f).get('excluir') or {}
+def reglas():
+    with open(os.path.join(AQUI, 'datos', 'reglas.json'), encoding='utf-8') as f: return json.load(f)
+
+
+def reglas_excluir(): return reglas().get('excluir') or {}
+def reglas_publicos(): return reglas().get('publicos') or []
+
+
+OTRO_SISTEMA = 'otro sistema'                 # lo que queda en un texto del atlas donde se nombraba algo excluido
+IDS_ATLAS = ('id', 'from', 'to', 'components', 'boards', 'repo')    # en el atlas, llaves que son ids y no texto
+
+
+def _textos(o, f, salta=()):
+    """Aplica f a cada texto dentro de o (dicts y listas), sin tocar las llaves de `salta`."""
+    if isinstance(o, str): return f(o)
+    if isinstance(o, list): return [_textos(x, f, salta) for x in o]
+    if isinstance(o, dict): return {k: (v if k in salta else _textos(v, f, salta)) for k, v in o.items()}
+    return o
 
 
 def filtra_atlas(M, R=None):
     """El modelo del atlas sin lo que Dirección decidió no publicar (reglas.json → "excluir"), ANTES de sincronizarlo.
     Si entrara y excluye() lo quitara después, cada rehecho lo contaría como «piezas nuevas» en su resumen y esos nombres
     quedarían publicados en grafo/versiones.json y en la explicación de la IA (pasó el 12-nov-2026 con el borrador
-    G-20261112-1147). Quita componentes, procesos y contratos cuyo id cumple la regla, las conexiones que los tocan y sus
-    menciones dentro de procesos y contratos que sí se quedan."""
+    G-20261112-1147). Quita componentes, procesos, contratos y propuestas cuyo id cumple la regla, las conexiones que los
+    tocan y sus menciones dentro de procesos, contratos y propuestas que sí se quedan (una propuesta que sólo mejoraba algo
+    excluido también sale). En los textos de lo que se queda, lo que cumple "textos" se cambia por «otro sistema»."""
     R = R if R is not None else reglas_excluir()
     pats = [re.compile(x) for x in (R.get('ids') or []) + (R.get('comp') or [])]
+    txt = [re.compile(x) for x in R.get('textos') or []]
     fuera = lambda i: any(p.search(str(i or '')) for p in pats)
-    if not pats or not M: return M
+    if not (pats or txt) or not M: return M
     M = json.loads(json.dumps(M))
     M['components'] = [c for c in M.get('components') or [] if not fuera(c.get('id'))]
     M['connections'] = [c for c in M.get('connections') or [] if not (fuera(c.get('from')) or fuera(c.get('to')))]
     M['data_contracts'] = [dict(c, components=[k for k in c.get('components') or [] if not fuera(k)]) for c in M.get('data_contracts') or [] if not fuera(c.get('id'))]
     M['processes'] = [dict(p, steps=[dict(s, components=[k for k in s.get('components') or [] if not fuera(k)]) for s in p.get('steps') or []])
                       for p in M.get('processes') or [] if not fuera(p.get('id'))]
+    props = []
+    for p in M.get('proposals') or []:
+        if fuera(p.get('id')) or fuera(f"PROP-{p.get('id')}"): continue
+        tableros = p.get('boards') or []; quedan = [k for k in tableros if not fuera(k)]
+        if tableros and not quedan: continue
+        props.append(dict(p, boards=quedan) if tableros else p)
+    M['proposals'] = props
+    if txt:
+        tapa = lambda s: functools.reduce(lambda a, p: p.sub(OTRO_SISTEMA, a), txt, s)
+        for k in ('components', 'connections', 'data_contracts', 'processes', 'proposals'):
+            M[k] = _textos(M.get(k) or [], tapa, IDS_ATLAS)
     return M
+
+
+# ── sólo repositorios públicos ──────────────────────────────────────────────────────────────────────
+# reglas.json → "publicos" es la lista de los repositorios que el grafo puede nombrar, revisada a mano y vigilada por
+# LoPublicado. Lo que no está ahí no se publica: ni sus piezas ni su nombre en los textos. Los nombres de los repositorios
+# NO públicos no se escriben en este repositorio (es público), y tampoco se guardan sus huellas: una huella sin clave deja
+# confirmar el nombre a quien lo adivine (dictamen del PR 90, H1). En cada refresco se sacan del atlas, sólo en memoria, y
+# con ellas se reconoce y se tapa el nombre en cualquier texto. Si el atlas deja de nombrar un repositorio no público, su
+# nombre corto ya no se reconoce; el «dueño/nombre» completo se sigue tapando porque no está en la lista. La visibilidad
+# real la comprueba rehacer.py: lee sin credencial cada repositorio de la lista; si uno que el grafo rastrea no contesta,
+# no abre borrador; si no contesta uno que sólo sale en textos, se tapa su nombre completo (--tapar) y sigue.
+REPO_PRIVADO = 'un repositorio privado'
+TROZO = re.compile(r'[A-Za-z0-9._/-]+')
+
+
+def huella_nombre(n): return hashlib.sha256(('grafo:' + str(n).strip().lower()).encode('utf-8')).hexdigest()[:16]
+
+
+def _segmentos(trozo): return [s.strip('.-_') for s in trozo.split('/')]
+
+
+def nombra_privado(trozo, H):
+    """¿El trozo (una palabra o una ruta) nombra un repositorio cuya huella está en H? Mira cada tramo y cada par dueño/nombre."""
+    s = _segmentos(trozo)
+    return any(huella_nombre(x) in H for x in s if x) or any(huella_nombre(a + '/' + b) in H for a, b in zip(s, s[1:]) if a and b)
+
+
+def huellas_no_publicos(M, publicos):
+    """Huellas de los repositorios que el atlas nombra y que no son públicos: los que él marca así y los que no están en la
+    lista. Del nombre completo y, si no choca con el de un repositorio público, también del corto. Se usan y se tiran: no
+    se guardan en la base."""
+    pub = {p.lower() for p in publicos}; cortos = {p.split('/', 1)[-1] for p in pub}; otros = set()
+    for r in (M or {}).get('repositories') or []:
+        n = str(r.get('repo') or '')
+        if '/' in n and (n.lower() not in pub or str(r.get('visibility') or '').lower() != 'public'): otros.add(n.lower())
+    for k in ('components', 'path_ownership'):
+        for c in (M or {}).get(k) or []:
+            n = str(c.get('repo') or '')
+            if '/' in n and n.lower() not in pub: otros.add(n.lower())
+    marcados = sorted(n for n in otros if n in pub)          # en la lista, pero el atlas dice que no son públicos
+    H = {huella_nombre(n) for n in otros} | {huella_nombre(n.split('/', 1)[1]) for n in otros if n.split('/', 1)[1] not in cortos}
+    return H, marcados
+
+
+def solo_publicos(X, publicos, H=()):
+    """Quita del grafo lo que no es de un repositorio público: repositorios fuera de la lista con sus piezas, piezas de
+    repositorio que no están en la lista, y en los textos cualquier «dueño/nombre» fuera de la lista o cualquier nombre con
+    huella en H (se cambia por «un repositorio privado»; una liga a ese repositorio se quita). Regresa cuántas piezas quitó
+    y cuántos textos tapó; nunca los nombres."""
+    pub = {p.lower() for p in publicos}; H = set(H)
+    for tag in [t for t, r in X.REPOS.items() if f"{r['owner']}/{r['repo']}".lower() not in pub]: del X.REPOS[tag]
+    tags = set(X.REPOS)
+    fuera = [i for i, n in X.N.items() if (n.get('capa') == 'repo' and i.startswith('repo:') and i[5:].lower() not in pub)
+             or (n.get('capa') != 'repo' and n.get('repo') and n['repo'] not in tags)]
+    for i in fuera: X.quita_nodo(i)
+    duenos = sorted({p.split('/', 1)[0] for p in pub})
+    citado = re.compile(r'(?<![A-Za-z0-9._-])(' + '|'.join(map(re.escape, duenos)) + r')/([A-Za-z0-9._-]*[A-Za-z0-9_-])', re.I) if duenos else None
+    def privado(t):
+        return nombra_privado(t, H) or bool(citado and any(f'{o}/{r}'.lower() not in pub for o, r in citado.findall(t)))
+    def tapa(s):
+        def uno(m):
+            t = m.group(0); nucleo = t.rstrip('./-_')
+            return REPO_PRIVADO + t[len(nucleo):] if privado(nucleo) else t
+        return TROZO.sub(uno, s)
+    tapados = 0
+    for i, n in X.N.items():
+        for k, v in list(n.items()):
+            if k in ('capa', 'ft', 'repo', 'ruta', 'source_file', 'source_location', 'local_id'): continue
+            if k == 'url':
+                if isinstance(v, str) and privado(v): del n[k]; tapados += 1
+            elif k == 'en_codigo' and isinstance(v, list):
+                w = [x for x in v if x in tags]
+                if w != v: n[k] = w; tapados += 1
+            else:
+                w = _textos(v, tapa)
+                if w != v: n[k] = w; tapados += 1
+    for f in X.F:
+        for k in ('r', 'nota', 'sf'):
+            if isinstance(f.get(k), str):
+                w = tapa(f[k])
+                if w != f[k]: f[k] = w; tapados += 1
+    X.limpia(); X.fid = {(n.get('repo'), n.get('ruta')): i for i, n in X.N.items() if n.get('capa') in ARCH and n.get('ruta') is not None}
+    return dict(piezas=len(fuera), textos=tapados)
 
 
 def sincroniza_atlas(X, M):
@@ -498,7 +613,8 @@ def excluye(X, R=None):
 def filtra_cambios(res, R=None):
     """Lo excluido tampoco se nombra en el informe del rehecho (archivos nuevos, quitados o cambiados por repositorio y notas),
     que es lo que leen la IA, el PR del borrador y grafo/versiones.json. excluye() limpia el grafo; esto limpia lo que se cuenta
-    de él. 12-nov-2026: el borrador G-20261112-1351 decía «llega EMD al portal» porque yod-portal agregó archivos bajo emd/."""
+    de él. 12-nov-2026: el resumen del borrador G-20261112-1351 nombraba el sistema excluido porque yod-portal agregó
+    archivos en su carpeta."""
     R = R if R is not None else reglas_excluir()
     rutas = [re.compile(x) for x in R.get('rutas') or []]
     fuera = lambda p: any(x.search(p) for x in rutas)
@@ -550,6 +666,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--repos', required=True); ap.add_argument('--base', default=os.path.join(AQUI, 'datos', 'base.json'))
     ap.add_argument('--salida'); ap.add_argument('--cambios'); ap.add_argument('--todo', action='store_true'); ap.add_argument('--hoy', default='')
+    ap.add_argument('--tapar', action='append', default=[], help='dueño/nombre de la lista de públicos que hoy no contestó: se tapa en los textos')
     a = ap.parse_args()
     B = json.load(open(a.base, encoding='utf-8')); A = json.loads(json.dumps(B)); X = Base(B)
     res = dict(repos=[], faltan=[], atlas=None, notas=X.nota)
@@ -565,6 +682,17 @@ def main():
     if M: res['atlas'] = sincroniza_atlas(X, filtra_atlas(M))
     res['excluidos'] = excluye(X)
     res['excluidos_en_informe'] = filtra_cambios(res)
+    # --tapar: repositorios de la lista que hoy no contestaron sin credencial y que el grafo no rastrea (sólo salen en
+    # textos). Por esta vez cuentan como no públicos: se tapa su «dueño/nombre» completo. El corto no, porque casi siempre es
+    # también el de un repositorio público que sí contestó (las casas viejas) y podría ser una palabra común.
+    tapar = {n.lower() for n in a.tapar}
+    publicos = [p for p in reglas_publicos() if p.lower() not in tapar]; pub = {p.lower() for p in publicos}
+    H, marcados = huellas_no_publicos(M, publicos) if M else (set(), [])
+    H |= {huella_nombre(n) for n in tapar}
+    H -= {huella_nombre(p) for p in pub} | {huella_nombre(p.split('/', 1)[-1]) for p in pub | tapar}
+    res['no_publicos'] = solo_publicos(X, publicos, H)
+    res['marcados_no_publicos'] = marcados             # en la lista de públicos, pero el atlas dice que no lo son: rehacer no abre borrador
+    B.pop('no_publicos', None)                         # las huellas no se guardan (las bases anteriores al 13-nov-2026 las traían)
     pd = os.path.join(a.repos, 'potenciales-yod')
     if os.path.isdir(pd): B['ppp'] = contrato_ppp(pd)
     if a.hoy: B['armado'] = a.hoy

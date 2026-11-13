@@ -14,7 +14,7 @@ No hay servidor ni claves aquí: las claves de IA sólo llegan por el entorno de
 Uso: python3 grafo-motor/rehacer.py <acción> [--por quien] [--pedido N] [--motivo texto] [--sin-ia] [--ensayo]
      [--clones carpeta] [--aqui carpeta de este repositorio] [--salida carpeta de grafo] [--informe archivo]
 """
-import argparse, datetime, hashlib, json, os, shutil, subprocess, sys, tempfile
+import argparse, datetime, hashlib, json, os, shutil, subprocess, sys, tempfile, time
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 RAIZ = os.path.dirname(AQUI)
@@ -125,37 +125,82 @@ def dibuja(G, base):
         shutil.rmtree(tmp, ignore_errors=True)
 
 
-def clona(B, carpeta, aqui=None):
-    """Clones sin blobs (traen la historia para saber qué cambió) de los repositorios públicos del grafo."""
-    faltan = []
+# Lectura SIN credencial: sólo un repositorio público se deja clonar así. Es la comprobación real de visibilidad del grafo
+# (el campo «vis» de la base lo declara el propio grafo). Sin ayudante de credenciales ni cabeceras extra.
+GIT_ANONIMO = ['git', '-c', 'credential.helper=', '-c', 'http.extraHeader=', '-c', 'http.https://github.com/.extraHeader=', '-c', 'core.askPass=']
+
+
+def pausa_reintento():
+    """Segundos entre el primer intento y el segundo (GRAFO_PAUSA_REINTENTO; las pruebas, que no salen a la red, usan 0)."""
+    try: return max(0.0, float(os.environ.get('GRAFO_PAUSA_REINTENTO', '5')))
+    except ValueError: return 5.0
+
+
+def git_anonimo(args, env, antes_de_reintentar=None):
+    """Una lectura de git sin credencial con un reintento: un tropiezo de red no debe frenar el borrador (dictamen del PR 90,
+    H2). True si contestó en alguno de los dos intentos."""
+    for intento in (1, 2):
+        if intento > 1:
+            time.sleep(pausa_reintento())
+            if antes_de_reintentar: antes_de_reintentar()
+        if not subprocess.run(GIT_ANONIMO + args, capture_output=True, text=True, env=env).returncode: return True
+    return False
+
+
+def clona(B, carpeta, aqui=None, publicos=None):
+    """Clones sin blobs (traen la historia para saber qué cambió) de los repositorios públicos del grafo, leídos sin
+    credencial. Los demás repositorios de la lista de públicos (las casas viejas) sólo se tocan, también sin credencial.
+    Cada uno tiene dos intentos. Regresa dos listas de los que no contestaron (puede que ya no sean públicos, o que GitHub
+    no respondió): los que el grafo rastrea, que frenan el borrador, y los que sólo salen en textos, que se tapan."""
+    faltan, mudos = [], []; de = os.environ.get('GRAFO_CLONA_DE') or 'https://github.com/'
+    env = dict(os.environ, GIT_TERMINAL_PROMPT='0', GCM_INTERACTIVE='never')
     for tag, r in sorted(B['repos'].items()):
         d = os.path.join(carpeta, tag)
         if os.path.isdir(os.path.join(d, '.git')) or os.path.islink(d): continue
         nombre = f"{r['owner']}/{r['repo']}"
         if aqui and nombre.lower() == (os.environ.get('GITHUB_REPOSITORY') or 'yodesarrollomx/potenciales-yod').lower():
             os.symlink(os.path.abspath(aqui), d); continue
-        p = subprocess.run(['git', 'clone', '--quiet', '--filter=blob:none', f'https://github.com/{nombre}.git', d], capture_output=True, text=True)
-        if p.returncode: faltan.append(nombre)
-    return faltan
+        if not git_anonimo(['clone', '--quiet', '--filter=blob:none', f'{de}{nombre}.git', d], env, lambda: shutil.rmtree(d, ignore_errors=True)):
+            faltan.append(nombre)
+    rastreados = {f"{r['owner']}/{r['repo']}".lower() for r in B['repos'].values()}
+    for nombre in sorted(publicos or [], key=str.lower):
+        if nombre.lower() in rastreados: continue
+        if not git_anonimo(['ls-remote', '--quiet', '--heads', f'{de}{nombre}.git'], env): mudos.append(nombre)
+    return faltan, mudos
 
 
 def rehacer(a, G):
     import refrescar, ia
     V = versiones(G); t = ahora(); A = lee(BASE)
     clones = a.clones or tempfile.mkdtemp(prefix='clones-'); os.makedirs(clones, exist_ok=True)
-    faltan = clona(A, clones, a.aqui)
+    faltan, mudos = clona(A, clones, a.aqui, refrescar.reglas_publicos())
+    if faltan and not os.environ.get('GRAFO_PERMITE_SIN_CLON'):
+        # Lo que el grafo rastrea y no se pudo leer sin credencial no se publica a ciegas: no hay borrador hasta que contesten.
+        return dict(accion='rehacer', cambio=False, ensayo=bool(a.ensayo), antes=V['aprobado'], bloqueado='sin_clon', sin_clon=faltan, sin_respuesta=mudos,
+                    mensaje=(f"No se pudieron leer sin credencial {len(faltan)} de los repositorios públicos del grafo ({', '.join(faltan[:12])}"
+                             f"{'…' if len(faltan) > 12 else ''}), ni con un segundo intento: puede que ya no sean públicos o que GitHub no contestó. Si dejaron de ser "
+                             'públicos, hay que quitarlos de grafo-motor/datos/reglas.json («publicos») y de la base; si fue la red, vuelve a pedirlo.'))
+    # Los de la lista que el grafo no rastrea (sólo salen en textos) y no contestaron no frenan: se tapan sus nombres y sigue
+    # (dictamen del PR 90, H3). El pedido lo avisa (aviso.py) para quitarlos de la lista si ya no son públicos.
     tmp = tempfile.mkdtemp(prefix='base-'); sal = os.path.join(tmp, 'base.json'); cam = os.path.join(tmp, 'cambios.json')
-    argv = sys.argv; sys.argv = ['refrescar.py', '--repos', clones, '--base', BASE, '--salida', sal, '--cambios', cam, '--hoy', t.isoformat()]
+    argv = sys.argv; sys.argv = ['refrescar.py', '--repos', clones, '--base', BASE, '--salida', sal, '--cambios', cam, '--hoy', t.isoformat()] + [x for n in mudos for x in ('--tapar', n)]
     try: refrescar.main()
     finally: sys.argv = argv
     B = lee(sal); C = lee(cam)
+    if C.get('marcados_no_publicos'):
+        m = C['marcados_no_publicos']
+        return dict(accion='rehacer', cambio=False, ensayo=bool(a.ensayo), antes=V['aprobado'], bloqueado='atlas_no_publico', sin_respuesta=mudos,
+                    mensaje=(f"El atlas marca como no públicos {len(m)} repositorios de la lista de públicos del grafo ({', '.join(m[:12])}). "
+                             'Hay que revisar su visibilidad: si dejaron de ser públicos, se quitan de grafo-motor/datos/reglas.json («publicos»); si es un error del atlas, se corrige allá.'))
     R, sin_campo = recetas_validas(B)
     resumen = dict(C['resumen'], repos=[dict(repo=r['repo'], de=r['de'], a=r['a'], nuevos=len(r['nuevos']), quitados=len(r['quitados']), cambiados=len(r['cambiados'])) for r in C['repos']],
-                   atlas=C.get('atlas'), sin_clon=faltan, sin_campo=sin_campo, notas=(C.get('notas') or [])[:12])
+                   atlas=C.get('atlas'), sin_clon=faltan, sin_respuesta=len(mudos), sin_campo=sin_campo, notas=(C.get('notas') or [])[:12])
     cambio = huella(B) != huella(A)                 # sólo cuenta lo que cambia el grafo; un commit que no mueve nada no hace versión
     pedido = dict(por=a.por or '', numero=int(a.pedido) if str(a.pedido or '').isdigit() and int(a.pedido) else None, motivo=(a.motivo or '')[:300])
+    # Los nombres de los que no contestaron van sólo al informe (el comentario del pedido); el resumen, que se guarda en
+    # grafo/versiones.json, lleva cuántos.
     out = dict(accion='rehacer', cambio=cambio, ensayo=bool(a.ensayo), antes=V['aprobado'], resumen=resumen, claves=ia.disponibles(),
-               audiencias=[x['nombre'] for x in R['audiencias']], pedido=pedido)
+               audiencias=[x['nombre'] for x in R['audiencias']], pedido=pedido, sin_respuesta=mudos)
     if not cambio:
         out['mensaje'] = 'El grafo ya está al día: nada de lo que dibuja cambió en los repositorios ni en el atlas.'
         return out

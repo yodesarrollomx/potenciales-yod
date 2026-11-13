@@ -7,6 +7,7 @@ en la rama de datos y el cierre (aprobado o descartado). Todo sale del informe q
   python3 grafo-motor/aviso.py cierre <carpeta de la rama de datos> <si|no fusionado> <quién> <número de PR>
   python3 grafo-motor/aviso.py abrir <informe.json> <dueño/repositorio>      liga para abrir el PR con un toque
   python3 grafo-motor/aviso.py informe <versiones.json del borrador>         informe reconstruido del registro de versiones
+  python3 grafo-motor/aviso.py ensayo <informe.json>                         avisos del ensayo de un PR (::warning:: y resumen de la corrida)
 
 Dos caminos, según lo que el repositorio le permita a un flujo: (1) el flujo abre el PR del borrador; (2) si no
 puede, deja la rama y una liga: al tocar «Create pull request» el PR queda abierto y este mismo flujo lo completa.
@@ -45,8 +46,37 @@ def que_cambio(inf):
         if mas or menos: out.append(f"Plan de Potencial {tipo}: " + ' · '.join(x for x in [mas and 'campos nuevos ' + ', '.join(f'`{c}`' for c in mas[:10]), menos and 'campos que ya no están ' + ', '.join(f'`{c}`' for c in menos[:10])] if x))
     if r.get('primer_ppp'): out.append('Se registró por primera vez el contrato del Plan de Potencial (entradas y resultados guardados de cada tipo).')
     if r.get('sin_clon'): out.append('No se pudo clonar: ' + ', '.join(f'`{c}`' for c in r['sin_clon']) + '. Esos repositorios quedaron como estaban.')
+    if r.get('sin_respuesta'): out.append(f"{_plural(r['sin_respuesta'], 'repositorio', 'repositorios')} de la lista de públicos que el grafo no rastrea no contestaron sin credencial: "
+                                          'su nombre completo quedó tapado en los textos («un repositorio privado»). El pedido dice cuáles.')
     for n in (r.get('notas') or [])[:6]: out.append('Nota: ' + n)
     return out
+
+
+def aviso_mudos(inf):
+    """Repositorios de la lista de públicos que el grafo no rastrea (sólo salen en textos) y que no contestaron sin credencial
+    ni al segundo intento. No frenan el borrador, pero su nombre completo se tapó y hay que revisarlos (dictamen del PR 90, H3)."""
+    m = inf.get('sin_respuesta') or []
+    if not m: return ''
+    return (f"**Ojo:** {_plural(len(m), 'repositorio', 'repositorios')} de la lista de públicos que el grafo no rastrea (sólo salen en textos) "
+            f"no {'contestó' if len(m) == 1 else 'contestaron'} sin credencial, ni al segundo intento: {', '.join(f'`{x}`' for x in m[:12])}{'…' if len(m) > 12 else ''}. "
+            'Se siguió sin ellos y su nombre completo se tapó en los textos del grafo («un repositorio privado»). '
+            'Si ya no existen o dejaron de ser públicos, pídele a Claude que los quite de `grafo-motor/datos/reglas.json` («publicos»). '
+            + ('Si fue la red, descarta este borrador y vuelve a pedirlo: lo tapado no se destapa solo.' if inf.get('cambio') else 'Si fue la red, no hay nada que hacer.'))
+
+
+def _comando(s): return str(s).replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+
+
+def anotar_ensayo(inf):
+    """Lo que el trabajo «ensayo» de cada PR debe enseñar en el resumen de la corrida (dictamen del PR 90, H4): un ensayo
+    bloqueado no probó el motor, porque rehacer.py regresa antes de refrescar, y un repositorio de la lista sin respuesta se
+    taparía en un rehecho real. Regresa los avisos para GitHub Actions (::warning::) y el texto del resumen."""
+    avisos = []
+    if inf.get('bloqueado'): avisos.append(('Ensayo bloqueado, no probó el motor', inf.get('mensaje') or inf['bloqueado']))
+    m = inf.get('sin_respuesta') or []
+    if m: avisos.append(('Repositorios de la lista sin respuesta', f"No contestaron sin credencial: {', '.join(m)}. En un rehecho real su nombre se taparía en los textos."))
+    comandos = [f"::warning title={_comando(t).replace(':', '%3A').replace(',', '%2C')}::{_comando(x)}" for t, x in avisos]
+    return comandos, ''.join(f'### ⚠️ {t}\n\n{x}\n\n' for t, x in avisos)
 
 
 def linea_ia(inf):
@@ -61,10 +91,13 @@ def linea_ia(inf):
     return f"Explicación de IA: se preguntó a {pedidos} y ninguna respuesta sirvió ({json.dumps(i.get('fallos') or {}, ensure_ascii=False)}). El grafo se rehízo igual, sin explicación."
 
 
-# Cuando el PR lo abre un flujo, GitHub deja sus pruebas «en espera de aprobación» y no deja fusionar hasta que una
-# persona con permiso de escritura las deja correr. Comprobado en vivo el 12-nov-2026 (PR 66). Abierto a mano no lo pide.
-PASOS = ('**Para aprobar:** si GitHub muestra «Approve workflows to run», tócalo primero: sólo deja correr las pruebas (lo pide cuando el PR '
-         'lo abrió un flujo y no una persona). Cuando queden en verde, toca «Merge pull request» y luego «Confirm merge».')
+# Cuando el flujo abre el PR con su propia credencial, GitHub deja sus pruebas «en espera de aprobación» y no deja
+# fusionar hasta que una persona con permiso de escritura las deja correr (comprobado en vivo el 12-nov-2026, PR 66).
+# Abierto a mano, o por el flujo con la App del grafo, no lo pide. El texto vale para los dos casos: el cuerpo del PR
+# debe salir igual lo abra quien lo abra (lo comprueba prueba_motor).
+PASOS = ('**Para aprobar:** si GitHub muestra «Approve workflows to run», tócalo primero: sólo deja correr las pruebas (lo pide cuando el flujo '
+         'abrió el PR con su propia credencial; con la App del grafo, o si lo abrió una persona, las pruebas corren solas). '
+         'Cuando queden en verde, toca «Merge pull request» y luego «Confirm merge».')
 
 
 def cuerpo_pr(inf):
@@ -111,14 +144,15 @@ def informe_de(versiones, recetas=None):
 
 
 def comentario(inf, liga, numero=0):
-    if not inf.get('cambio'): return (inf.get('mensaje') or 'El grafo ya está al día.') + ' No se abrió ningún borrador.\n\n' + linea_ia(dict(ia_informe=dict(omitida=True))).replace('se pidió no usarla en esta corrida', 'no hizo falta: no había nada que explicar') + '\n'
+    mudos = aviso_mudos(inf)
+    if not inf.get('cambio'): return (inf.get('mensaje') or 'El grafo ya está al día.') + ' No se abrió ningún borrador.\n\n' + (mudos + '\n\n' if mudos else '') + linea_ia(dict(ia_informe=dict(omitida=True))).replace('se pidió no usarla en esta corrida', 'no hizo falta: no había nada que explicar') + '\n'
     ia = inf.get('ia'); hay_pr = str(numero or '').isdigit() and int(numero) > 0
     donde = f'en {liga}' if hay_pr else 'en la rama `grafo-borrador`'
-    aprobar = ('- **Aprobar ya:** abre ese PR. Si GitHub muestra «Approve workflows to run», tócalo primero (sólo deja correr las pruebas); cuando queden en verde, '
+    aprobar = ('- **Aprobar ya:** abre ese PR. Si GitHub muestra «Approve workflows to run», tócalo primero (sólo deja correr las pruebas; con la App del grafo no sale); cuando queden en verde, '
                'toca «Merge pull request». Las presentaciones cambian solas al grafo nuevo.' if hay_pr else
                f'- **Aprobar ya:** abre [esta página]({liga}), toca «Create pull request» y luego «Merge pull request». Las presentaciones cambian solas al grafo nuevo.')
     return '\n'.join([f"Listo: el grafo **{inf['id']}** quedó como **borrador** {donde}.", '',
-                      (ia['resumen'] if ia else 'Cambios: ' + '; '.join(que_cambio(inf)[:4]) + '.'), '', aprobar,
+                      (ia['resumen'] if ia else 'Cambios: ' + '; '.join(que_cambio(inf)[:4]) + '.'), ''] + ([mudos, ''] if mudos else []) + [aprobar,
                       '- **Dejarlo en borrador:** no hagas nada. Todo sigue igual y las ligas de las presentaciones no cambian.',
                       '- **Descartar:** ' + ('cierra el PR sin fusionar.' if hay_pr else 'borra la rama `grafo-borrador` o vuelve a rehacer el grafo más adelante.'), '', linea_ia(inf), ''])
 
@@ -173,6 +207,11 @@ if __name__ == '__main__':
     elif a[0] == 'cierre': cierre(a[1], a[2] == 'si', a[3], a[4])
     elif a[0] == 'abrir': sys.stdout.write(liga_abrir(_lee(a[1]), a[2]) + '\n')
     elif a[0] == 'titulo': sys.stdout.write(titulo_pr(_lee(a[1])) + '\n')
+    elif a[0] == 'ensayo':
+        comandos, md = anotar_ensayo(_lee(a[1]))
+        for c in comandos: print(c)
+        if md and os.environ.get('GITHUB_STEP_SUMMARY'):
+            with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as f: f.write(md)
     elif a[0] == 'informe':
         try: recetas = _lee(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'recetas.json'))
         except (OSError, ValueError): recetas = {}

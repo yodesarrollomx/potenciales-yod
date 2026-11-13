@@ -18,6 +18,12 @@ def corre(m, *a, env=None):
     return r.stdout
 
 
+# Las pruebas no salen a la red: los repositorios que no están en la carpeta de clones «no contestan», y se permite
+# rehacer así (en el flujo real eso no abre borrador; lo comprueba test_sin_leer_un_repositorio_publico_no_hay_borrador).
+# Sin pausa entre el primer intento y el segundo.
+SIN_RED = {'GRAFO_CLONA_DE': 'file:///grafo-sin-red/', 'GRAFO_PERMITE_SIN_CLON': '1', 'GRAFO_PAUSA_REINTENTO': '0'}
+
+
 def jl(p):
     with open(p, encoding='utf-8') as f: return json.load(f)
 
@@ -30,6 +36,28 @@ def repo_de_mentira(carpeta, archivos):
     g = lambda *x: subprocess.run(['git', '-C', carpeta, '-c', 'user.name=prueba', '-c', 'user.email=prueba@example.invalid'] + list(x), check=True, capture_output=True)
     g('init', '-q'); g('add', '-A'); g('commit', '-q', '-m', 'prueba')
     return carpeta
+
+
+def motor_de_mentira(publicos, nodos=None):
+    """Copia del motor con una base pequeña y una lista de públicos de mentira. El grafo rastrea un solo repositorio,
+    dueno/uno, que se lee de una fuente local (file://) en vez de GitHub. Regresa (carpeta, motor, fuente)."""
+    d, m = copia_motor()
+    p = os.path.join(m, 'datos', 'reglas.json'); R = jl(p); R['publicos'] = publicos
+    with open(p, 'w', encoding='utf-8') as f: json.dump(R, f, ensure_ascii=False)
+    B = dict(esquema=1, armado='2026-11-12T09:00:00-07:00', nodos=dict({'repo:dueno/uno': dict(capa='repo', repo='uno', label='dueno/uno')}, **(nodos or {})),
+             flechas=[], simbolos={}, entre=[], ppp={}, repos={'uno': dict(owner='dueno', repo='uno', commit='0000000000', papel='Prueba', vis='publico')})
+    with open(os.path.join(m, 'datos', 'base.json'), 'w', encoding='utf-8') as f: json.dump(B, f, ensure_ascii=False)
+    fuente = os.path.join(d, 'fuente')
+    repo_de_mentira(os.path.join(fuente, 'dueno', 'uno.git'), {'index.html': '<html><script>function hola(){ return 1; }</script></html>\n'})
+    return d, m, fuente
+
+
+def rehace_de_mentira(d, m, fuente, env=None):
+    """rehacer.py en ensayo contra la fuente local, sin el permiso de las pruebas para seguir sin clones. Regresa el informe."""
+    inf = os.path.join(d, 'informe.json')
+    corre(m, 'rehacer.py', 'rehacer', '--ensayo', '--sin-ia', '--clones', os.path.join(d, 'clones'), '--salida', os.path.join(d, 'grafo'), '--informe', inf,
+          env=dict({'GRAFO_CLONA_DE': 'file://' + fuente + '/', 'GRAFO_PERMITE_SIN_CLON': '', 'GRAFO_PAUSA_REINTENTO': '0'}, **(env or {})))
+    return jl(inf)
 
 
 class LoPublicado(unittest.TestCase):
@@ -58,52 +86,199 @@ class LoPublicado(unittest.TestCase):
     def test_sin_sistemas_de_clientes_externos(self):
         """DEC-19 (12-nov-2026): lo que Dirección excluyó en reglas.json → "excluir" sale del grafo al refrescar, por id, por
         componente o por ruta, con sus flechas. Se comprueba sobre una base pequeña; y sobre la base publicada en cuanto
-        haya sido armada después de la decisión (la anterior es una foto previa y la limpia el siguiente rehecho)."""
+        haya sido armada después de la decisión (la anterior es una foto previa y la limpia el siguiente rehecho).
+        Los datos de prueba se arman con el nombre que trae la propia regla: aquí no se escribe."""
         import refrescar
         with open(os.path.join(MOTOR, 'datos', 'reglas.json'), encoding='utf-8') as x: R = json.load(x).get('excluir') or {}
-        self.assertTrue(R.get('ids') and R.get('rutas') and R.get('comp'), 'la regla de exclusión debe existir')
-        N = {'SYS-EMD': dict(capa='sistema'), 'CTR-EMD-DRAFTS': dict(capa='contrato'), 'PROC-EMD-PROFILES·2': dict(capa='proceso'),
-             'gas:AKfycbwvvLVi': dict(capa='endpoint', comp='GAS-EMD'), 'sec:EMD_BRIDGE_KEY': dict(capa='llave'),
-             'yod-portal::emd_wrapper': dict(capa='codigo', repo='yod-portal', ruta='emd/wrapper.js'),
-             'f:yod-portal:docs/arquitectura/emd-contratos-20261102.md': dict(capa='documento', repo='yod-portal', ruta='docs/arquitectura/emd-contratos-20261102.md'),
-             'SYS-POTENCIALES': dict(capa='sistema'), 'SYS-EMDX': dict(capa='sistema'), 'yod-portal::despacho': dict(capa='codigo', repo='yod-portal', ruta='despacho/emd-no/x.js')}
-        B = dict(nodos=N, flechas=[dict(s='SYS-EMD', t='SYS-POTENCIALES', r='usa'), dict(s='SYS-POTENCIALES', t='yod-portal::despacho', r='usa')], simbolos={k: 1 for k in N}, repos={}, entre=[['SYS-EMD', 'SYS-POTENCIALES', 1]])
+        self.assertTrue(R.get('ids') and R.get('rutas') and R.get('comp') and R.get('textos'), 'la regla de exclusión debe existir')
+        Z_ = re.match(r'\^\(SYS\|GAS\|SHEET\|STORE\)-([A-Z0-9]+)\(', R['comp'][0]).group(1); z = Z_.lower()
+        N = {f'SYS-{Z_}': dict(capa='sistema'), f'CTR-{Z_}-DRAFTS': dict(capa='contrato'), f'PROC-{Z_}-PROFILES·2': dict(capa='proceso'),
+             'gas:AKfycbPRUEBA': dict(capa='endpoint', comp=f'GAS-{Z_}'), f'sec:{Z_}_LLAVE_DE_PRUEBA': dict(capa='llave'),
+             f'yod-portal::{z}_wrapper': dict(capa='codigo', repo='yod-portal', ruta=f'{z}/wrapper.js'),
+             f'f:yod-portal:docs/arquitectura/{z}-contratos-prueba.md': dict(capa='documento', repo='yod-portal', ruta=f'docs/arquitectura/{z}-contratos-prueba.md'),
+             'SYS-POTENCIALES': dict(capa='sistema'), f'SYS-{Z_}X': dict(capa='sistema'), 'yod-portal::despacho': dict(capa='codigo', repo='yod-portal', ruta=f'despacho/{z}-no/x.js'),
+             f'PROP-CHG-{Z_}-ALGO': dict(capa='propuesta')}
+        B = dict(nodos=N, flechas=[dict(s=f'SYS-{Z_}', t='SYS-POTENCIALES', r='usa'), dict(s='SYS-POTENCIALES', t='yod-portal::despacho', r='usa')], simbolos={k: 1 for k in N}, repos={}, entre=[[f'SYS-{Z_}', 'SYS-POTENCIALES', 1]])
         X = refrescar.Base(B); fuera = refrescar.excluye(X, R)
-        self.assertEqual(sorted(X.N), ['SYS-EMDX', 'SYS-POTENCIALES', 'yod-portal::despacho']); self.assertEqual(len(fuera), 7)
+        self.assertEqual(sorted(X.N), [f'SYS-{Z_}X', 'SYS-POTENCIALES', 'yod-portal::despacho']); self.assertEqual(len(fuera), 8)
         self.assertEqual(B['flechas'], [dict(s='SYS-POTENCIALES', t='yod-portal::despacho', r='usa')]); self.assertEqual(B['entre'], []); self.assertEqual(set(B['simbolos']), set(X.N))
         # el atlas se filtra ANTES de sincronizarlo: lo excluido no vuelve a contarse como «piezas nuevas» en cada rehecho
-        # (12-nov-2026: el borrador G-20261112-1147 decía «entraron SYS-EMD, GAS-EMD…» y esos nombres iban a publicarse)
-        M = dict(revision='r', components=[dict(id='SYS-EMD', nombre='E', tipo='tablero', status='ejecucion'), dict(id='GAS-EMD', nombre='G', tipo='backend', status='ejecucion'),
-                                            dict(id='SYS-POTENCIALES', nombre='P', tipo='tablero', status='ejecucion'), dict(id='SYS-NUEVO', nombre='N', tipo='tablero', status='declarado')],
-                 connections=[dict(**{'from': 'SYS-EMD', 'to': 'GAS-EMD'}, label='usa', status='ejecucion'), dict(**{'from': 'SYS-NUEVO', 'to': 'SYS-POTENCIALES'}, label='lee', status='ejecucion')],
-                 data_contracts=[dict(id='CTR-EMD-DRAFTS', components=['SYS-EMD']), dict(id='CTR-PPP', components=['SYS-POTENCIALES', 'GAS-EMD'])],
-                 processes=[dict(id='PROC-EMD-LOAD', nombre='L', steps=[dict(label='a', components=['SYS-EMD'])]), dict(id='PROC-PPP', nombre='P', steps=[dict(label='a', components=['SYS-POTENCIALES', 'SYS-EMD'])])],
-                 proposals=[])
+        # (12-nov-2026: el resumen del borrador G-20261112-1147 nombraba sus piezas y esos nombres iban a publicarse).
+        # También sus propuestas, y en los textos de lo que se queda su nombre pasa a «otro sistema» (dictamen GRAFO-05, B4).
+        M = dict(revision='r', components=[dict(id=f'SYS-{Z_}', nombre='E', tipo='tablero', status='ejecucion'), dict(id=f'GAS-{Z_}', nombre='G', tipo='backend', status='ejecucion'),
+                                            dict(id='SYS-POTENCIALES', nombre='P', tipo='tablero', status='ejecucion', proposito=f'Lee lo que deja {Z_} cada noche'),
+                                            dict(id='SYS-NUEVO', nombre='N', tipo='tablero', status='declarado')],
+                 connections=[dict(**{'from': f'SYS-{Z_}', 'to': f'GAS-{Z_}'}, label='usa', status='ejecucion'), dict(**{'from': 'SYS-NUEVO', 'to': 'SYS-POTENCIALES'}, label=f'lee como {Z_}', status='ejecucion')],
+                 data_contracts=[dict(id=f'CTR-{Z_}-DRAFTS', components=[f'SYS-{Z_}']), dict(id='CTR-PPP', components=['SYS-POTENCIALES', f'GAS-{Z_}'])],
+                 processes=[dict(id=f'PROC-{Z_}-LOAD', nombre='L', steps=[dict(label='a', components=[f'SYS-{Z_}'])]), dict(id='PROC-PPP', nombre='P', steps=[dict(label='a', components=['SYS-POTENCIALES', f'SYS-{Z_}'])])],
+                 proposals=[dict(id=f'CHG-{Z_}-ALGO', titulo='t', boards=['SYS-POTENCIALES']), dict(id='SOLO', titulo='s', boards=[f'SYS-{Z_}']),
+                            dict(id='MIXTA', titulo=f'Para {Z_} y PPP', problem='p', benefit='b', boards=[f'SYS-{Z_}', 'SYS-POTENCIALES']), dict(id='SIN', titulo='n')])
         F = refrescar.filtra_atlas(M, R)
         self.assertEqual([c['id'] for c in F['components']], ['SYS-POTENCIALES', 'SYS-NUEVO']); self.assertEqual([(c['from'], c['to']) for c in F['connections']], [('SYS-NUEVO', 'SYS-POTENCIALES')])
         self.assertEqual(F['data_contracts'], [dict(id='CTR-PPP', components=['SYS-POTENCIALES'])]); self.assertEqual([p['id'] for p in F['processes']], ['PROC-PPP']); self.assertEqual(F['processes'][0]['steps'][0]['components'], ['SYS-POTENCIALES'])
+        self.assertEqual([(p['id'], p.get('boards')) for p in F['proposals']], [('MIXTA', ['SYS-POTENCIALES']), ('SIN', None)])
+        self.assertEqual(F['components'][0]['proposito'], 'Lee lo que deja otro sistema cada noche'); self.assertEqual(F['connections'][0]['label'], 'lee como otro sistema')
+        self.assertEqual(F['proposals'][0]['titulo'], 'Para otro sistema y PPP')
         self.assertEqual(len(M['components']), 4, 'no toca el modelo original')
         Z = refrescar.Base(dict(nodos={'SYS-POTENCIALES': dict(capa='sistema', source_file=refrescar.ATL, label='P')}, flechas=[], simbolos={}, repos={}, entre=[]))
         res = refrescar.sincroniza_atlas(Z, F); refrescar.excluye(Z, R)
-        self.assertEqual(res['componentes_nuevos'], ['SYS-NUEVO', 'PROC-PPP']); self.assertNotIn('EMD', json.dumps(res)); self.assertFalse([i for i in Z.N if 'EMD' in i])
+        self.assertEqual(res['componentes_nuevos'], ['SYS-NUEVO', 'PROC-PPP']); self.assertNotIn(Z_, json.dumps(res)); self.assertFalse([i for i in Z.N if Z_ in i])
+        self.assertEqual(sorted(i for i in Z.N if i.startswith('PROP-')), ['PROP-MIXTA', 'PROP-SIN']); self.assertNotIn(Z_, json.dumps(Z.N))
         # el informe del rehecho tampoco nombra lo excluido: archivos por repositorio y notas
-        # (12-nov-2026: el borrador G-20261112-1351 decía «llega EMD al portal» por archivos nuevos bajo emd/)
-        C = dict(repos=[dict(repo='yodesarrollomx/yod-portal', de='a', a='b', nuevos=['emd/endpoint.js', 'os/x.js'], quitados=['docs/arquitectura/emd-escala-captura.md'],
-                             cambiados=['emd/index.html', 'docs/arquitectura/modelo.json', 'despacho/emd-no/x.js'], ligas_mas=3, ligas_menos=0)],
-                 notas=['yod-portal/emd/endpoint.js L2: llama a un Apps Script que el grafo no conoce (AKfycbwvvLVi…)',
+        # (12-nov-2026: el resumen del borrador G-20261112-1351 lo nombraba por archivos nuevos en su carpeta de yod-portal)
+        C = dict(repos=[dict(repo='yodesarrollomx/yod-portal', de='a', a='b', nuevos=[f'{z}/endpoint.js', 'os/x.js'], quitados=[f'docs/arquitectura/{z}-escala-captura.md'],
+                             cambiados=[f'{z}/index.html', 'docs/arquitectura/modelo.json', f'despacho/{z}-no/x.js'], ligas_mas=3, ligas_menos=0)],
+                 notas=[f'yod-portal/{z}/endpoint.js L2: llama a un Apps Script que el grafo no conoce (AKfycbPRUEBA…)',
                         'potenciales-yod/server/ppp2/PPP2.gs L4: llama a un Apps Script que el grafo no conoce (AKfycbzzzzzz…)'])
         self.assertEqual(refrescar.filtra_cambios(C, R), 4)
         r = C['repos'][0]
-        self.assertEqual((r['nuevos'], r['quitados'], r['cambiados']), (['os/x.js'], [], ['docs/arquitectura/modelo.json', 'despacho/emd-no/x.js']))
+        self.assertEqual((r['nuevos'], r['quitados'], r['cambiados']), (['os/x.js'], [], ['docs/arquitectura/modelo.json', f'despacho/{z}-no/x.js']))
         self.assertEqual(C['notas'], ['potenciales-yod/server/ppp2/PPP2.gs L4: llama a un Apps Script que el grafo no conoce (AKfycbzzzzzz…)'])
-        self.assertNotIn('emd/', json.dumps(C)); self.assertNotIn('emd-', json.dumps(C).replace('emd-no', ''))
+        self.assertNotIn(f'{z}/', json.dumps(C)); self.assertNotIn(f'{z}-', json.dumps(C).replace(f'{z}-no', ''))
         if str(self.B.get('armado') or '') >= '2026-11-12T18:00':
             Y = refrescar.Base(json.loads(json.dumps(self.B))); self.assertEqual(refrescar.excluye(Y, R), [], 'la base publicada aún trae piezas excluidas')
+
+    # Notas curadas que nombran lo excluido y que Dirección aún decide si se quedan (dictamen GRAFO-05: «las 4 notas conocidas»).
+    NOTAS_PENDIENTES = {'PLAN-lo-que-vive-fuera-del-menu', 'MEJ-lo-que-vive-fuera-del-menu-6', 'HAL-25', 'HAL-31'}
+
+    def test_lo_excluido_no_se_nombra_en_los_textos(self):
+        """Ni en las piezas ni en las ligas de la base, ni en el registro de versiones o los datos de presentaciones. Sólo
+        quedan las notas pendientes de decisión."""
+        with open(os.path.join(MOTOR, 'datos', 'reglas.json'), encoding='utf-8') as x: pats = [re.compile(p) for p in json.load(x)['excluir']['textos']]
+        dice = lambda v: any(p.search(t) for t in (v if isinstance(v, list) else [v]) if isinstance(t, str) for p in pats)
+        malos = [(i, k) for i, n in self.B['nodos'].items() if i not in self.NOTAS_PENDIENTES for k, v in n.items() if dice(v)]
+        malos += [(f['s'], f['t'], k) for f in self.B['flechas'] for k in ('r', 'nota', 'sf') if dice(f.get(k))]
+        G = os.path.join(MOTOR, '..', 'grafo')
+        for f in sorted(os.listdir(G)) + ['datos/' + x for x in sorted(os.listdir(os.path.join(G, 'datos')))]:
+            if f.endswith('.json'):
+                with open(os.path.join(G, f), encoding='utf-8') as x: t = x.read()
+                malos += [(f,)] * dice(t)
+        self.assertEqual(malos, [])
+
+    def test_el_patron_de_textos_atrapa_cualquier_forma_y_no_las_casualidades(self):
+        """El patrón de textos de DEC-19 no distingue mayúsculas, atrapa la palabra en rutas y pegada a otra, y se lleva lo
+        pegado; no atrapa palabras que sólo la contienen por casualidad (dictamen del PR 90, H5). El nombre sale de la regla."""
+        import refrescar
+        R = refrescar.reglas_excluir(); pats = [re.compile(p) for p in R['textos']]
+        Z_ = re.match(r'\^\(SYS\|GAS\|SHEET\|STORE\)-([A-Z0-9]+)\(', R['comp'][0]).group(1); z = Z_.lower(); Zc = Z_.capitalize()
+        dice = lambda s: any(p.search(s) for p in pats)
+        for s in (Z_, z, Zc, f'{Z_}evaluacion360', f'{z}/index.html', f'docs/arquitectura/{z}-contratos.md', f'llave_{z}_borrador', f'yod-{z}', f'({Z_})',
+                  f'abrir{Z_}', f'cargar{Zc}'):
+            self.assertTrue(dice(s), s)
+        for s in (f'h{z}ale', f'r{z}esivir', f'H{Z_}ALE', f'7{z}x', 'tiempo', 'Ninguna mención'):
+            self.assertFalse(dice(s), s)
+        F = refrescar.filtra_atlas(dict(components=[dict(id='SYS-POTENCIALES', proposito=f'Lee {z}/datos.json y {Z_}evaluacion360, y abre cargar{Zc}; la h{z}ale no')],
+                                        connections=[], proposals=[]), R)
+        self.assertEqual(F['components'][0]['proposito'], 'Lee otro sistema/datos.json y otro sistema, y abre cargarotro sistema; la ' + f'h{z}ale no')
+
+    def texto_publicado(self):
+        """Todo lo que se publica del grafo: la base, sus reglas y recetas, y lo generado en grafo/. De las láminas se omite
+        el texto de las cajas («lbl»): es el nombre de la pieza partido en renglones, y el nombre entero ya está en la base."""
+        t = [self.texto]; G = os.path.join(MOTOR, '..', 'grafo')
+        for f in sorted(os.listdir(G)) + ['datos/' + x for x in sorted(os.listdir(os.path.join(G, 'datos')))]:
+            if f.endswith(('.json', '.html')):
+                with open(os.path.join(G, f), encoding='utf-8') as x: t.append(re.sub(r'"lbl":"(?:[^"\\]|\\.)*"', '', x.read()))
+        return '\n'.join(t)
+
+    def test_solo_repositorios_publicos(self):
+        """El grafo sólo nombra repositorios de reglas.json → "publicos" (comprobados públicos). No se fía del campo «vis»
+        que la base declara de sí misma. Los nombres de los NO públicos no se escriben en ninguna parte, y tampoco sus huellas:
+        una huella sin clave deja confirmar el nombre a quien lo adivine (dictamen del PR 90, H1). Cómo se tapan con las
+        huellas sacadas del atlas en cada refresco lo comprueba SoloPublicos con nombres de mentira (dictamen GRAFO-05, M1 y B5)."""
+        import refrescar
+        P = refrescar.reglas_publicos(); pub = {p.lower() for p in P}
+        self.assertTrue(P and len(pub) == len(P) and all(re.fullmatch(r'[A-Za-z0-9-]+/[A-Za-z0-9._-]+', p) for p in P))
+        self.assertEqual({f"{r['owner']}/{r['repo']}".lower() for r in self.B['repos'].values()} - pub, set(), 'repositorio rastreado fuera de la lista')
+        self.assertEqual({i[5:].lower() for i, n in self.B['nodos'].items() if n.get('capa') == 'repo'} - pub, set(), 'pieza de repositorio fuera de la lista')
+        tags = set(self.B['repos'])
+        self.assertEqual({n['repo'] for n in self.B['nodos'].values() if n.get('capa') != 'repo' and n.get('repo')} - tags, set())
+        self.assertEqual({x for n in self.B['nodos'].values() for x in n.get('en_codigo') or []} - tags, set(), 'en_codigo sólo nombra repositorios del grafo')
+        T = self.texto_publicado()
+        duenos = sorted({p.split('/')[0] for p in pub})
+        citados = {f'{o}/{r}'.lower() for o, r in re.findall(r'(?<![A-Za-z0-9._-])(' + '|'.join(map(re.escape, duenos)) + r')/([A-Za-z0-9._-]*[A-Za-z0-9_-])', T, re.I)}
+        self.assertEqual(citados - pub, set(), 'se cita un dueño/repositorio que no está en la lista de públicos')
+        self.assertNotIn('no_publicos', self.B, 'la base no guarda huellas de los repositorios no públicos')
+        self.assertEqual(re.findall(r'"[0-9a-f]{16}"', self.texto), [], 'ni sueltas: una huella sin clave confirma el nombre a quien lo adivine')
+
+    def test_las_laminas_no_se_indexan(self):
+        G = os.path.join(MOTOR, '..', 'grafo'); html = [f for f in os.listdir(G) if f.endswith('.html')]
+        self.assertGreater(len(html), 80)
+        for f in html:
+            with open(os.path.join(G, f), encoding='utf-8') as x: self.assertIn('<meta name="robots" content="noindex,nofollow,noarchive">', x.read(3000), f)
 
     def test_las_ligas_a_github_son_de_repositorios_del_grafo(self):
         ok = tuple(f"https://github.com/{r['owner']}/{r['repo']}" for r in self.B['repos'].values())
         fuera = [n['url'] for n in self.B['nodos'].values() if str(n.get('url') or '').startswith('https://github.com/') and not n['url'].startswith(ok)]
         self.assertEqual(fuera, [])
+
+
+class SoloPublicos(unittest.TestCase):
+    """refrescar.solo_publicos sobre una base pequeña y nombres de mentira: lo que no está en la lista de públicos sale del
+    grafo, y su nombre sale de los textos, también cuando sólo se conoce su huella."""
+    def test_quita_piezas_y_nombres_de_repositorios_no_publicos(self):
+        import refrescar
+        P = ['dueno/publico', 'dueno/casa-vieja']; H = {refrescar.huella_nombre('oculto-x')}
+        N = {'repo:dueno/publico': dict(capa='repo', repo='publico', label='dueno/publico'), 'repo:dueno/se-fue': dict(capa='repo', repo='se-fue'),
+             'publico::app': dict(capa='codigo', repo='publico', ruta='app.js'), 'extra::app': dict(capa='codigo', repo='extra', ruta='app.js'),
+             'GAS-A': dict(capa='motor', nota='Código en Git: oculto-x/server/a.gs.', url='https://github.com/dueno/oculto-x/blob/1/a.gs'),
+             'GAS-B': dict(capa='motor', nota='Vive en dueno/no-listado y en dueno/casa-vieja', cols=['oculto-x', 'ok']),
+             'hoja:1': dict(capa='hoja', en_codigo=['publico', 'oculto-x', 'extra'])}
+        B = dict(nodos=N, flechas=[dict(s='GAS-A', t='GAS-B', r='lee', sf='oculto-x/server/a.gs', loc='L1', nota=''), dict(s='extra::app', t='GAS-A', r='usa', sf='', loc='', nota='')],
+                 simbolos={'extra::app': []}, repos={'publico': dict(owner='dueno', repo='publico', commit='1'), 'extra': dict(owner='dueno', repo='extra', commit='1')}, entre=[])
+        X = refrescar.Base(B); r = refrescar.solo_publicos(X, P, H)
+        self.assertEqual(sorted(B['repos']), ['publico']); self.assertEqual(sorted(X.N), ['GAS-A', 'GAS-B', 'hoja:1', 'publico::app', 'repo:dueno/publico'])
+        self.assertEqual(N['GAS-A']['nota'], 'Código en Git: un repositorio privado.'); self.assertNotIn('url', N['GAS-A'])
+        self.assertEqual(N['GAS-B']['nota'], 'Vive en un repositorio privado y en dueno/casa-vieja'); self.assertEqual(N['GAS-B']['cols'], ['un repositorio privado', 'ok'])
+        self.assertEqual(N['hoja:1']['en_codigo'], ['publico']); self.assertEqual(B['flechas'], [dict(s='GAS-A', t='GAS-B', r='lee', sf='un repositorio privado', loc='L1', nota='')])
+        self.assertEqual(r, dict(piezas=2, textos=6)); self.assertEqual(B['simbolos'], {})
+        self.assertNotIn('oculto-x', json.dumps(B)); self.assertNotIn('no-listado', json.dumps(B))
+        self.assertEqual(refrescar.solo_publicos(X, P, H), dict(piezas=0, textos=0), 'una segunda vuelta no cambia nada')
+
+    def test_las_huellas_salen_del_atlas_sin_guardar_nombres(self):
+        import refrescar
+        M = dict(repositories=[dict(repo='dueno/publico', visibility='public'), dict(repo='dueno/oculto-x', visibility='private'),
+                               dict(repo='dueno/casa-vieja', visibility='private'), dict(repo='otro/publico', visibility='private')],
+                 components=[dict(id='SYS-A', repo='dueno/sin-registro')], path_ownership=[dict(repo='dueno/publico', prefix='')])
+        H, marcados = refrescar.huellas_no_publicos(M, ['dueno/publico', 'dueno/casa-vieja'])
+        self.assertEqual(marcados, ['dueno/casa-vieja'], 'en la lista, pero el atlas dice que no es público')
+        h = refrescar.huella_nombre
+        self.assertEqual(H, {h('dueno/oculto-x'), h('oculto-x'), h('dueno/casa-vieja'), h('otro/publico'), h('dueno/sin-registro'), h('sin-registro')},
+                         'el nombre corto de un no público que coincide con uno público no se tapa: sólo el completo')
+        self.assertTrue(refrescar.nombra_privado('dueno/oculto-x/server', H)); self.assertTrue(refrescar.nombra_privado('otro/publico', H))
+        self.assertFalse(refrescar.nombra_privado('dueno/publico', H)); self.assertFalse(refrescar.nombra_privado('publico', H))
+
+    def test_el_refresco_saca_las_huellas_del_atlas_y_no_las_guarda(self):
+        """refrescar.py con un atlas de mentira: tapa el nombre corto de un repositorio que el atlas marca privado, y la base
+        que escribe no guarda huellas (dictamen del PR 90, H1). Tampoco el informe del refresco."""
+        import refrescar
+        d, m, fuente = motor_de_mentira(['dueno/uno'], {'SYS-X': dict(capa='sistema', label='X', nota='Lee lo que deja oculto-x cada noche')})
+        self.addCleanup(shutil.rmtree, d, True)
+        clones = os.path.join(d, 'clones'); subprocess.run(['git', 'clone', '-q', os.path.join(fuente, 'dueno', 'uno.git'), os.path.join(clones, 'uno')], check=True, capture_output=True)
+        at = os.path.join(clones, 'yod-portal', 'docs', 'arquitectura'); os.makedirs(at)
+        with open(os.path.join(at, 'modelo.json'), 'w', encoding='utf-8') as f:
+            json.dump(dict(revision='r', components=[], connections=[], repositories=[dict(repo='dueno/uno', visibility='public'), dict(repo='dueno/oculto-x', visibility='private')]), f)
+        with open(os.path.join(m, 'datos', 'base.json'), encoding='utf-8') as f: B = json.load(f)
+        B['no_publicos'] = ['0123456789abcdef']; sal = os.path.join(d, 'sal.json'); cam = os.path.join(d, 'cam.json')
+        with open(os.path.join(m, 'datos', 'base.json'), 'w', encoding='utf-8') as f: json.dump(B, f)
+        corre(m, 'refrescar.py', '--repos', clones, '--salida', sal, '--cambios', cam, env={'PYTHONHASHSEED': '0'})
+        S = jl(sal)
+        self.assertEqual(S['nodos']['SYS-X']['nota'], 'Lee lo que deja un repositorio privado cada noche')
+        self.assertNotIn('no_publicos', S, 'una base anterior que traía huellas las pierde al refrescar')
+        with open(sal, encoding='utf-8') as f, open(cam, encoding='utf-8') as g: texto = f.read() + g.read()
+        for h in (refrescar.huella_nombre('oculto-x'), refrescar.huella_nombre('dueno/oculto-x'), '0123456789abcdef'): self.assertNotIn(h, texto)
+        self.assertNotIn('oculto-x', texto)
+
+    def test_tapar_lo_que_no_contesto_tapa_el_nombre_completo_y_no_el_corto(self):
+        """--tapar (lo pasa rehacer.py con los repositorios de la lista que el grafo no rastrea y que no contestaron): se tapa
+        su «dueño/nombre»; el nombre corto no, porque suele ser también el de un repositorio público (dictamen del PR 90, H3)."""
+        d, m, fuente = motor_de_mentira(['dueno/uno', 'viejo/uno', 'viejo/casa'], {'SYS-X': dict(capa='sistema', label='X', nota='Antes en viejo/uno y viejo/casa; la casa y uno siguen')})
+        self.addCleanup(shutil.rmtree, d, True)
+        clones = os.path.join(d, 'clones'); subprocess.run(['git', 'clone', '-q', os.path.join(fuente, 'dueno', 'uno.git'), os.path.join(clones, 'uno')], check=True, capture_output=True)
+        sal = os.path.join(d, 'sal.json')
+        corre(m, 'refrescar.py', '--repos', clones, '--salida', sal, '--tapar', 'viejo/uno', '--tapar', 'viejo/casa', env={'PYTHONHASHSEED': '0'})
+        self.assertEqual(jl(sal)['nodos']['SYS-X']['nota'], 'Antes en un repositorio privado y un repositorio privado; la casa y uno siguen')
+        corre(m, 'refrescar.py', '--repos', clones, '--salida', sal, env={'PYTHONHASHSEED': '0'})
+        self.assertEqual(jl(sal)['nodos']['SYS-X']['nota'], 'Antes en viejo/uno y viejo/casa; la casa y uno siguen', 'sin --tapar no se toca')
 
 
 class Recetas(unittest.TestCase):
@@ -319,10 +494,10 @@ class Versiones(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(G, 'datos', V0['aprobado'] + '.json'))); self.assertTrue(os.path.exists(os.path.join(G, 'mapa.html')))
         imp = os.path.join(d, 'architecture-impact.json'); antes_imp = dict(model_revision='2026-01-01.prueba.1', proposal_id='CHG-OTRA-COSA', summary='otro cambio', components=['SYS-POTENCIALES', 'SYS-CONTROL'], tests=['x'], rollback='y')
         with open(imp, 'w', encoding='utf-8') as f: json.dump(antes_imp, f)
-        corre(m, 'rehacer.py', 'rehacer', '--sin-ia', '--ensayo', '--clones', clones, '--salida', G, '--informe', inf)
+        corre(m, 'rehacer.py', 'rehacer', '--sin-ia', '--ensayo', '--clones', clones, '--salida', G, '--informe', inf, env=SIN_RED)
         self.assertTrue(jl(inf)['cambio']); self.assertEqual(len(jl(os.path.join(G, 'versiones.json'))['versiones']), 1, 'el ensayo no guarda')
         self.assertEqual(jl(imp), antes_imp, 'el ensayo no toca el registro de impacto')
-        corre(m, 'rehacer.py', 'rehacer', '--sin-ia', '--clones', clones, '--salida', G, '--informe', inf, '--por', 'prueba', '--pedido', '7', '--motivo', 'porque sí')
+        corre(m, 'rehacer.py', 'rehacer', '--sin-ia', '--clones', clones, '--salida', G, '--informe', inf, '--por', 'prueba', '--pedido', '7', '--motivo', 'porque sí', env=SIN_RED)
         I = jl(inf); V = jl(os.path.join(G, 'versiones.json'))
         self.assertTrue(I['cambio']); self.assertEqual(V['aprobado'], I['id']); self.assertEqual([v['estado'] for v in V['versiones']], ['anterior', 'aprobado'])
         self.assertEqual(V['versiones'][-1]['pedido'], dict(por='prueba', numero=7, motivo='porque sí')); self.assertEqual(I['antes'], V0['aprobado'])
@@ -334,7 +509,7 @@ class Versiones(unittest.TestCase):
         D = jl(os.path.join(G, 'datos', I['id'] + '.json')); self.assertEqual(D['id'], I['id']); self.assertEqual(len(D['recetas']['audiencias']), 3); self.assertEqual(D['sin_campo'], [])
         with open(os.path.join(G, 'codigo-pintarron.html'), encoding='utf-8') as f: self.assertIn('nuevo-modulo.js', f.read())
         self.assertEqual(jl(os.path.join(G, 'mapa-ids.json'))['armado'], V['versiones'][-1]['armado'])
-        corre(m, 'rehacer.py', 'rehacer', '--sin-ia', '--clones', clones, '--salida', G, '--informe', inf)
+        corre(m, 'rehacer.py', 'rehacer', '--sin-ia', '--clones', clones, '--salida', G, '--informe', inf, env=SIN_RED)
         self.assertFalse(jl(inf)['cambio']); self.assertEqual(len(jl(os.path.join(G, 'versiones.json'))['versiones']), 2)
         # avisos del flujo
         import aviso
@@ -360,14 +535,76 @@ class Versiones(unittest.TestCase):
         with open(os.path.join(datos, 'registro.jsonl'), encoding='utf-8') as f: self.assertEqual(len(f.readlines()), 2, 'sin-registro no anota otra línea')
         sin_pr = aviso.comentario(I, liga, 0); self.assertIn('«Create pull request» y luego «Merge pull request»', sin_pr); self.assertIn('rama `grafo-borrador`', sin_pr); self.assertIn(f'[esta página]({liga})', sin_pr)
         con_pr = aviso.comentario(I, 'https://github.com/x/y/pull/12', 12); self.assertNotIn('Create pull request', con_pr)
-        # el PR que abre el flujo llega con sus pruebas en espera de aprobación: se dice ese paso antes de «Merge» (12-nov-2026, PR 66)
-        for texto in (con_pr, cuerpo): self.assertRegex(texto, r'«Approve workflows to run», tócalo primero[^\n]*«Merge pull request»')
+        # el PR que abre el flujo con su credencial llega con sus pruebas en espera de aprobación: se dice ese paso antes de «Merge»
+        # (12-nov-2026, PR 66); con la App del grafo no sale, y el texto lo dice (DEC-21)
+        for texto in (con_pr, cuerpo): self.assertRegex(texto, r'«Approve workflows to run», tócalo primero[^\n]*con la App del grafo[^\n]*«Merge pull request»')
         for texto in (sin_pr, con_pr): self.assertIn('Dejarlo en borrador', texto); self.assertIn('no cambian', texto)
         # el informe se puede reconstruir del registro de versiones (cuando el PR lo abre una persona)
         R = aviso.informe_de(V, jl(os.path.join(m, 'recetas.json')))
         self.assertEqual((R['id'], R['antes'], R['piezas'], R['ligas']), (I['id'], I['antes'], I['piezas'], I['ligas'])); self.assertEqual(R['pedido'], I['pedido']); self.assertEqual(len(R['audiencias']), 3)
         self.assertEqual(aviso.cuerpo_pr(R), cuerpo, 'el PR abierto a mano dice lo mismo que el abierto por el flujo')
         self.assertEqual(aviso.titulo_pr(R), f"🕸️ Grafo {I['id']} · borrador (fusionar = aprobar)")
+
+    def test_sin_leer_un_repositorio_publico_no_hay_borrador(self):
+        """Cada repositorio de la lista de públicos se lee sin credencial. Si alguno no contesta (dejó de ser público, o
+        GitHub no respondió) no se abre borrador y el pedido dice por qué (dictamen GRAFO-05, B5)."""
+        import aviso, refrescar
+        d, m = copia_motor(); self.addCleanup(shutil.rmtree, d, True)
+        G = os.path.join(d, 'grafo'); clones = os.path.join(d, 'clones'); inf = os.path.join(d, 'informe.json')
+        repo_de_mentira(os.path.join(clones, 'pintarron'), {'index.html': '<html><script>function hola(){ return 1; }</script></html>\n'})
+        corre(m, 'rehacer.py', 'inicial', '--salida', G)
+        with open(os.path.join(m, 'datos', 'base.json'), 'rb') as f: base = f.read()
+        corre(m, 'rehacer.py', 'rehacer', '--sin-ia', '--clones', clones, '--salida', G, '--informe', inf, env=dict(SIN_RED, GRAFO_PERMITE_SIN_CLON=''))
+        I = jl(inf); B = jl(os.path.join(m, 'datos', 'base.json'))
+        self.assertFalse(I['cambio']); self.assertEqual(I['bloqueado'], 'sin_clon')
+        rastreados = {f"{r['owner']}/{r['repo']}".lower() for r in B['repos'].values()}
+        self.assertEqual(len(I['sin_clon']), len(rastreados) - 1, 'frenan los que el grafo rastrea')
+        self.assertEqual(sorted(I['sin_respuesta']), sorted(p for p in refrescar.reglas_publicos() if p.lower() not in rastreados), 'las casas viejas también se tocan')
+        self.assertNotIn('yodesarrollomx/pintarron', I['sin_clon'])
+        self.assertEqual(len(jl(os.path.join(G, 'versiones.json'))['versiones']), 1)
+        with open(os.path.join(m, 'datos', 'base.json'), 'rb') as f: self.assertEqual(f.read(), base, 'la base no cambia')
+        c = aviso.comentario(I, '', 0); self.assertIn('no se pudieron leer sin credencial', c.lower()); self.assertIn('No se abrió ningún borrador', c)
+        # el ensayo de cada PR lo enseña como aviso en el resumen de la corrida, en vez de quedar en verde callado (dictamen del PR 90, H4)
+        comandos, md = aviso.anotar_ensayo(I)
+        self.assertTrue(comandos[0].startswith('::warning title=Ensayo bloqueado%2C no probó el motor::No se pudieron leer sin credencial')); self.assertIn('Ensayo bloqueado', md)
+        self.assertTrue(all('\n' not in x for x in comandos)); self.assertIn('Repositorios de la lista sin respuesta', md)
+        self.assertEqual(aviso.anotar_ensayo(dict(cambio=True, sin_respuesta=[])), ([], ''), 'un ensayo que sí probó el motor no avisa nada')
+        resumen = os.path.join(d, 'resumen.md')
+        r = subprocess.run([sys.executable, os.path.join(m, 'aviso.py'), 'ensayo', inf], capture_output=True, text=True, env=dict(os.environ, GITHUB_STEP_SUMMARY=resumen), check=True)
+        self.assertIn('::warning title=Ensayo bloqueado', r.stdout)
+        with open(resumen, encoding='utf-8') as f: self.assertIn('### ⚠️ Ensayo bloqueado', f.read())
+
+    def test_un_tropiezo_de_red_no_frena_el_borrador(self):
+        """Cada lectura sin credencial tiene dos intentos: un repositorio que falla una vez y luego contesta no frena el
+        borrador (dictamen del PR 90, H2). Un git de mentira hace fallar el primer intento."""
+        d, m, fuente = motor_de_mentira(['dueno/uno']); self.addCleanup(shutil.rmtree, d, True)
+        envuelto = os.path.join(d, 'bin'); os.makedirs(envuelto); marca = os.path.join(d, 'ya-fallo')
+        with open(os.path.join(envuelto, 'git'), 'w', encoding='utf-8') as f:
+            f.write('#!/bin/sh\nfor x in "$@"; do case "$x" in *uno.git) if [ ! -e "$GRAFO_PRUEBA_MARCA" ]; then : > "$GRAFO_PRUEBA_MARCA"; '
+                    'echo "fatal: tropiezo de prueba" >&2; exit 128; fi;; esac; done\nexec "$GRAFO_PRUEBA_GIT" "$@"\n')
+        os.chmod(os.path.join(envuelto, 'git'), 0o755)
+        I = rehace_de_mentira(d, m, fuente, env=dict(PATH=envuelto + os.pathsep + os.environ.get('PATH', ''), GRAFO_PRUEBA_MARCA=marca, GRAFO_PRUEBA_GIT=shutil.which('git')))
+        self.assertTrue(os.path.exists(marca), 'el primer intento sí falló')
+        self.assertNotIn('bloqueado', I); self.assertTrue(I['cambio'], 'abriría el borrador'); self.assertEqual(I['resumen']['sin_clon'], [])
+
+    def test_lo_que_solo_sale_en_textos_y_no_contesta_se_tapa_y_sigue(self):
+        """Un repositorio de la lista que el grafo no rastrea (una casa vieja) y no contesta ni al segundo intento ya no frena:
+        su nombre se tapa en los textos, se sigue y el pedido lo avisa. Uno rastreado que no contesta sigue frenando
+        (dictamen del PR 90, H3)."""
+        import aviso
+        d, m, fuente = motor_de_mentira(['dueno/uno', 'viejo/casa'], {'SYS-X': dict(capa='sistema', label='X', nota='Antes vivía en viejo/casa')})
+        self.addCleanup(shutil.rmtree, d, True)
+        I = rehace_de_mentira(d, m, fuente)
+        self.assertNotIn('bloqueado', I); self.assertTrue(I['cambio']); self.assertEqual(I['sin_respuesta'], ['viejo/casa'])
+        self.assertEqual(I['resumen']['sin_respuesta'], 1, 'lo que se guarda en grafo/versiones.json es cuántos, no cuáles')
+        c = aviso.comentario(I, 'https://github.com/x/y/pull/12', 12)
+        self.assertIn('`viejo/casa`', c); self.assertIn('se tapó en los textos', c); self.assertIn('descarta este borrador', c)
+        self.assertNotIn('viejo/casa', aviso.cuerpo_pr(dict(I, id='G-x', piezas=1, ligas=0)))
+        self.assertIn('El pedido dice cuáles', aviso.cuerpo_pr(dict(I, id='G-x', piezas=1, ligas=0)))
+        self.assertIn('no hay nada que hacer', aviso.comentario(dict(I, cambio=False, mensaje='El grafo ya está al día.'), '', 0))
+        shutil.rmtree(os.path.join(d, 'clones')); shutil.rmtree(os.path.join(fuente, 'dueno'))
+        I = rehace_de_mentira(d, m, fuente)
+        self.assertEqual((I['bloqueado'], I['sin_clon'], I['sin_respuesta']), ('sin_clon', ['dueno/uno'], ['viejo/casa']))
 
     def test_las_laminas_salen_iguales_cada_vez(self):
         a, b = tempfile.mkdtemp(), tempfile.mkdtemp(); self.addCleanup(shutil.rmtree, a, True); self.addCleanup(shutil.rmtree, b, True)

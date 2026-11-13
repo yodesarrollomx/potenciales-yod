@@ -7,10 +7,12 @@ name: Grafo · rehacer
 # Si el repositorio no deja que un flujo abra PR, queda la rama y una liga: al tocar «Create pull request» el PR se
 # abre y el trabajo «borrador-abierto» de este mismo flujo le pone título, explicación y aviso.
 #
-# Aprobar, cuando el PR lo abre este flujo, son dos toques: GitHub (desde junio de 2026) deja las pruebas de ese PR
-# «en espera de aprobación» y no deja fusionar hasta que una persona toca «Approve workflows to run»; después,
-# «Merge pull request». Pedir aparte la comprobación obligatoria no quita ese paso (comprobado el 12-nov-2026, PR 66),
-# así que este flujo ya no la pide ni necesita permiso sobre Actions.
+# Aprobar, cuando este flujo abre el PR con su propia credencial (GITHUB_TOKEN), son dos toques: GitHub (desde junio
+# de 2026) deja las pruebas de ese PR «en espera de aprobación» y no deja fusionar hasta que una persona toca «Approve
+# workflows to run»; después, «Merge pull request». Pedir aparte la comprobación obligatoria no quita ese paso
+# (comprobado el 12-nov-2026, PR 66), así que este flujo ya no la pide ni necesita permiso sobre Actions.
+# Con la App del grafo (secretos GRAFO_APP_ID y GRAFO_APP_PRIVATE_KEY) la rama y el PR del borrador los mueve la App:
+# GitHub corre solas sus pruebas y aprobar es un toque («Merge pull request»). Sin esos secretos todo sigue igual.
 run-name: >-
   Grafo · ${{ github.event_name == 'issues' && 'pedido de rehacer' || github.event_name == 'workflow_dispatch' && 'rehacer a mano'
   || github.event.action == 'closed' && 'cierre del borrador' || github.head_ref == 'grafo-borrador' && 'PR del borrador' || 'ensayo del motor' }}
@@ -73,6 +75,8 @@ jobs:
         run: |
           set -o pipefail
           python grafo-motor/rehacer.py rehacer --ensayo --sin-ia --aqui . --informe "$RUNNER_TEMP/informe.json" | tail -60
+          # Un ensayo bloqueado regresa antes de refrescar: no probó el motor. Sale como aviso en el resumen de la corrida.
+          python grafo-motor/aviso.py ensayo "$RUNNER_TEMP/informe.json"
       - name: Claves de IA disponibles en este repositorio (sólo sí o no)
         env:
           HAY_OPENAI: ${{ secrets.OPENAI_API_KEY != '' }}
@@ -98,6 +102,7 @@ jobs:
       POR: ${{ github.actor }}
       EVENTO: ${{ github.event_name }}
       ASOCIACION: ${{ github.event.issue.author_association }}
+      HAY_APP: ${{ secrets.GRAFO_APP_ID != '' && secrets.GRAFO_APP_PRIVATE_KEY != '' }}
     steps:
       - name: Quién lo pide
         id: quien
@@ -146,17 +151,38 @@ jobs:
           print('cambio=' + ('1' if i.get('cambio') else ''))
           print('id=' + str(i.get('id') or ''))
           PY
+      - name: Credencial de la App del grafo (sólo si existen sus dos secretos)
+        # Lo que hace la credencial del flujo deja las pruebas del PR esperando «Approve workflows to run»; lo que hace
+        # una GitHub App, no. Este token sólo sube la rama del borrador y abre o pone al día su PR (contenido y PR, nada
+        # más, y sólo en este repositorio). Sin los secretos este paso no corre; si falla, se sigue con la del flujo.
+        id: app
+        if: steps.r.outputs.cambio && env.HAY_APP == 'true'
+        continue-on-error: true
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.GRAFO_APP_ID }} # acepta el App ID o el Client ID de la App
+          private-key: ${{ secrets.GRAFO_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
       - name: Rama del borrador y su PR
         if: steps.r.outputs.cambio
         id: pr
         env:
           ID: ${{ steps.r.outputs.id }}
+          APP_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           git config user.name 'yod-grafo'; git config user.email 'yod-grafo@users.noreply.github.com'
           git checkout --quiet -B grafo-borrador
           git add -A grafo grafo-motor/datos architecture-impact.json
           git commit --quiet -m "Grafo $ID (borrador): fusionar este cambio es aprobarlo"
-          git push --quiet --force origin grafo-borrador
+          # Con la App, la rama y el PR los mueve ella (sin el encabezado de la credencial del flujo que deja checkout).
+          if [ -n "$APP_TOKEN" ] && git -c http.https://github.com/.extraheader= push --quiet --force "https://x-access-token:$APP_TOKEN@github.com/$REPO.git" grafo-borrador; then
+            export GH_TOKEN="$APP_TOKEN"
+            echo 'Rama y PR del borrador con la App del grafo: sus pruebas corren solas.'
+          else
+            if [ "$HAY_APP" = true ]; then echo '::warning::La App del grafo no respondió; se usó la credencial del flujo y aprobar serán dos toques.'; fi
+            git push --quiet --force origin grafo-borrador
+          fi
           python grafo-motor/aviso.py pr "$RUNNER_TEMP/informe.json" > "$RUNNER_TEMP/pr.md"
           TITULO=$(python grafo-motor/aviso.py titulo "$RUNNER_TEMP/informe.json")
           N=$(gh api "repos/$REPO/pulls?state=open&head=${REPO%%/*}:grafo-borrador" --jq '.[0].number // empty' 2>/dev/null || true)

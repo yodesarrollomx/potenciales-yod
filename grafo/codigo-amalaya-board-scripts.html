@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Código · amalaya-board · scripts/ · YOD OS en Graphify</title>
 <script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
@@ -403,7 +404,7 @@ applyTheme(themePref() || 'system');
   sim.innerHTML = Y.simbolos.map(s => `<b><span style="color:${s[1]}">${s[0]}</span> ${esc2(s[2])}</b>`).join('');
   if (st && st.parentNode) st.parentNode.insertBefore(sim, st);
 
-  // errores en vivo: estado.json lo escribe cada hora el flujo «Grafo · estado» del repositorio
+  // errores en vivo: estado.json lo escribe el flujo «Grafo · estado» del repositorio
   fetch(Y.estado || 'estado.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(E => {
     if (!E || !E.errores) return; let n = 0;
     E.errores.forEach(x => (x.nodos || []).forEach(id => { const p = Y.nodos[id]; if (!p) return; (p.err = p.err || []).push(x); if (x.tipo !== 'cambio') { p.al = p.al || []; p.bc = '#C8102E'; } else if (!p.bc) p.bc = '#C99A12'; n++; }));
