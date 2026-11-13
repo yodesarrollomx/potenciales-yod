@@ -272,9 +272,12 @@ cuando el libro dice `consejo` (se apaga con `Config!consejo_latido = no`).
   votaban, no se escribe nada (`cambio`). La sesión lleva nombre nuevo (`CP-n`), la fecha, la huella y
   la evidencia del Resumen, y un renglón en la bitácora con el motor que votó. Si no llegan los siete,
   no se escribe nada: «no contestó» nunca es «aprobado».
-- **La investigación.** Busca fuentes oficiales o primarias y entrega hasta tres hallazgos. Sólo se
-  anota un hallazgo cuya fuente sea una página que la búsqueda de verdad trajo (una liga inventada no
-  pasa). «Lo que falta» son los candados abiertos y lo que pidió el consejo en su última sesión (una
+- **La investigación.** Busca fuentes oficiales o primarias (al menos dos búsquedas, hasta cinco) y
+  contesta con un objeto `{hallazgos: [...]}`; entrega hasta tres. Sólo se anota un hallazgo cuya fuente
+  sea una página que la búsqueda de verdad trajo: se compara el sitio y la ruta (sin `www.`, sin `#…` ni
+  consulta, http o https) y en el libro queda la dirección tal como la trajo la búsqueda; una liga
+  inventada no pasa. La bitácora y el aviso dicen cuánto buscó (búsquedas, páginas, cuántos propuso),
+  para distinguir «no encontré nada» de «no alcancé a buscar» o «ninguna fuente comprobada». «Lo que falta» son los candados abiertos y lo que pidió el consejo en su última sesión (una
   condición que piden varios jueces va una sola vez). Lo que sólo puede entregar una persona
   (escrituras, cartas firmadas, presupuestos) no se investiga.
 
