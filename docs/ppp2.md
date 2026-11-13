@@ -23,7 +23,7 @@ presenta de nuevo. Lo que no se arregla así lo pide a quien puede conseguirlo.
 | `explorar` | Mueve capital y arranque de obra para proponer algo mejor (**la ronda**) | El plan, solo (latido) o con un clic |
 | `proponer` | La versión que defiende no pasa la revisión para fondos y la ronda no encontró cerca una que pase | El equipo, en Versiones |
 | `probar` | Se prueba contra los golpes (pruebas de estrés) | El plan, solo (latido) o con un clic |
-| `consejo` | Defiende su versión ante el consejo de planes | El plan en su forma virtual (revisión programada o chat) |
+| `consejo` | Defiende su versión ante el consejo de planes | El servidor, por la API de IA: un botón de la página o el latido |
 | `direccion` | El consejo la aprobó: falta que Dirección la vuelva vigente | Dirección |
 | `mundo` | El consejo la regresó y la ronda ya no encuentra mejora: falta conseguir lo que pidió el consejo | Personas (candados y datos) |
 | `candados` | Es árbol: faltan candados para florecer | Personas |
@@ -31,7 +31,7 @@ presenta de nuevo. Lo que no se arregla así lo pide a quien puede conseguirlo.
 | `cumplido` | Es fruto | — |
 
 El paso **lo calcula el libro** (pestaña `Plan`, sección «El ciclo del plan», y `Resumen!plan.paso`);
-nadie lo escribe a mano. Página, servidor y forma virtual leen la misma celda. Las reglas:
+nadie lo escribe a mano. La página y el servidor (también cuando convoca al consejo) leen la misma celda. Las reglas:
 
 - **Una versión que no pasa la revisión para fondos nunca va a pruebas ni al consejo.** El plan
   explora desde ella; si la ronda no encuentra una que pase, el paso es `proponer`.
@@ -143,9 +143,9 @@ para regresarla: quien la quiera de vuelta captura esas palancas otra vez.
 - La ronda sólo mueve capital y arranque de obra, y sólo cerca de donde está la versión (dos pasos
   y un mes). La primera estructura de un plan nuevo (banco, cobranza, pagos durante la obra) y los
   saltos grandes los hace una persona o el plan en su forma virtual.
-- Mientras corre una ronda o unas pruebas, **nadie puede guardar cambios en ningún plan** (el
-  servidor atiende de uno en uno): la página avisa que hay una ronda corriendo y hay que volver a
-  intentar al terminar. Leer sí se puede.
+- Mientras corre una ronda, unas pruebas, una sesión del consejo o una investigación, **nadie puede
+  guardar cambios en ningún plan** (el servidor atiende de uno en uno): la página avisa y hay que
+  volver a intentar al terminar. Leer sí se puede.
 - Con `Config!pausa = sí` el servidor no escribe nada, tampoco para restaurar una ronda que murió a
   medias: la página avisa que esa versión está a medias hasta que se quite la pausa.
 - El libro lee hasta 5 000 votos, 5 000 rondas y 20 000 renglones de pruebas por plan. Si el latido
@@ -154,9 +154,10 @@ para regresarla: quien la quiera de vuelta captura esas palancas otra vez.
 - El latido atiende un plan por vez y empieza por el que sigue al último atendido: un plan con el
   libro lento no deja sin turno a los demás.
 - Una hoja de Google nace con 1 000 renglones. El servidor agrega los que le hagan falta en
-  `Rondas`, `Pruebas` y `Bitácora`. `Consejo` y `Hallazgos` los escribe el plan en su forma virtual,
-  que no puede escribir debajo del último renglón de la hoja: con 1 000 renglones hay lugar para unas
-  140 sesiones; si se llenan, se agregan renglones (ver `server/ppp2/INSTALAR.md`).
+  `Rondas`, `Pruebas`, `Consejo`, `Hallazgos` y `Bitácora`. Quien escriba una sesión del consejo a mano
+  (en un chat, sin el servidor) no puede escribir debajo del último renglón de la hoja: con 1 000
+  renglones hay lugar para unas 140 sesiones; si se llenan, se agregan renglones (ver
+  `server/ppp2/INSTALAR.md`).
 
 ## La huella: de qué números se está hablando
 
@@ -176,12 +177,12 @@ votos **dejan de contar** y el plan vuelve a probarse y a defenderse.
   activador instalado, nada corre solo: la página ofrece los mismos pasos con un clic. **La página
   sólo dice «lo hago solo» si el latido corrió en las últimas dos horas** (el servidor anota cada
   latido); si no, dice que no tiene latido o que está apagado.
-- **En su forma virtual** (una revisión programada de Claude, si existe, y cualquier chat con
-  Claude): el consejo de planes y la investigación. Escribe filas en `Consejo`, `Hallazgos` y
-  `Bitácora`; nunca datos, palancas, versiones ni fórmulas. La revisión programada vive fuera de este
-  repositorio (en la cuenta de Claude de Dirección, con los identificadores de los libros); lo que
-  dice la página sobre cuándo se reúne el consejo sale del renglón `revision` de `Config`, y si está
-  vacío la página dice que no hay revisión programada.
+- **El consejo y la investigación, también en el servidor, por la API de IA** (ver «El consejo y la
+  investigación, por API»): un botón de la página los pide y, si hay clave, el latido convoca solo al
+  consejo cuando el libro dice `consejo`. No dependen de un chat ni de una suscripción. Escriben filas
+  en `Consejo`, `Hallazgos` y `Bitácora`; nunca datos, palancas, versiones ni fórmulas. Sin la clave,
+  la página dice que el consejo se convoca en cuanto Dirección la ponga, y una investigación queda
+  pedida (pestaña `Pedidos` del vivero).
 - **Personas**: capturar y confirmar datos, cerrar candados, aceptar hallazgos, prestarle una versión
   al plan y **volver vigente una versión (sólo Dirección)**.
 
@@ -240,14 +241,52 @@ del Resumen**: la **huella** de la versión (`plan.huella`, columna H) y la **ev
   huella o sin versión no se puede contar: el libro dice cuántos hay (`plan.consejo_sin_leer`) y la
   página lo avisa.
 
+## El consejo y la investigación, por API
+
+El consejo de planes y la investigación corren en el servidor de PPP 2 (`consejo_`, `investigar_` y
+el bloque «el consejo y la investigación, por API» de `PPP2.gs`). Se piden con un botón de la página
+(«Convocar al consejo», «Investigar», «Investigar lo que falta»); el latido convoca solo al consejo
+cuando el libro dice `consejo` (se apaga con `Config!consejo_latido = no`).
+
+- **La clave.** Dirección la pone una vez en las propiedades del script del servidor:
+  `ANTHROPIC_API_KEY` (consejo e investigación) u `OPENAI_API_KEY` (sólo consejo). Nunca viaja a la
+  página, al repositorio, al libro ni a la bitácora, y el texto de error del proveedor no se guarda.
+  Es la excepción a «las claves de IA sólo como secretos de Actions» (que rige el grafo): aquí el
+  servidor que escribe en los libros es el que llama a la API, para que el expediente del plan no pase
+  por un repositorio público. Paso a paso en `server/ppp2/INSTALAR.md`.
+- **El motor.** Anthropic (`claude-sonnet-5-5`) si hay su clave; si no, OpenAI (`gpt-6.1-sol`).
+  `Config!consejo_motor` = `openai` pide OpenAI primero y `Config!consejo_modelo` cambia el modelo de
+  ese motor. `Config!consejo = no` apaga el consejo y la investigación por API.
+- **Cobra por uso.** Cada sesión son siete consultas (una por juez) y cada investigación, una consulta
+  con hasta cuatro búsquedas en la web. Lo paga la cuenta de la API, no la suscripción de nadie.
+- **Cómo vota.** El servidor arma el expediente desde el libro, tal como se ve (con sus unidades): lo
+  que calculó para la versión que el plan defiende y para la vigente, las pruebas de estrés con esa
+  misma huella, el reparto, los productos, los datos con su estado y fuente, los candados, los
+  hallazgos, las preguntas respondidas, la última sesión del consejo y las rondas recientes. Cada juez
+  lo lee por separado, con su oficio y las reglas de siempre (aprueba sólo si hoy firmaría; razones
+  con cifras del expediente; nada de cuentas nuevas), y contesta con un objeto fijo: voto, razón y
+  condición. Sólo Alejandro virtual puede vetar.
+- **Cuándo se escribe.** Sólo si el libro dice `consejo`, la versión tiene pruebas con su huella y
+  llegan **los siete votos válidos** (a quien no contestó bien se le pregunta una vez más). Antes de
+  escribir se vuelve a leer el Resumen: si la versión, la huella o la evidencia cambiaron mientras
+  votaban, no se escribe nada (`cambio`). La sesión lleva nombre nuevo (`CP-n`), la fecha, la huella y
+  la evidencia del Resumen, y un renglón en la bitácora con el motor que votó. Si no llegan los siete,
+  no se escribe nada: «no contestó» nunca es «aprobado».
+- **La investigación.** Busca fuentes oficiales o primarias y entrega hasta tres hallazgos. Sólo se
+  anota un hallazgo cuya fuente sea una página que la búsqueda de verdad trajo (una liga inventada no
+  pasa). «Lo que falta» son los candados abiertos y lo que pidió el consejo en su última sesión (una
+  condición que piden varios jueces va una sola vez). Lo que sólo puede entregar una persona
+  (escrituras, cartas firmadas, presupuestos) no se investiga.
+
 ## Otras herramientas del plan
 
 - «La siguiente pregunta» la elige el libro: entre las preguntas abiertas de la edad del plan, la de
   mayor impacto del oficio y más básica. Es un orden del oficio, no un cálculo de sensibilidad.
-- «Investígalo tú» deja un pedido en la pestaña `Pedidos` del vivero; el plan, en su forma virtual,
-  lo toma y deja lo que encuentra en `Hallazgos` con su fuente. Ningún hallazgo cambia un dato solo.
-  Si `Config` no tiene el renglón `revision`, la página dice que no hay revisión programada y que el
-  pedido se atiende en un chat con Claude: no promete una revisión que no existe.
+- «Investigar» (en una pregunta) y «Investigar lo que falta» (cuando el paso es `mundo`) buscan en la
+  web ahí mismo, por la API de Anthropic, y dejan en `Hallazgos` lo que encuentran con su fuente
+  (estado `propuesto`). Ningún hallazgo cambia un dato solo: una persona lo acepta. Sin la clave de
+  Anthropic, «Investigar» deja un pedido en la pestaña `Pedidos` del vivero y la página dice qué falta
+  para atenderlo: no promete una revisión que no existe.
 - Todo plan nace con seis candados abiertos (tenencia, uso de suelo, agua, vialidad, banco y acuerdo
   con los dueños). Un árbol sin candados registrados lo dice en vez de quedarse sin salida.
 - Las pruebas de estrés las calcula el libro: el servidor cambia la columna Prueba, lee y la deja
@@ -266,7 +305,8 @@ del Resumen**: la **huella** de la versión (`plan.huella`, columna H) y la **ev
 
 ## Pruebas
 
-- `node --test tests/ppp2-servidor.test.cjs tests/ppp2-ronda.test.cjs tests/ppp2-libro.test.cjs`
+- `node --test tests/ppp2-servidor.test.cjs tests/ppp2-ronda.test.cjs tests/ppp2-libro.test.cjs tests/ppp2-consejo.test.cjs`
+  (`ppp2-consejo`: el consejo y la investigación con una API de juguete; nada sale a la red)
 - `node tests/ppp2-browser.cjs`
 - Tres accesorios salen de una hoja de cálculo de verdad (LibreOffice) con el plan inventado, y se
   regeneran juntos con `python3 ppp2/libro/regenerar.py`:

@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
-const { mundo, ADMIN, EDITOR, LECTOR, PLAN, filaDe, jugueteConCiclo } = require('./ppp2-mundo.cjs');
+const { mundo, ADMIN, EDITOR, LECTOR, PLAN, filaDe, jugueteConCiclo, jueces } = require('./ppp2-mundo.cjs');
 
 const RAIZ = path.join(__dirname, '..');
 const FOTOS = process.env.PPP_SCREENSHOTS || '';
@@ -118,6 +118,21 @@ async function foto(page, nombre) {
       await ctx.close();
     });
 
+    await caso('si la sesión deja de servir a medio camino, queda la pantalla de entrar y no un aviso de «estoy trabajando» que nunca termina', async () => {
+      const w = regresada();
+      const { page, ctx, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN });
+      await page.getByRole('button', { name: /Prestarme la V3/ }).waitFor();
+      await page.evaluate(() => localStorage.setItem('pyod_clave_v1', 'syrevocada00000000000000'));   // la revocaron mientras veía el plan
+      await page.getByRole('button', { name: /Prestarme la V3/ }).click();
+      await page.getByText('Tu sesión ya no sirve aquí').waitFor();
+      await page.waitForTimeout(300);
+      assert.equal(await page.getByText('Tu sesión ya no sirve aquí').count(), 1, 'no se vuelve a pintar el plan encima');
+      assert.equal(await page.locator('#p2Toast').isHidden(), true, 'el aviso de que estaba corriendo la ronda se quita');
+      assert.equal(await page.evaluate(() => localStorage.getItem('pyod_clave_v1')), 'syrevocada00000000000000', 'nunca borra la credencial');
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
     await caso('el vivero muestra lo que recibe el dueño y lleva al plan', async () => {
       const w = mundo();
       const { page, ctx, errores } = await pagina(navegador, base, w, EDITOR);
@@ -213,7 +228,9 @@ async function foto(page, nombre) {
       assert.equal(posts[1].version, 3, 'prueba la versión donde quedó la propuesta');
       assert.ok(posts.every((b) => b.request_id && b.plan === PLAN));
       await page.getByText('Ya corrí las pruebas de estrés de mi V3 con los números que tiene hoy. Me toca defenderla ante el consejo de planes.').waitFor({ timeout: 15000 });
-      assert.match(await page.locator('.p2-voz').innerText(), /todavía no tengo una revisión programada/, 'sin revisión programada en Config, no la promete');
+      assert.match(await page.locator('.p2-voz').innerText(), /Mi consejo se convoca con un botón en cuanto Dirección ponga en mi servidor la clave de la API de IA\./, 'sin la clave de la API no promete el consejo');
+      assert.equal(await page.getByRole('button', { name: /Convocar al consejo/ }).count(), 0);
+      assert.doesNotMatch(await page.locator('.p2-voz').innerText(), /chat con Claude/, 'el consejo no depende de un chat');
       assert.equal(await page.locator('.p2-vbtn[aria-pressed="true"] b').innerText().then((t) => t.slice(0, 2)), 'V3', 'queda viendo la propuesta nueva');
       assert.match(await page.locator('.p2-vbtn[aria-pressed="true"]').innerText(), /la que defiendo/);
       await page.evaluate((h) => { location.hash = h; }, '#/plan/' + PLAN + '/auton');     // el nombre viejo de la pestaña sigue llevando aquí
@@ -241,8 +258,9 @@ async function foto(page, nombre) {
       await ctx.close();
     });
 
-    await caso('con una versión libre el plan corre su ronda sin pedir nada, y dice que si nadie se lo pide la corre solo', async () => {
-      const w = regresada({ config: [['revision', 'lunes a viernes, tres veces al día']] });
+    await caso('con una versión libre el plan corre su ronda sin pedir nada, se prueba y, con la clave de la API, convoca al consejo con un botón', async () => {
+      const w = regresada({ ia: jueces({ 'Desarrollador-financiero': { voto: 'aprueba', razon: 'Pasa la revisión para fondos y aguanta los golpes leves según el libro.', condicion: '' } }) });
+      w.propiedades.set('ANTHROPIC_API_KEY', 'sk-ant-prueba');
       const ver = w.libro.getSheetByName('Versiones');
       ver.v[filaDe(ver, 'estado') - 1][4] = 'descartada';
       jugueteConCiclo(w.libro);
@@ -260,7 +278,16 @@ async function foto(page, nombre) {
       await page.getByRole('button', { name: /Correr mi ronda/ }).click();
       await page.getByText('Propuesta lista y probada: ahora le toca al consejo.').waitFor({ timeout: 15000 });
       assert.deepEqual(posts.map((b) => [b.tipo, b.usar]), [['ppp2-ronda', undefined], ['ppp2-estres', undefined]]);
-      await page.getByText(/El consejo se reúne en mi revisión programada \(lunes a viernes, tres veces al día\) o cuando hablas conmigo en un chat con Claude\./).waitFor({ timeout: 15000 });
+      // le toca el consejo: con la clave de la API se convoca con un botón y, con el latido corriendo, lo convoca solo
+      await page.getByText('Si nadie lo convoca, lo convoco solo en mi siguiente latido. Los siete jueces votan por separado con los números de mi libro; tarda cerca de un minuto.').waitFor({ timeout: 15000 });
+      await foto(page, 'ppp2-consejo-boton');
+      await page.getByRole('button', { name: /Convocar al consejo/ }).click();
+      await page.getByText(/El consejo votó mi V3 \(sesión CP-2\): aprueban 1 de 7\. Me la regresa: sus razones y lo que pide quedaron en «Mis rondas»\./).waitFor({ timeout: 15000 });
+      assert.equal(posts[2].tipo, 'ppp2-consejo');
+      assert.equal(w.iaPedidos.length, 7, 'siete jueces, por separado');
+      assert.ok(w.iaPedidos.every((p) => !p.crudo.includes('sk-ant-prueba')), 'la clave nunca sale del servidor hacia la API en el cuerpo');
+      await page.getByText(/El consejo regresó mi V3 \(1 de 7 aprueban\)/).waitFor({ timeout: 15000 });
+      assert.doesNotMatch(await page.content(), /sk-ant-prueba/, 'la página nunca ve la clave');
       await ctx.close();
     });
 
@@ -278,9 +305,29 @@ async function foto(page, nombre) {
       assert.match(texto, /Conseguir la escritura 1/);
       assert.match(texto, /Candados abiertos/);
       assert.match(texto, /sin mejora/);
-      assert.equal(await page.getByRole('button', { name: /Correr mi ronda|Prestarme|Afinar|Probar mi V|Correr pruebas/ }).count(), 0);
+      assert.equal(await page.getByRole('button', { name: /Correr mi ronda|Prestarme|Afinar|Probar mi V|Correr pruebas|Investigar lo que falta|Convocar/ }).count(), 0);
       assert.equal(posts.length, 0);
       await sinDesborde(page, 'rondas · lector');
+      await ctx.close();
+    });
+
+    await caso('cuando ya no mejora, quien edita le pide al plan que investigue lo que falta y el hallazgo llega con su fuente', async () => {
+      const URL = 'https://boletinoficial.sonora.gob.mx/ejemplo/programa.pdf';
+      const w = regresada({ ia: ({ n }) => ({ codigo: 200, cuerpo: { stop_reason: 'tool_use', content: [
+        { type: 'server_tool_use', id: 's' + n, name: 'web_search', input: { query: 'zonificación' } },
+        { type: 'web_search_tool_result', tool_use_id: 's' + n, content: [{ type: 'web_search_result', url: URL, title: 'Programa municipal', encrypted_content: 'x' }] },
+        { type: 'tool_use', id: 'h' + n, name: 'entregar_hallazgos', input: { hallazgos: [{ tema: 'Uso de suelo', hallazgo: 'El programa municipal fija la zonificación; hay que pedir la constancia del predio para comparar la altura.', fuente: URL, confianza: 'media', mueve: 'candado uso_suelo' }] } }] } }) });
+      w.propiedades.set('ANTHROPIC_API_KEY', 'sk-ant-prueba');
+      const res = w.libro.getSheetByName('Resumen'), h2 = res.v[filaDe(res, 'v2.huella') - 1][1];
+      w.libro.getSheetByName('Rondas').appendRow([1, '2026-01-15 11:00', 'El plan (servidor)', 2, h2, 'El consejo (CP-1) regresó la V2: aprueban 0 de 7', 'sin mejora', '', '', 'Ronda 1 del plan. Probé 15 combinaciones y ninguna es mejor que la que ya defiendo.', 15, '{"candidatos":[]}', '']);
+      jugueteConCiclo(w.libro);
+      const { page, ctx, posts, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN + '/rondas' });
+      await page.getByText('Lo que sólo puede entregar una persona (escrituras, cartas firmadas, presupuestos) no lo investigo: lo pido.').waitFor();
+      await page.getByRole('button', { name: /Investigar lo que falta/ }).click();
+      await page.getByText(/Investigué y dejé 1 hallazgo en «Lo que encontré», con su fuente\./).waitFor({ timeout: 15000 });
+      assert.deepEqual([posts[0].tipo, posts[0].mundo], ['ppp2-investigar', true]);
+      await page.locator('.p2-seccion', { hasText: 'Lo que encontré' }).getByText(/El programa municipal fija la zonificación/).waitFor({ timeout: 15000 });
+      assert.deepEqual(errores, []);
       await ctx.close();
     });
 
@@ -393,7 +440,7 @@ async function foto(page, nombre) {
       w2.cache.set('trabajando', PLAN);
       const r2 = await pagina(navegador, base, w2, EDITOR, { hash: '#/plan/' + PLAN });
       await r2.page.getByRole('button', { name: /Probar mi V2/ }).click();
-      await r2.page.getByText(/Hay un plan corriendo una ronda o unas pruebas/).waitFor({ timeout: 40000 });
+      await r2.page.getByText(/Hay un plan corriendo una ronda, unas pruebas, su consejo o una investigación/).waitFor({ timeout: 40000 });
       await r2.page.getByRole('button', { name: /^\s*Probar mi V2\s*$/ }).waitFor();
       assert.equal(await r2.page.getByRole('button', { name: /^\s*Probar mi V2\s*$/ }).isEnabled(), true);
       await ctx.close(); await r2.ctx.close();
