@@ -39,7 +39,7 @@ Decisión de Dirección del 12-nov-2026 (DEC-19): el grafo **no refleja** sistem
 | `grafo-motor/aviso.py` | Textos del PR, del comentario del pedido y del aviso de borrador. |
 | `grafo/` | Lo generado: láminas, `versiones.json`, `datos/<id>.json`, `mapa-ids.json`. **No se edita a mano.** |
 | `grafo-control.js` | Los controles junto al grafo en Accesos. No trae claves ni escribe nada. |
-| `scripts/grafo-estado.cjs` | Vigilante de cada hora (sólo lectura). |
+| `scripts/grafo-estado.cjs` | El vigilante (sólo lectura): corre con lo que pasa en el repositorio y cuando GitHub arranca su horario. |
 | `scripts/grafo-rama-datos.sh` | Lee y escribe la rama de datos `grafo-datos`. |
 | `.github/workflows/grafo-rehacer.yml` · `grafo-estado.yml` | Los dos flujos. |
 
@@ -81,12 +81,12 @@ Si otros cambios entran a la rama principal mientras el borrador espera, puede q
 
 «Grafo · estado» sólo lee (API de GitHub y páginas estáticas; ningún `/exec`). Corre:
 
-- por horario, dos veces cada hora. **GitHub arranca los horarios cuando puede**: el 12-nov-2026, recién instalado, lo corrió una sola vez en diez horas. Por eso no depende sólo del reloj;
+- por horario: pide dos por hora (minutos 17 y 47), pero **GitHub arranca los horarios cuando puede, así que no es «cada hora»**. GitHub avisa que con carga alta los horarios se retrasan y algunos se descartan ([«Events that trigger workflows» · schedule](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)). Medido en esta organización del 8 al 12-nov-2026: cada línea de horario corre unas tres veces al día y con horas de retraso, pida cada 15 minutos, cada hora o cada 3 horas (`sala-cada-hora.yml` de la Sala, con cuatro líneas: cada una, una vez cada 4 a 11 horas; `salud-online.yml` de la cabina pide 96 al día y corrió de 3 a 5). Aquí, el 12-nov: una a las 16:01Z y la siguiente a las 22:16Z. Por eso no depende sólo del reloj;
 - en cuanto se aprueba un grafo;
 - en cuanto termina en la rama principal una revisión de este repositorio («Arquitectura YOD», «Verificar acceso PPP», «Verificar interfaz PPP»): si falló, se pinta y se abre su chinche en ese momento;
 - cuando en este repositorio se abre, se cierra o se reabre una chinche.
 
-Lo de los otros repositorios se ve en la siguiente corrida, sea por horario o por cualquiera de las anteriores. Cada corrida deja su hora: es el «revisado» que enseña la página.
+Lo de los otros repositorios se ve en la siguiente corrida, sea por horario o por cualquiera de las anteriores. De noche y en fin de semana casi nada lo despierta salvo el horario: lo pintado puede tener horas. Cada corrida deja su hora: es el «revisado» que enseña la página. Para revisar ya: en GitHub, Actions → «Grafo · estado» → «Run workflow» (sólo lee).
 
 Qué mira:
 
@@ -95,7 +95,7 @@ Qué mira:
 - repositorios que cambiaron después de armar el grafo;
 - páginas que responden con error.
 
-Lo pinta en el grafo, lo anota en el registro y abre una chinche (`📌 Grafo: …`) por cada flujo o página que falla, para que la ronda diaria de chinches lo atienda; si esa chinche ya está abierta no abre otra. También pone al día el aviso de borrador con lo que de verdad hay en GitHub.
+Lo pinta en el grafo, lo anota en el registro y abre una chinche (`📌 Grafo: …`) por cada flujo o página que falla, para que la ronda diaria de chinches lo atienda; si esa chinche ya está abierta no abre otra: la reconoce por la clave del error (va en su texto) o por el flujo o la página, aunque esta vez tronara en otro trabajo, en otro paso o con otro código. Así, un flujo que falla, pasa y vuelve a fallar entre revisiones seguidas no llena de chinches (pasó el 12-nov con «Sala · Cada hora», que en cada corrida hace un trabajo distinto). Si no pudo leer cuáles hay abiertas, o GitHub no la dejó abrir, no abre a ciegas: queda en `chinche_pendiente` de `estado.json` y la siguiente revisión la abre si el error sigue. También pone al día el aviso de borrador con lo que de verdad hay en GitHub.
 
 Dos cuidados para que el registro diga la verdad:
 

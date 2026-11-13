@@ -19,6 +19,9 @@ const PROPIO = { 'yodesarrollomx/potenciales-yod': ['grafo/', 'grafo-motor/datos
 // El flujo «Grafo · rehacer» anota el cierre de un borrador al cerrarse su PR. El vigilante sólo lo anota si aquél no corrió:
 // le da este rato. Los dos a la vez dejaban dos renglones «grafo aprobado» (12-nov-2026).
 const GRACIA_MS = 10 * 60 * 1000;
+// Lo que identifica el error en el título de su chinche: el flujo o la página, sin el trabajo, el paso ni el código, que
+// cambian de una falla a otra. Se comparan los primeros 100 caracteres porque el título se corta a 120.
+const nucleo = msg => String(msg || '').split(', trabajo «')[0].replace(/ respondió \d+$/, ' respondió').trim().slice(0, 100);
 
 function crear({ fetchImpl = fetch, ahora = () => new Date().toISOString(), mapa } = {}) {
   async function gh(ruta, opc = {}) {
@@ -125,19 +128,31 @@ function crear({ fetchImpl = fetch, ahora = () => new Date().toISOString(), mapa
     return { nuevos, resueltos, lineas, igual, estado: { generado: t, errores, ...(sd.size ? { sin_dato: [...sd].sort() } : {}) } };
   }
 
+  /* Una chinche por cada flujo o página que falla. Sin repetir: si ya hay una abierta del mismo error no se abre otra,
+     aunque esta vez tronara en otro trabajo o en otro paso (un flujo que se va y vuelve entre dos revisiones seguidas no
+     llena de chinches). Si no se pudo leer cuáles hay abiertas, o GitHub no dejó abrirla, no se adivina: regresa esas
+     claves para intentarlo en la siguiente revisión. */
   async function chinches(nuevos) {
     const mios = nuevos.filter(x => x.tipo === 'flujo' || x.tipo === 'pagina');
-    if (!mios.length) return;
-    // Sin repetir: si el error se fue y volvió y su chinche sigue abierta, no se abre otra.
-    const abiertas = await suave(() => gh(`/repos/${AQUI}/issues?state=open&labels=chinche&per_page=100`), []);
-    const titulos = new Set((Array.isArray(abiertas) ? abiertas : []).map(i => String(i.title || '')));
-    for (const x of mios) {
-      const titulo = '📌 Grafo: ' + x.msg.slice(0, 120);
-      if (titulos.has(titulo)) continue;
-      titulos.add(titulo);
-      await suave(() => gh(`/repos/${AQUI}/issues`, { method: 'POST', body: JSON.stringify({ title: titulo, labels: ['chinche'],
-        body: `El grafo del sistema detectó este error.\n\n- Qué: ${x.msg}\n- Desde: ${x.desde}\n- Evidencia: ${x.url}\n- Piezas del grafo: ${x.nodos.join(', ')}\n\nEn el registro del grafo queda anotado cuando el flujo vuelva a pasar.` }) }), null);
+    if (!mios.length) return [];
+    const l = await intento(() => gh(`/repos/${AQUI}/issues?state=open&labels=chinche&per_page=100`));
+    if (!l.ok || !Array.isArray(l.v)) return mios.map(x => x.clave).filter(Boolean);
+    const ya = new Set();
+    for (const i of l.v) {
+      const t = String(i.title || ''); if (!t.startsWith('📌 Grafo:')) continue;
+      ya.add('t:' + nucleo(t.replace(/^📌 Grafo:\s*/u, '')));
+      const c = /Clave: `([^`]+)`/.exec(String(i.body || '')); if (c) ya.add('c:' + c[1]);
     }
+    const falta = [];
+    for (const x of mios) {
+      const t = 't:' + nucleo(x.msg.slice(0, 120)), c = x.clave ? 'c:' + x.clave : '';
+      if (ya.has(t) || (c && ya.has(c))) continue;
+      const r = await intento(() => gh(`/repos/${AQUI}/issues`, { method: 'POST', body: JSON.stringify({ title: '📌 Grafo: ' + x.msg.slice(0, 120), labels: ['chinche'],
+        body: `El grafo del sistema detectó este error.\n\n- Qué: ${x.msg}\n- Desde: ${x.desde}\n- Evidencia: ${x.url}\n- Piezas del grafo: ${x.nodos.join(', ')}` + (x.clave ? `\n- Clave: \`${x.clave}\`` : '') + `\n\nEn el registro del grafo queda anotado cuando el flujo vuelva a pasar.` }) }));
+      if (!r.ok) { if (x.clave) falta.push(x.clave); continue; }
+      ya.add(t); if (c) ya.add(c);
+    }
+    return falta;
   }
   /* Qué hay de verdad del borrador en GitHub. null o undefined = no se pudo saber (no se toca nada). */
   async function borradorEnGitHub(numPR) {
@@ -173,7 +188,7 @@ function reconciliarBorrador({ puntero, aprobado, rama, pr, deRama, repo, ahora,
   const p = puntero && ID.test(String(puntero.id || '')) ? puntero : null, igual = { puntero: p || {}, linea: null, cambio: !p && !!puntero && Object.keys(puntero).length > 0 };
   if (rama === null || rama === undefined) return igual;
   const idRama = deRama && ID.test(String(deRama.aprobado || '')) ? deRama.aprobado : '';
-  const cerrar = () => p ? { puntero: {}, cambio: true, linea: cerrados.includes(p.id) ? null : { cuando: ahora, que: p.id === aprobado ? 'grafo aprobado' : 'borrador descartado', id: p.id, pr: p.pr || null, por: 'revisión de cada hora' } } : { puntero: {}, linea: null, cambio: igual.cambio };
+  const cerrar = () => p ? { puntero: {}, cambio: true, linea: cerrados.includes(p.id) ? null : { cuando: ahora, que: p.id === aprobado ? 'grafo aprobado' : 'borrador descartado', id: p.id, pr: p.pr || null, por: 'revisión del vigilante' } } : { puntero: {}, linea: null, cambio: igual.cambio };
   if (!rama || (idRama && idRama === aprobado)) return p && reciente && !cerrados.includes(p.id) ? igual : cerrar();   // ya no hay rama, o su grafo ya es el aprobado
   let n = p ? { ...p } : null;
   if (!n || (idRama && n.id !== idRama)) {                                      // falta el aviso, o es de un borrador anterior
@@ -200,19 +215,29 @@ function cerradosDe(texto) {
   return out;
 }
 
+/* A qué errores se les intenta abrir chinche en esta revisión: a los nuevos y a los que la anterior no pudo abrir, si siguen.
+   Función pura. «claves» es lo que queda pendiente si esta revisión no abre chinches. */
+function pendientesChinche(previo, r) {
+  const pend = new Set(Array.isArray(previo && previo.chinche_pendiente) ? previo.chinche_pendiente : []), nuevos = new Set(r.nuevos.map(x => x.clave));
+  const candidatos = [...r.nuevos, ...r.estado.errores.filter(x => pend.has(x.clave) && !nuevos.has(x.clave))];
+  return { candidatos, claves: candidatos.filter(x => x.tipo === 'flujo' || x.tipo === 'pagina').map(x => x.clave) };
+}
+
 async function main() {
   const mapa = JSON.parse(fs.readFileSync(path.join(GRAFO, 'mapa-ids.json'), 'utf8'));
   const E = crear({ mapa });
   const { errores, sinDato } = await E.leerTodo();
   fs.mkdirSync(SALIDA, { recursive: true });
   const fEstado = path.join(SALIDA, 'estado.json'), fReg = path.join(SALIDA, 'registro.jsonl');
-  const antes = (() => { try { return JSON.parse(fs.readFileSync(fEstado, 'utf8')).errores || []; } catch (e) { return []; } })();
-  const r = E.conciliar(antes, errores, sinDato);
+  const previo = (() => { try { return JSON.parse(fs.readFileSync(fEstado, 'utf8')) || {}; } catch (e) { return {}; } })();
+  const r = E.conciliar(previo.errores || [], errores, sinDato);
   if (r.lineas.length) fs.appendFileSync(fReg, r.lineas.map(l => JSON.stringify(l)).join('\n') + '\n');
+  console.log(`errores ${r.estado.errores.length} · nuevos ${r.nuevos.length} · resueltos ${r.resueltos.length} · sin dato ${sinDato.length}` + (sinDato.length ? ' (' + sinDato.join(', ') + ')' : ''));
+  const pendiente = pendientesChinche(previo, r);
+  const falta = ABRIR && TOKEN ? await E.chinches(pendiente.candidatos) : pendiente.claves;
+  if (falta.length) { r.estado.chinche_pendiente = falta; console.log('chinches por abrir en la siguiente revisión:', falta.length); }
   // Siempre se escribe: «generado» es la hora de la ÚLTIMA REVISIÓN (lo que la página enseña como «revisado»), haya o no cambios.
   fs.writeFileSync(fEstado, JSON.stringify(r.estado, null, 1) + '\n');
-  console.log(`errores ${r.estado.errores.length} · nuevos ${r.nuevos.length} · resueltos ${r.resueltos.length} · sin dato ${sinDato.length}` + (sinDato.length ? ' (' + sinDato.join(', ') + ')' : ''));
-  if (ABRIR && TOKEN) await E.chinches(r.nuevos);
   // el aviso de borrador, al día con GitHub
   const fBorr = path.join(SALIDA, 'borrador.json'), lee = f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { return null; } };
   const punt = lee(fBorr) || {}, cerrados = cerradosDe((() => { try { return fs.readFileSync(fReg, 'utf8'); } catch (e) { return ''; } })());
@@ -222,4 +247,4 @@ async function main() {
 }
 
 if (require.main === module) main().catch(e => { console.error(e); process.exit(1); });
-module.exports = { crear, PROPIO, GRACIA_MS, reconciliarBorrador, cerradosDe, ligaAbrir, tituloPR };
+module.exports = { crear, PROPIO, GRACIA_MS, reconciliarBorrador, cerradosDe, ligaAbrir, tituloPR, pendientesChinche, nucleo };
