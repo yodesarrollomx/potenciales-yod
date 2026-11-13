@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-13T04:13:42.314Z",
+ "generado": "2026-11-13T04:21:54.926Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -111,6 +111,16 @@
    "desde": "2026-10-10T07:45:52Z",
    "url": "https://github.com/yodesarrollomx/sala-edicion/issues/249",
    "msg": "Chinche #249 en sala-edicion (sobre yod-portal): 📌 yod-portal/os · no me deja enviar a una que aunque estaba ahorita hablando con vos y t"
+  },
+  {
+   "clave": "cambio:yodesarrollomx/sala-edicion",
+   "tipo": "cambio",
+   "nodos": [
+    "repo:yodesarrollomx/sala-edicion"
+   ],
+   "desde": "2026-11-13T04:21:23Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/commit/2ade81d39f95b28f02ff1facda94495ad7eae56a",
+   "msg": "sala-edicion cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
    "clave": "chinche:yodesarrollo/amalaya-board#87",
