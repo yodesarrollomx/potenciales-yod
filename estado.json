@@ -1,6 +1,16 @@
 {
- "generado": "2026-11-13T01:37:14.967Z",
+ "generado": "2026-11-13T01:43:34.991Z",
  "errores": [
+  {
+   "clave": "cambio:yodesarrollomx/yodesarrollo-board",
+   "tipo": "cambio",
+   "nodos": [
+    "repo:yodesarrollomx/yodesarrollo-board"
+   ],
+   "desde": "2026-11-13T01:41:57Z",
+   "url": "https://github.com/yodesarrollomx/yodesarrollo-board/commit/25de9093896f1f72d067d2cfc3ce69dc302b6848",
+   "msg": "yodesarrollo-board cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
+  },
   {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-consejo.yml",
    "tipo": "flujo",
