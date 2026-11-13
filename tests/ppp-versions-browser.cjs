@@ -12,7 +12,7 @@ function eight(active='version-8'){
  const context=await browser.newContext({viewport:{width:430,height:932},isMobile:true,hasTouch:true,reducedMotion:'reduce'}),source=eight(),net=await install(context,{seed:null,native:true,model:source.m}),p=await context.newPage(),errors=[],operations=[];let incomplete=false;
  p.on('pageerror',e=>errors.push(e.message));
  await context.route('https://script.google.com/**',route=>{
-  const request=route.request();if(request.method()!=='POST')return route.fallback();const b=request.postDataJSON();if(b.tipo==='bitacora')return route.fallback();
+  const request=route.request();if(request.method()!=='POST')return route.fallback();const b=request.postDataJSON();if(b.tipo==='bitacora'||b.tipo==='despacho-v1'&&b.operation==='resolvePresentationContext')return route.fallback();
   operations.push(b);if(b.tipo==='sheet-version'){
    if(incomplete)return route.fulfill({contentType:'application/json',body:JSON.stringify({...net.model,estados:{}})});
    assert.equal(b.accion,'activar');assert.equal(b.revision_esperada,net.model.revision);const next=copy(net.model);next.activo=b.escenario_id;next.revision+='x';next.escenarios.forEach(e=>{e.activo=e.id===next.activo;next.estados[e.id]=copy(source.results[e.id]);if(!e.activo)delete next.estados[e.id].flows;});net.model=next;return route.fulfill({contentType:'application/json',body:JSON.stringify(next)});

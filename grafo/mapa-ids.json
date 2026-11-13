@@ -1,0 +1,311 @@
+{
+ "repos": {
+  "yodesarrollomx/yod-portal": {
+   "nodos": [
+    "repo:yodesarrollomx/yod-portal",
+    "SYS-CONTROL",
+    "SYS-YOD-OS"
+   ],
+   "commit": "01d77be217",
+   "flujos": {
+    ".github/workflows/salud-online.yml": "yod-portal::github_workflows_salud_online",
+    ".github/workflows/arquitectura.yml": "yod-portal::github_workflows_arquitectura",
+    ".github/workflows/chinche-browser.yml": "yod-portal::github_workflows_chinche_browser",
+    ".github/workflows/conocimiento-browser.yml": "yod-portal::github_workflows_conocimiento_browser",
+    ".github/workflows/ux-mockup.yml": "yod-portal::github_workflows_ux_mockup",
+    ".github/workflows/yod-core.yml": "yod-portal::github_workflows_yod_core",
+    ".github/workflows/yod-core-register.yml": "yod-portal::github_workflows_yod_core_register",
+    ".github/workflows/reuniones.yml": "yod-portal::github_workflows_reuniones",
+    ".github/workflows/verificar.yml": "yod-portal::github_workflows_verificar",
+    ".github/workflows/chinches-paquete.yml": "yod-portal::github_workflows_chinches_paquete"
+   }
+  },
+  "yodesarrollomx/potenciales-yod": {
+   "nodos": [
+    "repo:yodesarrollomx/potenciales-yod",
+    "SYS-POTENCIALES"
+   ],
+   "commit": "3a855bac12",
+   "flujos": {
+    ".github/workflows/verificar-ppp.yml": "potenciales-yod::github_workflows_verificar_ppp",
+    ".github/workflows/verificar-acceso.yml": "potenciales-yod::github_workflows_verificar_acceso",
+    ".github/workflows/arquitectura.yml": "potenciales-yod::github_workflows_arquitectura",
+    ".github/workflows/grafo-estado.yml": "f:potenciales-yod:.github/workflows/grafo-estado.yml",
+    ".github/workflows/grafo-rehacer.yml": "f:potenciales-yod:.github/workflows/grafo-rehacer.yml"
+   }
+  },
+  "yodesarrollomx/yodesarrollo-board": {
+   "nodos": [
+    "repo:yodesarrollomx/yodesarrollo-board",
+    "SYS-INVERSION"
+   ],
+   "commit": "25de909389",
+   "flujos": {
+    ".github/workflows/offer-review.yml": "yodesarrollo-board::github_workflows_offer_review",
+    ".github/workflows/broker-journey.yml": "yodesarrollo-board::github_workflows_broker_journey",
+    ".github/workflows/hunt-map.yml": "yodesarrollo-board::github_workflows_hunt_map",
+    ".github/workflows/arquitectura.yml": "yodesarrollo-board::github_workflows_arquitectura"
+   }
+  },
+  "yodesarrollomx/yod-despacho": {
+   "nodos": [
+    "repo:yodesarrollomx/yod-despacho",
+    "SYS-DESPACHO"
+   ],
+   "commit": "d89b15114f",
+   "flujos": {
+    ".github/workflows/arquitectura.yml": "yod-despacho::github_workflows_arquitectura"
+   }
+  },
+  "yodesarrollomx/board-aurum": {
+   "nodos": [
+    "repo:yodesarrollomx/board-aurum",
+    "SYS-TAREAS"
+   ],
+   "commit": "93bf6241c8",
+   "flujos": {
+    ".github/workflows/deploy.yml": "board-aurum::github_workflows_deploy",
+    ".github/workflows/arquitectura.yml": "board-aurum::github_workflows_arquitectura"
+   }
+  },
+  "yodesarrollomx/board-flujo-yod": {
+   "nodos": [
+    "repo:yodesarrollomx/board-flujo-yod",
+    "SYS-FLUJO"
+   ],
+   "commit": "e9d122f090",
+   "flujos": {
+    ".github/workflows/arquitectura.yml": "board-flujo-yod::github_workflows_arquitectura"
+   }
+  },
+  "yodesarrollomx/real-miramar-board": {
+   "nodos": [
+    "repo:yodesarrollomx/real-miramar-board",
+    "SYS-MIRAMAR"
+   ],
+   "commit": "9db34a902f",
+   "flujos": {
+    ".github/workflows/arquitectura.yml": "real-miramar-board::github_workflows_arquitectura"
+   }
+  },
+  "yodesarrollomx/interiores-aurum": {
+   "nodos": [
+    "repo:yodesarrollomx/interiores-aurum",
+    "SYS-INTERIORES"
+   ],
+   "commit": "8bcdfc35b9",
+   "flujos": {
+    ".github/workflows/arquitectura.yml": "interiores-aurum::github_workflows_arquitectura"
+   }
+  },
+  "yodesarrollomx/aurum-board": {
+   "nodos": [
+    "repo:yodesarrollomx/aurum-board",
+    "SYS-MARKETING"
+   ],
+   "commit": "e3dd428a01",
+   "flujos": {
+    ".github/workflows/guardian-salud.yml": "aurum-board::github_workflows_guardian_salud",
+    ".github/workflows/guardian-uptime.yml": "aurum-board::github_workflows_guardian_uptime",
+    ".github/workflows/sala-access-discovery.yml": "aurum-board::github_workflows_sala_access_discovery",
+    ".github/workflows/arquitectura.yml": "aurum-board::github_workflows_arquitectura",
+    ".github/workflows/refresh-board.yml": "aurum-board::github_workflows_refresh_board",
+    ".github/workflows/snapshots-online.yml": "aurum-board::github_workflows_snapshots_online",
+    ".github/workflows/guardian-token.yml": "f:aurum-board:.github/workflows/guardian-token.yml"
+   }
+  },
+  "yodesarrollomx/sala-edicion": {
+   "nodos": [
+    "repo:yodesarrollomx/sala-edicion",
+    "SYS-SALA"
+   ],
+   "commit": "051785e2e9",
+   "flujos": {
+    ".github/workflows/sala-llaves.yml": "sala-edicion::github_workflows_sala_llaves",
+    ".github/workflows/sala-rescate-llamada.yml": "sala-edicion::github_workflows_sala_rescate_llamada",
+    ".github/workflows/verificar.yml": "sala-edicion::github_workflows_verificar",
+    ".github/workflows/sala-contenido-comprobar.yml": "sala-edicion::github_workflows_sala_contenido_comprobar",
+    ".github/workflows/sala-cierre-online.yml": "sala-edicion::github_workflows_sala_cierre_online",
+    ".github/workflows/sala-consejo.yml": "sala-edicion::github_workflows_sala_consejo",
+    ".github/workflows/sala-mesa.yml": "sala-edicion::github_workflows_sala_mesa",
+    ".github/workflows/sala-vigilante.yml": "sala-edicion::github_workflows_sala_vigilante",
+    ".github/workflows/publicar.yml": "sala-edicion::github_workflows_publicar",
+    ".github/workflows/sala-arranque.yml": "sala-edicion::github_workflows_sala_arranque",
+    ".github/workflows/sala-corregir-metadatos.yml": "sala-edicion::github_workflows_sala_corregir_metadatos",
+    ".github/workflows/sala-access-discovery.yml": "sala-edicion::github_workflows_sala_access_discovery",
+    ".github/workflows/sala-ejecutor.yml": "sala-edicion::github_workflows_sala_ejecutor",
+    ".github/workflows/sala-cada-hora.yml": "sala-edicion::github_workflows_sala_cada_hora",
+    ".github/workflows/arquitectura.yml": "sala-edicion::github_workflows_arquitectura",
+    ".github/workflows/sonda-medios-publicos.yml": "sala-edicion::github_workflows_sonda_medios_publicos",
+    ".github/workflows/sala-recorrido.yml": "sala-edicion::github_workflows_sala_recorrido",
+    ".github/workflows/sala-chinches.yml": "sala-edicion::github_workflows_sala_chinches",
+    ".github/workflows/sala-piloto-omni.yml": "sala-edicion::github_workflows_sala_piloto_omni",
+    ".github/workflows/sala-relevo.yml": "sala-edicion::github_workflows_sala_relevo",
+    ".github/workflows/sala-v4.yml": "sala-edicion::github_workflows_sala_v4",
+    ".github/workflows/sala-salud-canario.yml": "sala-edicion::github_workflows_sala_salud_canario",
+    ".github/workflows/sala-plan.yml": "sala-edicion::github_workflows_sala_plan",
+    ".github/workflows/sala-revision.yml": "sala-edicion::github_workflows_sala_revision",
+    ".github/workflows/sala-entregar-cortes.yml": "sala-edicion::github_workflows_sala_entregar_cortes",
+    ".github/workflows/sala-maquinas.yml": "sala-edicion::github_workflows_sala_maquinas",
+    ".github/workflows/sala-productor.yml": "sala-edicion::github_workflows_sala_productor",
+    ".github/workflows/sala-mantenimiento-queued.yml": "sala-edicion::github_workflows_sala_mantenimiento_queued",
+    ".github/workflows/sala-prueba-online.yml": "sala-edicion::github_workflows_sala_prueba_online",
+    ".github/workflows/sala-recuperar-escena-cpu.yml": "sala-edicion::github_workflows_sala_recuperar_escena_cpu",
+    ".github/workflows/sala-conexiones.yml": "sala-edicion::github_workflows_sala_conexiones",
+    ".github/workflows/sala-banco.yml": "sala-edicion::github_workflows_sala_banco",
+    ".github/workflows/sala-medios-reconexion.yml": "sala-edicion::github_workflows_sala_medios_reconexion",
+    ".github/workflows/sala-regla.yml": "sala-edicion::github_workflows_sala_regla",
+    ".github/workflows/graphify-code.yml": "sala-edicion::github_workflows_graphify_code",
+    ".github/workflows/sala-preservar-medios.yml": "sala-edicion::github_workflows_sala_preservar_medios",
+    ".github/workflows/sala-auditoria-fallos.yml": "sala-edicion::github_workflows_sala_auditoria_fallos",
+    ".github/workflows/sala-persistencia-prueba.yml": "sala-edicion::github_workflows_sala_persistencia_prueba",
+    ".github/workflows/sala-diario.yml": "sala-edicion::github_workflows_sala_diario",
+    ".github/workflows/snapshots-online.yml": "sala-edicion::github_workflows_snapshots_online",
+    ".github/workflows/sala-tablero-pruebas.yml": "sala-edicion::github_workflows_sala_tablero_pruebas",
+    ".github/workflows/sala-diagnostico.yml": "sala-edicion::github_workflows_sala_diagnostico",
+    ".github/workflows/sala-rendimiento.yml": "sala-edicion::github_workflows_sala_rendimiento",
+    ".github/workflows/sala-durable.yml": "sala-edicion::github_workflows_sala_durable",
+    ".github/workflows/sala-calentar-cache.yml": "sala-edicion::github_workflows_sala_calentar_cache",
+    ".github/workflows/sala-historico.yml": "sala-edicion::github_workflows_sala_historico",
+    ".github/workflows/sala-sonda.yml": "sala-edicion::github_workflows_sala_sonda",
+    ".github/workflows/sala-modal-deploy.yml": "sala-edicion::github_workflows_sala_modal_deploy"
+   }
+  },
+  "yodesarrollomx/plan-potencial": {
+   "nodos": [
+    "repo:yodesarrollomx/plan-potencial",
+    "SYS-PLAN-POTENCIAL"
+   ],
+   "commit": "9f036c7251",
+   "flujos": {
+    ".github/workflows/arquitectura.yml": "plan-potencial::github_workflows_arquitectura"
+   }
+  },
+  "yodesarrollomx/crokiss": {
+   "nodos": [
+    "repo:yodesarrollomx/crokiss",
+    "SYS-CROKISS"
+   ],
+   "commit": "7a7a5572d1",
+   "flujos": {
+    ".github/workflows/arquitectura.yml": "crokiss::github_workflows_arquitectura"
+   }
+  },
+  "yodesarrollomx/Co-desarrolladores-Yod": {
+   "nodos": [
+    "repo:yodesarrollomx/Co-desarrolladores-Yod",
+    "SYS-CODES-PORTAL"
+   ],
+   "commit": "bdaf46b447",
+   "flujos": {
+    ".github/workflows/arquitectura.yml": "Co-desarrolladores-Yod::github_workflows_arquitectura"
+   }
+  },
+  "yodesarrollomx/alquimia-urbana": {
+   "nodos": [
+    "repo:yodesarrollomx/alquimia-urbana",
+    "SYS-ALQUIMIA"
+   ],
+   "commit": "0c0da90783",
+   "flujos": {
+    ".github/workflows/arquitectura.yml": "alquimia-urbana::github_workflows_arquitectura"
+   }
+  },
+  "yodesarrollomx/aurum-experiencia": {
+   "nodos": [
+    "repo:yodesarrollomx/aurum-experiencia",
+    "SYS-AURUM-EXPERIENCIA"
+   ],
+   "commit": "70c63b3309",
+   "flujos": {
+    ".github/workflows/arquitectura.yml": "aurum-experiencia::github_workflows_arquitectura"
+   }
+  },
+  "yodesarrollomx/pintarron": {
+   "nodos": [
+    "repo:yodesarrollomx/pintarron",
+    "SYS-PINTARRON"
+   ],
+   "commit": "0979d3f7f5",
+   "flujos": {
+    ".github/workflows/arquitectura.yml": "pintarron::github_workflows_arquitectura"
+   }
+  },
+  "yodesarrollomx/prueba-dominio": {
+   "nodos": [
+    "repo:yodesarrollomx/prueba-dominio",
+    "SYS-PRUEBA-DOMINIO"
+   ],
+   "commit": "715c6c7c58",
+   "flujos": {}
+  },
+  "yodesarrollomx/yodesarrollomx.github.io": {
+   "nodos": [
+    "repo:yodesarrollomx/yodesarrollomx.github.io"
+   ],
+   "commit": "a5680f2cf2",
+   "flujos": {
+    ".github/workflows/arquitectura.yml": "yodesarrollomx.github.io::github_workflows_arquitectura"
+   }
+  },
+  "alexpueblag/pizarron-claude-yodbot": {
+   "nodos": [
+    "repo:alexpueblag/pizarron-claude-yodbot"
+   ],
+   "commit": "31593a117a",
+   "flujos": {
+    ".github/workflows/ajedrex-checks.yml": "pizarron-claude-yodbot::github_workflows_ajedrex_checks"
+   }
+  },
+  "yodesarrollo/amalaya-board": {
+   "nodos": [
+    "repo:yodesarrollo/amalaya-board",
+    "SYS-AMALAYA"
+   ],
+   "commit": "e3f94e67ea",
+   "flujos": {
+    ".github/workflows/deploy.yml": "amalaya-board::github_workflows_deploy",
+    ".github/workflows/chinches.yml": "amalaya-board::github_workflows_chinches",
+    ".github/workflows/salud.yml": "amalaya-board::github_workflows_salud"
+   }
+  },
+  "aurumarquitectos/experiencia": {
+   "nodos": [
+    "repo:aurumarquitectos/experiencia"
+   ],
+   "commit": "89d29e8fe2",
+   "flujos": {}
+  },
+  "aurumarquitectos/aurumarquitectos.github.io": {
+   "nodos": [
+    "repo:aurumarquitectos/aurumarquitectos.github.io"
+   ],
+   "commit": "d33f765349",
+   "flujos": {
+    ".github/workflows/deploy-pages.yml": "aurumarquitectos.github.io::github_workflows_deploy_pages"
+   }
+  },
+  "alexpueblag/codesarrolladores-libre": {
+   "nodos": [
+    "repo:alexpueblag/codesarrolladores-libre"
+   ],
+   "commit": "96d26c5e30",
+   "flujos": {}
+  },
+  "alexpueblag/yod-terreno-si": {
+   "nodos": [
+    "repo:alexpueblag/yod-terreno-si"
+   ],
+   "commit": "09f75f40f0",
+   "flujos": {}
+  },
+  "alexpueblag/yod-terreno-dormido": {
+   "nodos": [
+    "repo:alexpueblag/yod-terreno-dormido"
+   ],
+   "commit": "1159ca5e6c",
+   "flujos": {}
+  }
+ },
+ "armado": "2026-11-12T20:14:09-07:00"
+}

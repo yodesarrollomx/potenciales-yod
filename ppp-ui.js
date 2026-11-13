@@ -338,5 +338,17 @@
     }else item.card.scrollIntoView({block:'start',behavior:'instant'});
     return navigationState(target);
   }
-  root.PPPView={mount,update,toggle,adjust,setCaseState,navigate,navigationState};
+  // Shows an existing control inside its own card without focusing it:
+  // focus or blur on a native input may save. Used by the chain diagram links.
+  function reveal(controlId){
+    const input=$(controlId),card=input?.closest('.ppp-card'),item=card&&records.find(x=>x.card===card);
+    if(!mounted||!item||item.trigger.disabled)return null;
+    toggle(item.id,true);focusRequest++;
+    item.card.classList.add('ppp-adjusting');item.drawer.classList.add('active');item.adjust.setAttribute('aria-expanded','true');item.adjust.textContent='Ver detalle';
+    let parent=input.parentElement;while(parent&&parent!==item.drawer){if(parent.tagName==='DETAILS')parent.open=true;parent=parent.parentElement;}
+    const group=input.closest('.input-group')||input;
+    requestAnimationFrame(()=>group.scrollIntoView({block:'center',behavior:reduced()?'instant':'smooth'}));
+    return group;
+  }
+  root.PPPView={mount,update,toggle,adjust,reveal,setCaseState,navigate,navigationState};
 })(typeof window==='undefined'?globalThis:window);

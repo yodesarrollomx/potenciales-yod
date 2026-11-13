@@ -2,14 +2,15 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=1"></script>
-<script src="https://yodesarrollomx.github.io/yod-portal/os/access-policy.js?v=0.1.2"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=20261031-fase1-e2"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-cargador.js?v=20261031-fase1-e2"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/access-policy.js?v=20261031-fase1-e2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
 <title>Accesos · El Portero · YoDesarrollo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://yodesarrollomx.github.io/yod-portal/os/shell.css">
+<link rel="stylesheet" href="https://yodesarrollomx.github.io/yod-portal/os/shell.css?v=20261031-fase1-e2">
 <style>
   :root{--bg:#f6f3ed;--card:#ffffff;--text:#231d14;--muted:#766f62;--suave:#8a8272;--linea:#e1dacb;--lineaf:#d8cfbb;--gold:#9a7b3f;--goldc:#b98b3c;--green:#39744b;--orange:#9a6a1e;--red:#a94438;--blue:#3e6484}
   *{box-sizing:border-box}
@@ -25,6 +26,25 @@
   .hero p{color:var(--muted);font-size:12px;margin:0;line-height:1.5}
   .card{background:var(--card);border:1px solid var(--linea);border-radius:16px;padding:14px 16px;margin-bottom:14px}
   .card h2{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--goldc);margin:0 0 10px}
+  .gc{margin:0 0 12px;font-size:12px;line-height:1.5}
+  .gc-fila{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 8px}
+  .gc-ver{border:1px solid var(--lineaf);border-radius:999px;padding:5px 10px;font-size:11.5px;background:rgba(35,29,20,.03)}
+  .gc-ver.gc-borr{border-color:#d9b25c;background:#fbf1d6;color:#6b4a0c}
+  button.gc-ver{font:inherit;font-size:11.5px;line-height:1.5;cursor:pointer}
+  .gc-aviso p.gc-pregunta{font-weight:800;font-size:12.5px;margin:10px 0 2px}
+  .gc-aviso{border:1px solid #e3cf9a;background:#fdf8ea;border-radius:12px;padding:10px 12px;margin:0 0 10px}
+  .gc-aviso p{margin:4px 0 8px}
+  .gc-nota{color:var(--muted);font-size:11px;margin:0}
+  .gc a.btn{text-decoration:none;display:inline-block}
+  .gc-chip{border:1px solid var(--linea);border-radius:999px;padding:3px 9px;font-size:11px}
+  .gc-confirma{border:1px solid var(--lineaf);border-radius:12px;padding:10px 12px;margin:0 0 10px}
+  .gc-confirma p{margin:0 0 8px}
+  .gc-confirma input{width:100%;box-sizing:border-box;background:rgba(35,29,20,.05);border:1px solid var(--lineaf);border-radius:10px;padding:9px 11px;color:var(--text);font:inherit;font-size:12.5px;margin:0 0 8px}
+  .gc-det{border-top:1px solid var(--linea);padding:6px 0}
+  .gc-det summary{cursor:pointer;font-weight:700;font-size:11.5px;padding:4px 0}
+  .gc-reg{list-style:none;margin:6px 0 0;padding:0;font-size:11px}
+  .gc-reg li{padding:3px 0;border-top:1px dashed var(--linea)}
+  .gc-reg span{color:var(--muted);display:inline-block;min-width:92px}
   .fila-alta{display:grid;grid-template-columns:2fr 1.3fr 1.1fr .9fr auto;gap:8px}
   .fila-alta input,.fila-alta select{background:rgba(35,29,20,.05);border:1px solid var(--lineaf);border-radius:10px;padding:10px 11px;color:var(--text);font:inherit;font-size:12.5px;min-width:0}
   .btn{background:var(--gold);color:#17140F;border:0;border-radius:10px;padding:10px 14px;font:inherit;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;white-space:nowrap}
@@ -85,7 +105,7 @@
   .matriz th.todo{border-right:1px solid var(--lineaf)}
   @media(max-width:640px){.fila-alta{grid-template-columns:1fr 1fr}.container{padding:12px 11px 60px}}
 </style>
-<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-salud.js?v=salud-20261011-3"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-salud.js?v=20261031-fase1-e2"></script>
 </head>
 <body>
 <header>
@@ -146,8 +166,16 @@
       <b>(28m ×7)</b> — al cerrar: minutos de la visita × eventos totales &nbsp;|&nbsp; renglón lleno (60 visitas) → renglón nuevo "correo <b>·cont2</b>"<br><b>Permisos por tablero</b>: el campo <b>boards</b> de cada usuario acepta <b>*</b> (ve todos) o los códigos de la matriz de arriba separados por coma — <b>PT</b> Potenciales · <b>CO</b> Codesarrollos · <b>RM</b> Miramar · <b>TA</b> Operación · <b>FL</b> Flujo · <b>IN</b> Interiores · <b>IV</b> Inversionistas · <b>MK</b> Métricas · <b>OB</b> Obra. Ej.: alguien que solo ve Flujo y Miramar = "FL,RM". <br><span style="color:var(--muted)">Nota: hoy filtran de verdad <b>Flujo, Interiores, Miramar y Operación</b>; los otros 4 abren para cualquier sesión válida hasta que su backend mande su código (te dejo esa línea aparte).</span>
     </div>
   </section>
+
+  <section class="card" id="grafo-sistema" hidden aria-label="Grafo del sistema">
+    <h2>🕸️ Grafo del sistema <span id="grafoEstado" style="color:var(--muted);font-weight:400;font-size:12px;text-transform:none;letter-spacing:0"></span></h2>
+    <p style="font-size:12px;color:var(--muted);margin:-2px 0 12px">Cada tablero, motor, libro y archivo de YOD OS, y cómo se conectan. El borde rojo marca una pieza con error abierto; el ámbar, un repositorio que cambió desde que se armó el grafo. Se revisa cuando cambia este repositorio o se aprueba un grafo, y por horario cuando GitHub lo arranca (unas cuantas veces al día, con retraso); «revisado» dice la hora de la última revisión. Rehacerlo deja un borrador: las presentaciones siguen con el aprobado hasta que lo apruebes.</p>
+    <div id="grafoControl" class="gc" aria-live="polite"></div>
+    <iframe id="grafoMarco" title="Grafo de YOD OS en el visor de Graphify" loading="lazy" style="width:100%;height:min(82vh,860px);min-height:520px;border:1px solid var(--line,#ddd);border-radius:10px;background:transparent"></iframe>
+  </section>
 </main>
 
+<script src="grafo-control.js?v=20261112-ppp2s"></script>
 <script>
 (()=>{
   // Cada solicitud usa ORIGINAL. Un rechazo no cambia de autoridad.
@@ -161,8 +189,43 @@
   // Portero procesa las ligas y recarga; esta carga nunca usa la sesión anterior.
   const entradaLiga=!!new URLSearchParams(location.search).get('liga');
   const sesion=()=>({token:tokenActual,generacion});
+  // Grafo del sistema: archivos estáticos de grafo/. Se enseña sólo con sesión de admin, igual que la salud.
+  // Los controles (versión, borrador, rehacer, registro) viven en grafo-control.js; aquí no hay claves.
+  let grafoVisto=null,grafoCtl=null;
+  function cargarGrafo(){
+    const sec=$('grafo-sistema'),m=$('grafoMarco'),et=$('grafoEstado');
+    if(!sec||sec.hidden||!m||m.getAttribute('src'))return;
+    m.setAttribute('src','grafo/index.html');
+    try{grafoCtl=window.YodGrafo?.montar({caja:$('grafoControl'),marco:m,etiqueta:et})||null}catch(e){grafoCtl=null}
+  }
+  // El marco se carga hasta que la sección entra a la vista: no pide nada mientras no se baje hasta ella.
+  function mostrarGrafo(si){
+    try{
+      const sec=$('grafo-sistema'),m=$('grafoMarco'),et=$('grafoEstado');
+      if(!sec||!m||typeof m.setAttribute!=='function')return;
+      sec.hidden=!si;
+      if(grafoVisto){grafoVisto.disconnect();grafoVisto=null}
+      if(!si){try{grafoCtl?.detener()}catch(e){}grafoCtl=null;m.removeAttribute('src');if(et)et.textContent='';return}
+      if(typeof IntersectionObserver!=='function'){cargarGrafo();return}
+      grafoVisto=new IntersectionObserver(es=>{if(es.some(x=>x.isIntersecting)){grafoVisto.disconnect();grafoVisto=null;cargarGrafo()}},{rootMargin:'200px'});
+      grafoVisto.observe(sec);
+    }catch(e){}
+  }
+  // El Portero ya confirmó que es admin (canje) y lo que falló es sólo traer la lista, por tiempo o por red: se borra lo
+  // privado y no se deja escribir, pero el grafo y la salud se quedan (son archivos estáticos que no dependen de esa
+  // lista). Antes se apagaba todo: el 12-nov-2026 el Portero tardó más de lo que se esperaba y el grafo desapareció de Accesos.
+  function listaSinCargar(mensaje){
+    admin=false;listado++;
+    $('lista').innerHTML='<p class="u-meta">'+esc(mensaje)+'</p>';
+    $('matriz').innerHTML='<tbody><tr><td class="u">'+esc(mensaje)+'</td></tr></tbody>';
+    $('uCnt').textContent='';
+    ['aCorreo','aNombre','aBoards','aRol'].forEach(id=>{$(id).disabled=true});
+    $('aBtn').disabled=true;$('aBtn').classList.remove('is-saving');
+    $('aRetry').disabled=!tokenActual;
+  }
   function limpiarVista(mensaje){
     window.YodSalud?.detener();
+    mostrarGrafo(false);
     admin=false;listado++;
     $('lista').innerHTML='<p class="u-meta">'+esc(mensaje)+'</p>';
     $('matriz').innerHTML='<tbody><tr><td class="u">'+esc(mensaje)+'</td></tr></tbody>';
@@ -192,13 +255,24 @@
     observarSesion();
     return s.token===k()&&s.token===tokenActual&&s.generacion===generacion&&(!exigeAdmin||admin);
   }
-  async function leer(recurso,s){
-    const ctrl=new AbortController(),to=setTimeout(()=>ctrl.abort(),20000);
-    try{
-      const param=recurso==='canje'?'t':'k';
-      const r=await fetch(PORTERO_ORIGINAL+'?recurso='+recurso+'&'+param+'='+encodeURIComponent(s.token),{credentials:'omit',cache:'no-store',signal:ctrl.signal});
-      return await r.text();
-    }finally{clearTimeout(to)}
+  // Lecturas del Portero (canje y lista). Su primera llamada puede tardar de 20 a 25 s (medido el 12-nov-2026; la cabina
+  // de yod-portal ya espera 25 s): se espera hasta ESPERA_LECTURA y, sólo si venció ese tiempo y la sesión sigue siendo la
+  // misma, se intenta UNA vez más. Una respuesta del Portero (también un rechazo) o un fallo de red se toman como vienen.
+  // Mientras se espera la pantalla sigue en «Validando sesión…»: nada privado se pinta antes de que el canje diga admin.
+  const ESPERA_LECTURA=30000;
+  async function leer(recurso,s,{seguir=()=>vigente(s),alReintentar}={}){
+    for(let intento=1;;intento++){
+      const ctrl=new AbortController();let vencio=false;
+      const to=setTimeout(()=>{vencio=true;ctrl.abort()},ESPERA_LECTURA);
+      try{
+        const param=recurso==='canje'?'t':'k';
+        const r=await fetch(PORTERO_ORIGINAL+'?recurso='+recurso+'&'+param+'='+encodeURIComponent(s.token),{credentials:'omit',cache:'no-store',signal:ctrl.signal});
+        return await r.text();
+      }catch(e){
+        if(!vencio||intento>1||!seguir())throw e;
+        try{alReintentar?.()}catch(_){}
+      }finally{clearTimeout(to)}
+    }
   }
   // Escritura única, con timeout; nunca se reenvía al respaldo ni se reintenta.
   async function post(b,s){
@@ -240,9 +314,9 @@
     $('ligaWa').onclick=()=>{const msg='Tu acceso a YOD OS (válido 90 días):\n'+ligaActual;window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank','noopener')};
   })();
 
-  // Los 8 tableros de YOD OS (mismo orden que la barra lateral). Palomear
+  // Los tableros de YOD OS (mismo orden que la barra lateral; MH = Mercado Hermosillo, 1-nov-2026). Palomear
   // un tablero = esa persona puede verlo. '*' = ve todos.
-  const CODES=[['*','Todo'],['PT','Potenciales'],['CO','Codesarrollos'],['RM','Miramar'],['TA','Operación'],['FL','Flujo'],['IN','Interiores'],['IV','Inversion.'],['MK','Métricas'],['OB','Obra'],['DP','Despacho']];
+  const CODES=[['*','Todo'],['PT','Potenciales'],['MH','Mercado'],['CO','Codesarrollos'],['RM','Miramar'],['TA','Operación'],['FL','Flujo'],['IN','Interiores'],['IV','Inversion.'],['MK','Métricas'],['OB','Obra'],['DP','Despacho']];
   // El número de la leyenda ("ve los N") se cuenta de este arreglo, no se
   // escribe a mano: la última vez que se hizo a mano se quedó en "8" con 11 códigos ya vivos.
   (function(){const t=$('totalTb');if(t)t.textContent=String(CODES.length-1)})();
@@ -253,7 +327,7 @@
   function tieneCode(b,c){if(b==='*')return true;return b.toUpperCase().split(/[,|; ]+/).indexOf(c)>-1}
   /* AC-5 (26-sep): «al marcar un código se ve qué verá esta persona». Misma regla que YOD OS
      (os/access-policy.js · canOpen), así lo que dice aquí es lo que el menú le va a mostrar. */
-  const TABLEROS=[['SYS-DESPACHO','Despacho'],['SYS-POTENCIALES','PPP'],['SYS-TRACK','Codesarrollos'],['SYS-MIRAMAR','Miramar'],
+  const TABLEROS=[['SYS-DESPACHO','Despacho'],['SYS-POTENCIALES','PPP'],['SYS-MERCADO','Mercado Hmo'],['SYS-TRACK','Codesarrollos'],['SYS-MIRAMAR','Miramar'],
     ['SYS-TAREAS','MOAC'],['SYS-FLUJO','Flujo'],['SYS-INTERIORES','Interiores'],['SYS-INVERSION','Codesarrolladores'],
     ['SYS-MARKETING','Embudo'],['SYS-OBRA','Obra'],['SYS-CONTROL','Control Maestro']];
   function vera(boards,rol){const P=window.YodAccessPolicy;if(!P)return '';
@@ -308,7 +382,7 @@
     const solicitud=++listado,cont=$('lista');
     const actual=()=>vigente(s,true)&&solicitud===listado;
     try{
-      const raw=await leer('accesos-lista',s);
+      const raw=await leer('accesos-lista',s,{seguir:actual});
       if(!actual())return;
       let r; try{r=JSON.parse(raw)}catch(_){throw new Error(/sign in|accounts\.google/i.test(raw)?'sesión de Google caducada':'respuesta inesperada')}
       if(!r.ok){limpiarVista(r.error==='admin'?'Necesitas sesión de administrador para ver esto.':'Error: '+(r.error||'sesión no validada'));return}
@@ -365,7 +439,12 @@
         // tenía (guardados en el botón desde la última lista cargada).
         try{const r=await post({tipo:'acceso-alta',correo:b.dataset.rea,nombre:b.dataset.nom,rol:b.dataset.rolrea,boards:b.dataset.boardsrea},s);if(!vigente(s,true))return;if(r.ok){toast('✓ Acceso reactivado')}else{toast('No se pudo reactivar: '+(r.error||''),'err')}cargar()}catch(e){if(!vigente(s,true))return;b.disabled=false;toast('No se pudo reactivar: '+e.message,'err')}
       });
-    }catch(e){if(!actual())return;limpiarVista('No se pudo cargar la lista.');cont.innerHTML='<p class="u-meta">No se pudo cargar la lista ('+esc(e.message||'sin conexión')+'). Recarga con Ctrl/⌘+Shift+R o vuelve a entrar con tu Google.</p>'}
+    }catch(e){
+      if(!actual())return;
+      // Tiempo agotado (AbortError) o sin red (TypeError): el Portero no contestó. Lo demás (p. ej. sesión de Google caducada) sí limpia todo.
+      if(e&&(e.name==='AbortError'||e.name==='TypeError')){listaSinCargar('No se pudo cargar la lista: el Portero no contestó a tiempo. El grafo y el estado de los sistemas siguen abajo. Pulsa «Reintentar validación» o recarga con Ctrl/⌘+Shift+R.');return}
+      limpiarVista('No se pudo cargar la lista.');cont.innerHTML='<p class="u-meta">No se pudo cargar la lista ('+esc(e.message||'sin conexión')+'). Recarga con Ctrl/⌘+Shift+R o vuelve a entrar con tu Google.</p>'
+    }
   }
   async function probarSesionSalud(){
     const s=sesion();
@@ -384,13 +463,14 @@
   }
   async function esperarAdminYcargar(s){
     try{
-      const raw=await leer('canje',s);
+      const raw=await leer('canje',s,{alReintentar:()=>{if(vigente(s))limpiarVista('El Portero está tardando en contestar; lo intento una vez más…')}});
       if(!vigente(s))return;
       const j=JSON.parse(raw);
       if(!j.ok){limpiarVista('Tu sesión no se pudo validar: '+(j.error||'rechazada')+'. Vuelve a entrar.');return}
       if(j.rol!=='admin'){limpiarVista('Necesitas sesión de administrador para ver esto.');return}
       admin=true;
       window.YodSalud?.activar({elementId:'salud-sistemas',probarSesion:probarSesionSalud});
+      mostrarGrafo(true);
       ['aCorreo','aNombre','aBoards','aRol'].forEach(id=>{$(id).disabled=false});
       actualizarBotonAlta();
       await cargar(s);
@@ -458,7 +538,7 @@
     </div>
   </div>
 </div>
-<script src="portero.js?v=relevo9"></script>
-<script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=audit-20260930"></script>
+<script src="portero.js?v=20261112-ppp2s"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=20261031-fase1-e2"></script>
 </body>
 </html>

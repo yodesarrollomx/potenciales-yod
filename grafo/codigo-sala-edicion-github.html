@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Código · sala-edicion · .github/ · YOD OS en Graphify</title>
+<script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
+        integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"
+        crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #0f0f1a; --panel: #1a1a2e; --border: #2a2a4e; --input-border: #3a3a5e;
+    --text: #e0e0e0; --text-2: #aaa; --text-3: #ccc; --muted: #555; --count: #666;
+    --neighbor-border: #333; --node-label: #ffffff;
+  }
+  [data-theme="light"] {
+    --bg: #ffffff; --panel: #f8f9fa; --border: #d9dee5; --input-border: #c3cad4;
+    --text: #222222; --text-2: #666666; --text-3: #333333; --muted: #888888; --count: #777777;
+    --neighbor-border: #ccc; --node-label: #222222;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  #graph { flex: 1; }
+  #sidebar { width: 280px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  #search-wrap { padding: 12px; border-bottom: 1px solid var(--border); }
+  #search { width: 100%; background: var(--bg); border: 1px solid var(--input-border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+  #search:focus { border-color: #4E79A7; }
+  #search-results { max-height: 140px; overflow-y: auto; padding: 4px 12px; border-bottom: 1px solid var(--border); display: none; }
+  .search-item { padding: 4px 6px; cursor: pointer; border-radius: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-item:hover { background: var(--border); }
+  #info-panel { padding: 14px; border-bottom: 1px solid var(--border); min-height: 140px; }
+  #info-panel h3 { font-size: 13px; color: var(--text-2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #info-content { font-size: 13px; color: var(--text-3); line-height: 1.6; }
+  #info-content .field { margin-bottom: 5px; }
+  #info-content .field b { color: var(--text); }
+  #info-content .empty { color: var(--muted); font-style: italic; }
+  .neighbor-link { display: block; padding: 2px 6px; margin: 2px 0; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--neighbor-border); }
+  .neighbor-link:hover { background: var(--border); }
+  #neighbors-list { max-height: 160px; overflow-y: auto; margin-top: 4px; }
+  #legend-wrap { flex: 1; overflow-y: auto; padding: 12px; }
+  #legend-wrap h3 { font-size: 13px; color: var(--text-2); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
+  .legend-item:hover { background: var(--border); padding-left: 4px; }
+  .legend-item.dimmed { opacity: 0.35; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-count { color: var(--count); font-size: 11px; }
+  #stats { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  #legend-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 4px 0; }
+  #legend-controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-2); user-select: none; }
+  #legend-controls label:hover { color: var(--text); }
+  .legend-cb, #select-all-cb { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid var(--input-border); border-radius: 3px; background: var(--bg); cursor: pointer; position: relative; flex-shrink: 0; }
+  .legend-cb:checked, #select-all-cb:checked { background: #4E79A7; border-color: #4E79A7; }
+  .legend-cb:checked::after, #select-all-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  #select-all-cb:indeterminate { background: #4E79A7; border-color: #4E79A7; }
+  #select-all-cb:indeterminate::after { content: ''; position: absolute; left: 2px; top: 5px; width: 8px; height: 2px; background: #fff; border: none; transform: none; }
+  #theme-wrap { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  #theme-wrap button { flex: 1; background: var(--bg); color: var(--text-2); border: 1px solid var(--input-border); border-radius: 4px; padding: 3px 0; font-size: 11px; cursor: pointer; }
+  #theme-wrap button:hover { color: var(--text); }
+  #theme-wrap button[aria-pressed="true"] { background: #4E79A7; border-color: #4E79A7; color: #fff; }
+</style>
+<script id="graphify-theme-init">
+// Apply the saved theme before first paint (#3894). No saved choice keeps the
+// historical dark look; "system" follows prefers-color-scheme.
+(function () {
+  var pref = null;
+  try { pref = localStorage.getItem('graphify-theme'); } catch (e) {}
+  var t = pref === 'light' ? 'light'
+    : pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light'
+    : window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<style id="yod-capa">
+  #graph { position: relative; }
+  #yod-barra { position: fixed; top: 8px; left: 8px; right: 296px; z-index: 5; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+  #yod-barra button, #yod-barra a, #yod-barra select { pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; font: 500 12px system-ui, -apple-system, sans-serif; text-decoration: none;
+    color: var(--text); background: var(--panel); border: 1px solid var(--input-border); border-radius: 999px; padding: 5px 10px; min-height: 30px; cursor: pointer; }
+  #yod-barra button[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+  #yod-barra select { max-width: 150px; appearance: auto; }
+  #yod-barra i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  #yod-barra .yod-fuerte { font-weight: 650; }
+  #yod-barra .yod-c { display: none; }
+  .neighbor-link { white-space: normal !important; overflow-wrap: anywhere; line-height: 1.35; padding: 5px 6px !important; }
+  #neighbors-list { max-height: 260px !important; }
+  #info-content .field { overflow-wrap: anywhere; }
+  #info-content a { color: #4E79A7; }
+  [data-theme="dark"] #info-content a { color: #8FB8E8; }
+  .yod-tipo { color: var(--text-2); font-size: 12px; }
+  .yod-ev { color: var(--text-2); font-size: 11.5px; }
+  .yod-alerta { color: #C8102E; } [data-theme="dark"] .yod-alerta { color: #FF7B8A; }
+  .yod-entrar { display: block; margin: 8px 0; padding: 9px 11px; border-radius: 8px; background: #4E79A7; color: #fff !important; font-weight: 600; text-decoration: none; font-size: 13px; }
+  .yod-abrir { display: inline-block; margin: 2px 0 6px; font-size: 12px; }
+  .yod-lista { margin: 6px 0; font-size: 12px; } .yod-lista summary { cursor: pointer; color: var(--text-2); padding: 3px 0; }
+  .yod-lista div { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 0; } .yod-lista span { border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font: 11.5px ui-monospace, Menlo, monospace; }
+  .yod-tb { font-size: 12px; line-height: 1.7; }
+  #yod-simbolos { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 3px 10px; }
+  #yod-simbolos b { font-weight: 400; }
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    #graph { flex: 1 1 auto; min-height: 54vh; }
+    #sidebar { display: block; width: auto; max-height: 46vh; overflow-y: auto; border-left: 0; border-top: 1px solid var(--border); }
+    #theme-wrap { display: none; }
+    #info-panel { min-height: 0; }
+    #legend-wrap { overflow: visible; }
+    #yod-barra { right: 8px; gap: 4px; }
+    #yod-barra button, #yod-barra a, #yod-barra select { font-size: 11px; padding: 4px 8px; min-height: 28px; }
+    #yod-barra .yod-l { display: none; } #yod-barra .yod-c { display: inline; }
+    #yod-barra select { max-width: 112px; }
+    #yod-barra a.yod-fuerte { max-width: 150px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: inline-block; line-height: 20px; }
+  }
+</style>
+<script id="yod-datos">window.YOD = {"id":"codigo-sala-edicion-github","titulo":"Código · sala-edicion · .github/","sub":"Carpeta .github/ del repositorio sala-edicion.","padre":["codigo-sala-edicion.html","Código · sala-edicion"],"nodos":{"sala-edicion::github_workflows_sala_access_discovery":{"x":111,"y":72,"nombre":"Localizar conexiones de Sala y Marketing","forma":"hexagon","tam":9,"color":"#86BCB6","tipo":"Flujo de GitHub","celda":"workflows/ · Flujos y pruebas","lbl":"Localizar\nconexiones de Sala\ny Marketing","nota":"a mano · al hacer push Secretos que usa (sólo nombres): APPS_SCRIPT_OAUTH, APPS_SCRIPT_PROJECTS, AURUM_QAA_TOKEN, CLASPRC_JSON, CLASP_TOKEN, GDRIVE_SA_JSON, GEMINI_API_KEY, GH_APP_ID, GH_APP_PRIVATE_KEY, GH_PAT, GH_TOKEN, GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY, GITHUB_PAT, HF_TOKEN, MODAL_TOKEN_ID, MODAL_TOKEN_SECRET, PAT_TOKEN, PERSONAL_ACCESS_TOKEN, PLAN_POTENCIAL_TOKEN, PLAN_SCRIPT_ID, QAA_SCRIPT_ID, SALA_CLAVE_AGENTE, SALA_GAS_EXEC, SALA_GITHUB_TOKEN, SALA_SCRIPT_ID, YOD_APPS_SCRIPT_OAUTH, YOD_APP_ID, YOD_APP_KEY, YOD_GITHUB_APP_ID, YOD_GITHUB_APP_PRIVATE_KEY, YOD_GITHUB_TOKEN, YOD_META_TOKEN, YOD_PUBLISHER_APP_ID, YOD_PUBLISHER_APP_PRIVATE_KEY, YOD_PUBLISHER_TOKEN.","ev":"sala-edicion/.github/workflows/sala-access-discovery.yml · 133 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/.github/workflows/sala-access-discovery.yml","lt":"Funciones y símbolos (93)","lista":["name  · L1","on  · L2","push  · L3","branches  · L4","paths  · L5","workflow_dispatch  · L6","inputs  · L7","restablecer_modal  · L8","description  · L9","type  · L10","required  · L11","default  · L12","permissions  · L13","contents  · L14","jobs  · L15","descubrir  · L16","runs-on  · L17","timeout-minutes  · L18","steps  · L19","uses  · L20","with  · L21","node-version  · L22","name  · L23","env  · L24","PRESENT_SECRET_YOD_PUBLISHER_APP_PRIVATE_KEY  · L25","PRESENT_SECRET_YOD_PUBLISHER_APP_ID  · L26","PRESENT_SECRET_YOD_APP_ID  · L27","PRESENT_SECRET_YOD_APP_KEY  · L28","PRESENT_SECRET_YOD_GITHUB_APP_ID  · L29","PRESENT_SECRET_YOD_GITHUB_APP_PRIVATE_KEY  · L30","PRESENT_SECRET_GITHUB_APP_ID  · L31","PRESENT_SECRET_GITHUB_APP_PRIVATE_KEY  · L32","PRESENT_SECRET_GH_APP_ID  · L33","PRESENT_SECRET_GH_APP_PRIVATE_KEY  · L34","PRESENT_SECRET_YOD_PUBLISHER_TOKEN  · L35","PRESENT_SECRET_YOD_GITHUB_TOKEN  · L36","PRESENT_SECRET_SALA_GITHUB_TOKEN  · L37","PRESENT_SECRET_GH_TOKEN  · L38","PRESENT_SECRET_GH_PAT  · L39","PRESENT_SECRET_GITHUB_PAT  · L40","PRESENT_SECRET_PAT_TOKEN  · L41","PRESENT_SECRET_PERSONAL_ACCESS_TOKEN  · L42","PRESENT_SECRET_YOD_APPS_SCRIPT_OAUTH  · L43","PRESENT_SECRET_CLASP_TOKEN  · L44","PRESENT_SECRET_CLASPRC_JSON  · L45","PRESENT_SECRET_APPS_SCRIPT_OAUTH  · L46","PRESENT_SECRET_SALA_SCRIPT_ID  · L47","PRESENT_SECRET_QAA_SCRIPT_ID  · L48","PRESENT_SECRET_PLAN_SCRIPT_ID  · L49","PRESENT_SECRET_APPS_SCRIPT_PROJECTS  · L50","PRESENT_SECRET_GDRIVE_SA_JSON  · L51","PRESENT_SECRET_SALA_GAS_EXEC  · L52","PRESENT_SECRET_SALA_CLAVE_AGENTE  · L53","PRESENT_SECRET_YOD_META_TOKEN  · L54","PRESENT_SECRET_AURUM_QAA_TOKEN  · L55","PRESENT_SECRET_PLAN_POTENCIAL_TOKEN  · L56","PRESENT_SECRET_GEMINI_API_KEY  · L57","PRESENT_SECRET_HF_TOKEN  · L58","PRESENT_SECRET_MODAL_TOKEN_ID  · L59","PRESENT_SECRET_MODAL_TOKEN_SECRET  · L60","PRESENT_VARIABLE_YOD_PUBLISHER_APP_ID  · L61","PRESENT_VARIABLE_YOD_APP_ID  · L62","PRESENT_VARIABLE_YOD_GITHUB_APP_ID  · L63","PRESENT_VARIABLE_GITHUB_APP_ID  · L64","PRESENT_VARIABLE_GH_APP_ID  · L65","PRESENT_VARIABLE_YOD_PUBLISHER_TOKEN  · L66","PRESENT_VARIABLE_YOD_GITHUB_TOKEN  · L67","PRESENT_VARIABLE_SALA_GITHUB_TOKEN  · L68","PRESENT_VARIABLE_GH_TOKEN  · L69","PRESENT_VARIABLE_PAT_TOKEN  · L70","… y 23 más"],"tb":[["codigo-sala-edicion.html","Código · sala-edicion"],["codigo-sala-edicion-github-workflows.html","Código · sala-edicion · .github/ · workflows/"]]},"sala-edicion::github_workflows_sala_mesa":{"x":277,"y":72,"nombre":"Montador de la mesa","forma":"hexagon","tam":9,"color":"#86BCB6","tipo":"Flujo de GitHub","celda":"workflows/ · Flujos y pruebas","lbl":"Montador de la\nmesa","nota":"a mano Secretos que usa (sólo nombres): CF_ACCOUNT_ID, CF_API_TOKEN, GEMINI_API_KEY, HF_TOKEN, OPENAI_API_KEY, SALA_CLAVE_AGENTE, SALA_GAS_EXEC.","ev":"sala-edicion/.github/workflows/sala-mesa.yml · 180 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/.github/workflows/sala-mesa.yml","lt":"Funciones y símbolos (61)","lista":["name  · L5","on  · L7","workflow_call  · L9","inputs  · L10","modo  · L11","type  · L12","default  · L13","pieza  · L14","type  · L15","default  · L16","workflow_dispatch  · L17","inputs  · L18","description  · L20","options  · L22","description  · L25","permissions  · L29","contents  · L30","pull-requests  · L31","issues  · L32","actions  · L33","concurrency  · L35","group  · L36","cancel-in-progress  · L37","env  · L39","SALA_PRODUCCION_HISTORICA  · L40","SALA_PUBLICADOR_MODO  · L41","SALA_MEDIOS_PUBLICOS  · L43","jobs  · L45","mesa  · L46","if  · L47","runs-on  · L48","timeout-minutes  · L49","env  · L50","MODO  · L51","PIEZA  · L52","steps  · L53","uses  · L54","with  · L55","ref  · L56","fetch-depth  · L57","persist-credentials  · L58","python-version  · L61","name  · L63","env  · L64","GH_TOKEN  · L65","SIMULAR  · L66","run  · L68","id  · L78","path  · L81","key  · L82","if  · L85","working-directory  · L94","SALA_GAS_EXEC  · L96","SALA_CLAVE_AGENTE  · L97","SALA_RECIBOS_PRIVADOS  · L99","GEMINI_API_KEY  · L100","CF_ACCOUNT_ID  · L101","CF_API_TOKEN  · L102","HF_TOKEN  · L103","OPENAI_API_KEY  · L104","MERGE_SHA  · L144"],"tb":[["codigo-sala-edicion.html","Código · sala-edicion"],["codigo-sala-edicion-github-workflows.html","Código · sala-edicion · .github/ · workflows/"]]},"sala-edicion::github_workflows_sala_ejecutor":{"x":443,"y":72,"nombre":"Ejecutor de la Sala","forma":"hexagon","tam":9,"color":"#86BCB6","tipo":"Flujo de GitHub","celda":"workflows/ · Flujos y pruebas","lbl":"Ejecutor de la\nSala","nota":"a mano Secretos que usa (sólo nombres): CF_ACCOUNT_ID, CF_API_TOKEN, GDRIVE_SA_JSON, GEMINI_API_KEY, HF_TOKEN, MODAL_TOKEN_ID, MODAL_TOKEN_SECRET, OPENAI_API_KEY, SALA_CLAVE_AGENTE, SALA_GAS_EXEC.","ev":"sala-edicion/.github/workflows/sala-ejecutor.yml · 176 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/.github/workflows/sala-ejecutor.yml","lt":"Funciones y símbolos (52)","lista":["name  · L8","on  · L10","workflow_call  · L12","workflow_dispatch  · L13","inputs  · L14","simular  · L15","description  · L16","type  · L17","default  · L18","ignorar_silencio  · L19","description  · L20","type  · L21","default  · L22","permissions  · L24","contents  · L25","issues  · L26","actions  · L27","env  · L29","SALA_PRODUCCION_HISTORICA  · L30","concurrency  · L33","group  · L34","cancel-in-progress  · L35","jobs  · L37","ejecutor  · L38","if  · L39","runs-on  · L40","timeout-minutes  · L41","steps  · L42","uses  · L43","with  · L45","python-version  · L46","name  · L48","env  · L49","GH_TOKEN  · L50","run  · L51","path  · L67","key  · L68","id  · L71","if  · L78","working-directory  · L94","SALA_GAS_EXEC  · L96","SALA_CLAVE_AGENTE  · L97","GDRIVE_SA_JSON  · L106","HF_TOKEN  · L107","MODAL_TOKEN_ID  · L108","MODAL_TOKEN_SECRET  · L109","GEMINI_API_KEY  · L110","CF_ACCOUNT_ID  · L111","CF_API_TOKEN  · L112","OPENAI_API_KEY  · L113","KOKORO_MODEL_PATH  · L114","KOKORO_VOICES_PATH  · L115"],"tb":[["codigo-sala-edicion.html","Código · sala-edicion"],["codigo-sala-edicion-github-workflows.html","Código · sala-edicion · .github/ · workflows/"]]},"sala-edicion::github_workflows_sala_consejo":{"x":111,"y":156,"nombre":"Sala · Roast Room","forma":"hexagon","tam":9,"color":"#86BCB6","tipo":"Flujo de GitHub","celda":"workflows/ · Flujos y pruebas","lbl":"Sala · Roast Room","nota":"cron 50 13 * * * · a mano Secretos que usa (sólo nombres): ANTHROPIC_API_KEY, GDRIVE_SA_JSON, GEMINI_API_KEY, OPENAI_API_KEY, SALA_CLAVE_AGENTE, SALA_CLAVE_CONSEJO, SALA_GAS_EXEC.","ev":"sala-edicion/.github/workflows/sala-consejo.yml · 119 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/.github/workflows/sala-consejo.yml","lt":"Funciones y símbolos (64)","lista":["name  · L25","run-name  · L26","on  · L27","schedule  · L28","cron  · L29","workflow_dispatch  · L30","inputs  · L31","modo  · L32","description  · L33","type  · L34","options  · L35","default  · L36","veredictos  · L37","description  · L38","type  · L39","required  · L40","default  · L41","paquetes  · L42","description  · L43","type  · L44","required  · L45","default  · L46","ensayo  · L47","description  · L48","type  · L49","default  · L50","permissions  · L51","contents  · L52","actions  · L53","concurrency  · L54","group  · L56","cancel-in-progress  · L57","env  · L58","MODO  · L59","SALA_PRODUCCION_HISTORICA  · L60","jobs  · L61","consejo  · L62","if  · L63","runs-on  · L64","timeout-minutes  · L65","steps  · L66","uses  · L67","with  · L68","ref  · L69","persist-credentials  · L70","sparse-checkout  · L71","python-version  · L76","name  · L77","run  · L78","if  · L80","env  · L84","SALA_GAS_EXEC  · L85","SALA_CLAVE_AGENTE  · L86","SALA_CLAVE_CONSEJO  · L87","OPENAI_API_KEY  · L88","ANTHROPIC_API_KEY  · L89","GEMINI_API_KEY  · L90","GDRIVE_SA_JSON  · L91","CONSEJO_VEREDICTOS  · L93","CONSEJO_ENSAYO  · L94","SALIDA_PAQUETES  · L104","SALIDA_ENSAYO  · L105","GH_TOKEN  · L112","R  · L113"],"tb":[["tablero-embudo.html","Tablero · Embudo y Sala"],["relojes.html","Relojes · lo que corre solo"],["codigo-sala-edicion.html","Código · sala-edicion"],["codigo-sala-edicion-github-workflows.html","Código · sala-edicion · .github/ · workflows/"]]},"sala-edicion::github_workflows_sala_arranque":{"x":277,"y":156,"nombre":"Semillero y arranque de la Sala","forma":"hexagon","tam":9,"color":"#86BCB6","tipo":"Flujo de GitHub","celda":"workflows/ · Flujos y pruebas","lbl":"Semillero y\narranque de la\nSala","nota":"a mano Secretos que usa (sólo nombres): CF_ACCOUNT_ID, CF_API_TOKEN, GEMINI_API_KEY, HF_TOKEN, OPENAI_API_KEY, SALA_CLAVE_AGENTE, SALA_GAS_EXEC.","ev":"sala-edicion/.github/workflows/sala-arranque.yml · 155 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/.github/workflows/sala-arranque.yml","lt":"Funciones y símbolos (55)","lista":["name  · L4","on  · L6","workflow_call  · L8","inputs  · L9","modo  · L10","type  · L11","default  · L12","workflow_dispatch  · L13","inputs  · L14","description  · L16","options  · L18","permissions  · L21","contents  · L22","pull-requests  · L23","issues  · L24","actions  · L25","concurrency  · L27","group  · L28","cancel-in-progress  · L29","env  · L31","SALA_PUBLICADOR_MODO  · L32","SALA_MEDIOS_PUBLICOS  · L34","jobs  · L36","arranque  · L37","if  · L38","runs-on  · L39","timeout-minutes  · L40","env  · L41","MODO  · L42","SALA_GAS_EXEC  · L43","SALA_CLAVE_AGENTE  · L44","GH_TOKEN  · L45","SALA_RECIBOS_PRIVADOS  · L46","GEMINI_API_KEY  · L47","CF_ACCOUNT_ID  · L48","CF_API_TOKEN  · L49","HF_TOKEN  · L50","OPENAI_API_KEY  · L51","steps  · L52","uses  · L53","with  · L54","ref  · L55","fetch-depth  · L56","persist-credentials  · L57","python-version  · L60","name  · L62","env  · L63","SIMULAR  · L65","run  · L67","id  · L77","path  · L80","key  · L81","if  · L84","working-directory  · L93","MERGE_SHA  · L122"],"tb":[["relojes.html","Relojes · lo que corre solo"],["codigo-sala-edicion.html","Código · sala-edicion"],["codigo-sala-edicion-github-workflows.html","Código · sala-edicion · .github/ · workflows/"]]},"sala-edicion::github_workflows_sala_vigilante":{"x":443,"y":156,"nombre":"Sala · recuperación de horarios","forma":"hexagon","tam":9,"color":"#86BCB6","tipo":"Flujo de GitHub","celda":"workflows/ · Flujos y pruebas","lbl":"Sala ·\nrecuperación de\nhorarios","nota":"a mano","ev":"sala-edicion/.github/workflows/sala-vigilante.yml · 95 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/.github/workflows/sala-vigilante.yml","lt":"Funciones y símbolos (91)","lista":["name  · L1","run-name  · L2","on  · L3","workflow_dispatch  · L4","inputs  · L5","proceso  · L6","description  · L7","type  · L8","required  · L9","default  · L10","options  · L11","correlacion  · L12","description  · L13","type  · L14","required  · L15","permissions  · L16","contents  · L17","actions  · L18","issues  · L19","pull-requests  · L20","concurrency  · L21","group  · L22","cancel-in-progress  · L23","jobs  · L24","validar  · L25","if  · L26","runs-on  · L27","steps  · L28","name  · L29","env  · L30","CORRELACION  · L31","run  · L32","revision  · L34","if  · L35","needs  · L36","uses  · L37","secrets  · L38","productor  · L39","if  · L40","needs  · L41","uses  · L42","secrets  · L43","mesa  · L44","if  · L45","needs  · L46","uses  · L47","with  · L48","modo  · L49","secrets  · L50","arranque  · L51","if  · L52","needs  · L53","uses  · L54","with  · L55","secrets  · L57","semillero  · L58","if  · L59","needs  · L60","uses  · L61","with  · L62","secrets  · L64","ejecutor  · L65","if  · L66","needs  · L67","uses  · L68","secrets  · L69","chinches  · L70","if  · L71","needs  · L72","uses  · L73","… y 21 más"],"tb":[["codigo-sala-edicion.html","Código · sala-edicion"],["codigo-sala-edicion-github-workflows.html","Código · sala-edicion · .github/ · workflows/"]]},"sala-edicion::github_workflows_sala_cierre_online":{"x":111,"y":240,"nombre":"Cierre y comparación Sala online","forma":"hexagon","tam":9,"color":"#86BCB6","tipo":"Flujo de GitHub","celda":"workflows/ · Flujos y pruebas","lbl":"Cierre y\ncomparación Sala\nonline","nota":"a mano · al hacer push Secretos que usa (sólo nombres): GDRIVE_SA_JSON, SALA_CLAVE_AGENTE, SALA_GAS_EXEC.","ev":"sala-edicion/.github/workflows/sala-cierre-online.yml · 114 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/.github/workflows/sala-cierre-online.yml","lt":"Funciones y símbolos (66)","lista":["name  · L1","on  · L2","push  · L3","branches  · L4","paths  · L5","workflow_dispatch  · L12","inputs  · L13","enviar_entrada  · L14","description  · L15","type  · L16","default  · L17","reprogramar_correo  · L18","description  · L19","type  · L20","default  · L21","comparar  · L22","description  · L23","type  · L24","default  · L25","permissions  · L26","contents  · L27","actions  · L28","issues  · L29","concurrency  · L30","group  · L31","cancel-in-progress  · L32","jobs  · L33","cierre  · L34","if  · L35","runs-on  · L36","timeout-minutes  · L37","steps  · L38","uses  · L39","with  · L40","persist-credentials  · L41","python-version  · L44","name  · L45","run  · L46","env  · L52","GH_TOKEN  · L53","SALA_GAS_EXEC  · L54","SALA_CLAVE_AGENTE  · L55","GDRIVE_SA_JSON  · L56","ENVIAR_ENTRADA  · L58","REPROGRAMAR_CORREO  · L59","ciclo  · L65","needs  · L66","uses  · L67","secrets  · L68","ejecutar  · L69","needs  · L70","uses  · L71","secrets  · L72","comparar  · L73","needs  · L74","if  · L76","runs-on  · L77","timeout-minutes  · L78","env  · L79","OMP_NUM_THREADS  · L80","MKL_NUM_THREADS  · L81","OPENBLAS_NUM_THREADS  · L82","steps  · L83","path  · L98","key  · L101","working-directory  · L108"],"tb":[["codigo-sala-edicion.html","Código · sala-edicion"],["codigo-sala-edicion-github-workflows.html","Código · sala-edicion · .github/ · workflows/"]]},"sala-edicion::github_workflows_publicar":{"x":277,"y":240,"nombre":"Publicar la Sala","forma":"hexagon","tam":9,"color":"#86BCB6","tipo":"Flujo de GitHub","celda":"workflows/ · Flujos y pruebas","lbl":"Publicar la Sala","nota":"a mano · al hacer push Secretos que usa (sólo nombres): SALA_CLAVE_AGENTE, SALA_GAS_EXEC.","ev":"sala-edicion/.github/workflows/publicar.yml · 115 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/.github/workflows/publicar.yml","lt":"Funciones y símbolos (61)","lista":["name  · L2","run-name  · L3","on  · L4","push  · L5","branches  · L6","workflow_dispatch  · L7","inputs  · L8","sha  · L9","type  · L10","required  · L11","publicacion_id  · L12","type  · L13","required  · L14","snapshot_id  · L15","description  · L16","type  · L17","required  · L18","lease  · L19","description  · L20","type  · L21","required  · L22","permissions  · L23","contents  · L24","actions  · L25","pages  · L26","id-token  · L27","concurrency  · L28","group  · L29","cancel-in-progress  · L30","env  · L31","SALA_PRODUCCION_HISTORICA  · L32","SALA_PUBLICADOR_MODO  · L33","jobs  · L34","publicar  · L35","if  · L36","environment  · L37","name  · L38","url  · L39","runs-on  · L40","timeout-minutes  · L42","steps  · L43","uses  · L44","with  · L45","ref  · L46","fetch-depth  · L47","persist-credentials  · L48","name  · L49","env  · L50","PUBLICAR_SHA  · L51","run  · L52","python-version  · L59","GH_TOKEN  · L63","SNAPSHOT_ID  · L65","LEASE  · L66","path  · L82","id  · L90","timeout  · L96","if  · L102","working-directory  · L103","SALA_GAS_EXEC  · L106","SALA_CLAVE_AGENTE  · L107"],"tb":[["codigo-sala-edicion.html","Código · sala-edicion"],["codigo-sala-edicion-github-workflows.html","Código · sala-edicion · .github/ · workflows/"]]},"mas:codigo-sala-edicion-github:flujo:workflows/":{"x":443,"y":240,"nombre":"+40 archivos más","forma":"dot","tam":9,"color":"#8A8F98","tipo":"Grupo","celda":"workflows/ · Flujos y pruebas","lbl":"+40 archivos más","lt":"Incluye","lista":["Sala · decisiones guardadas a producción","Puente de chinches de la Sala","Relevo de la Sala","Sala · corregir metadatos revisados y reanudar cuatro cortes","Sala · pruebas pequeñas de motores y Drive","Entregar cortes terminados a la Sala","Piloto Omni (una historia)","Revisión continua de la Sala","Sala 4.0 · Historias","Sala · Cada hora","Sala · comprobar conexiones y medios","Recuperar escena interrumpida con CPU verificada","Sala · Banco de escenas","Tablero Sala · navegador y generador","Arquitectura YOD","Plan · lectura agregada en nube","Productor de la Sala","Sala · sonda técnica de medios públicos","Semáforo de la Sala","Auditar cortes fallidos sin reencolar","Sala · conservar versiones sobrescritas","Sala · reconectar voces originales recuperadas","Diagnosticar instalación de Sala","Prueba técnica Sala online","Medir lectura de Sala","Poner una regla de la Sala","Sala · Mantenimiento de corrida huérfana","Sala · Probar llaves (sólo lee)","Sala · recuperación entre runners","Validar snapshots online","Comprobar rechazo editorial GAS","Graphify - mapa de codigo (manual)","Sala · Activar caché de acceso rápido","Sala · Desplegar LTX en Modal","Sala · Diario","Sonda de la Sala (sólo lee)","Verificar histórico de Sala (sólo lectura)","Sala · regresiones de medios","Verificar la Sala","Sala · Recuperar foto de videollamada"],"dentro":["codigo-sala-edicion-github-workflows.html","Código · sala-edicion · .github/ · workflows/"]}},"flechas":{},"familias":{"viva":{"corto":"Visto","nombre":"Visto en código u hoja","color":"#5B6470","ancho":1.3,"opacidad":0.75,"punteada":false},"inferida":{"corto":"Atlas","nombre":"Del atlas o deducido","color":"#9AA1AB","ancho":1.0,"opacidad":0.6,"punteada":false},"propuesta":{"corto":"Propuesta","nombre":"Propuesta","color":"#C99A12","ancho":1.6,"opacidad":0.9,"punteada":[7,5]},"hueco":{"corto":"Falta","nombre":"Falta o hallazgo","color":"#C8102E","ancho":1.7,"opacidad":0.9,"punteada":[3,5]}},"usadas":[],"rejilla":{"cols":[{"x":0,"w":554,"nombre":"Flujos y pruebas"}],"filas":[{"y":0,"h":312,"nombre":"workflows/"}]},"eje_x":"Tipo de archivo","eje_y":"Carpeta","estado":"https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/grafo-datos/estado.json","simbolos":[["■","#59A14F","Tablero o página"],["▭","#F1CE63","Pantalla propuesta"],["◆","#F28E2B","Motor"],["⬢","#79706E","Repositorio o código"],["▲","#4E79A7","Libro"],["▼","#A0CBE8","Pestaña"],["●","#B07AA1","Quién"],["★","#EDC948","Propuesta"],["★","#E15759","Hallazgo o clave"]],"pie":"9 nodos · 0 flechas · Código · sala-edicion · .github/ · Graphify 0.9.106"};</script>
+</head>
+<body>
+<div id="graph"></div>
+<div id="sidebar">
+  <div id="theme-wrap" role="group" aria-label="Theme">
+    <button type="button" data-theme-choice="light">Claro</button>
+    <button type="button" data-theme-choice="dark">Oscuro</button>
+    <button type="button" data-theme-choice="system">Sistema</button>
+  </div>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Buscar…" autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div id="info-panel">
+    <h3>Detalle</h3>
+    <div id="info-content"><span class="empty">Toca un nodo para ver su detalle</span></div>
+  </div>
+  <div id="legend-wrap">
+    <h3>Grupos</h3>
+    <div id="legend-controls">
+      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">Todos</label>
+    </div>
+    <div id="legend"></div>
+  </div>
+  <div id="stats">9 nodes &middot; 0 edges &middot; 1 communities</div>
+</div>
+<script>
+const RAW_NODES = [{"id": "sala-edicion::github_workflows_sala_access_discovery", "label": "Localizar conexiones de Sala y Marketing", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "Localizar conexiones de Sala y Marketing", "community": 0, "community_name": "workflows/ \u00b7 Flujos y pruebas", "source_file": "sala-edicion/.github/workflows/sala-access-discovery.yml \u00b7 133 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "sala-edicion::github_workflows_sala_mesa", "label": "Montador de la mesa", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "Montador de la mesa", "community": 0, "community_name": "workflows/ \u00b7 Flujos y pruebas", "source_file": "sala-edicion/.github/workflows/sala-mesa.yml \u00b7 180 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "sala-edicion::github_workflows_sala_ejecutor", "label": "Ejecutor de la Sala", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "Ejecutor de la Sala", "community": 0, "community_name": "workflows/ \u00b7 Flujos y pruebas", "source_file": "sala-edicion/.github/workflows/sala-ejecutor.yml \u00b7 176 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "sala-edicion::github_workflows_sala_consejo", "label": "Sala \u00b7 Roast Room", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "Sala \u00b7 Roast Room", "community": 0, "community_name": "workflows/ \u00b7 Flujos y pruebas", "source_file": "sala-edicion/.github/workflows/sala-consejo.yml \u00b7 119 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "sala-edicion::github_workflows_sala_arranque", "label": "Semillero y arranque de la Sala", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "Semillero y arranque de la Sala", "community": 0, "community_name": "workflows/ \u00b7 Flujos y pruebas", "source_file": "sala-edicion/.github/workflows/sala-arranque.yml \u00b7 155 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "sala-edicion::github_workflows_sala_vigilante", "label": "Sala \u00b7 recuperaci\u00f3n de horarios", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "Sala \u00b7 recuperaci\u00f3n de horarios", "community": 0, "community_name": "workflows/ \u00b7 Flujos y pruebas", "source_file": "sala-edicion/.github/workflows/sala-vigilante.yml \u00b7 95 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "sala-edicion::github_workflows_sala_cierre_online", "label": "Cierre y comparaci\u00f3n Sala online", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "Cierre y comparaci\u00f3n Sala online", "community": 0, "community_name": "workflows/ \u00b7 Flujos y pruebas", "source_file": "sala-edicion/.github/workflows/sala-cierre-online.yml \u00b7 114 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "sala-edicion::github_workflows_publicar", "label": "Publicar la Sala", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "Publicar la Sala", "community": 0, "community_name": "workflows/ \u00b7 Flujos y pruebas", "source_file": "sala-edicion/.github/workflows/publicar.yml \u00b7 115 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "mas:codigo-sala-edicion-github:flujo:workflows/", "label": "+40 archivos m\u00e1s", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "+40 archivos m\u00e1s", "community": 0, "community_name": "workflows/ \u00b7 Flujos y pruebas", "source_file": "", "file_type": "concept", "degree": 0}];
+const RAW_EDGES = [];
+const LEGEND = [{"cid": 0, "color": "#4E79A7", "label": "workflows/ \u00b7 Flujos y pruebas", "count": 9}];
+
+// HTML-escape helper — prevents XSS when injecting graph data into innerHTML
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Build vis datasets
+const nodesDS = new vis.DataSet(RAW_NODES.map((n, i) => ({
+  id: n.id, label: n.label, color: n.color, size: n.size,
+  font: n.font, title: n.title,
+  // Fermat/golden-angle spiral seed positions (#3699): spreading nodes out
+  // before physics runs keeps avoidOverlap from computing near-zero-distance
+  // repulsion that blows the BarnesHut recursion into a stack overflow on large
+  // graphs. `i` is the map index — physics still settles small graphs identically.
+  x: 30 * Math.sqrt(i) * Math.cos(i * 2.4),
+  y: 30 * Math.sqrt(i) * Math.sin(i * 2.4),
+  community: n.community, community_name: n.community_name,
+  source_file: n.source_file, file_type: n.file_type, degree: n.degree,
+  member_count: n.member_count,
+})));
+
+const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({
+  id: i, from: e.from, to: e.to,
+  label: '',
+  title: e.title,
+  dashes: e.dashes,
+  width: e.width,
+  color: e.color,
+  arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+})));
+
+const container = document.getElementById('graph');
+const network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, {
+  physics: {
+    enabled: false,
+    solver: 'forceAtlas2Based',
+    forceAtlas2Based: {
+      gravitationalConstant: -60,
+      centralGravity: 0.005,
+      springLength: 120,
+      springConstant: 0.08,
+      damping: 0.4,
+      avoidOverlap: 0.8,
+    },
+    stabilization: { iterations: 200, fit: true },
+  },
+  interaction: {
+    hover: true,
+    tooltipDelay: 100,
+    hideEdgesOnDrag: true,
+    navigationButtons: false,
+    keyboard: false,
+  },
+  nodes: { shape: 'dot', borderWidth: 1.5 },
+  edges: { smooth: { type: 'continuous', roundness: 0.2 }, selectionWidth: 3 },
+});
+
+// Theme toggle (#3894): Light / Dark / System, persisted in localStorage.
+const THEME_KEY = 'graphify-theme';
+const themeMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+let themeLabelColor = '#ffffff';  // matches the per-node font color set in Python
+function themePref() {
+  let p = null;
+  try { p = localStorage.getItem(THEME_KEY); } catch (e) {}
+  return (p === 'light' || p === 'dark' || p === 'system') ? p : null;
+}
+function applyTheme(pref) {
+  const t = pref === 'light' ? 'light' : (pref === 'system' && themeMQ && themeMQ.matches) ? 'light' : 'dark';
+  const root = document.documentElement;
+  if (!root) return;
+  root.setAttribute('data-theme', t);
+  document.querySelectorAll('[data-theme-choice]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.themeChoice === (pref || 'system')));
+  });
+  const labelColor = getComputedStyle(root).getPropertyValue('--node-label').trim();
+  if (labelColor && labelColor !== themeLabelColor) {
+    themeLabelColor = labelColor;
+    nodesDS.update(nodesDS.get().map(n => ({ id: n.id, font: Object.assign({}, n.font, { color: labelColor }) })));
+  }
+}
+document.querySelectorAll('[data-theme-choice]').forEach(b => {
+  b.addEventListener('click', () => {
+    const pref = b.dataset.themeChoice;
+    try { localStorage.setItem(THEME_KEY, pref); } catch (e) {}
+    applyTheme(pref);
+  });
+});
+if (themeMQ) {
+  const onSchemeChange = () => { if (themePref() === 'system') applyTheme('system'); };
+  if (themeMQ.addEventListener) themeMQ.addEventListener('change', onSchemeChange);
+  else if (themeMQ.addListener) themeMQ.addListener(onSchemeChange);
+}
+applyTheme(themePref() || 'system');
+
+
+// ── YOD: acomodo fijo en cuadrante sobre el visor de Graphify. Los nodos y las flechas son los que exportó Graphify. ──
+(function () {
+  const Y = window.YOD;
+  // Cuando la portada enseña un borrador, trae la lámina como texto: los enlaces a otras láminas se le piden a ella.
+  const SUELTA = location.protocol === 'about:';
+  const yodIr = h => { const m = String(h).match(/^([A-Za-z0-9._-]+)\.html(?:#(.*))?$/);
+    if (SUELTA && m) { try { parent.postMessage({ yod: 2, ir: m[1], nodo: m[2] ? decodeURIComponent(m[2]) : '' }, '*'); } catch (e) {} } else location.href = h; };
+  if (SUELTA) document.addEventListener('click', e => { const a = e.target && e.target.closest ? e.target.closest('a[href]') : null; if (!a || a.target === '_blank') return;
+    const h = a.getAttribute('href') || ''; if (/^[A-Za-z0-9._-]+\.html(#.*)?$/.test(h)) { e.preventDefault(); yodIr(h); } }, true);
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const esc2 = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const fuente = p => p.forma === 'box'
+    ? { size: 13, color: '#1d1d1f', face: 'system-ui, -apple-system, sans-serif', multi: 'html', align: 'left', bold: { color: '#111111', size: 14, face: 'system-ui, -apple-system, sans-serif' } }
+    : { size: 14, color: css('--node-label') || '#222', face: 'system-ui, -apple-system, sans-serif', strokeWidth: 3, strokeColor: css('--bg') || '#fff' };
+  const estiloNodo = (n, apagado) => {
+    const p = Y.nodos[n.id] || {};
+    const o = { id: n.id, x: p.x, y: p.y, label: p.lbl, shape: p.forma, size: p.tam, opacity: apagado ? 0.14 : 1, title: undefined,
+      color: { background: p.color, border: p.al ? '#C8102E' : (p.bc || p.color), highlight: { background: p.color, border: '#111' }, hover: { background: p.color, border: '#111' } },
+      borderWidth: p.al ? 2.6 : (p.bc ? 2.4 : 1), borderWidthSelected: 3.5, font: fuente(p) };
+    if (p.forma === 'box') { o.widthConstraint = { minimum: p.caja, maximum: p.caja }; o.margin = 9; o.shapeProperties = { borderRadius: 7 }; }
+    return o;
+  };
+  const ocultas = new Set();
+  let foco = null;
+  const recto = RAW_EDGES.length > 380;
+  const det = r => Y.flechas[r.from + '>' + r.to] || Y.flechas[r.to + '>' + r.from] || {};
+  const estiloArista = e => {
+    const r = RAW_EDGES[e.id], fl = det(r), f = Y.familias[fl.f] || Y.familias.inferida;
+    const con = !foco || foco.aristas.has(e.id);
+    return { id: e.id, hidden: ocultas.has(fl.f || 'inferida'), width: con && foco ? f.ancho + 1.3 : f.ancho, title: undefined,
+             color: { color: f.color, opacity: con ? f.opacidad : 0.05, highlight: f.color, hover: f.color },
+             dashes: f.punteada, arrows: { to: { enabled: true, scaleFactor: 0.55 } }, smooth: recto ? false : { type: 'curvedCW', roundness: 0.12 } };
+  };
+  const pintar = () => {
+    nodesDS.update(nodesDS.get().map(n => estiloNodo(n, foco && !foco.nodos.has(n.id))));
+    edgesDS.update(edgesDS.get().map(estiloArista));
+  };
+  pintar();
+  network.setOptions({ physics: { enabled: false }, nodes: { labelHighlightBold: false, scaling: { label: { drawThreshold: 5, maxVisible: 44 } } },
+                       interaction: { hover: true, tooltipDelay: 150, zoomSpeed: 0.8, hideEdgesOnDrag: RAW_EDGES.length > 250, hideEdgesOnZoom: RAW_EDGES.length > 600 } });
+  new MutationObserver(() => setTimeout(pintar, 30)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  const enfocar = id => { foco = { nodos: new Set([id, ...network.getConnectedNodes(id)]), aristas: new Set(network.getConnectedEdges(id)) }; pintar(); };
+  network.on('selectNode', p => enfocar(p.nodes[0]));
+  network.on('deselectNode', () => { foco = null; pintar(); });
+
+  // barra: subir, familias de flecha y «Ver todo»
+  const barra = document.createElement('div');
+  barra.id = 'yod-barra';
+  barra.innerHTML = (Y.padre ? `<a class="yod-fuerte" href="${Y.padre[0]}">↑ ${esc2(Y.padre[1])}</a>` : '') +
+    Object.entries(Y.familias).filter(([k]) => Y.usadas.includes(k)).map(([k, f]) =>
+      `<button type="button" data-fam="${k}" aria-pressed="true" title="${f.nombre}"><i style="background:${f.color}"></i><span class="yod-l">${f.nombre}</span><span class="yod-c">${f.corto}</span></button>`).join('') +
+    '<button type="button" id="yod-todo" class="yod-fuerte">Ver todo</button>';
+  document.body.appendChild(barra);
+  barra.addEventListener('click', ev => {
+    const b = ev.target.closest('button'); if (!b) return;
+    if (b.id === 'yod-todo') { foco = null; network.unselectAll(); pintar(); ajustar(true); inicio(); return; }
+    const k = b.dataset.fam; if (ocultas.has(k)) ocultas.delete(k); else ocultas.add(k);
+    b.setAttribute('aria-pressed', String(!ocultas.has(k))); pintar();
+  });
+
+  // rejilla del cuadrante: los títulos crecen al alejarse para que siempre se lean
+  const g = Y.rejilla, W = g.cols.reduce((s, c) => s + c.w, 0), Ht = g.filas.reduce((s, f) => s + f.h, 0);
+  const MS = Math.max(70, Math.min(150, Ht * 0.07));
+  const letra = (ctx, t) => { ctx.font = '600 ' + t + 'px system-ui, -apple-system, sans-serif'; };
+  network.on('beforeDrawing', ctx => {
+    const sc = network.getScale() || 1;
+    const linea = css('--border') || '#ccc', texto = css('--text-2') || '#666', fondo = css('--panel') || '#f6f6f6';
+    ctx.save();
+    g.filas.forEach((f, i) => { if (i % 2 === 0) { ctx.fillStyle = fondo; ctx.globalAlpha = 0.6; ctx.fillRect(0, f.y, W, f.h); } });
+    ctx.globalAlpha = 1; ctx.strokeStyle = linea; ctx.lineWidth = 1.5 / Math.min(1, sc * 1.6);
+    g.cols.forEach(c => { ctx.beginPath(); ctx.moveTo(c.x, -MS); ctx.lineTo(c.x, Ht); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(W, -MS); ctx.lineTo(W, Ht); ctx.stroke();
+    g.filas.forEach(f => { ctx.beginPath(); ctx.moveTo(0, f.y); ctx.lineTo(W, f.y); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(0, Ht); ctx.lineTo(W, Ht); ctx.stroke();
+    ctx.fillStyle = texto; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'center';
+    g.cols.forEach(c => {
+      let t = Math.max(20, Math.min(15 / sc, MS * 0.62)); letra(ctx, t);
+      while (t > 11 && ctx.measureText(c.nombre).width > c.w - 14) { t -= 1; letra(ctx, t); }
+      if (ctx.measureText(c.nombre).width > c.w - 14) { const p = c.nombre.split(' '), m = Math.ceil(p.length / 2); ctx.fillText(p.slice(0, m).join(' '), c.x + c.w / 2, -t - 14); ctx.fillText(p.slice(m).join(' '), c.x + c.w / 2, -10); }
+      else ctx.fillText(c.nombre, c.x + c.w / 2, -12);
+    });
+    ctx.textAlign = 'left';
+    g.filas.forEach(f => {
+      let t = Math.max(17, Math.min(14 / sc, f.h * 0.4)); letra(ctx, t);
+      while (t > 12 && ctx.measureText(f.nombre).width > W - 20) { t -= 2; letra(ctx, t); }
+      ctx.globalAlpha = t > 30 ? 0.42 : 0.8; ctx.fillText(f.nombre, 9, f.y + t + 5);
+    });
+    ctx.globalAlpha = 1; ctx.restore();
+  });
+  const marco = (x0, y0, x1, y1, animar) => {
+    const el = document.getElementById('graph'), w = el.clientWidth, h = el.clientHeight;
+    const arriba = (document.getElementById('yod-barra') || { offsetHeight: 0 }).offsetHeight + 12;
+    const s = Math.max(0.04, Math.min((w - 10) / (x1 - x0), (h - arriba - 8) / (y1 - y0), 1.5));
+    network.moveTo({ position: { x: (x0 + x1) / 2, y: (y0 + y1) / 2 - arriba / 2 / s }, scale: s, animation: animar ? { duration: 350, easingFunction: 'easeInOutQuad' } : false });
+  };
+  const ajustar = animar => marco(-14, -MS - 6, W + 14, Ht + 12, animar);
+  const aFila = f => { const el = document.getElementById('graph'), r = el.clientWidth / Math.max(200, el.clientHeight - 60); marco(-10, f.y - 10, Math.min(W + 10, Math.max(540, (f.h + 20) * r)) - 10, f.y + f.h + 10, true); };
+  const aCol = c => { const el = document.getElementById('graph'), r = Math.max(200, el.clientHeight - 60) / el.clientWidth; marco(c.x - 12, -MS, c.x + c.w + 12, Math.min(Ht + 10, Math.max(420, (c.w + 24) * r) - MS), true); };
+  let tocado = false;
+  const cont = document.getElementById('graph');
+  ['pointerdown', 'wheel', 'touchstart'].forEach(ev => cont.addEventListener(ev, () => { tocado = true; }, { passive: true }));
+  network.once('afterDrawing', () => { if (!foco) ajustar(false); });
+  [60, 250, 700, 1500].forEach(ms => setTimeout(() => { if (!foco && !tocado) ajustar(false); }, ms));
+  window.addEventListener('resize', () => setTimeout(() => { if (!foco) ajustar(false); }, 80));
+  const ir = document.createElement('select'); ir.id = 'yod-ir'; ir.setAttribute('aria-label', 'Acercar a una fila o columna');
+  ir.innerHTML = '<option value="">Acercar a…</option><optgroup label="Filas">' + g.filas.map((f, i) => `<option value="f${i}">${esc2(f.nombre)}</option>`).join('') +
+    '</optgroup><optgroup label="Columnas">' + g.cols.map((c, i) => `<option value="c${i}">${esc2(c.nombre)}</option>`).join('') + '</optgroup>';
+  barra.insertBefore(ir, barra.querySelector('button'));
+  ir.addEventListener('change', () => { const v = ir.value; if (!v) return; tocado = true; if (v[0] === 'f') aFila(g.filas[+v.slice(1)]); else aCol(g.cols[+v.slice(1)]); ir.value = ''; });
+
+  // panel de detalle
+  const enlace = (t, id) => t[0] ? `<a href="${t[0]}#${encodeURIComponent(id)}">${esc2(t[1])}</a>` : esc2(t[1]);
+  window.showInfo = function (nodeId) {
+    const p = Y.nodos[nodeId]; if (!p) return;
+    const eds = network.getConnectedEdges(nodeId);
+    const vecinos = eds.map(eid => {
+      const r = RAW_EDGES[eid], otro = r.from === nodeId ? r.to : r.from, fl = det(r), q = Y.nodos[otro] || {};
+      return `<span class="neighbor-link" style="border-left-color:${esc2((Y.familias[fl.f] || {}).color || '#888')}" data-nid="${esc2(otro)}">${r.from === nodeId ? '→' : '←'} ${esc2(q.nombre || otro)} <i style="opacity:.72">· ${esc2(fl.r || '')}</i></span>`;
+    }).join('');
+    let h = `<div class="field"><b>${esc2(p.nombre)}</b></div><div class="field yod-tipo">${esc2(p.tipo)}${p.estado ? ' · ' + esc2(p.estado) : ''}</div>`;
+    if (p.dentro) h += `<a class="yod-entrar" href="${p.dentro[0]}">Entrar a ${esc2(p.dentro[1])} →</a>`;
+    if (p.nota) h += `<div class="field">${esc2(p.nota)}</div>`;
+    if (p.err) h += p.err.map(x => `<div class="field yod-alerta"><b>${x.tipo === 'cambio' ? 'Cambió' : 'Error'}</b> · ${esc2(x.msg)}${x.desde ? ' · desde ' + esc2(String(x.desde).slice(0, 10)) : ''}${x.url ? ` · <a href="${esc2(x.url)}" target="_blank" rel="noopener" style="color:inherit">ver</a>` : ''}</div>`).join('');
+    if (p.al) h += p.al.map(a => `<div class="field yod-alerta"><b>Hallazgo</b> · <a href="hallazgos.html#${encodeURIComponent(a[0])}" style="color:inherit">${esc2(a[1])}</a></div>`).join('');
+    if (p.lista) h += `<details class="yod-lista"${p.lista.length <= 24 ? ' open' : ''}><summary>${esc2(p.lt)}</summary><div>${p.lista.map(x => `<span>${esc2(x)}</span>`).join('')}</div></details>`;
+    if (p.ev) h += `<div class="field yod-ev">Evidencia: ${esc2(p.ev)}</div>`;
+    if (p.url) h += `<a class="yod-abrir" href="${esc2(p.url)}" target="_blank" rel="noopener">Abrir la fuente ↗</a>`;
+    if (p.tb && p.tb.length) h += `<div class="field yod-tb">También aparece en: ${p.tb.map(t => enlace(t, nodeId)).join(' · ')}</div>`;
+    h += `<div class="field yod-ev">Celda: ${esc2(p.celda)}</div>`;
+    if (eds.length) h += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Conexiones (${eds.length})</div><div id="neighbors-list">${vecinos}</div>`;
+    document.getElementById('info-content').innerHTML = h;
+  };
+  window.focusNode = function (id) {
+    const p = Y.nodos[id] || {}, el = document.getElementById('graph');
+    const s = p.forma === 'box' ? Math.min(1, (el.clientWidth - 24) / ((p.caja || 300) + 40)) : Math.min(0.9, Math.max(0.6, el.clientWidth / 520));
+    network.focus(id, { scale: s, animation: true }); network.selectNodes([id]); showInfo(id); enfocar(id);
+  };
+  const inicio = () => { const c = document.getElementById('info-content');
+    if (c) c.innerHTML = `<div class="field"><b>${esc2(Y.titulo)}</b></div><div class="field">${esc2(Y.sub)}</div><div class="field yod-ev">Toca un nodo para ver qué es, de dónde le llega y a dónde va. Con «Acercar a…» saltas a una fila o a una columna.</div>`; };
+  inicio();
+  network.on('click', p => {
+    if (p.nodes.length) return;
+    if (p.edges.length) {
+      const r = RAW_EDGES[p.edges[0]], fl = det(r), a = Y.nodos[r.from] || {}, b = Y.nodos[r.to] || {};
+      document.getElementById('info-content').innerHTML = `<div class="field"><b>${esc2(a.nombre)} → ${esc2(b.nombre)}</b></div><div class="field">${esc2(fl.r || '')}</div>` +
+        `<div class="field yod-tipo">${esc2((Y.familias[fl.f] || {}).nombre || '')}</div>` + (fl.nota ? `<div class="field">${esc2(fl.nota)}</div>` : '') +
+        (fl.ev ? `<div class="field yod-ev">Evidencia: ${esc2(fl.ev)}</div>` : '') +
+        `<span class="neighbor-link" data-nid="${esc2(r.from)}">← ${esc2(a.nombre)}</span><span class="neighbor-link" data-nid="${esc2(r.to)}">→ ${esc2(b.nombre)}</span>`;
+      return;
+    }
+    const c = p.pointer.canvas;
+    if (c.y < 0 && c.y > -MS - 30) { const col = g.cols.find(k => c.x >= k.x && c.x <= k.x + k.w); if (col) { aCol(col); return; } }
+    inicio();
+  });
+  network.on('doubleClick', p => { const d = p.nodes.length && Y.nodos[p.nodes[0]] && Y.nodos[p.nodes[0]].dentro; if (d) yodIr(d[0]); });
+
+  // textos del visor en español
+  const tx = (sel, t) => { const el = document.querySelector(sel); if (el) el.textContent = t; };
+  tx('#info-panel h3', 'Detalle'); tx('#legend-wrap h3', 'Celdas de esta lámina');
+  const inp = document.getElementById('search'); if (inp) inp.placeholder = 'Buscar en esta lámina…';
+  const lbl = document.querySelector('#legend-controls label'); if (lbl) lbl.lastChild.textContent = 'Todas';
+  document.querySelectorAll('[data-theme-choice]').forEach(b => { b.textContent = { light: 'Claro', dark: 'Oscuro', system: 'Sistema' }[b.dataset.themeChoice] || b.textContent; });
+  const st = document.getElementById('stats'); if (st) st.textContent = Y.pie;
+  const sim = document.createElement('div'); sim.id = 'yod-simbolos';
+  sim.innerHTML = Y.simbolos.map(s => `<b><span style="color:${s[1]}">${s[0]}</span> ${esc2(s[2])}</b>`).join('');
+  if (st && st.parentNode) st.parentNode.insertBefore(sim, st);
+
+  // errores en vivo: estado.json lo escribe el flujo «Grafo · estado» del repositorio
+  fetch(Y.estado || 'estado.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(E => {
+    if (!E || !E.errores) return; let n = 0;
+    E.errores.forEach(x => (x.nodos || []).forEach(id => { const p = Y.nodos[id]; if (!p) return; (p.err = p.err || []).push(x); if (x.tipo !== 'cambio') { p.al = p.al || []; p.bc = '#C8102E'; } else if (!p.bc) p.bc = '#C99A12'; n++; }));
+    if (n) { pintar(); const st2 = document.getElementById('stats'); if (st2) st2.textContent = Y.pie + ' · estado del ' + (E.generado || '').slice(0, 16).replace('T', ' ') + ' UTC'; }
+  }).catch(() => {});
+  // llegar con un nodo señalado en la liga, y avisar a la portada qué lámina es
+  const abrir = () => { let id = ''; try { id = window.YOD_FOCO || decodeURIComponent(location.hash.slice(1)); } catch (e) {} if (Y.nodos[id]) focusNode(id); };
+  if (window.YOD_FOCO || location.hash.length > 1) setTimeout(abrir, 280);
+  window.addEventListener('hashchange', abrir);
+  try { if (window.parent && window.parent !== window) window.parent.postMessage({ yod: 1, id: Y.id }, '*'); } catch (e) {}
+})();
+
+network.once('stabilizationIterationsDone', () => {
+  network.setOptions({ physics: { enabled: false } });
+});
+
+function showInfo(nodeId) {
+  const n = nodesDS.get(nodeId);
+  if (!n) return;
+  const neighborIds = network.getConnectedNodes(nodeId);
+  const neighborItems = neighborIds.map(nid => {
+    const nb = nodesDS.get(nid);
+    const color = nb ? nb.color.background : '#555';
+    return `<span class="neighbor-link" style="border-left-color:${esc(color)}" data-nid="${esc(nid)}">${esc(nb ? nb.label : nid)}</span>`;
+  }).join('');
+  const isMetaNode = !n.file_type && !n.source_file;
+  let html = `<div class="field"><b>${esc(n.label)}</b></div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Type: ${esc(n.file_type || 'unknown')}</div>`;
+  }
+  html += `<div class="field">Community: ${esc(n.community_name || '')}</div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Source: ${esc(n.source_file || '-')}</div>`;
+  } else if (n.member_count !== undefined && n.member_count !== null) {
+    html += `<div class="field">Members: ${esc(n.member_count)}</div>`;
+  }
+  html += `<div class="field">Degree: ${n.degree}</div>`;
+  if (neighborIds.length) {
+    html += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Neighbors (${neighborIds.length})</div><div id="neighbors-list">${neighborItems}</div>`;
+  }
+  document.getElementById('info-content').innerHTML = html;
+}
+
+function focusNode(nodeId) {
+  network.focus(nodeId, { scale: 1.4, animation: true });
+  network.selectNodes([nodeId]);
+  showInfo(nodeId);
+}
+
+// Neighbor links use a data attribute + one delegated listener rather than an
+// inline onclick. A node id/label sourced from a document or a scraped URL
+// (graphify add) can contain a double-quote; dropping the stringified id
+// unescaped into a quoted onclick both broke every link and allowed a hostile
+// source to inject an event handler into the local report (stored XSS, #1838).
+// esc() on data-nid keeps the value inside the attribute; the listener reads it
+// back verbatim. Bound to document so it survives the innerHTML rebuild that
+// recreates #neighbors-list on each showInfo().
+document.addEventListener('click', e => {
+  const el = e.target.closest('.neighbor-link');
+  if (el && el.dataset.nid !== undefined) focusNode(el.dataset.nid);
+});
+
+// Sidebar tooltips reuse vis-network's .vis-tooltip style and 100ms tooltipDelay.
+// Names get one only when CSS ellipsis truncates them (the full text is still in
+// the DOM); counts always get one, to say what the number is. Text is set with
+// textContent only (labels are untrusted). Delegated on document so rows rebuilt
+// later (search results, showInfo()) are covered.
+const sidebarTip = document.createElement('div');
+sidebarTip.className = 'vis-tooltip';
+sidebarTip.style.cssText = 'white-space: normal; max-width: 360px; overflow-wrap: break-word;';
+document.body.appendChild(sidebarTip);
+let sidebarTipTimer = null;
+let sidebarTipEl = null;    // element whose text the tooltip shows
+let sidebarTipZone = null;  // element the pointer must leave to hide it
+function hideSidebarTip() {
+  clearTimeout(sidebarTipTimer);
+  sidebarTip.style.visibility = 'hidden';
+  sidebarTip.textContent = '';
+  sidebarTipEl = sidebarTipZone = null;
+}
+document.addEventListener('mouseover', e => {
+  const zone = e.target.closest && e.target.closest('.legend-count, .legend-item, .search-item, .neighbor-link');
+  // Anywhere on a legend row except its count (dot, checkbox, gaps, padding)
+  // stands for the row's name, so moving within the row never re-triggers it.
+  const el = zone && zone.classList.contains('legend-item') ? zone.querySelector('.legend-label') : zone;
+  if (!el || el === sidebarTipEl) return;
+  hideSidebarTip();
+  const isCount = el.classList.contains('legend-count');
+  if (!isCount && el.scrollWidth <= el.clientWidth) return;
+  const text = isCount ? `${el.textContent} ${el.textContent === '1' ? 'nodo' : 'nodos'}` : el.textContent;
+  sidebarTipEl = el;
+  sidebarTipZone = zone;
+  const x = e.clientX, y = e.clientY;
+  sidebarTipTimer = setTimeout(() => {
+    sidebarTip.textContent = text;
+    sidebarTip.style.left = sidebarTip.style.top = '0px';  // measure at full max-width
+    sidebarTip.style.visibility = 'visible';
+    const w = sidebarTip.offsetWidth, h = sidebarTip.offsetHeight;
+    sidebarTip.style.left = Math.max(4, Math.min(x + 12, window.innerWidth - w - 4)) + 'px';
+    sidebarTip.style.top = (y + 16 + h > window.innerHeight ? Math.max(4, y - h - 8) : y + 16) + 'px';
+  }, 100);
+});
+document.addEventListener('mouseout', e => {
+  if (sidebarTipZone && !sidebarTipZone.contains(e.relatedTarget)) hideSidebarTip();
+});
+// A click rebuilds or hides the row (showInfo(), search pick) without a mouseout.
+document.addEventListener('mousedown', hideSidebarTip);
+
+// Track hovered node — hover detection is more reliable than click params
+let hoveredNodeId = null;
+network.on('hoverNode', params => {
+  hoveredNodeId = params.node;
+  container.style.cursor = 'pointer';
+});
+network.on('blurNode', () => {
+  hoveredNodeId = null;
+  container.style.cursor = 'default';
+});
+container.addEventListener('click', () => {
+  if (hoveredNodeId !== null) {
+    showInfo(hoveredNodeId);
+    network.selectNodes([hoveredNodeId]);
+  }
+});
+network.on('click', params => {
+  if (params.nodes.length > 0) {
+    showInfo(params.nodes[0]);
+  } else if (hoveredNodeId === null) {
+    document.getElementById('info-content').innerHTML = '<span class="empty">Toca un nodo para ver su detalle</span>';
+  }
+});
+
+const searchInput = document.getElementById('search');
+const searchResults = document.getElementById('search-results');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  searchResults.innerHTML = '';
+  if (!q) { searchResults.style.display = 'none'; return; }
+  const matches = RAW_NODES.filter(n => n.label.toLowerCase().includes(q)).slice(0, 20);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.style.display = 'block';
+  matches.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'search-item';
+    el.textContent = n.label;
+    el.style.borderLeft = `3px solid ${n.color.background}`;
+    el.style.paddingLeft = '8px';
+    el.onclick = () => {
+      network.focus(n.id, { scale: 1.5, animation: true });
+      network.selectNodes([n.id]);
+      showInfo(n.id);
+      searchResults.style.display = 'none';
+      searchInput.value = '';
+    };
+    searchResults.appendChild(el);
+  });
+});
+document.addEventListener('click', e => {
+  if (!searchResults.contains(e.target) && e.target !== searchInput)
+    searchResults.style.display = 'none';
+});
+
+const hiddenCommunities = new Set();
+
+const selectAllCb = document.getElementById('select-all-cb');
+
+function updateSelectAllState() {
+  const total = LEGEND.length;
+  const hidden = hiddenCommunities.size;
+  selectAllCb.checked = hidden === 0;
+  selectAllCb.indeterminate = hidden > 0 && hidden < total;
+}
+
+function toggleAllCommunities(hide) {
+  document.querySelectorAll('.legend-item').forEach(item => {
+    hide ? item.classList.add('dimmed') : item.classList.remove('dimmed');
+  });
+  document.querySelectorAll('.legend-cb').forEach(cb => {
+    cb.checked = !hide;
+  });
+  LEGEND.forEach(c => {
+    if (hide) hiddenCommunities.add(c.cid); else hiddenCommunities.delete(c.cid);
+  });
+  const updates = RAW_NODES.map(n => ({ id: n.id, hidden: hide }));
+  nodesDS.update(updates);
+  updateSelectAllState();
+}
+
+const legendEl = document.getElementById('legend');
+LEGEND.forEach(c => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.className = 'legend-cb';
+  cb.checked = true;
+  cb.addEventListener('change', (e) => {
+    e.stopPropagation();
+    if (cb.checked) {
+      hiddenCommunities.delete(c.cid);
+      item.classList.remove('dimmed');
+    } else {
+      hiddenCommunities.add(c.cid);
+      item.classList.add('dimmed');
+    }
+    const updates = RAW_NODES
+      .filter(n => n.community === c.cid)
+      .map(n => ({ id: n.id, hidden: !cb.checked }));
+    nodesDS.update(updates);
+    updateSelectAllState();
+  });
+  item.innerHTML = `<div class="legend-dot" style="background:${c.color}"></div>
+    <span class="legend-label">${c.label}</span>
+    <span class="legend-count">${c.count}</span>`;
+  item.prepend(cb);
+  item.onclick = (e) => {
+    if (e.target === cb) return;
+    cb.checked = !cb.checked;
+    cb.dispatchEvent(new Event('change'));
+  };
+  legendEl.appendChild(item);
+});
+</script>
+<script>
+// Render hyperedges as shaded regions
+const hyperedges = [];
+// afterDrawing passes ctx already transformed to network coordinate space.
+// Draw node positions raw — no manual pan/zoom/DPR math needed.
+
+// Andrew's monotone chain. Returns the hull in counter-clockwise order, which
+// is what the perimeter must be traced in. Collinear and duplicate points
+// collapse to the extremes, so degenerate member sets render as a segment
+// rather than a zero-area crossed path.
+function convexHull(pts) {
+    const p = pts.slice().sort((a, b) => (a.x - b.x) || (a.y - b.y));
+    if (p.length < 3) return p;
+    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const build = seq => {
+        const out = [];
+        for (const q of seq) {
+            while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+            out.push(q);
+        }
+        out.pop();
+        return out;
+    };
+    const hull = build(p).concat(build(p.slice().reverse()));
+    return hull.length >= 3 ? hull : p;
+}
+network.on('afterDrawing', function(ctx) {
+    hyperedges.forEach(h => {
+        // Legend toggles only set `hidden` on nodes; getPositions() still
+        // returns them, so skip hidden members or their hull lingers.
+        const positions = h.nodes
+            .filter(nid => { const n = nodesDS.get(nid); return n && n.hidden !== true; })
+            .map(nid => network.getPositions([nid])[nid])
+            .filter(p => p !== undefined);
+        if (positions.length < 2) return;
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#6366f1';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Centroid and expanded hull in network coordinates.
+        // The perimeter must follow hull order, not h.nodes order: tracing the
+        // raw member order self-intersects whenever the layout does not happen
+        // to place members in angular order, filling as crossed wedges.
+        const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length;
+        const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length;
+        const hull = convexHull(positions);
+        const expanded = hull.map(p => ({
+            x: cx + (p.x - cx) * 1.15,
+            y: cy + (p.y - cy) * 1.15
+        }));
+        ctx.moveTo(expanded[0].x, expanded[0].y);
+        expanded.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+        // Label
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#4f46e5';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(h.label, cx, cy - 5);
+        ctx.restore();
+    });
+});
+</script>
+</body>
+</html>

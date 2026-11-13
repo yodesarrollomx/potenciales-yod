@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Libro · Board Aurum · YoDesarrollo · YOD OS en Graphify</title>
+<script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
+        integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"
+        crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #0f0f1a; --panel: #1a1a2e; --border: #2a2a4e; --input-border: #3a3a5e;
+    --text: #e0e0e0; --text-2: #aaa; --text-3: #ccc; --muted: #555; --count: #666;
+    --neighbor-border: #333; --node-label: #ffffff;
+  }
+  [data-theme="light"] {
+    --bg: #ffffff; --panel: #f8f9fa; --border: #d9dee5; --input-border: #c3cad4;
+    --text: #222222; --text-2: #666666; --text-3: #333333; --muted: #888888; --count: #777777;
+    --neighbor-border: #ccc; --node-label: #222222;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  #graph { flex: 1; }
+  #sidebar { width: 280px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  #search-wrap { padding: 12px; border-bottom: 1px solid var(--border); }
+  #search { width: 100%; background: var(--bg); border: 1px solid var(--input-border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+  #search:focus { border-color: #4E79A7; }
+  #search-results { max-height: 140px; overflow-y: auto; padding: 4px 12px; border-bottom: 1px solid var(--border); display: none; }
+  .search-item { padding: 4px 6px; cursor: pointer; border-radius: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-item:hover { background: var(--border); }
+  #info-panel { padding: 14px; border-bottom: 1px solid var(--border); min-height: 140px; }
+  #info-panel h3 { font-size: 13px; color: var(--text-2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #info-content { font-size: 13px; color: var(--text-3); line-height: 1.6; }
+  #info-content .field { margin-bottom: 5px; }
+  #info-content .field b { color: var(--text); }
+  #info-content .empty { color: var(--muted); font-style: italic; }
+  .neighbor-link { display: block; padding: 2px 6px; margin: 2px 0; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--neighbor-border); }
+  .neighbor-link:hover { background: var(--border); }
+  #neighbors-list { max-height: 160px; overflow-y: auto; margin-top: 4px; }
+  #legend-wrap { flex: 1; overflow-y: auto; padding: 12px; }
+  #legend-wrap h3 { font-size: 13px; color: var(--text-2); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
+  .legend-item:hover { background: var(--border); padding-left: 4px; }
+  .legend-item.dimmed { opacity: 0.35; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-count { color: var(--count); font-size: 11px; }
+  #stats { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  #legend-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 4px 0; }
+  #legend-controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-2); user-select: none; }
+  #legend-controls label:hover { color: var(--text); }
+  .legend-cb, #select-all-cb { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid var(--input-border); border-radius: 3px; background: var(--bg); cursor: pointer; position: relative; flex-shrink: 0; }
+  .legend-cb:checked, #select-all-cb:checked { background: #4E79A7; border-color: #4E79A7; }
+  .legend-cb:checked::after, #select-all-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  #select-all-cb:indeterminate { background: #4E79A7; border-color: #4E79A7; }
+  #select-all-cb:indeterminate::after { content: ''; position: absolute; left: 2px; top: 5px; width: 8px; height: 2px; background: #fff; border: none; transform: none; }
+  #theme-wrap { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  #theme-wrap button { flex: 1; background: var(--bg); color: var(--text-2); border: 1px solid var(--input-border); border-radius: 4px; padding: 3px 0; font-size: 11px; cursor: pointer; }
+  #theme-wrap button:hover { color: var(--text); }
+  #theme-wrap button[aria-pressed="true"] { background: #4E79A7; border-color: #4E79A7; color: #fff; }
+</style>
+<script id="graphify-theme-init">
+// Apply the saved theme before first paint (#3894). No saved choice keeps the
+// historical dark look; "system" follows prefers-color-scheme.
+(function () {
+  var pref = null;
+  try { pref = localStorage.getItem('graphify-theme'); } catch (e) {}
+  var t = pref === 'light' ? 'light'
+    : pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light'
+    : window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<style id="yod-capa">
+  #graph { position: relative; }
+  #yod-barra { position: fixed; top: 8px; left: 8px; right: 296px; z-index: 5; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+  #yod-barra button, #yod-barra a, #yod-barra select { pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; font: 500 12px system-ui, -apple-system, sans-serif; text-decoration: none;
+    color: var(--text); background: var(--panel); border: 1px solid var(--input-border); border-radius: 999px; padding: 5px 10px; min-height: 30px; cursor: pointer; }
+  #yod-barra button[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+  #yod-barra select { max-width: 150px; appearance: auto; }
+  #yod-barra i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  #yod-barra .yod-fuerte { font-weight: 650; }
+  #yod-barra .yod-c { display: none; }
+  .neighbor-link { white-space: normal !important; overflow-wrap: anywhere; line-height: 1.35; padding: 5px 6px !important; }
+  #neighbors-list { max-height: 260px !important; }
+  #info-content .field { overflow-wrap: anywhere; }
+  #info-content a { color: #4E79A7; }
+  [data-theme="dark"] #info-content a { color: #8FB8E8; }
+  .yod-tipo { color: var(--text-2); font-size: 12px; }
+  .yod-ev { color: var(--text-2); font-size: 11.5px; }
+  .yod-alerta { color: #C8102E; } [data-theme="dark"] .yod-alerta { color: #FF7B8A; }
+  .yod-entrar { display: block; margin: 8px 0; padding: 9px 11px; border-radius: 8px; background: #4E79A7; color: #fff !important; font-weight: 600; text-decoration: none; font-size: 13px; }
+  .yod-abrir { display: inline-block; margin: 2px 0 6px; font-size: 12px; }
+  .yod-lista { margin: 6px 0; font-size: 12px; } .yod-lista summary { cursor: pointer; color: var(--text-2); padding: 3px 0; }
+  .yod-lista div { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 0; } .yod-lista span { border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font: 11.5px ui-monospace, Menlo, monospace; }
+  .yod-tb { font-size: 12px; line-height: 1.7; }
+  #yod-simbolos { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 3px 10px; }
+  #yod-simbolos b { font-weight: 400; }
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    #graph { flex: 1 1 auto; min-height: 54vh; }
+    #sidebar { display: block; width: auto; max-height: 46vh; overflow-y: auto; border-left: 0; border-top: 1px solid var(--border); }
+    #theme-wrap { display: none; }
+    #info-panel { min-height: 0; }
+    #legend-wrap { overflow: visible; }
+    #yod-barra { right: 8px; gap: 4px; }
+    #yod-barra button, #yod-barra a, #yod-barra select { font-size: 11px; padding: 4px 8px; min-height: 28px; }
+    #yod-barra .yod-l { display: none; } #yod-barra .yod-c { display: inline; }
+    #yod-barra select { max-width: 112px; }
+    #yod-barra a.yod-fuerte { max-width: 150px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: inline-block; line-height: 20px; }
+  }
+</style>
+<script id="yod-datos">window.YOD = {"id":"libro-board-aurum-yodesarrollo","titulo":"Libro · Board Aurum · YoDesarrollo","sub":"«Board Aurum · YoDesarrollo» por dentro: cada pestaña, quién la lee o la escribe, qué clave de proyecto lleva y qué zona de pantalla saldría de ella. Toca una pestaña para ver sus columnas.","padre":["libros.html","Libros de Google Sheets"],"nodos":{"hoja:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM":{"x":342,"y":74,"nombre":"Board Aurum · YoDesarrollo","forma":"triangle","tam":14,"color":"#4E79A7","tipo":"Libro de Google Sheets","celda":"El libro · Pestaña","lbl":"Board Aurum ·\nYoDesarrollo","estado":"Vivo · leído el 11-nov","nota":"La lee el código de: board-aurum.","ev":"Google Sheets","url":"https://docs.google.com/spreadsheets/d/11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM/edit","tb":[["mapa.html","Mapa general"],["tablero-despacho.html","Tablero · El Despacho"],["tablero-moac.html","Tablero · MOAC"],["pantalla-hoy.html","Pantalla · Hoy"],["pantalla-equipo.html","Pantalla · Equipo · MOAC"],["libros.html","Libros de Google Sheets"],["codigo-board-aurum.html","Código · board-aurum"]]},"SHEET-OPERACION":{"x":114,"y":74,"nombre":"Datos de Operación y tareas","forma":"triangle","tam":11,"color":"#86A9CF","tipo":"Almacén según el atlas","celda":"El libro · Quién la lee o escribe","lbl":"Datos de Operación\ny tareas","estado":"Declarado en el atlas","nota":"Almacenar registros del dominio operacion","ev":"yod-portal/docs/arquitectura/modelo.json"},"board-aurum::scripts_sync_sheet_py_scripts_sync_sheet":{"x":114,"y":162,"nombre":"sync_sheet.py","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"El libro · Quién la lee o escribe","lbl":"sync_sheet.py","ev":"board-aurum/scripts/sync_sheet.py · 150 líneas","url":"https://github.com/yodesarrollomx/board-aurum/blob/93bf6241c8/scripts/sync_sheet.py","lt":"Funciones y símbolos (8)","lista":["log()  · L19","fetch_csv()  · L23","parse_links()  · L32","csv_to_tasks()  · L58","write_data_json()  · L88","git_commit_and_push()  · L109","run()  · L110","main()  · L129"],"tb":[["tablero-moac.html","Tablero · MOAC"],["codigo-board-aurum.html","Código · board-aurum"]]},"tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1":{"x":342,"y":310,"nombre":"Hoja 1","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Con columnas leídas · Pestaña","lbl":"Hoja 1","estado":"Vivo · leído el 11-nov","ev":"Libro «Board Aurum · YoDesarrollo»","url":"https://docs.google.com/spreadsheets/d/11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM/edit","lt":"Columnas (fila 1, leída el 11-nov)","lista":["id","mes","empresa","proyecto","responsable","semana","actividad","entregable","fecha","estado","observaciones","links","prioridad","color","archivada","fechaTerminado","historial","subtareas","comentarios","borrada"],"al":[["HAL-21","Tesorería, tareas y obra llevan «proyecto» en una columna de texto"]],"tb":[["tablero-despacho.html","Tablero · El Despacho"],["tablero-moac.html","Tablero · MOAC"],["pantalla-hoy.html","Pantalla · Hoy"],["pantalla-equipo.html","Pantalla · Equipo · MOAC"],["folio.html","Folio · una clave por proyecto"],["relojes.html","Relojes · lo que corre solo"],["hallazgos.html","Hallazgos"]]},"R-LUNES":{"x":114,"y":310,"nombre":"YodBot · Lunes MOAC 07:00","forma":"triangle","tam":10,"color":"#86BCB6","tipo":"Rutina o disparador","celda":"Con columnas leídas · Quién la lee o escribe","lbl":"YodBot · Lunes\nMOAC 07:00","estado":"Vivo · leído el 11-nov","nota":"Lunes 6:52. Arma la agenda del Lunes MOAC y manda un correo. Última corrida: 9-nov, correcta.","ev":"tareas-programadas-de-claude","tb":[["tablero-moac.html","Tablero · MOAC"],["pantalla-equipo.html","Pantalla · Equipo · MOAC"],["libro-buzon-claude-chatgpt.html","Libro · Buzón Claude ↔ ChatGPT"],["libro-moac-metas-objetivos-y-acciones-yod-au.html","Libro · MOAC · Metas, Objetivos y Acciones (YoD + Au"],["relojes.html","Relojes · lo que corre solo"]]},"R-CIERRE":{"x":114,"y":398,"nombre":"YodBot · Cierre 18:00 (diario)","forma":"triangle","tam":10,"color":"#86BCB6","tipo":"Rutina o disparador","celda":"Con columnas leídas · Quién la lee o escribe","lbl":"YodBot · Cierre\n18:00 (diario)","estado":"Vivo · leído el 11-nov","nota":"Diario 17:52. Cierre del día para el grupo y para ti, en un correo. Última corrida: 11-nov, correcta.","ev":"tareas-programadas-de-claude","tb":[["tablero-moac.html","Tablero · MOAC"],["pantalla-equipo.html","Pantalla · Equipo · MOAC"],["libro-buzon-claude-chatgpt.html","Libro · Buzón Claude ↔ ChatGPT"],["libro-moac-metas-objetivos-y-acciones-yod-au.html","Libro · MOAC · Metas, Objetivos y Acciones (YoD + Au"],["relojes.html","Relojes · lo que corre solo"]]},"KEY-TEXTO":{"x":570,"y":310,"nombre":"proyecto · texto libre","forma":"star","tam":16,"color":"#E15759","tipo":"Clave de proyecto","celda":"Con columnas leídas · Clave de proyecto","lbl":"proyecto · texto\nlibre","estado":"Vivo · leído el 11-nov","nota":"Tesorería, tareas y el motor de obra llevan una columna «proyecto». No leí sus valores: si es el nombre escrito a mano, basta que alguien lo escriba distinto para que deje de sumar. Ejemplo: el nombre escrito a mano.","ev":"google-sheets (encabezados)","al":[["HAL-21","Tesorería, tareas y obra llevan «proyecto» en una columna de texto"]],"tb":[["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"],["libro-moac-metas-objetivos-y-acciones-yod-au.html","Libro · MOAC · Metas, Objetivos y Acciones (YoD + Au"],["folio.html","Folio · una clave por proyecto"],["hallazgos.html","Hallazgos"]]},"N-FOLIO":{"x":570,"y":398,"nombre":"Folio único del proyecto","forma":"triangle","tam":11,"color":"#86A9CF","tipo":"Almacén según el atlas","celda":"Con columnas leídas · Clave de proyecto","lbl":"Folio único del\nproyecto","estado":"Propuesto en el atlas","nota":"Una sola clave por terreno, de la captación al reparto. No hay que inventarla: project_id (PRJ-…) ya vive en el Control Maestro, en el catálogo de la cabina, en la app de obra y en el módulo del comprador. Falta sembrarla en 13 pestañas.","ev":"yod-os/propuesta","al":[["HAL-09","La capa de agentes crece más rápido que los datos de abajo"]],"dentro":["folio.html","Folio · una clave por proyecto"],"tb":[["tablero-ppp.html","Tablero · PPP"],["tablero-codes.html","Tablero · Codesarrollos y Miramar"],["tablero-flujo.html","Tablero · Flujo"],["tablero-brokers.html","Tablero · Masterbrokers"],["tablero-embudo.html","Tablero · Embudo y Sala"],["tablero-obra.html","Tablero · Obra en vivo"],["pantalla-cartera-ppp.html","Pantalla · Cartera · PPP"],["pantalla-cartera-proyectos.html","Pantalla · Cartera · Proyectos"],["","y 12 más"]]},"ZON-equipo-4":{"x":798,"y":310,"nombre":"Vencido","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"Con columnas leídas · Zona de pantalla que sale de aquí","lbl":"4 · Vencido","caja":142,"bc":"#2E7D32","estado":"El dato existe y ya se lee","nota":"Lo que pasó su fecha, con días de atraso. De dónde sale: Hoja de MOAC.","ev":"propuesta del 11-nov-2026","tb":[["tablero-moac.html","Tablero · MOAC"],["pantalla-equipo.html","Pantalla · Equipo · MOAC"]]},"ZON-equipo-5":{"x":798,"y":398,"nombre":"Cerrar con evidencia","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"Con columnas leídas · Zona de pantalla que sale de aquí","lbl":"5 · Cerrar con evidencia","caja":142,"bc":"#C99A12","estado":"El dato existe, falta conectarlo","nota":"Para marcar hecho hay que pegar la liga, foto o documento. De dónde sale: Captura en la acción.","ev":"propuesta del 11-nov-2026","tb":[["tablero-moac.html","Tablero · MOAC"],["pantalla-equipo.html","Pantalla · Equipo · MOAC"]]},"ZON-hoy-4":{"x":798,"y":486,"nombre":"Atorado","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"Con columnas leídas · Zona de pantalla que sale de aquí","lbl":"4 · Atorado","caja":142,"bc":"#C99A12","estado":"El dato existe, falta conectarlo","nota":"Lo que lleva días sin moverse, de personas y de asistentes juntos, con quién lo trae. De dónde sale: MOAC, Buzón (órdenes y tablero de tareas de los agentes) y Kanban.","ev":"propuesta del 11-nov-2026","tb":[["tablero-despacho.html","Tablero · El Despacho"],["pantalla-hoy.html","Pantalla · Hoy"],["libro-buzon-claude-chatgpt.html","Libro · Buzón Claude ↔ ChatGPT"]]},"ZON-equipo-2":{"x":798,"y":574,"nombre":"La semana por persona","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"Con columnas leídas · Zona de pantalla que sale de aquí","lbl":"2 · La semana por persona","caja":142,"bc":"#C99A12","estado":"El dato existe, falta conectarlo","nota":"Una columna por persona y una por los asistentes. Tres acciones prioritarias cada quien. De dónde sale: Hoja de MOAC, Buzón y Kanban.","ev":"propuesta del 11-nov-2026","tb":[["tablero-moac.html","Tablero · MOAC"],["pantalla-equipo.html","Pantalla · Equipo · MOAC"],["libro-buzon-claude-chatgpt.html","Libro · Buzón Claude ↔ ChatGPT"],["libro-moac-metas-objetivos-y-acciones-yod-au.html","Libro · MOAC · Metas, Objetivos y Acciones (YoD + Au"]]},"ZON-equipo-3":{"x":798,"y":662,"nombre":"Sin dueño o sin fecha","forma":"box","tam":0,"color":"#F8E7A8","tipo":"Zona de la pantalla","celda":"Con columnas leídas · Zona de pantalla que sale de aquí","lbl":"3 · Sin dueño o sin fecha","caja":142,"bc":"#2E7D32","estado":"El dato existe y ya se lee","nota":"Lo que nadie tomó. Se reparte en la junta del lunes. De dónde sale: Hoja de MOAC.","ev":"propuesta del 11-nov-2026","tb":[["tablero-moac.html","Tablero · MOAC"],["pantalla-equipo.html","Pantalla · Equipo · MOAC"]]},"HAL-21":{"x":798,"y":750,"nombre":"Tesorería, tareas y obra llevan «proyecto» en una columna de texto","forma":"star","tam":13,"color":"#E15759","tipo":"Hallazgo","celda":"Con columnas leídas · Zona de pantalla que sale de aquí","lbl":"Tesorería, tareas\ny obra llevan\n«proyecto» en una…","estado":"Hallazgo de este análisis","nota":"En el Flujo el proyecto es el nombre de la bolsa; en la hoja de tareas, en TAREAS_MOAC y en las pestañas del motor de obra hay una columna «proyecto». No leí sus valores, pero ninguna de esas columnas se llama como el folio. Mientras sea texto, el margen por proyecto y «qué se hizo esta semana en Alysa» no se suman solos. Qué hacer: Que esa columna guarde el folio PRJ, o agregar la columna project_id a su lado.","ev":"análisis del 11-nov-2026","tb":[["libro-yod-flujo-2026.html","Libro · YOD_Flujo_2026"],["libro-moac-metas-objetivos-y-acciones-yod-au.html","Libro · MOAC · Metas, Objetivos y Acciones (YoD + Au"],["hallazgos.html","Hallazgos"]]},"tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Pagos":{"x":342,"y":898,"nombre":"Pagos","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Sólo están en el libro · Pestaña","lbl":"Pagos","estado":"Vivo · leído el 11-nov","ev":"Libro «Board Aurum · YoDesarrollo»","url":"https://docs.google.com/spreadsheets/d/11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM/edit","tb":[["tablero-moac.html","Tablero · MOAC"]]},"tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:_YOD_MOAC_RECIBOS_V1":{"x":342,"y":1046,"nombre":"_YOD_MOAC_RECIBOS_V1","forma":"triangleDown","tam":9,"color":"#A0CBE8","tipo":"Pestaña","celda":"Ocultas · Pestaña","lbl":"\n_YOD_MOAC_RECIBOS_V1","estado":"Vivo · leído el 11-nov","ev":"Libro «Board Aurum · YoDesarrollo»","url":"https://docs.google.com/spreadsheets/d/11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM/edit","tb":[["tablero-moac.html","Tablero · MOAC"]]}},"flechas":{"ZON-equipo-4>tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1":{"f":"viva","r":"sale de","nota":"Hoja de MOAC"},"ZON-equipo-5>tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1":{"f":"propuesta","r":"sale de","nota":"Captura en la acción"},"HAL-21>tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1":{"f":"hueco","r":"señala"},"HAL-21>KEY-TEXTO":{"f":"hueco","r":"señala"},"hoja:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM>tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:_YOD_MOAC_RECIBOS_V1":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM"},"N-FOLIO>SHEET-OPERACION":{"f":"propuesta","r":"Misma clave","ev":"yod-os/propuesta"},"N-FOLIO>tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1":{"f":"propuesta","r":"habría que sembrarlo en","ev":"google-sheets/11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM Hoja 1"},"hoja:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM>tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Pagos":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM"},"hoja:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM>tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1":{"f":"viva","r":"tiene pestaña","ev":"google-sheets/11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM"},"R-LUNES>tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1":{"f":"viva","r":"lee","ev":"tareas-programadas-de-claude"},"R-CIERRE>tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1":{"f":"viva","r":"lee","ev":"tareas-programadas-de-claude"},"tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1>KEY-TEXTO":{"f":"viva","r":"lleva la clave","ev":"google-sheets/11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM Hoja 1!proyecto"},"ZON-hoy-4>tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1":{"f":"propuesta","r":"sale de","nota":"MOAC, Buzón (órdenes y tablero de tareas de los agentes) y Kanban"},"ZON-equipo-2>tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1":{"f":"propuesta","r":"sale de","nota":"Hoja de MOAC, Buzón y Kanban"},"ZON-equipo-3>tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1":{"f":"viva","r":"sale de","nota":"Hoja de MOAC"},"board-aurum::scripts_sync_sheet_py_scripts_sync_sheet>hoja:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM":{"f":"viva","r":"referencia la hoja","ev":"board-aurum/scripts/sync_sheet.py L8"},"SHEET-OPERACION>hoja:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM":{"f":"viva","r":"es el libro","ev":"codigo-y-documentos-del-repo"}},"familias":{"viva":{"corto":"Visto","nombre":"Visto en código u hoja","color":"#5B6470","ancho":1.3,"opacidad":0.75,"punteada":false},"inferida":{"corto":"Atlas","nombre":"Del atlas o deducido","color":"#9AA1AB","ancho":1.0,"opacidad":0.6,"punteada":false},"propuesta":{"corto":"Propuesta","nombre":"Propuesta","color":"#C99A12","ancho":1.6,"opacidad":0.9,"punteada":[7,5]},"hueco":{"corto":"Falta","nombre":"Falta o hallazgo","color":"#C8102E","ancho":1.7,"opacidad":0.9,"punteada":[3,5]}},"usadas":["viva","propuesta","hueco"],"rejilla":{"cols":[{"x":0,"w":228,"nombre":"Quién la lee o escribe"},{"x":228,"w":228,"nombre":"Pestaña"},{"x":456,"w":228,"nombre":"Clave de proyecto"},{"x":684,"w":228,"nombre":"Zona de pantalla que sale de aquí"}],"filas":[{"y":0,"h":236,"nombre":"El libro"},{"y":236,"h":588,"nombre":"Con columnas leídas"},{"y":824,"h":148,"nombre":"Sólo están en el libro"},{"y":972,"h":148,"nombre":"Ocultas"}]},"eje_x":"De quien la toca a la pantalla que alimenta","eje_y":"Qué tanto se conoce la pestaña","estado":"https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/grafo-datos/estado.json","simbolos":[["■","#59A14F","Tablero o página"],["▭","#F1CE63","Pantalla propuesta"],["◆","#F28E2B","Motor"],["⬢","#79706E","Repositorio o código"],["▲","#4E79A7","Libro"],["▼","#A0CBE8","Pestaña"],["●","#B07AA1","Quién"],["★","#EDC948","Propuesta"],["★","#E15759","Hallazgo o clave"]],"pie":"16 nodos · 17 flechas · Libro · Board Aurum · YoDesarrollo · Graphify 0.9.106"};</script>
+</head>
+<body>
+<div id="graph"></div>
+<div id="sidebar">
+  <div id="theme-wrap" role="group" aria-label="Theme">
+    <button type="button" data-theme-choice="light">Claro</button>
+    <button type="button" data-theme-choice="dark">Oscuro</button>
+    <button type="button" data-theme-choice="system">Sistema</button>
+  </div>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Buscar…" autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div id="info-panel">
+    <h3>Detalle</h3>
+    <div id="info-content"><span class="empty">Toca un nodo para ver su detalle</span></div>
+  </div>
+  <div id="legend-wrap">
+    <h3>Grupos</h3>
+    <div id="legend-controls">
+      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">Todos</label>
+    </div>
+    <div id="legend"></div>
+  </div>
+  <div id="stats">16 nodes &middot; 17 edges &middot; 8 communities</div>
+</div>
+<script>
+const RAW_NODES = [{"id": "hoja:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM", "label": "Board Aurum \u00b7 YoDesarrollo", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 23.6, "font": {"size": 12, "color": "#ffffff"}, "title": "Board Aurum \u00b7 YoDesarrollo", "community": 0, "community_name": "El libro \u00b7 Pesta\u00f1a", "source_file": "Google Sheets", "file_type": "document", "degree": 5}, {"id": "SHEET-OPERACION", "label": "Datos de Operaci\u00f3n y tareas", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 15.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Datos de Operaci\u00f3n y tareas", "community": 1, "community_name": "El libro \u00b7 Qui\u00e9n la lee o escribe", "source_file": "yod-portal/docs/arquitectura/modelo.json", "file_type": "concept", "degree": 2}, {"id": "board-aurum::scripts_sync_sheet_py_scripts_sync_sheet", "label": "sync_sheet.py", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 12.7, "font": {"size": 0, "color": "#ffffff"}, "title": "sync_sheet.py", "community": 1, "community_name": "El libro \u00b7 Qui\u00e9n la lee o escribe", "source_file": "board-aurum/scripts/sync_sheet.py \u00b7 150 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1", "label": "Hoja 1", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Hoja 1", "community": 2, "community_name": "Con columnas le\u00eddas \u00b7 Pesta\u00f1a", "source_file": "Libro \u00abBoard Aurum \u00b7 YoDesarrollo\u00bb", "file_type": "document", "degree": 11}, {"id": "R-LUNES", "label": "YodBot \u00b7 Lunes MOAC 07:00", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 12.7, "font": {"size": 0, "color": "#ffffff"}, "title": "YodBot \u00b7 Lunes MOAC 07:00", "community": 3, "community_name": "Con columnas le\u00eddas \u00b7 Qui\u00e9n la lee o escribe", "source_file": "tareas-programadas-de-claude", "file_type": "concept", "degree": 1}, {"id": "R-CIERRE", "label": "YodBot \u00b7 Cierre 18:00 (diario)", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 12.7, "font": {"size": 0, "color": "#ffffff"}, "title": "YodBot \u00b7 Cierre 18:00 (diario)", "community": 3, "community_name": "Con columnas le\u00eddas \u00b7 Qui\u00e9n la lee o escribe", "source_file": "tareas-programadas-de-claude", "file_type": "concept", "degree": 1}, {"id": "KEY-TEXTO", "label": "proyecto \u00b7 texto libre", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 15.5, "font": {"size": 12, "color": "#ffffff"}, "title": "proyecto \u00b7 texto libre", "community": 4, "community_name": "Con columnas le\u00eddas \u00b7 Clave de proyecto", "source_file": "google-sheets (encabezados)", "file_type": "concept", "degree": 2}, {"id": "N-FOLIO", "label": "Folio \u00fanico del proyecto", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 15.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Folio \u00fanico del proyecto", "community": 4, "community_name": "Con columnas le\u00eddas \u00b7 Clave de proyecto", "source_file": "yod-os/propuesta", "file_type": "concept", "degree": 2}, {"id": "ZON-equipo-4", "label": "Vencido", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 12.7, "font": {"size": 0, "color": "#ffffff"}, "title": "Vencido", "community": 5, "community_name": "Con columnas le\u00eddas \u00b7 Zona de pantalla que sale de aqu\u00ed", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 1}, {"id": "ZON-equipo-5", "label": "Cerrar con evidencia", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 12.7, "font": {"size": 0, "color": "#ffffff"}, "title": "Cerrar con evidencia", "community": 5, "community_name": "Con columnas le\u00eddas \u00b7 Zona de pantalla que sale de aqu\u00ed", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 1}, {"id": "ZON-hoy-4", "label": "Atorado", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 12.7, "font": {"size": 0, "color": "#ffffff"}, "title": "Atorado", "community": 5, "community_name": "Con columnas le\u00eddas \u00b7 Zona de pantalla que sale de aqu\u00ed", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 1}, {"id": "ZON-equipo-2", "label": "La semana por persona", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 12.7, "font": {"size": 0, "color": "#ffffff"}, "title": "La semana por persona", "community": 5, "community_name": "Con columnas le\u00eddas \u00b7 Zona de pantalla que sale de aqu\u00ed", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 1}, {"id": "ZON-equipo-3", "label": "Sin due\u00f1o o sin fecha", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 12.7, "font": {"size": 0, "color": "#ffffff"}, "title": "Sin due\u00f1o o sin fecha", "community": 5, "community_name": "Con columnas le\u00eddas \u00b7 Zona de pantalla que sale de aqu\u00ed", "source_file": "propuesta del 11-nov-2026", "file_type": "concept", "degree": 1}, {"id": "HAL-21", "label": "Tesorer\u00eda, tareas y obra llevan \u00abproyecto\u00bb en una columna de texto", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 15.5, "font": {"size": 12, "color": "#ffffff"}, "title": "Tesorer\u00eda, tareas y obra llevan \u00abproyecto\u00bb en una columna de texto", "community": 5, "community_name": "Con columnas le\u00eddas \u00b7 Zona de pantalla que sale de aqu\u00ed", "source_file": "an\u00e1lisis del 11-nov-2026", "file_type": "rationale", "degree": 2}, {"id": "tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Pagos", "label": "Pagos", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 12.7, "font": {"size": 0, "color": "#ffffff"}, "title": "Pagos", "community": 6, "community_name": "S\u00f3lo est\u00e1n en el libro \u00b7 Pesta\u00f1a", "source_file": "Libro \u00abBoard Aurum \u00b7 YoDesarrollo\u00bb", "file_type": "document", "degree": 1}, {"id": "tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:_YOD_MOAC_RECIBOS_V1", "label": "_YOD_MOAC_RECIBOS_V1", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 12.7, "font": {"size": 0, "color": "#ffffff"}, "title": "_YOD_MOAC_RECIBOS_V1", "community": 7, "community_name": "Ocultas \u00b7 Pesta\u00f1a", "source_file": "Libro \u00abBoard Aurum \u00b7 YoDesarrollo\u00bb", "file_type": "document", "degree": 1}];
+const RAW_EDGES = [{"from": "hoja:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM", "to": "tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:_YOD_MOAC_RECIBOS_V1", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM", "to": "tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Pagos", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "hoja:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM", "to": "tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1", "label": "tiene pesta\u00f1a", "title": "tiene pesta\u00f1a [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "board-aurum::scripts_sync_sheet_py_scripts_sync_sheet", "to": "hoja:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM", "label": "referencia la hoja", "title": "referencia la hoja [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "SHEET-OPERACION", "to": "hoja:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM", "label": "es el libro", "title": "es el libro [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "N-FOLIO", "to": "SHEET-OPERACION", "label": "Misma clave", "title": "Misma clave [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-equipo-4", "to": "tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1", "label": "sale de", "title": "sale de [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "ZON-equipo-5", "to": "tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "HAL-21", "to": "tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1", "label": "se\u00f1ala", "title": "se\u00f1ala [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "N-FOLIO", "to": "tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1", "label": "habr\u00eda que sembrarlo en", "title": "habr\u00eda que sembrarlo en [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "R-LUNES", "to": "tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1", "label": "lee", "title": "lee [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "R-CIERRE", "to": "tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1", "label": "lee", "title": "lee [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1", "to": "KEY-TEXTO", "label": "lleva la clave", "title": "lleva la clave [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "ZON-hoy-4", "to": "tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-equipo-2", "to": "tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1", "label": "sale de", "title": "sale de [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "ZON-equipo-3", "to": "tab:11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM:Hoja 1", "label": "sale de", "title": "sale de [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "HAL-21", "to": "KEY-TEXTO", "label": "se\u00f1ala", "title": "se\u00f1ala [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}];
+const LEGEND = [{"cid": 0, "color": "#4E79A7", "label": "El libro \u00b7 Pesta\u00f1a", "count": 1}, {"cid": 1, "color": "#F28E2B", "label": "El libro \u00b7 Qui\u00e9n la lee o escribe", "count": 2}, {"cid": 2, "color": "#E15759", "label": "Con columnas le\u00eddas \u00b7 Pesta\u00f1a", "count": 1}, {"cid": 3, "color": "#76B7B2", "label": "Con columnas le\u00eddas \u00b7 Qui\u00e9n la lee o escribe", "count": 2}, {"cid": 4, "color": "#59A14F", "label": "Con columnas le\u00eddas \u00b7 Clave de proyecto", "count": 2}, {"cid": 5, "color": "#EDC948", "label": "Con columnas le\u00eddas \u00b7 Zona de pantalla que sale de aqu\u00ed", "count": 6}, {"cid": 6, "color": "#B07AA1", "label": "S\u00f3lo est\u00e1n en el libro \u00b7 Pesta\u00f1a", "count": 1}, {"cid": 7, "color": "#FF9DA7", "label": "Ocultas \u00b7 Pesta\u00f1a", "count": 1}];
+
+// HTML-escape helper — prevents XSS when injecting graph data into innerHTML
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Build vis datasets
+const nodesDS = new vis.DataSet(RAW_NODES.map((n, i) => ({
+  id: n.id, label: n.label, color: n.color, size: n.size,
+  font: n.font, title: n.title,
+  // Fermat/golden-angle spiral seed positions (#3699): spreading nodes out
+  // before physics runs keeps avoidOverlap from computing near-zero-distance
+  // repulsion that blows the BarnesHut recursion into a stack overflow on large
+  // graphs. `i` is the map index — physics still settles small graphs identically.
+  x: 30 * Math.sqrt(i) * Math.cos(i * 2.4),
+  y: 30 * Math.sqrt(i) * Math.sin(i * 2.4),
+  community: n.community, community_name: n.community_name,
+  source_file: n.source_file, file_type: n.file_type, degree: n.degree,
+  member_count: n.member_count,
+})));
+
+const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({
+  id: i, from: e.from, to: e.to,
+  label: '',
+  title: e.title,
+  dashes: e.dashes,
+  width: e.width,
+  color: e.color,
+  arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+})));
+
+const container = document.getElementById('graph');
+const network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, {
+  physics: {
+    enabled: false,
+    solver: 'forceAtlas2Based',
+    forceAtlas2Based: {
+      gravitationalConstant: -60,
+      centralGravity: 0.005,
+      springLength: 120,
+      springConstant: 0.08,
+      damping: 0.4,
+      avoidOverlap: 0.8,
+    },
+    stabilization: { iterations: 200, fit: true },
+  },
+  interaction: {
+    hover: true,
+    tooltipDelay: 100,
+    hideEdgesOnDrag: true,
+    navigationButtons: false,
+    keyboard: false,
+  },
+  nodes: { shape: 'dot', borderWidth: 1.5 },
+  edges: { smooth: { type: 'continuous', roundness: 0.2 }, selectionWidth: 3 },
+});
+
+// Theme toggle (#3894): Light / Dark / System, persisted in localStorage.
+const THEME_KEY = 'graphify-theme';
+const themeMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+let themeLabelColor = '#ffffff';  // matches the per-node font color set in Python
+function themePref() {
+  let p = null;
+  try { p = localStorage.getItem(THEME_KEY); } catch (e) {}
+  return (p === 'light' || p === 'dark' || p === 'system') ? p : null;
+}
+function applyTheme(pref) {
+  const t = pref === 'light' ? 'light' : (pref === 'system' && themeMQ && themeMQ.matches) ? 'light' : 'dark';
+  const root = document.documentElement;
+  if (!root) return;
+  root.setAttribute('data-theme', t);
+  document.querySelectorAll('[data-theme-choice]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.themeChoice === (pref || 'system')));
+  });
+  const labelColor = getComputedStyle(root).getPropertyValue('--node-label').trim();
+  if (labelColor && labelColor !== themeLabelColor) {
+    themeLabelColor = labelColor;
+    nodesDS.update(nodesDS.get().map(n => ({ id: n.id, font: Object.assign({}, n.font, { color: labelColor }) })));
+  }
+}
+document.querySelectorAll('[data-theme-choice]').forEach(b => {
+  b.addEventListener('click', () => {
+    const pref = b.dataset.themeChoice;
+    try { localStorage.setItem(THEME_KEY, pref); } catch (e) {}
+    applyTheme(pref);
+  });
+});
+if (themeMQ) {
+  const onSchemeChange = () => { if (themePref() === 'system') applyTheme('system'); };
+  if (themeMQ.addEventListener) themeMQ.addEventListener('change', onSchemeChange);
+  else if (themeMQ.addListener) themeMQ.addListener(onSchemeChange);
+}
+applyTheme(themePref() || 'system');
+
+
+// ── YOD: acomodo fijo en cuadrante sobre el visor de Graphify. Los nodos y las flechas son los que exportó Graphify. ──
+(function () {
+  const Y = window.YOD;
+  // Cuando la portada enseña un borrador, trae la lámina como texto: los enlaces a otras láminas se le piden a ella.
+  const SUELTA = location.protocol === 'about:';
+  const yodIr = h => { const m = String(h).match(/^([A-Za-z0-9._-]+)\.html(?:#(.*))?$/);
+    if (SUELTA && m) { try { parent.postMessage({ yod: 2, ir: m[1], nodo: m[2] ? decodeURIComponent(m[2]) : '' }, '*'); } catch (e) {} } else location.href = h; };
+  if (SUELTA) document.addEventListener('click', e => { const a = e.target && e.target.closest ? e.target.closest('a[href]') : null; if (!a || a.target === '_blank') return;
+    const h = a.getAttribute('href') || ''; if (/^[A-Za-z0-9._-]+\.html(#.*)?$/.test(h)) { e.preventDefault(); yodIr(h); } }, true);
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const esc2 = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const fuente = p => p.forma === 'box'
+    ? { size: 13, color: '#1d1d1f', face: 'system-ui, -apple-system, sans-serif', multi: 'html', align: 'left', bold: { color: '#111111', size: 14, face: 'system-ui, -apple-system, sans-serif' } }
+    : { size: 14, color: css('--node-label') || '#222', face: 'system-ui, -apple-system, sans-serif', strokeWidth: 3, strokeColor: css('--bg') || '#fff' };
+  const estiloNodo = (n, apagado) => {
+    const p = Y.nodos[n.id] || {};
+    const o = { id: n.id, x: p.x, y: p.y, label: p.lbl, shape: p.forma, size: p.tam, opacity: apagado ? 0.14 : 1, title: undefined,
+      color: { background: p.color, border: p.al ? '#C8102E' : (p.bc || p.color), highlight: { background: p.color, border: '#111' }, hover: { background: p.color, border: '#111' } },
+      borderWidth: p.al ? 2.6 : (p.bc ? 2.4 : 1), borderWidthSelected: 3.5, font: fuente(p) };
+    if (p.forma === 'box') { o.widthConstraint = { minimum: p.caja, maximum: p.caja }; o.margin = 9; o.shapeProperties = { borderRadius: 7 }; }
+    return o;
+  };
+  const ocultas = new Set();
+  let foco = null;
+  const recto = RAW_EDGES.length > 380;
+  const det = r => Y.flechas[r.from + '>' + r.to] || Y.flechas[r.to + '>' + r.from] || {};
+  const estiloArista = e => {
+    const r = RAW_EDGES[e.id], fl = det(r), f = Y.familias[fl.f] || Y.familias.inferida;
+    const con = !foco || foco.aristas.has(e.id);
+    return { id: e.id, hidden: ocultas.has(fl.f || 'inferida'), width: con && foco ? f.ancho + 1.3 : f.ancho, title: undefined,
+             color: { color: f.color, opacity: con ? f.opacidad : 0.05, highlight: f.color, hover: f.color },
+             dashes: f.punteada, arrows: { to: { enabled: true, scaleFactor: 0.55 } }, smooth: recto ? false : { type: 'curvedCW', roundness: 0.12 } };
+  };
+  const pintar = () => {
+    nodesDS.update(nodesDS.get().map(n => estiloNodo(n, foco && !foco.nodos.has(n.id))));
+    edgesDS.update(edgesDS.get().map(estiloArista));
+  };
+  pintar();
+  network.setOptions({ physics: { enabled: false }, nodes: { labelHighlightBold: false, scaling: { label: { drawThreshold: 5, maxVisible: 44 } } },
+                       interaction: { hover: true, tooltipDelay: 150, zoomSpeed: 0.8, hideEdgesOnDrag: RAW_EDGES.length > 250, hideEdgesOnZoom: RAW_EDGES.length > 600 } });
+  new MutationObserver(() => setTimeout(pintar, 30)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  const enfocar = id => { foco = { nodos: new Set([id, ...network.getConnectedNodes(id)]), aristas: new Set(network.getConnectedEdges(id)) }; pintar(); };
+  network.on('selectNode', p => enfocar(p.nodes[0]));
+  network.on('deselectNode', () => { foco = null; pintar(); });
+
+  // barra: subir, familias de flecha y «Ver todo»
+  const barra = document.createElement('div');
+  barra.id = 'yod-barra';
+  barra.innerHTML = (Y.padre ? `<a class="yod-fuerte" href="${Y.padre[0]}">↑ ${esc2(Y.padre[1])}</a>` : '') +
+    Object.entries(Y.familias).filter(([k]) => Y.usadas.includes(k)).map(([k, f]) =>
+      `<button type="button" data-fam="${k}" aria-pressed="true" title="${f.nombre}"><i style="background:${f.color}"></i><span class="yod-l">${f.nombre}</span><span class="yod-c">${f.corto}</span></button>`).join('') +
+    '<button type="button" id="yod-todo" class="yod-fuerte">Ver todo</button>';
+  document.body.appendChild(barra);
+  barra.addEventListener('click', ev => {
+    const b = ev.target.closest('button'); if (!b) return;
+    if (b.id === 'yod-todo') { foco = null; network.unselectAll(); pintar(); ajustar(true); inicio(); return; }
+    const k = b.dataset.fam; if (ocultas.has(k)) ocultas.delete(k); else ocultas.add(k);
+    b.setAttribute('aria-pressed', String(!ocultas.has(k))); pintar();
+  });
+
+  // rejilla del cuadrante: los títulos crecen al alejarse para que siempre se lean
+  const g = Y.rejilla, W = g.cols.reduce((s, c) => s + c.w, 0), Ht = g.filas.reduce((s, f) => s + f.h, 0);
+  const MS = Math.max(70, Math.min(150, Ht * 0.07));
+  const letra = (ctx, t) => { ctx.font = '600 ' + t + 'px system-ui, -apple-system, sans-serif'; };
+  network.on('beforeDrawing', ctx => {
+    const sc = network.getScale() || 1;
+    const linea = css('--border') || '#ccc', texto = css('--text-2') || '#666', fondo = css('--panel') || '#f6f6f6';
+    ctx.save();
+    g.filas.forEach((f, i) => { if (i % 2 === 0) { ctx.fillStyle = fondo; ctx.globalAlpha = 0.6; ctx.fillRect(0, f.y, W, f.h); } });
+    ctx.globalAlpha = 1; ctx.strokeStyle = linea; ctx.lineWidth = 1.5 / Math.min(1, sc * 1.6);
+    g.cols.forEach(c => { ctx.beginPath(); ctx.moveTo(c.x, -MS); ctx.lineTo(c.x, Ht); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(W, -MS); ctx.lineTo(W, Ht); ctx.stroke();
+    g.filas.forEach(f => { ctx.beginPath(); ctx.moveTo(0, f.y); ctx.lineTo(W, f.y); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(0, Ht); ctx.lineTo(W, Ht); ctx.stroke();
+    ctx.fillStyle = texto; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'center';
+    g.cols.forEach(c => {
+      let t = Math.max(20, Math.min(15 / sc, MS * 0.62)); letra(ctx, t);
+      while (t > 11 && ctx.measureText(c.nombre).width > c.w - 14) { t -= 1; letra(ctx, t); }
+      if (ctx.measureText(c.nombre).width > c.w - 14) { const p = c.nombre.split(' '), m = Math.ceil(p.length / 2); ctx.fillText(p.slice(0, m).join(' '), c.x + c.w / 2, -t - 14); ctx.fillText(p.slice(m).join(' '), c.x + c.w / 2, -10); }
+      else ctx.fillText(c.nombre, c.x + c.w / 2, -12);
+    });
+    ctx.textAlign = 'left';
+    g.filas.forEach(f => {
+      let t = Math.max(17, Math.min(14 / sc, f.h * 0.4)); letra(ctx, t);
+      while (t > 12 && ctx.measureText(f.nombre).width > W - 20) { t -= 2; letra(ctx, t); }
+      ctx.globalAlpha = t > 30 ? 0.42 : 0.8; ctx.fillText(f.nombre, 9, f.y + t + 5);
+    });
+    ctx.globalAlpha = 1; ctx.restore();
+  });
+  const marco = (x0, y0, x1, y1, animar) => {
+    const el = document.getElementById('graph'), w = el.clientWidth, h = el.clientHeight;
+    const arriba = (document.getElementById('yod-barra') || { offsetHeight: 0 }).offsetHeight + 12;
+    const s = Math.max(0.04, Math.min((w - 10) / (x1 - x0), (h - arriba - 8) / (y1 - y0), 1.5));
+    network.moveTo({ position: { x: (x0 + x1) / 2, y: (y0 + y1) / 2 - arriba / 2 / s }, scale: s, animation: animar ? { duration: 350, easingFunction: 'easeInOutQuad' } : false });
+  };
+  const ajustar = animar => marco(-14, -MS - 6, W + 14, Ht + 12, animar);
+  const aFila = f => { const el = document.getElementById('graph'), r = el.clientWidth / Math.max(200, el.clientHeight - 60); marco(-10, f.y - 10, Math.min(W + 10, Math.max(540, (f.h + 20) * r)) - 10, f.y + f.h + 10, true); };
+  const aCol = c => { const el = document.getElementById('graph'), r = Math.max(200, el.clientHeight - 60) / el.clientWidth; marco(c.x - 12, -MS, c.x + c.w + 12, Math.min(Ht + 10, Math.max(420, (c.w + 24) * r) - MS), true); };
+  let tocado = false;
+  const cont = document.getElementById('graph');
+  ['pointerdown', 'wheel', 'touchstart'].forEach(ev => cont.addEventListener(ev, () => { tocado = true; }, { passive: true }));
+  network.once('afterDrawing', () => { if (!foco) ajustar(false); });
+  [60, 250, 700, 1500].forEach(ms => setTimeout(() => { if (!foco && !tocado) ajustar(false); }, ms));
+  window.addEventListener('resize', () => setTimeout(() => { if (!foco) ajustar(false); }, 80));
+  const ir = document.createElement('select'); ir.id = 'yod-ir'; ir.setAttribute('aria-label', 'Acercar a una fila o columna');
+  ir.innerHTML = '<option value="">Acercar a…</option><optgroup label="Filas">' + g.filas.map((f, i) => `<option value="f${i}">${esc2(f.nombre)}</option>`).join('') +
+    '</optgroup><optgroup label="Columnas">' + g.cols.map((c, i) => `<option value="c${i}">${esc2(c.nombre)}</option>`).join('') + '</optgroup>';
+  barra.insertBefore(ir, barra.querySelector('button'));
+  ir.addEventListener('change', () => { const v = ir.value; if (!v) return; tocado = true; if (v[0] === 'f') aFila(g.filas[+v.slice(1)]); else aCol(g.cols[+v.slice(1)]); ir.value = ''; });
+
+  // panel de detalle
+  const enlace = (t, id) => t[0] ? `<a href="${t[0]}#${encodeURIComponent(id)}">${esc2(t[1])}</a>` : esc2(t[1]);
+  window.showInfo = function (nodeId) {
+    const p = Y.nodos[nodeId]; if (!p) return;
+    const eds = network.getConnectedEdges(nodeId);
+    const vecinos = eds.map(eid => {
+      const r = RAW_EDGES[eid], otro = r.from === nodeId ? r.to : r.from, fl = det(r), q = Y.nodos[otro] || {};
+      return `<span class="neighbor-link" style="border-left-color:${esc2((Y.familias[fl.f] || {}).color || '#888')}" data-nid="${esc2(otro)}">${r.from === nodeId ? '→' : '←'} ${esc2(q.nombre || otro)} <i style="opacity:.72">· ${esc2(fl.r || '')}</i></span>`;
+    }).join('');
+    let h = `<div class="field"><b>${esc2(p.nombre)}</b></div><div class="field yod-tipo">${esc2(p.tipo)}${p.estado ? ' · ' + esc2(p.estado) : ''}</div>`;
+    if (p.dentro) h += `<a class="yod-entrar" href="${p.dentro[0]}">Entrar a ${esc2(p.dentro[1])} →</a>`;
+    if (p.nota) h += `<div class="field">${esc2(p.nota)}</div>`;
+    if (p.err) h += p.err.map(x => `<div class="field yod-alerta"><b>${x.tipo === 'cambio' ? 'Cambió' : 'Error'}</b> · ${esc2(x.msg)}${x.desde ? ' · desde ' + esc2(String(x.desde).slice(0, 10)) : ''}${x.url ? ` · <a href="${esc2(x.url)}" target="_blank" rel="noopener" style="color:inherit">ver</a>` : ''}</div>`).join('');
+    if (p.al) h += p.al.map(a => `<div class="field yod-alerta"><b>Hallazgo</b> · <a href="hallazgos.html#${encodeURIComponent(a[0])}" style="color:inherit">${esc2(a[1])}</a></div>`).join('');
+    if (p.lista) h += `<details class="yod-lista"${p.lista.length <= 24 ? ' open' : ''}><summary>${esc2(p.lt)}</summary><div>${p.lista.map(x => `<span>${esc2(x)}</span>`).join('')}</div></details>`;
+    if (p.ev) h += `<div class="field yod-ev">Evidencia: ${esc2(p.ev)}</div>`;
+    if (p.url) h += `<a class="yod-abrir" href="${esc2(p.url)}" target="_blank" rel="noopener">Abrir la fuente ↗</a>`;
+    if (p.tb && p.tb.length) h += `<div class="field yod-tb">También aparece en: ${p.tb.map(t => enlace(t, nodeId)).join(' · ')}</div>`;
+    h += `<div class="field yod-ev">Celda: ${esc2(p.celda)}</div>`;
+    if (eds.length) h += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Conexiones (${eds.length})</div><div id="neighbors-list">${vecinos}</div>`;
+    document.getElementById('info-content').innerHTML = h;
+  };
+  window.focusNode = function (id) {
+    const p = Y.nodos[id] || {}, el = document.getElementById('graph');
+    const s = p.forma === 'box' ? Math.min(1, (el.clientWidth - 24) / ((p.caja || 300) + 40)) : Math.min(0.9, Math.max(0.6, el.clientWidth / 520));
+    network.focus(id, { scale: s, animation: true }); network.selectNodes([id]); showInfo(id); enfocar(id);
+  };
+  const inicio = () => { const c = document.getElementById('info-content');
+    if (c) c.innerHTML = `<div class="field"><b>${esc2(Y.titulo)}</b></div><div class="field">${esc2(Y.sub)}</div><div class="field yod-ev">Toca un nodo para ver qué es, de dónde le llega y a dónde va. Con «Acercar a…» saltas a una fila o a una columna.</div>`; };
+  inicio();
+  network.on('click', p => {
+    if (p.nodes.length) return;
+    if (p.edges.length) {
+      const r = RAW_EDGES[p.edges[0]], fl = det(r), a = Y.nodos[r.from] || {}, b = Y.nodos[r.to] || {};
+      document.getElementById('info-content').innerHTML = `<div class="field"><b>${esc2(a.nombre)} → ${esc2(b.nombre)}</b></div><div class="field">${esc2(fl.r || '')}</div>` +
+        `<div class="field yod-tipo">${esc2((Y.familias[fl.f] || {}).nombre || '')}</div>` + (fl.nota ? `<div class="field">${esc2(fl.nota)}</div>` : '') +
+        (fl.ev ? `<div class="field yod-ev">Evidencia: ${esc2(fl.ev)}</div>` : '') +
+        `<span class="neighbor-link" data-nid="${esc2(r.from)}">← ${esc2(a.nombre)}</span><span class="neighbor-link" data-nid="${esc2(r.to)}">→ ${esc2(b.nombre)}</span>`;
+      return;
+    }
+    const c = p.pointer.canvas;
+    if (c.y < 0 && c.y > -MS - 30) { const col = g.cols.find(k => c.x >= k.x && c.x <= k.x + k.w); if (col) { aCol(col); return; } }
+    inicio();
+  });
+  network.on('doubleClick', p => { const d = p.nodes.length && Y.nodos[p.nodes[0]] && Y.nodos[p.nodes[0]].dentro; if (d) yodIr(d[0]); });
+
+  // textos del visor en español
+  const tx = (sel, t) => { const el = document.querySelector(sel); if (el) el.textContent = t; };
+  tx('#info-panel h3', 'Detalle'); tx('#legend-wrap h3', 'Celdas de esta lámina');
+  const inp = document.getElementById('search'); if (inp) inp.placeholder = 'Buscar en esta lámina…';
+  const lbl = document.querySelector('#legend-controls label'); if (lbl) lbl.lastChild.textContent = 'Todas';
+  document.querySelectorAll('[data-theme-choice]').forEach(b => { b.textContent = { light: 'Claro', dark: 'Oscuro', system: 'Sistema' }[b.dataset.themeChoice] || b.textContent; });
+  const st = document.getElementById('stats'); if (st) st.textContent = Y.pie;
+  const sim = document.createElement('div'); sim.id = 'yod-simbolos';
+  sim.innerHTML = Y.simbolos.map(s => `<b><span style="color:${s[1]}">${s[0]}</span> ${esc2(s[2])}</b>`).join('');
+  if (st && st.parentNode) st.parentNode.insertBefore(sim, st);
+
+  // errores en vivo: estado.json lo escribe el flujo «Grafo · estado» del repositorio
+  fetch(Y.estado || 'estado.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(E => {
+    if (!E || !E.errores) return; let n = 0;
+    E.errores.forEach(x => (x.nodos || []).forEach(id => { const p = Y.nodos[id]; if (!p) return; (p.err = p.err || []).push(x); if (x.tipo !== 'cambio') { p.al = p.al || []; p.bc = '#C8102E'; } else if (!p.bc) p.bc = '#C99A12'; n++; }));
+    if (n) { pintar(); const st2 = document.getElementById('stats'); if (st2) st2.textContent = Y.pie + ' · estado del ' + (E.generado || '').slice(0, 16).replace('T', ' ') + ' UTC'; }
+  }).catch(() => {});
+  // llegar con un nodo señalado en la liga, y avisar a la portada qué lámina es
+  const abrir = () => { let id = ''; try { id = window.YOD_FOCO || decodeURIComponent(location.hash.slice(1)); } catch (e) {} if (Y.nodos[id]) focusNode(id); };
+  if (window.YOD_FOCO || location.hash.length > 1) setTimeout(abrir, 280);
+  window.addEventListener('hashchange', abrir);
+  try { if (window.parent && window.parent !== window) window.parent.postMessage({ yod: 1, id: Y.id }, '*'); } catch (e) {}
+})();
+
+network.once('stabilizationIterationsDone', () => {
+  network.setOptions({ physics: { enabled: false } });
+});
+
+function showInfo(nodeId) {
+  const n = nodesDS.get(nodeId);
+  if (!n) return;
+  const neighborIds = network.getConnectedNodes(nodeId);
+  const neighborItems = neighborIds.map(nid => {
+    const nb = nodesDS.get(nid);
+    const color = nb ? nb.color.background : '#555';
+    return `<span class="neighbor-link" style="border-left-color:${esc(color)}" data-nid="${esc(nid)}">${esc(nb ? nb.label : nid)}</span>`;
+  }).join('');
+  const isMetaNode = !n.file_type && !n.source_file;
+  let html = `<div class="field"><b>${esc(n.label)}</b></div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Type: ${esc(n.file_type || 'unknown')}</div>`;
+  }
+  html += `<div class="field">Community: ${esc(n.community_name || '')}</div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Source: ${esc(n.source_file || '-')}</div>`;
+  } else if (n.member_count !== undefined && n.member_count !== null) {
+    html += `<div class="field">Members: ${esc(n.member_count)}</div>`;
+  }
+  html += `<div class="field">Degree: ${n.degree}</div>`;
+  if (neighborIds.length) {
+    html += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Neighbors (${neighborIds.length})</div><div id="neighbors-list">${neighborItems}</div>`;
+  }
+  document.getElementById('info-content').innerHTML = html;
+}
+
+function focusNode(nodeId) {
+  network.focus(nodeId, { scale: 1.4, animation: true });
+  network.selectNodes([nodeId]);
+  showInfo(nodeId);
+}
+
+// Neighbor links use a data attribute + one delegated listener rather than an
+// inline onclick. A node id/label sourced from a document or a scraped URL
+// (graphify add) can contain a double-quote; dropping the stringified id
+// unescaped into a quoted onclick both broke every link and allowed a hostile
+// source to inject an event handler into the local report (stored XSS, #1838).
+// esc() on data-nid keeps the value inside the attribute; the listener reads it
+// back verbatim. Bound to document so it survives the innerHTML rebuild that
+// recreates #neighbors-list on each showInfo().
+document.addEventListener('click', e => {
+  const el = e.target.closest('.neighbor-link');
+  if (el && el.dataset.nid !== undefined) focusNode(el.dataset.nid);
+});
+
+// Sidebar tooltips reuse vis-network's .vis-tooltip style and 100ms tooltipDelay.
+// Names get one only when CSS ellipsis truncates them (the full text is still in
+// the DOM); counts always get one, to say what the number is. Text is set with
+// textContent only (labels are untrusted). Delegated on document so rows rebuilt
+// later (search results, showInfo()) are covered.
+const sidebarTip = document.createElement('div');
+sidebarTip.className = 'vis-tooltip';
+sidebarTip.style.cssText = 'white-space: normal; max-width: 360px; overflow-wrap: break-word;';
+document.body.appendChild(sidebarTip);
+let sidebarTipTimer = null;
+let sidebarTipEl = null;    // element whose text the tooltip shows
+let sidebarTipZone = null;  // element the pointer must leave to hide it
+function hideSidebarTip() {
+  clearTimeout(sidebarTipTimer);
+  sidebarTip.style.visibility = 'hidden';
+  sidebarTip.textContent = '';
+  sidebarTipEl = sidebarTipZone = null;
+}
+document.addEventListener('mouseover', e => {
+  const zone = e.target.closest && e.target.closest('.legend-count, .legend-item, .search-item, .neighbor-link');
+  // Anywhere on a legend row except its count (dot, checkbox, gaps, padding)
+  // stands for the row's name, so moving within the row never re-triggers it.
+  const el = zone && zone.classList.contains('legend-item') ? zone.querySelector('.legend-label') : zone;
+  if (!el || el === sidebarTipEl) return;
+  hideSidebarTip();
+  const isCount = el.classList.contains('legend-count');
+  if (!isCount && el.scrollWidth <= el.clientWidth) return;
+  const text = isCount ? `${el.textContent} ${el.textContent === '1' ? 'nodo' : 'nodos'}` : el.textContent;
+  sidebarTipEl = el;
+  sidebarTipZone = zone;
+  const x = e.clientX, y = e.clientY;
+  sidebarTipTimer = setTimeout(() => {
+    sidebarTip.textContent = text;
+    sidebarTip.style.left = sidebarTip.style.top = '0px';  // measure at full max-width
+    sidebarTip.style.visibility = 'visible';
+    const w = sidebarTip.offsetWidth, h = sidebarTip.offsetHeight;
+    sidebarTip.style.left = Math.max(4, Math.min(x + 12, window.innerWidth - w - 4)) + 'px';
+    sidebarTip.style.top = (y + 16 + h > window.innerHeight ? Math.max(4, y - h - 8) : y + 16) + 'px';
+  }, 100);
+});
+document.addEventListener('mouseout', e => {
+  if (sidebarTipZone && !sidebarTipZone.contains(e.relatedTarget)) hideSidebarTip();
+});
+// A click rebuilds or hides the row (showInfo(), search pick) without a mouseout.
+document.addEventListener('mousedown', hideSidebarTip);
+
+// Track hovered node — hover detection is more reliable than click params
+let hoveredNodeId = null;
+network.on('hoverNode', params => {
+  hoveredNodeId = params.node;
+  container.style.cursor = 'pointer';
+});
+network.on('blurNode', () => {
+  hoveredNodeId = null;
+  container.style.cursor = 'default';
+});
+container.addEventListener('click', () => {
+  if (hoveredNodeId !== null) {
+    showInfo(hoveredNodeId);
+    network.selectNodes([hoveredNodeId]);
+  }
+});
+network.on('click', params => {
+  if (params.nodes.length > 0) {
+    showInfo(params.nodes[0]);
+  } else if (hoveredNodeId === null) {
+    document.getElementById('info-content').innerHTML = '<span class="empty">Toca un nodo para ver su detalle</span>';
+  }
+});
+
+const searchInput = document.getElementById('search');
+const searchResults = document.getElementById('search-results');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  searchResults.innerHTML = '';
+  if (!q) { searchResults.style.display = 'none'; return; }
+  const matches = RAW_NODES.filter(n => n.label.toLowerCase().includes(q)).slice(0, 20);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.style.display = 'block';
+  matches.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'search-item';
+    el.textContent = n.label;
+    el.style.borderLeft = `3px solid ${n.color.background}`;
+    el.style.paddingLeft = '8px';
+    el.onclick = () => {
+      network.focus(n.id, { scale: 1.5, animation: true });
+      network.selectNodes([n.id]);
+      showInfo(n.id);
+      searchResults.style.display = 'none';
+      searchInput.value = '';
+    };
+    searchResults.appendChild(el);
+  });
+});
+document.addEventListener('click', e => {
+  if (!searchResults.contains(e.target) && e.target !== searchInput)
+    searchResults.style.display = 'none';
+});
+
+const hiddenCommunities = new Set();
+
+const selectAllCb = document.getElementById('select-all-cb');
+
+function updateSelectAllState() {
+  const total = LEGEND.length;
+  const hidden = hiddenCommunities.size;
+  selectAllCb.checked = hidden === 0;
+  selectAllCb.indeterminate = hidden > 0 && hidden < total;
+}
+
+function toggleAllCommunities(hide) {
+  document.querySelectorAll('.legend-item').forEach(item => {
+    hide ? item.classList.add('dimmed') : item.classList.remove('dimmed');
+  });
+  document.querySelectorAll('.legend-cb').forEach(cb => {
+    cb.checked = !hide;
+  });
+  LEGEND.forEach(c => {
+    if (hide) hiddenCommunities.add(c.cid); else hiddenCommunities.delete(c.cid);
+  });
+  const updates = RAW_NODES.map(n => ({ id: n.id, hidden: hide }));
+  nodesDS.update(updates);
+  updateSelectAllState();
+}
+
+const legendEl = document.getElementById('legend');
+LEGEND.forEach(c => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.className = 'legend-cb';
+  cb.checked = true;
+  cb.addEventListener('change', (e) => {
+    e.stopPropagation();
+    if (cb.checked) {
+      hiddenCommunities.delete(c.cid);
+      item.classList.remove('dimmed');
+    } else {
+      hiddenCommunities.add(c.cid);
+      item.classList.add('dimmed');
+    }
+    const updates = RAW_NODES
+      .filter(n => n.community === c.cid)
+      .map(n => ({ id: n.id, hidden: !cb.checked }));
+    nodesDS.update(updates);
+    updateSelectAllState();
+  });
+  item.innerHTML = `<div class="legend-dot" style="background:${c.color}"></div>
+    <span class="legend-label">${c.label}</span>
+    <span class="legend-count">${c.count}</span>`;
+  item.prepend(cb);
+  item.onclick = (e) => {
+    if (e.target === cb) return;
+    cb.checked = !cb.checked;
+    cb.dispatchEvent(new Event('change'));
+  };
+  legendEl.appendChild(item);
+});
+</script>
+<script>
+// Render hyperedges as shaded regions
+const hyperedges = [];
+// afterDrawing passes ctx already transformed to network coordinate space.
+// Draw node positions raw — no manual pan/zoom/DPR math needed.
+
+// Andrew's monotone chain. Returns the hull in counter-clockwise order, which
+// is what the perimeter must be traced in. Collinear and duplicate points
+// collapse to the extremes, so degenerate member sets render as a segment
+// rather than a zero-area crossed path.
+function convexHull(pts) {
+    const p = pts.slice().sort((a, b) => (a.x - b.x) || (a.y - b.y));
+    if (p.length < 3) return p;
+    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const build = seq => {
+        const out = [];
+        for (const q of seq) {
+            while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+            out.push(q);
+        }
+        out.pop();
+        return out;
+    };
+    const hull = build(p).concat(build(p.slice().reverse()));
+    return hull.length >= 3 ? hull : p;
+}
+network.on('afterDrawing', function(ctx) {
+    hyperedges.forEach(h => {
+        // Legend toggles only set `hidden` on nodes; getPositions() still
+        // returns them, so skip hidden members or their hull lingers.
+        const positions = h.nodes
+            .filter(nid => { const n = nodesDS.get(nid); return n && n.hidden !== true; })
+            .map(nid => network.getPositions([nid])[nid])
+            .filter(p => p !== undefined);
+        if (positions.length < 2) return;
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#6366f1';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Centroid and expanded hull in network coordinates.
+        // The perimeter must follow hull order, not h.nodes order: tracing the
+        // raw member order self-intersects whenever the layout does not happen
+        // to place members in angular order, filling as crossed wedges.
+        const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length;
+        const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length;
+        const hull = convexHull(positions);
+        const expanded = hull.map(p => ({
+            x: cx + (p.x - cx) * 1.15,
+            y: cy + (p.y - cy) * 1.15
+        }));
+        ctx.moveTo(expanded[0].x, expanded[0].y);
+        expanded.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+        // Label
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#4f46e5';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(h.label, cx, cy - 5);
+        ctx.restore();
+    });
+});
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 {
-  "model_revision": "2026-10-29.ppp40-semilla.1",
+  "model_revision": "2026-11-13.ppp40-semilla.1",
   "proposal_id": "CHG-PPP40-SEMILLA-20261029",
   "summary": "PPP4 incremental: catálogo literal, grafo puro y semilla incompleta versionada dentro del frontend existente. Persistencia propuesta por módulo opt-in en la MISMA implementación GAS y tablas del master. Sin nueva URL, ACL, segundo motor financiero ni datos privados. Seed_id pre-alta es identidad de borrador, no board_case_id; promoción debe preservar vínculo explícito y no se presenta implementada.",
   "components": [

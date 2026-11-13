@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Código · amalaya-board · public/ · YOD OS en Graphify</title>
+<script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
+        integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"
+        crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #0f0f1a; --panel: #1a1a2e; --border: #2a2a4e; --input-border: #3a3a5e;
+    --text: #e0e0e0; --text-2: #aaa; --text-3: #ccc; --muted: #555; --count: #666;
+    --neighbor-border: #333; --node-label: #ffffff;
+  }
+  [data-theme="light"] {
+    --bg: #ffffff; --panel: #f8f9fa; --border: #d9dee5; --input-border: #c3cad4;
+    --text: #222222; --text-2: #666666; --text-3: #333333; --muted: #888888; --count: #777777;
+    --neighbor-border: #ccc; --node-label: #222222;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  #graph { flex: 1; }
+  #sidebar { width: 280px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  #search-wrap { padding: 12px; border-bottom: 1px solid var(--border); }
+  #search { width: 100%; background: var(--bg); border: 1px solid var(--input-border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+  #search:focus { border-color: #4E79A7; }
+  #search-results { max-height: 140px; overflow-y: auto; padding: 4px 12px; border-bottom: 1px solid var(--border); display: none; }
+  .search-item { padding: 4px 6px; cursor: pointer; border-radius: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-item:hover { background: var(--border); }
+  #info-panel { padding: 14px; border-bottom: 1px solid var(--border); min-height: 140px; }
+  #info-panel h3 { font-size: 13px; color: var(--text-2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #info-content { font-size: 13px; color: var(--text-3); line-height: 1.6; }
+  #info-content .field { margin-bottom: 5px; }
+  #info-content .field b { color: var(--text); }
+  #info-content .empty { color: var(--muted); font-style: italic; }
+  .neighbor-link { display: block; padding: 2px 6px; margin: 2px 0; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--neighbor-border); }
+  .neighbor-link:hover { background: var(--border); }
+  #neighbors-list { max-height: 160px; overflow-y: auto; margin-top: 4px; }
+  #legend-wrap { flex: 1; overflow-y: auto; padding: 12px; }
+  #legend-wrap h3 { font-size: 13px; color: var(--text-2); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
+  .legend-item:hover { background: var(--border); padding-left: 4px; }
+  .legend-item.dimmed { opacity: 0.35; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-count { color: var(--count); font-size: 11px; }
+  #stats { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  #legend-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 4px 0; }
+  #legend-controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-2); user-select: none; }
+  #legend-controls label:hover { color: var(--text); }
+  .legend-cb, #select-all-cb { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid var(--input-border); border-radius: 3px; background: var(--bg); cursor: pointer; position: relative; flex-shrink: 0; }
+  .legend-cb:checked, #select-all-cb:checked { background: #4E79A7; border-color: #4E79A7; }
+  .legend-cb:checked::after, #select-all-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  #select-all-cb:indeterminate { background: #4E79A7; border-color: #4E79A7; }
+  #select-all-cb:indeterminate::after { content: ''; position: absolute; left: 2px; top: 5px; width: 8px; height: 2px; background: #fff; border: none; transform: none; }
+  #theme-wrap { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  #theme-wrap button { flex: 1; background: var(--bg); color: var(--text-2); border: 1px solid var(--input-border); border-radius: 4px; padding: 3px 0; font-size: 11px; cursor: pointer; }
+  #theme-wrap button:hover { color: var(--text); }
+  #theme-wrap button[aria-pressed="true"] { background: #4E79A7; border-color: #4E79A7; color: #fff; }
+</style>
+<script id="graphify-theme-init">
+// Apply the saved theme before first paint (#3894). No saved choice keeps the
+// historical dark look; "system" follows prefers-color-scheme.
+(function () {
+  var pref = null;
+  try { pref = localStorage.getItem('graphify-theme'); } catch (e) {}
+  var t = pref === 'light' ? 'light'
+    : pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light'
+    : window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<style id="yod-capa">
+  #graph { position: relative; }
+  #yod-barra { position: fixed; top: 8px; left: 8px; right: 296px; z-index: 5; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+  #yod-barra button, #yod-barra a, #yod-barra select { pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; font: 500 12px system-ui, -apple-system, sans-serif; text-decoration: none;
+    color: var(--text); background: var(--panel); border: 1px solid var(--input-border); border-radius: 999px; padding: 5px 10px; min-height: 30px; cursor: pointer; }
+  #yod-barra button[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+  #yod-barra select { max-width: 150px; appearance: auto; }
+  #yod-barra i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  #yod-barra .yod-fuerte { font-weight: 650; }
+  #yod-barra .yod-c { display: none; }
+  .neighbor-link { white-space: normal !important; overflow-wrap: anywhere; line-height: 1.35; padding: 5px 6px !important; }
+  #neighbors-list { max-height: 260px !important; }
+  #info-content .field { overflow-wrap: anywhere; }
+  #info-content a { color: #4E79A7; }
+  [data-theme="dark"] #info-content a { color: #8FB8E8; }
+  .yod-tipo { color: var(--text-2); font-size: 12px; }
+  .yod-ev { color: var(--text-2); font-size: 11.5px; }
+  .yod-alerta { color: #C8102E; } [data-theme="dark"] .yod-alerta { color: #FF7B8A; }
+  .yod-entrar { display: block; margin: 8px 0; padding: 9px 11px; border-radius: 8px; background: #4E79A7; color: #fff !important; font-weight: 600; text-decoration: none; font-size: 13px; }
+  .yod-abrir { display: inline-block; margin: 2px 0 6px; font-size: 12px; }
+  .yod-lista { margin: 6px 0; font-size: 12px; } .yod-lista summary { cursor: pointer; color: var(--text-2); padding: 3px 0; }
+  .yod-lista div { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 0; } .yod-lista span { border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font: 11.5px ui-monospace, Menlo, monospace; }
+  .yod-tb { font-size: 12px; line-height: 1.7; }
+  #yod-simbolos { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 3px 10px; }
+  #yod-simbolos b { font-weight: 400; }
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    #graph { flex: 1 1 auto; min-height: 54vh; }
+    #sidebar { display: block; width: auto; max-height: 46vh; overflow-y: auto; border-left: 0; border-top: 1px solid var(--border); }
+    #theme-wrap { display: none; }
+    #info-panel { min-height: 0; }
+    #legend-wrap { overflow: visible; }
+    #yod-barra { right: 8px; gap: 4px; }
+    #yod-barra button, #yod-barra a, #yod-barra select { font-size: 11px; padding: 4px 8px; min-height: 28px; }
+    #yod-barra .yod-l { display: none; } #yod-barra .yod-c { display: inline; }
+    #yod-barra select { max-width: 112px; }
+    #yod-barra a.yod-fuerte { max-width: 150px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: inline-block; line-height: 20px; }
+  }
+</style>
+<script id="yod-datos">window.YOD = {"id":"codigo-amalaya-board-public","titulo":"Código · amalaya-board · public/","sub":"Carpeta public/ del repositorio amalaya-board.","padre":["codigo-amalaya-board.html","Código · amalaya-board"],"nodos":{"amalaya-board::public_plan_accion_amalaya_html_inline":{"x":111,"y":72,"nombre":"plan-accion-amalaya.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"(esta carpeta) · Páginas","lbl":"plan-accion-amalay\na.html","ev":"amalaya-board/public/plan-accion-amalaya.html · 20 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/plan-accion-amalaya.html","lt":"Funciones y símbolos (9)","lista":["esc()  · L11","openIds  · L11","params  · L11","reviewState()  · L12","render()  · L13","safeHref()  · L14","sourceLink()  · L15","currentReview()  · L16","card()  · L17"],"tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::public_modelo_completo_html_inline":{"x":277,"y":72,"nombre":"modelo-completo.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"(esta carpeta) · Páginas","lbl":"\nmodelo-completo.html","ev":"amalaya-board/public/modelo-completo.html · 64 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/modelo-completo.html","lt":"Funciones y símbolos (3)","lista":["compactModel  · L51","buildingPanel  · L52","fitPanel()  · L53"],"tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::public_chinche":{"x":665,"y":72,"nombre":"chinche.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"(esta carpeta) · Código","lbl":"chinche.js","ev":"amalaya-board/public/chinche.js · 1582 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/chinche.js","lt":"Funciones y símbolos (123)","lista":["timeline()  · L8","audioType()  · L14","audioParts()  · L19","normalizeAudio()  · L24","draftStore()  · L25","database()  · L27","run()  · L28","visibleStrokes()  · L31","draw()  · L32","validate()  · L42","dataURL()  · L53","style()  · L54","microphoneBridge()  · L57","cleanup()  · L62","fail()  · L63","receive()  · L64","mount()  · L77","raw()  · L88","checkpoint()  · L89","schedule()  · L90","download()  · L91","restore()  · L93","frame()  · L96","point()  · L97","end()  · L100","release()  · L103","halt()  · L104","value()  · L122","replay()  · L128","show()  · L130","pause()  · L132","tick()  · L133","leerN()  · L183","guardarN()  · L184","quien()  · L191","abrirBD()  · L201","tx()  · L217","pedir()  · L218","todas()  · L220","foto()  · L225","guardar()  · L229","borrar()  · L239","pendientes()  · L248","sello()  · L251","p()  · L252","nuevoId()  · L255","p()  · L256","repoDe()  · L264","repoActual()  · L274","repoDeChinche()  · L275","aparato()  · L276","capturarLienzo()  · L282","flecha()  · L298","tarjetaContexto()  · L309","cortar()  · L344","conTope()  · L358","conTopeError()  · L361","aBlob()  · L364","mini()  · L369","vacia()  · L381","recorteDe()  · L390","corto()  · L410","limpiar()  · L411","unir()  · L430","pedirContexto()  · L440","fotoDeExtra()  · L448","leerLienzo()  · L480","fin()  · L483","leer()  · L484","rutaCorta()  · L498","… y 53 más"],"tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"]]},"f:amalaya-board:public/data.json":{"x":1219,"y":72,"nombre":"data.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"(esta carpeta) · Documentos y datos","lbl":"data.json","ev":"amalaya-board/public/data.json · 268 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/data.json"},"f:amalaya-board:public/estado.json":{"x":1385,"y":72,"nombre":"estado.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"(esta carpeta) · Documentos y datos","lbl":"estado.json","ev":"amalaya-board/public/estado.json · 6 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/estado.json"},"f:amalaya-board:public/seguimiento-3d.json":{"x":1551,"y":72,"nombre":"seguimiento-3d.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"(esta carpeta) · Documentos y datos","lbl":"\nseguimiento-3d.json","ev":"amalaya-board/public/seguimiento-3d.json · 16212 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/seguimiento-3d.json"},"f:amalaya-board:public/seguimiento-3d.md":{"x":1219,"y":156,"nombre":"seguimiento-3d.md","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"(esta carpeta) · Documentos y datos","lbl":"seguimiento-3d.md","ev":"amalaya-board/public/seguimiento-3d.md · 289 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/seguimiento-3d.md"},"f:amalaya-board:public/seguimiento-ligero.json":{"x":1385,"y":156,"nombre":"seguimiento-ligero.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"(esta carpeta) · Documentos y datos","lbl":"seguimiento-ligero\n.json","ev":"amalaya-board/public/seguimiento-ligero.json · 1 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/seguimiento-ligero.json"},"amalaya-board::public_levantamiento_cuadra_detail_data":{"x":665,"y":300,"nombre":"cuadra-detail-data.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"levantamiento/ · Código","lbl":"cuadra-detail-data\n.js","ev":"amalaya-board/public/levantamiento/cuadra-detail-data.js · 324 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/cuadra-detail-data.js","lt":"Funciones y símbolos (2)","lista":["CUADRA_DETAILS  · L103","SIN_LOD  · L322"],"tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"],["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"amalaya-board::public_levantamiento_fabrica_fachadas":{"x":831,"y":300,"nombre":"fabrica-fachadas.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"levantamiento/ · Código","lbl":"\nfabrica-fachadas.js","ev":"amalaya-board/public/levantamiento/fabrica-fachadas.js · 78 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/fabrica-fachadas.js","lt":"Funciones y símbolos (16)","lista":["PALETA  · L7","TIPOLOGIAS  · L13","r3()  · L22","modulos()  · L25","bandas()  · L31","ventana()  · L37","puerta()  · L39","frenteCasa()  · L42","frenteComercio()  · L50","frenteMuro()  · L56","TIPO  · L61","fachada()  · L64","fachadas()  · L72","tinaco()  · L75","ventila()  · L76","calentador()  · L77"],"tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"],["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"amalaya-board::public_levantamiento_sheet_plan_refinement":{"x":997,"y":300,"nombre":"sheet-plan-refinement.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"levantamiento/ · Código","lbl":"sheet-plan-refinem\nent.js","ev":"amalaya-board/public/levantamiento/sheet-plan-refinement.js · 93 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/sheet-plan-refinement.js","lt":"Funciones y símbolos (1)","lista":["applySheetPlan()  · L9"],"tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"],["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"amalaya-board::public_levantamiento_modelo_completo":{"x":665,"y":384,"nombre":"modelo-completo.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"levantamiento/ · Código","lbl":"modelo-completo.js","ev":"amalaya-board/public/levantamiento/modelo-completo.js · 163 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/modelo-completo.js","lt":"Funciones y símbolos (30)","lista":["canvas  · L6","ctx  · L6","faceCanvas  · L8","faceContext  · L8","buildings  · L9","target  · L9","triangles  · L9","visibleLabelHits  · L10","labelTap  · L11","palette  · L12","EB_SW_PARTS  · L15","roofPoint()  · L20","makeIdentification()  · L21","focusBlock()  · L41","historicalNotice()  · L46","focusLabel()  · L52","showBlockEntry()  · L53","identificationDraw()  · L58","identificationPanel()  · L65","params  · L81","updateSelection()  · L86","report()  · L87","schedule()  · L88","render()  · L89","overviewSpan()  · L104","choose()  · L105","mode()  · L115","touches  · L118","load()  · L125","ground  · L162"],"tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"],["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"amalaya-board::public_levantamiento_plan_review_refinement":{"x":831,"y":384,"nombre":"plan-review-refinement.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"levantamiento/ · Código","lbl":"plan-review-refine\nment.js","ev":"amalaya-board/public/levantamiento/plan-review-refinement.js · 2 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/plan-review-refinement.js","lt":"Funciones y símbolos (3)","lista":["applyPlanReview()  · L1","local()  · L1","REVIEW_OB01  · L1"],"tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"],["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"amalaya-board::public_levantamiento_paramento_refinement":{"x":997,"y":384,"nombre":"paramento-refinement.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"levantamiento/ · Código","lbl":"paramento-refineme\nnt.js","ev":"amalaya-board/public/levantamiento/paramento-refinement.js · 471 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/paramento-refinement.js","lt":"Funciones y símbolos (14)","lista":["roundedFront()  · L11","registro82()  · L37","applyParamento()  · L66","solidCells()  · L77","mesh()  · L86","block()  · L87","rod()  · L88","arch()  · L90","wall()  · L91","removeOwner()  · L191","addFront()  · L198","compact()  · L298","wallColliders()  · L320","overlayFront()  · L329"],"tb":[["codigo-amalaya-board.html","Código · amalaya-board"],["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"amalaya-board::public_levantamiento_c02_10_data":{"x":665,"y":468,"nombre":"c02-10-data.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"levantamiento/ · Código","lbl":"c02-10-data.js","ev":"amalaya-board/public/levantamiento/c02-10-data.js · 54 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/c02-10-data.js","lt":"Funciones y símbolos (17)","lista":["tinacoBajo()  · L17","A  · L18","B  · L18","C  · L18","D  · L18","E  · L18","F  · L18","G  · L18","H  · L18","split  · L19","oriente  · L20","poniente  · L20","largo()  · L21","dosNiveles()  · L24","vidrio()  · L29","bandaRosales  · L30","C02_10  · L31"],"tb":[["codigo-amalaya-board.html","Código · amalaya-board"],["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"amalaya-board::public_levantamiento_paramento_data":{"x":831,"y":468,"nombre":"paramento-data.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"levantamiento/ · Código","lbl":"paramento-data.js","ev":"amalaya-board/public/levantamiento/paramento-data.js · 101 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/paramento-data.js","lt":"Funciones y símbolos (14)","lista":["PARAMENTO_VERSION  · L5","frontZ()  · L6","pt()  · L7","FRONT_BUILDINGS  · L8","HEIGHT_REVIEWS  · L34","COURTYARD_REVIEWS  · L50","JOIN_REVIEWS  · L51","blueEast  · L65","blueWest  · L65","whiteEast  · L65","whiteWest  · L65","splitBack  · L66","splitFront  · L66","ROUND2_BUILDINGS  · L67"],"tb":[["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"mas:codigo-amalaya-board-public:codigo:levantamiento/":{"x":997,"y":468,"nombre":"+123 archivos más","forma":"dot","tam":9,"color":"#8A8F98","tipo":"Grupo","celda":"levantamiento/ · Código","lbl":"+123 archivos más","lt":"Incluye","lista":["ground-reference-refinement.js","street-batch50-refinement.js","walk-navigation.js","c02-12-data.js","c11-89-data.js","cuadra-c02-aproximada.js","c01-08-data.js","c03-26-data.js","c05-17-data.js","c07-06-data.js","c08-01-data.js","c28-51-data.js","evidence-policy.mjs","ground-reference-data.js","sector-visor.js","ajuste-visual-refinement.js","c01-09-data.js","c02-13-data.js","c04-23-data.js","c04-24-data.js","c04-25-data.js","c05-14-data.js","c08-02-data.js","c09-102-data.js","c1-13-barandal.js","c10-87-data.js","c10-88-data.js","c14-94-data.js","c15-112-data.js","c15-113-data.js","c15-115-data.js","c16-116-data.js","c16-117-data.js","c18-119-data.js","c18-122-data.js","c18-123-data.js","c18-124-data.js","c18-130-data.js","c18-133-data.js","c18-137-data.js","c18-138-data.js","c18-139-data.js","c19-106-data.js","c19-107-data.js","c19-108-data.js","c21-40-data.js","c21-41-data.js","c30-30-data.js","cuadra-c05-aproximada.js","depth-raster.js","label-interaction.js","visor-loader.js","bloque1-serdan-20261026.js","c01-07-data.js","c02-11-data.js","c03-27-data.js","c05-15-data.js","c05-16-data.js","c05-18-data.js","c05-19-data.js","c05-20-data.js","c08-03-data.js","c09-100-data.js","c09-101-data.js","c09-95-data.js","c09-96-data.js","c09-97-data.js","c09-98-data.js","c09-99-data.js","c10-84-data.js","c10-85-data.js","c10-86-data.js","c14-90-data.js","c14-91-data.js","c14-92-data.js","c14-93-data.js","c15-114-data.js","c17-118-data.js","c18-120-data.js","c18-121-data.js","c18-125-data.js","c18-126-data.js","c18-127-data.js","c18-128-data.js","c18-129-data.js","c18-131-data.js","c18-132-data.js","c18-134-data.js","c18-135-data.js","c18-136-data.js","c19-103-data.js","c19-104-data.js","c19-105-data.js","c19-109-data.js","c19-110-data.js","c19-111-data.js","c24-59-data.js","c24-60-data.js","c24-61-data.js","c24-62-data.js","c24-63-data.js","c30-28-data.js","c30-29-data.js","c30-31-data.js","c30-32-data.js","c30-33-data.js","corredor-obregon-20261026.js","medir-aerea.py","medir-aerea.py","obregon-aproximado-data.js","world.js","ajuste-visual-data.js","banquetas-refinement.js","calzadas-refinement.js","ebsw-refinement.js","index-RoPA5goG.js","isc58-refinement.js","paramento-sidewalks.js","plantas-refinement.js","serdan-aproximado-data.js","sheet-plan-data.js","street-batch50-data.js","triangular-fotos.py"],"dentro":["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]},"f:amalaya-board:public/levantamiento/anclas-geometria-actual.json":{"x":1219,"y":300,"nombre":"anclas-geometria-actual.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"levantamiento/ · Documentos y datos","lbl":"anclas-geometria-a\nctual.json","ev":"amalaya-board/public/levantamiento/anclas-geometria-actual.json · 55 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/anclas-geometria-actual.json","tb":[["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"f:amalaya-board:public/levantamiento/banquetas-provenance.json":{"x":1385,"y":300,"nombre":"banquetas-provenance.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"levantamiento/ · Documentos y datos","lbl":"banquetas-provenan\nce.json","ev":"amalaya-board/public/levantamiento/banquetas-provenance.json · 12 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/banquetas-provenance.json","tb":[["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"f:amalaya-board:public/levantamiento/calzadas-provenance.json":{"x":1551,"y":300,"nombre":"calzadas-provenance.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"levantamiento/ · Documentos y datos","lbl":"calzadas-provenanc\ne.json","ev":"amalaya-board/public/levantamiento/calzadas-provenance.json · 12 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/calzadas-provenance.json","tb":[["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"f:amalaya-board:public/levantamiento/cuadras.json":{"x":1219,"y":384,"nombre":"cuadras.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"levantamiento/ · Documentos y datos","lbl":"cuadras.json","ev":"amalaya-board/public/levantamiento/cuadras.json · 2 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/cuadras.json","tb":[["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"f:amalaya-board:public/levantamiento/direcciones-referencias.json":{"x":1385,"y":384,"nombre":"direcciones-referencias.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"levantamiento/ · Documentos y datos","lbl":"direcciones-refere\nncias.json","ev":"amalaya-board/public/levantamiento/direcciones-referencias.json · 91 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/direcciones-referencias.json","tb":[["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"f:amalaya-board:public/levantamiento/ebsw-provenance.json":{"x":1551,"y":384,"nombre":"ebsw-provenance.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"levantamiento/ · Documentos y datos","lbl":"\nebsw-provenance.json","ev":"amalaya-board/public/levantamiento/ebsw-provenance.json · 18 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/ebsw-provenance.json","tb":[["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"f:amalaya-board:public/levantamiento/encaje-edificios-referencia.json":{"x":1219,"y":468,"nombre":"encaje-edificios-referencia.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"levantamiento/ · Documentos y datos","lbl":"encaje-edificios-r\neferencia.json","ev":"amalaya-board/public/levantamiento/encaje-edificios-referencia.json · 2 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/encaje-edificios-referencia.json","tb":[["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"f:amalaya-board:public/levantamiento/evidence/D1-09/20261030-equipo/ficha.md":{"x":1385,"y":468,"nombre":"ficha.md","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"levantamiento/ · Documentos y datos","lbl":"ficha.md","ev":"amalaya-board/public/levantamiento/evidence/D1-09/20261030-equipo/ficha.md · 18 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/evidence/D1-09/20261030-equipo/ficha.md","tb":[["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"mas:codigo-amalaya-board-public:doc:levantamiento/":{"x":1551,"y":468,"nombre":"+14 archivos más","forma":"dot","tam":9,"color":"#8A8F98","tipo":"Grupo","celda":"levantamiento/ · Documentos y datos","lbl":"+14 archivos más","lt":"Incluye","lista":["ground-audit.json","ground-reference.json","identificadores-provisionales.json","isc58-provenance.json","modelo-ligero.json","plan-accion-data.json","plantas-provenance.json","poligono-glb.txt","poligono-glb.txt","sheet-plan-provenance.json","sidewalk-round.json","street-batch50-geometry-report.json","street-batch50-provenance.json","street-round.json"],"dentro":["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]},"f:amalaya-board:public/levantamiento/visor/index.html":{"x":111,"y":300,"nombre":"index.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"levantamiento/ · Páginas","lbl":"index.html","ev":"amalaya-board/public/levantamiento/visor/index.html · 19 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/visor/index.html","tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"],["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"f:amalaya-board:public/levantamiento/evidence/C10/20261030-practico85/revision/index.html":{"x":277,"y":300,"nombre":"index.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"levantamiento/ · Páginas","lbl":"index.html","ev":"amalaya-board/public/levantamiento/evidence/C10/20261030-practico85/revision/index.html · 15 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/evidence/C10/20261030-practico85/revision/index.html","tb":[["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"f:amalaya-board:public/levantamiento/evidence/C10/20261030-practico86-20261104/revision/index.html":{"x":443,"y":300,"nombre":"index.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"levantamiento/ · Páginas","lbl":"index.html","ev":"amalaya-board/public/levantamiento/evidence/C10/20261030-practico86-20261104/revision/index.html · 15 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/evidence/C10/20261030-practico86-20261104/revision/index.html","tb":[["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"f:amalaya-board:public/levantamiento/evidence/C10/20261030-practico87-20261105-r2/revision/index.html":{"x":111,"y":384,"nombre":"index.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"levantamiento/ · Páginas","lbl":"index.html","ev":"amalaya-board/public/levantamiento/evidence/C10/20261030-practico87-20261105-r2/revision/index.html · 15 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/evidence/C10/20261030-practico87-20261105-r2/revision/index.html","tb":[["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"f:amalaya-board:public/levantamiento/evidence/C10/20261030-practico87-20261105-r3/revision/index.html":{"x":277,"y":384,"nombre":"index.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"levantamiento/ · Páginas","lbl":"index.html","ev":"amalaya-board/public/levantamiento/evidence/C10/20261030-practico87-20261105-r3/revision/index.html · 15 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/evidence/C10/20261030-practico87-20261105-r3/revision/index.html","tb":[["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"f:amalaya-board:public/levantamiento/evidence/c08-cierre-20261008/index.html":{"x":443,"y":384,"nombre":"index.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"levantamiento/ · Páginas","lbl":"index.html","ev":"amalaya-board/public/levantamiento/evidence/c08-cierre-20261008/index.html · 1 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/evidence/c08-cierre-20261008/index.html","tb":[["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"f:amalaya-board:public/levantamiento/evidence/c08-punto1-20261008/index.html":{"x":111,"y":468,"nombre":"index.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"levantamiento/ · Páginas","lbl":"index.html","ev":"amalaya-board/public/levantamiento/evidence/c08-punto1-20261008/index.html · 1 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/evidence/c08-punto1-20261008/index.html","tb":[["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"f:amalaya-board:public/levantamiento/evidence/c08-punto2-20261008/index.html":{"x":277,"y":468,"nombre":"index.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"levantamiento/ · Páginas","lbl":"index.html","ev":"amalaya-board/public/levantamiento/evidence/c08-punto2-20261008/index.html · 1 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/levantamiento/evidence/c08-punto2-20261008/index.html","tb":[["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]]},"mas:codigo-amalaya-board-public:pagina:levantamiento/":{"x":443,"y":468,"nombre":"+4 archivos más","forma":"dot","tam":9,"color":"#8A8F98","tipo":"Grupo","celda":"levantamiento/ · Páginas","lbl":"+4 archivos más","lt":"Incluye","lista":["index.html","index.html","index.html","index.html"],"dentro":["codigo-amalaya-board-public-levantamiento.html","Código · amalaya-board · public/ · levantamiento/"]},"amalaya-board::public_recorrido_panorama_ligero":{"x":665,"y":612,"nombre":"panorama-ligero.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"recorrido/ · Código","lbl":"panorama-ligero.js","ev":"amalaya-board/public/recorrido/panorama-ligero.js · 62 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/recorrido/panorama-ligero.js","lt":"Funciones y símbolos (7)","lista":["panoramaPixels()  · L2","iniciarPanoramaLigero()  · L13","draw()  · L24","imageData()  · L30","sourceLink()  · L31","updateAfter()  · L32","go()  · L33"]},"f:amalaya-board:public/recorrido/vendor/three-0.160.0.min.js":{"x":831,"y":612,"nombre":"three-0.160.0.min.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"recorrido/ · Código","lbl":"\nthree-0.160.0.min.js","ev":"amalaya-board/public/recorrido/vendor/three-0.160.0.min.js","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/recorrido/vendor/three-0.160.0.min.js"},"f:amalaya-board:public/recorrido/despues/LEEME.txt":{"x":1219,"y":612,"nombre":"LEEME.txt","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"recorrido/ · Documentos y datos","lbl":"LEEME.txt","ev":"amalaya-board/public/recorrido/despues/LEEME.txt · 2 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/recorrido/despues/LEEME.txt","tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"f:amalaya-board:public/recorrido/acciones.json":{"x":1385,"y":612,"nombre":"acciones.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"recorrido/ · Documentos y datos","lbl":"acciones.json","ev":"amalaya-board/public/recorrido/acciones.json · 2 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/recorrido/acciones.json"},"f:amalaya-board:public/recorrido/roll.json":{"x":1551,"y":612,"nombre":"roll.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"recorrido/ · Documentos y datos","lbl":"roll.json","ev":"amalaya-board/public/recorrido/roll.json · 317 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/recorrido/roll.json"},"f:amalaya-board:public/recorrido/rutas.json":{"x":1219,"y":696,"nombre":"rutas.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"recorrido/ · Documentos y datos","lbl":"rutas.json","ev":"amalaya-board/public/recorrido/rutas.json · 295 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/recorrido/rutas.json"},"f:amalaya-board:public/recorrido/index.html":{"x":111,"y":612,"nombre":"index.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"recorrido/ · Páginas","lbl":"index.html","ev":"amalaya-board/public/recorrido/index.html · 221 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/recorrido/index.html","lt":"Funciones y símbolos (23)","lista":["recorrido/index.html.inline.js  · L1","params  · L57","ACCIONES  · L58","ROLL  · L59","encuadrar()  · L61","canvas  · L63","nivelar()  · L75","cargarTex()  · L82","enEsfera()  · L84","rumbo()  · L85","metros()  · L86","spriteTexto()  · L88","flechaHacia()  · L94","pinAccion()  · L100","pintarUI()  · L103","irA()  · L106","pintarDespues()  · L124","pintarMini()  · L130","cargarAcciones()  · L135","guardarLocal()  · L136","contextoChinche()  · L160","ajustar()  · L178","frame()  · L179"],"tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::public_capas_app":{"x":665,"y":840,"nombre":"app.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"capas/ · Código","lbl":"app.js","ev":"amalaya-board/public/capas/app.js · 67 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/capas/app.js","lt":"Funciones y símbolos (10)","lista":["selected  · L5","state  · L5","list()  · L9","persist()  · L10","render()  · L11","applyStep()  · L33","openGroup()  · L34","chooseTheme()  · L35","initialSeq  · L62","layersOpen()  · L65"]},"amalaya-board::public_capas_model":{"x":831,"y":840,"nombre":"model.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"capas/ · Código","lbl":"model.js","ev":"amalaya-board/public/capas/model.js · 29 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/capas/model.js","lt":"Funciones y símbolos (7)","lista":["THEMES  · L1","LAYERS  · L2","IDS  · L21","sanitize()  · L22","sequence()  · L23","decode()  · L27","encode()  · L28"]},"amalaya-board::public_capas_scene":{"x":997,"y":840,"nombre":"scene.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"capas/ · Código","lbl":"scene.js","ev":"amalaya-board/public/capas/scene.js · 30 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/capas/scene.js","lt":"Funciones y símbolos (5)","lista":["crops  · L2","sprite()  · L3","layer()  · L4","onRoad()  · L5","scene()  · L6"]},"f:amalaya-board:public/capas/index.html":{"x":111,"y":840,"nombre":"index.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"capas/ · Páginas","lbl":"index.html","ev":"amalaya-board/public/capas/index.html · 9 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/capas/index.html","tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"]]},"f:amalaya-board:public/fuentes/OFL-Anton.txt":{"x":1219,"y":984,"nombre":"OFL-Anton.txt","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"fuentes/ · Documentos y datos","lbl":"OFL-Anton.txt","ev":"amalaya-board/public/fuentes/OFL-Anton.txt · 94 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/fuentes/OFL-Anton.txt","tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"f:amalaya-board:public/fuentes/OFL-Fraunces.txt":{"x":1385,"y":984,"nombre":"OFL-Fraunces.txt","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"fuentes/ · Documentos y datos","lbl":"OFL-Fraunces.txt","ev":"amalaya-board/public/fuentes/OFL-Fraunces.txt · 94 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/fuentes/OFL-Fraunces.txt","tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"f:amalaya-board:public/fuentes/OFL-Inter.txt":{"x":1551,"y":984,"nombre":"OFL-Inter.txt","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"fuentes/ · Documentos y datos","lbl":"OFL-Inter.txt","ev":"amalaya-board/public/fuentes/OFL-Inter.txt · 93 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/fuentes/OFL-Inter.txt","tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"f:amalaya-board:public/fuentes/OFL-PirataOne.txt":{"x":1219,"y":1068,"nombre":"OFL-PirataOne.txt","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"fuentes/ · Documentos y datos","lbl":"OFL-PirataOne.txt","ev":"amalaya-board/public/fuentes/OFL-PirataOne.txt · 94 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/fuentes/OFL-PirataOne.txt","tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::public_sector_amalaya_sector":{"x":665,"y":1212,"nombre":"sector.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"sector-amalaya/ · Código","lbl":"sector.js","ev":"amalaya-board/public/sector-amalaya/sector.js · 34 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/sector-amalaya/sector.js","lt":"Funciones y símbolos (10)","lista":["names  · L1","origin  · L2","local()  · L3","length()  · L4","bearing()  · L5","routes  · L6","svgNode()  · L7","diagram()  · L8","selectPoint()  · L16","selectRoute()  · L20"]},"f:amalaya-board:public/sector-amalaya/index.html":{"x":111,"y":1212,"nombre":"index.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"sector-amalaya/ · Páginas","lbl":"index.html","ev":"amalaya-board/public/sector-amalaya/index.html · 9 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/sector-amalaya/index.html","tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::public_obregon_ob01_review":{"x":665,"y":1356,"nombre":"review.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"obregon-ob01/ · Código","lbl":"review.js","ev":"amalaya-board/public/obregon-ob01/review.js · 13 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/obregon-ob01/review.js","lt":"Funciones y símbolos (3)","lista":["labels  · L2","image  · L3","update()  · L4"]},"f:amalaya-board:public/obregon-ob01/index.html":{"x":111,"y":1356,"nombre":"index.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"obregon-ob01/ · Páginas","lbl":"index.html","ev":"amalaya-board/public/obregon-ob01/index.html · 11 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/obregon-ob01/index.html","tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"]]},"amalaya-board::public_piloto_modelo_piloto":{"x":665,"y":1500,"nombre":"piloto.js","forma":"hexagon","tam":8,"color":"#9AA4AE","tipo":"Archivo de código","celda":"piloto-modelo/ · Código","lbl":"piloto.js","ev":"amalaya-board/public/piloto-modelo/piloto.js · 11 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/piloto-modelo/piloto.js","lt":"Funciones y símbolos (3)","lista":["frame  · L1","slider  · L1","camera  · L3"]},"f:amalaya-board:public/piloto-modelo/index.html":{"x":111,"y":1500,"nombre":"index.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"piloto-modelo/ · Páginas","lbl":"index.html","ev":"amalaya-board/public/piloto-modelo/index.html · 12 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/piloto-modelo/index.html","tb":[["tablero-fuera.html","Tablero · Fuera del menú"],["codigo-amalaya-board.html","Código · amalaya-board"]]},"f:amalaya-board:public/activos3d/Visor_3D.html":{"x":111,"y":1644,"nombre":"Visor_3D.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"activos3d/ · Páginas","lbl":"Visor_3D.html","ev":"amalaya-board/public/activos3d/Visor_3D.html · 9 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/activos3d/Visor_3D.html","tb":[["tablero-fuera.html","Tablero · Fuera del menú"]]},"f:amalaya-board:public/activos3d/manifest.json":{"x":1219,"y":1644,"nombre":"manifest.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"activos3d/ · Documentos y datos","lbl":"manifest.json","ev":"amalaya-board/public/activos3d/manifest.json · 1007 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/activos3d/manifest.json"},"f:amalaya-board:public/brand/OFL-Cinzel.txt":{"x":1219,"y":1788,"nombre":"OFL-Cinzel.txt","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"brand/ · Documentos y datos","lbl":"OFL-Cinzel.txt","ev":"amalaya-board/public/brand/OFL-Cinzel.txt · 94 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/brand/OFL-Cinzel.txt","tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"f:amalaya-board:public/brand/OFL-Montserrat.txt":{"x":1385,"y":1788,"nombre":"OFL-Montserrat.txt","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"brand/ · Documentos y datos","lbl":"OFL-Montserrat.txt","ev":"amalaya-board/public/brand/OFL-Montserrat.txt · 93 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/brand/OFL-Montserrat.txt","tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"f:amalaya-board:public/caras/CREDITOS.md":{"x":1219,"y":1932,"nombre":"CREDITOS.md","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Documento","celda":"otras carpetas · Documentos y datos","lbl":"CREDITOS.md","ev":"amalaya-board/public/caras/CREDITOS.md · 16 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/caras/CREDITOS.md","tb":[["codigo-amalaya-board.html","Código · amalaya-board"]]},"f:amalaya-board:public/observatorio/publicaciones.json":{"x":1385,"y":1932,"nombre":"publicaciones.json","forma":"dot","tam":6,"color":"#BAB0AC","tipo":"Archivo de datos","celda":"otras carpetas · Documentos y datos","lbl":"publicaciones.json","ev":"amalaya-board/public/observatorio/publicaciones.json · 1074 líneas","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/observatorio/publicaciones.json"},"f:amalaya-board:public/modelo/serdan-garmendia.html":{"x":111,"y":1932,"nombre":"serdan-garmendia.html","forma":"square","tam":9,"color":"#8CD17D","tipo":"Página","celda":"otras carpetas · Páginas","lbl":"serdan-garmendia.h\ntml","ev":"amalaya-board/public/modelo/serdan-garmendia.html","url":"https://github.com/yodesarrollo/amalaya-board/blob/e3f94e67ea/public/modelo/serdan-garmendia.html"}},"flechas":{"f:amalaya-board:public/obregon-ob01/index.html>amalaya-board::public_obregon_ob01_review":{"f":"viva","r":"carga el script","ev":"amalaya-board/public/obregon-ob01/index.html L10"},"f:amalaya-board:public/recorrido/index.html>f:amalaya-board:public/recorrido/vendor/three-0.160.0.min.js":{"f":"viva","r":"carga el script","ev":"amalaya-board/public/recorrido/index.html L45"},"f:amalaya-board:public/piloto-modelo/index.html>amalaya-board::public_piloto_modelo_piloto":{"f":"viva","r":"carga el script","ev":"amalaya-board/public/piloto-modelo/index.html L11"},"f:amalaya-board:public/sector-amalaya/index.html>amalaya-board::public_sector_amalaya_sector":{"f":"viva","r":"carga el script","ev":"amalaya-board/public/sector-amalaya/index.html L8"},"amalaya-board::public_modelo_completo_html_inline>amalaya-board::public_levantamiento_modelo_completo":{"f":"viva","r":"carga el script","ev":"amalaya-board/public/modelo-completo.html L61"},"f:amalaya-board:public/capas/index.html>amalaya-board::public_capas_app":{"f":"viva","r":"carga el script","ev":"amalaya-board/public/capas/index.html L8"},"amalaya-board::public_levantamiento_c02_10_data>amalaya-board::public_levantamiento_fabrica_fachadas":{"f":"viva","r":"se llaman (6)","ev":"grafo de código de Graphify"},"amalaya-board::public_levantamiento_paramento_refinement>amalaya-board::public_levantamiento_sheet_plan_refinement":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"amalaya-board::public_capas_app>amalaya-board::public_capas_model":{"f":"viva","r":"se llaman (7)","ev":"grafo de código de Graphify"},"amalaya-board::public_capas_app>amalaya-board::public_capas_scene":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"amalaya-board::public_levantamiento_fabrica_fachadas>amalaya-board::public_levantamiento_paramento_refinement":{"f":"viva","r":"se llaman (2)","ev":"grafo de código de Graphify"},"amalaya-board::public_capas_app>amalaya-board::public_chinche":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"amalaya-board::public_levantamiento_c02_10_data>amalaya-board::public_levantamiento_cuadra_detail_data":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"amalaya-board::public_recorrido_panorama_ligero>f:amalaya-board:public/recorrido/index.html":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"amalaya-board::public_levantamiento_modelo_completo>amalaya-board::public_levantamiento_paramento_data":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"amalaya-board::public_levantamiento_cuadra_detail_data>amalaya-board::public_levantamiento_paramento_refinement":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"amalaya-board::public_levantamiento_paramento_data>amalaya-board::public_levantamiento_paramento_refinement":{"f":"viva","r":"se llaman (6)","ev":"grafo de código de Graphify"}},"familias":{"viva":{"corto":"Visto","nombre":"Visto en código u hoja","color":"#5B6470","ancho":1.3,"opacidad":0.75,"punteada":false},"inferida":{"corto":"Atlas","nombre":"Del atlas o deducido","color":"#9AA1AB","ancho":1.0,"opacidad":0.6,"punteada":false},"propuesta":{"corto":"Propuesta","nombre":"Propuesta","color":"#C99A12","ancho":1.6,"opacidad":0.9,"punteada":[7,5]},"hueco":{"corto":"Falta","nombre":"Falta o hallazgo","color":"#C8102E","ancho":1.7,"opacidad":0.9,"punteada":[3,5]}},"usadas":["viva"],"rejilla":{"cols":[{"x":0,"w":554,"nombre":"Páginas"},{"x":554,"w":554,"nombre":"Código"},{"x":1108,"w":554,"nombre":"Documentos y datos"}],"filas":[{"y":0,"h":228,"nombre":"(esta carpeta)"},{"y":228,"h":312,"nombre":"levantamiento/"},{"y":540,"h":228,"nombre":"recorrido/"},{"y":768,"h":144,"nombre":"capas/"},{"y":912,"h":228,"nombre":"fuentes/"},{"y":1140,"h":144,"nombre":"sector-amalaya/"},{"y":1284,"h":144,"nombre":"obregon-ob01/"},{"y":1428,"h":144,"nombre":"piloto-modelo/"},{"y":1572,"h":144,"nombre":"activos3d/"},{"y":1716,"h":144,"nombre":"brand/"},{"y":1860,"h":144,"nombre":"otras carpetas"}]},"eje_x":"Tipo de archivo","eje_y":"Carpeta","estado":"https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/grafo-datos/estado.json","simbolos":[["■","#59A14F","Tablero o página"],["▭","#F1CE63","Pantalla propuesta"],["◆","#F28E2B","Motor"],["⬢","#79706E","Repositorio o código"],["▲","#4E79A7","Libro"],["▼","#A0CBE8","Pestaña"],["●","#B07AA1","Quién"],["★","#EDC948","Propuesta"],["★","#E15759","Hallazgo o clave"]],"pie":"63 nodos · 17 flechas · Código · amalaya-board · public/ · Graphify 0.9.106"};</script>
+</head>
+<body>
+<div id="graph"></div>
+<div id="sidebar">
+  <div id="theme-wrap" role="group" aria-label="Theme">
+    <button type="button" data-theme-choice="light">Claro</button>
+    <button type="button" data-theme-choice="dark">Oscuro</button>
+    <button type="button" data-theme-choice="system">Sistema</button>
+  </div>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Buscar…" autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div id="info-panel">
+    <h3>Detalle</h3>
+    <div id="info-content"><span class="empty">Toca un nodo para ver su detalle</span></div>
+  </div>
+  <div id="legend-wrap">
+    <h3>Grupos</h3>
+    <div id="legend-controls">
+      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">Todos</label>
+    </div>
+    <div id="legend"></div>
+  </div>
+  <div id="stats">63 nodes &middot; 17 edges &middot; 23 communities</div>
+</div>
+<script>
+const RAW_NODES = [{"id": "amalaya-board::public_plan_accion_amalaya_html_inline", "label": "plan-accion-amalaya.html", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "plan-accion-amalaya.html", "community": 0, "community_name": "(esta carpeta) \u00b7 P\u00e1ginas", "source_file": "amalaya-board/public/plan-accion-amalaya.html \u00b7 20 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "amalaya-board::public_modelo_completo_html_inline", "label": "modelo-completo.html", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "modelo-completo.html", "community": 0, "community_name": "(esta carpeta) \u00b7 P\u00e1ginas", "source_file": "amalaya-board/public/modelo-completo.html \u00b7 64 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "amalaya-board::public_chinche", "label": "chinche.js", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "chinche.js", "community": 1, "community_name": "(esta carpeta) \u00b7 C\u00f3digo", "source_file": "amalaya-board/public/chinche.js \u00b7 1582 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "f:amalaya-board:public/data.json", "label": "data.json", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "data.json", "community": 2, "community_name": "(esta carpeta) \u00b7 Documentos y datos", "source_file": "amalaya-board/public/data.json \u00b7 268 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/estado.json", "label": "estado.json", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "estado.json", "community": 2, "community_name": "(esta carpeta) \u00b7 Documentos y datos", "source_file": "amalaya-board/public/estado.json \u00b7 6 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/seguimiento-3d.json", "label": "seguimiento-3d.json", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "seguimiento-3d.json", "community": 2, "community_name": "(esta carpeta) \u00b7 Documentos y datos", "source_file": "amalaya-board/public/seguimiento-3d.json \u00b7 16212 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/seguimiento-3d.md", "label": "seguimiento-3d.md", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "seguimiento-3d.md", "community": 2, "community_name": "(esta carpeta) \u00b7 Documentos y datos", "source_file": "amalaya-board/public/seguimiento-3d.md \u00b7 289 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/seguimiento-ligero.json", "label": "seguimiento-ligero.json", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "seguimiento-ligero.json", "community": 2, "community_name": "(esta carpeta) \u00b7 Documentos y datos", "source_file": "amalaya-board/public/seguimiento-ligero.json \u00b7 1 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "amalaya-board::public_levantamiento_cuadra_detail_data", "label": "cuadra-detail-data.js", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 25.0, "font": {"size": 12, "color": "#ffffff"}, "title": "cuadra-detail-data.js", "community": 3, "community_name": "levantamiento/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/public/levantamiento/cuadra-detail-data.js \u00b7 324 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "amalaya-board::public_levantamiento_fabrica_fachadas", "label": "fabrica-fachadas.js", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 25.0, "font": {"size": 12, "color": "#ffffff"}, "title": "fabrica-fachadas.js", "community": 3, "community_name": "levantamiento/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/public/levantamiento/fabrica-fachadas.js \u00b7 78 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "amalaya-board::public_levantamiento_sheet_plan_refinement", "label": "sheet-plan-refinement.js", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "sheet-plan-refinement.js", "community": 3, "community_name": "levantamiento/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/public/levantamiento/sheet-plan-refinement.js \u00b7 93 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "amalaya-board::public_levantamiento_modelo_completo", "label": "modelo-completo.js", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 25.0, "font": {"size": 12, "color": "#ffffff"}, "title": "modelo-completo.js", "community": 3, "community_name": "levantamiento/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/public/levantamiento/modelo-completo.js \u00b7 163 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "amalaya-board::public_levantamiento_plan_review_refinement", "label": "plan-review-refinement.js", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "plan-review-refinement.js", "community": 3, "community_name": "levantamiento/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/public/levantamiento/plan-review-refinement.js \u00b7 2 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "amalaya-board::public_levantamiento_paramento_refinement", "label": "paramento-refinement.js", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "paramento-refinement.js", "community": 3, "community_name": "levantamiento/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/public/levantamiento/paramento-refinement.js \u00b7 471 l\u00edneas", "file_type": "code", "degree": 4}, {"id": "amalaya-board::public_levantamiento_c02_10_data", "label": "c02-10-data.js", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 25.0, "font": {"size": 12, "color": "#ffffff"}, "title": "c02-10-data.js", "community": 3, "community_name": "levantamiento/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/public/levantamiento/c02-10-data.js \u00b7 54 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "amalaya-board::public_levantamiento_paramento_data", "label": "paramento-data.js", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 25.0, "font": {"size": 12, "color": "#ffffff"}, "title": "paramento-data.js", "community": 3, "community_name": "levantamiento/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/public/levantamiento/paramento-data.js \u00b7 101 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "mas:codigo-amalaya-board-public:codigo:levantamiento/", "label": "+123 archivos m\u00e1s", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "+123 archivos m\u00e1s", "community": 3, "community_name": "levantamiento/ \u00b7 C\u00f3digo", "source_file": "", "file_type": "concept", "degree": 0}, {"id": "f:amalaya-board:public/levantamiento/anclas-geometria-actual.json", "label": "anclas-geometria-actual.json", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "anclas-geometria-actual.json", "community": 4, "community_name": "levantamiento/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/levantamiento/anclas-geometria-actual.json \u00b7 55 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/levantamiento/banquetas-provenance.json", "label": "banquetas-provenance.json", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "banquetas-provenance.json", "community": 4, "community_name": "levantamiento/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/levantamiento/banquetas-provenance.json \u00b7 12 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/levantamiento/calzadas-provenance.json", "label": "calzadas-provenance.json", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "calzadas-provenance.json", "community": 4, "community_name": "levantamiento/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/levantamiento/calzadas-provenance.json \u00b7 12 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/levantamiento/cuadras.json", "label": "cuadras.json", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "cuadras.json", "community": 4, "community_name": "levantamiento/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/levantamiento/cuadras.json \u00b7 2 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/levantamiento/direcciones-referencias.json", "label": "direcciones-referencias.json", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "direcciones-referencias.json", "community": 4, "community_name": "levantamiento/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/levantamiento/direcciones-referencias.json \u00b7 91 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/levantamiento/ebsw-provenance.json", "label": "ebsw-provenance.json", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "ebsw-provenance.json", "community": 4, "community_name": "levantamiento/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/levantamiento/ebsw-provenance.json \u00b7 18 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/levantamiento/encaje-edificios-referencia.json", "label": "encaje-edificios-referencia.json", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "encaje-edificios-referencia.json", "community": 4, "community_name": "levantamiento/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/levantamiento/encaje-edificios-referencia.json \u00b7 2 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/levantamiento/evidence/D1-09/20261030-equipo/ficha.md", "label": "ficha.md", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "ficha.md", "community": 4, "community_name": "levantamiento/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/levantamiento/evidence/D1-09/20261030-equipo/ficha.md \u00b7 18 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "mas:codigo-amalaya-board-public:doc:levantamiento/", "label": "+14 archivos m\u00e1s", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "+14 archivos m\u00e1s", "community": 4, "community_name": "levantamiento/ \u00b7 Documentos y datos", "source_file": "", "file_type": "concept", "degree": 0}, {"id": "f:amalaya-board:public/levantamiento/visor/index.html", "label": "index.html", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "index.html", "community": 5, "community_name": "levantamiento/ \u00b7 P\u00e1ginas", "source_file": "amalaya-board/public/levantamiento/visor/index.html \u00b7 19 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "f:amalaya-board:public/levantamiento/evidence/C10/20261030-practico85/revision/index.html", "label": "index.html", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "index.html", "community": 5, "community_name": "levantamiento/ \u00b7 P\u00e1ginas", "source_file": "amalaya-board/public/levantamiento/evidence/C10/20261030-practico85/revision/index.html \u00b7 15 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "f:amalaya-board:public/levantamiento/evidence/C10/20261030-practico86-20261104/revision/index.html", "label": "index.html", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "index.html", "community": 5, "community_name": "levantamiento/ \u00b7 P\u00e1ginas", "source_file": "amalaya-board/public/levantamiento/evidence/C10/20261030-practico86-20261104/revision/index.html \u00b7 15 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "f:amalaya-board:public/levantamiento/evidence/C10/20261030-practico87-20261105-r2/revision/index.html", "label": "index.html", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "index.html", "community": 5, "community_name": "levantamiento/ \u00b7 P\u00e1ginas", "source_file": "amalaya-board/public/levantamiento/evidence/C10/20261030-practico87-20261105-r2/revision/index.html \u00b7 15 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "f:amalaya-board:public/levantamiento/evidence/C10/20261030-practico87-20261105-r3/revision/index.html", "label": "index.html", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "index.html", "community": 5, "community_name": "levantamiento/ \u00b7 P\u00e1ginas", "source_file": "amalaya-board/public/levantamiento/evidence/C10/20261030-practico87-20261105-r3/revision/index.html \u00b7 15 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "f:amalaya-board:public/levantamiento/evidence/c08-cierre-20261008/index.html", "label": "index.html", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "index.html", "community": 5, "community_name": "levantamiento/ \u00b7 P\u00e1ginas", "source_file": "amalaya-board/public/levantamiento/evidence/c08-cierre-20261008/index.html \u00b7 1 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "f:amalaya-board:public/levantamiento/evidence/c08-punto1-20261008/index.html", "label": "index.html", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "index.html", "community": 5, "community_name": "levantamiento/ \u00b7 P\u00e1ginas", "source_file": "amalaya-board/public/levantamiento/evidence/c08-punto1-20261008/index.html \u00b7 1 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "f:amalaya-board:public/levantamiento/evidence/c08-punto2-20261008/index.html", "label": "index.html", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "index.html", "community": 5, "community_name": "levantamiento/ \u00b7 P\u00e1ginas", "source_file": "amalaya-board/public/levantamiento/evidence/c08-punto2-20261008/index.html \u00b7 1 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "mas:codigo-amalaya-board-public:pagina:levantamiento/", "label": "+4 archivos m\u00e1s", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "+4 archivos m\u00e1s", "community": 5, "community_name": "levantamiento/ \u00b7 P\u00e1ginas", "source_file": "", "file_type": "concept", "degree": 0}, {"id": "amalaya-board::public_recorrido_panorama_ligero", "label": "panorama-ligero.js", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "panorama-ligero.js", "community": 6, "community_name": "recorrido/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/public/recorrido/panorama-ligero.js \u00b7 62 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "f:amalaya-board:public/recorrido/vendor/three-0.160.0.min.js", "label": "three-0.160.0.min.js", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "three-0.160.0.min.js", "community": 6, "community_name": "recorrido/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/public/recorrido/vendor/three-0.160.0.min.js", "file_type": "code", "degree": 1}, {"id": "f:amalaya-board:public/recorrido/despues/LEEME.txt", "label": "LEEME.txt", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "LEEME.txt", "community": 7, "community_name": "recorrido/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/recorrido/despues/LEEME.txt \u00b7 2 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/recorrido/acciones.json", "label": "acciones.json", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "acciones.json", "community": 7, "community_name": "recorrido/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/recorrido/acciones.json \u00b7 2 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/recorrido/roll.json", "label": "roll.json", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "roll.json", "community": 7, "community_name": "recorrido/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/recorrido/roll.json \u00b7 317 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/recorrido/rutas.json", "label": "rutas.json", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "rutas.json", "community": 7, "community_name": "recorrido/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/recorrido/rutas.json \u00b7 295 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/recorrido/index.html", "label": "index.html", "color": {"background": "#9C755F", "border": "#9C755F", "highlight": {"background": "#ffffff", "border": "#9C755F"}}, "size": 25.0, "font": {"size": 12, "color": "#ffffff"}, "title": "index.html", "community": 8, "community_name": "recorrido/ \u00b7 P\u00e1ginas", "source_file": "amalaya-board/public/recorrido/index.html \u00b7 221 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "amalaya-board::public_capas_app", "label": "app.js", "color": {"background": "#BAB0AC", "border": "#BAB0AC", "highlight": {"background": "#ffffff", "border": "#BAB0AC"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "app.js", "community": 9, "community_name": "capas/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/public/capas/app.js \u00b7 67 l\u00edneas", "file_type": "code", "degree": 4}, {"id": "amalaya-board::public_capas_model", "label": "model.js", "color": {"background": "#BAB0AC", "border": "#BAB0AC", "highlight": {"background": "#ffffff", "border": "#BAB0AC"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "model.js", "community": 9, "community_name": "capas/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/public/capas/model.js \u00b7 29 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "amalaya-board::public_capas_scene", "label": "scene.js", "color": {"background": "#BAB0AC", "border": "#BAB0AC", "highlight": {"background": "#ffffff", "border": "#BAB0AC"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "scene.js", "community": 9, "community_name": "capas/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/public/capas/scene.js \u00b7 30 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "f:amalaya-board:public/capas/index.html", "label": "index.html", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "index.html", "community": 10, "community_name": "capas/ \u00b7 P\u00e1ginas", "source_file": "amalaya-board/public/capas/index.html \u00b7 9 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "f:amalaya-board:public/fuentes/OFL-Anton.txt", "label": "OFL-Anton.txt", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "OFL-Anton.txt", "community": 11, "community_name": "fuentes/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/fuentes/OFL-Anton.txt \u00b7 94 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/fuentes/OFL-Fraunces.txt", "label": "OFL-Fraunces.txt", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "OFL-Fraunces.txt", "community": 11, "community_name": "fuentes/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/fuentes/OFL-Fraunces.txt \u00b7 94 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/fuentes/OFL-Inter.txt", "label": "OFL-Inter.txt", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "OFL-Inter.txt", "community": 11, "community_name": "fuentes/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/fuentes/OFL-Inter.txt \u00b7 93 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/fuentes/OFL-PirataOne.txt", "label": "OFL-PirataOne.txt", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "OFL-PirataOne.txt", "community": 11, "community_name": "fuentes/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/fuentes/OFL-PirataOne.txt \u00b7 94 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "amalaya-board::public_sector_amalaya_sector", "label": "sector.js", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "sector.js", "community": 12, "community_name": "sector-amalaya/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/public/sector-amalaya/sector.js \u00b7 34 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "f:amalaya-board:public/sector-amalaya/index.html", "label": "index.html", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "index.html", "community": 13, "community_name": "sector-amalaya/ \u00b7 P\u00e1ginas", "source_file": "amalaya-board/public/sector-amalaya/index.html \u00b7 9 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "amalaya-board::public_obregon_ob01_review", "label": "review.js", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "review.js", "community": 14, "community_name": "obregon-ob01/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/public/obregon-ob01/review.js \u00b7 13 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "f:amalaya-board:public/obregon-ob01/index.html", "label": "index.html", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "index.html", "community": 15, "community_name": "obregon-ob01/ \u00b7 P\u00e1ginas", "source_file": "amalaya-board/public/obregon-ob01/index.html \u00b7 11 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "amalaya-board::public_piloto_modelo_piloto", "label": "piloto.js", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "piloto.js", "community": 16, "community_name": "piloto-modelo/ \u00b7 C\u00f3digo", "source_file": "amalaya-board/public/piloto-modelo/piloto.js \u00b7 11 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "f:amalaya-board:public/piloto-modelo/index.html", "label": "index.html", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 17.5, "font": {"size": 12, "color": "#ffffff"}, "title": "index.html", "community": 17, "community_name": "piloto-modelo/ \u00b7 P\u00e1ginas", "source_file": "amalaya-board/public/piloto-modelo/index.html \u00b7 12 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "f:amalaya-board:public/activos3d/Visor_3D.html", "label": "Visor_3D.html", "color": {"background": "#9C755F", "border": "#9C755F", "highlight": {"background": "#ffffff", "border": "#9C755F"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "Visor_3D.html", "community": 18, "community_name": "activos3d/ \u00b7 P\u00e1ginas", "source_file": "amalaya-board/public/activos3d/Visor_3D.html \u00b7 9 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "f:amalaya-board:public/activos3d/manifest.json", "label": "manifest.json", "color": {"background": "#BAB0AC", "border": "#BAB0AC", "highlight": {"background": "#ffffff", "border": "#BAB0AC"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "manifest.json", "community": 19, "community_name": "activos3d/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/activos3d/manifest.json \u00b7 1007 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/brand/OFL-Cinzel.txt", "label": "OFL-Cinzel.txt", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "OFL-Cinzel.txt", "community": 20, "community_name": "brand/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/brand/OFL-Cinzel.txt \u00b7 94 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/brand/OFL-Montserrat.txt", "label": "OFL-Montserrat.txt", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "OFL-Montserrat.txt", "community": 20, "community_name": "brand/ \u00b7 Documentos y datos", "source_file": "amalaya-board/public/brand/OFL-Montserrat.txt \u00b7 93 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/caras/CREDITOS.md", "label": "CREDITOS.md", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "CREDITOS.md", "community": 21, "community_name": "otras carpetas \u00b7 Documentos y datos", "source_file": "amalaya-board/public/caras/CREDITOS.md \u00b7 16 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/observatorio/publicaciones.json", "label": "publicaciones.json", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "publicaciones.json", "community": 21, "community_name": "otras carpetas \u00b7 Documentos y datos", "source_file": "amalaya-board/public/observatorio/publicaciones.json \u00b7 1074 l\u00edneas", "file_type": "document", "degree": 0}, {"id": "f:amalaya-board:public/modelo/serdan-garmendia.html", "label": "serdan-garmendia.html", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "serdan-garmendia.html", "community": 22, "community_name": "otras carpetas \u00b7 P\u00e1ginas", "source_file": "amalaya-board/public/modelo/serdan-garmendia.html", "file_type": "code", "degree": 0}];
+const RAW_EDGES = [{"from": "amalaya-board::public_modelo_completo_html_inline", "to": "amalaya-board::public_levantamiento_modelo_completo", "label": "carga el script", "title": "carga el script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::public_capas_app", "to": "amalaya-board::public_chinche", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::public_levantamiento_c02_10_data", "to": "amalaya-board::public_levantamiento_cuadra_detail_data", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::public_levantamiento_cuadra_detail_data", "to": "amalaya-board::public_levantamiento_paramento_refinement", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::public_levantamiento_c02_10_data", "to": "amalaya-board::public_levantamiento_fabrica_fachadas", "label": "se llaman (6)", "title": "se llaman (6) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::public_levantamiento_fabrica_fachadas", "to": "amalaya-board::public_levantamiento_paramento_refinement", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::public_levantamiento_paramento_refinement", "to": "amalaya-board::public_levantamiento_sheet_plan_refinement", "label": "se llaman (2)", "title": "se llaman (2) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::public_levantamiento_modelo_completo", "to": "amalaya-board::public_levantamiento_paramento_data", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::public_levantamiento_paramento_data", "to": "amalaya-board::public_levantamiento_paramento_refinement", "label": "se llaman (6)", "title": "se llaman (6) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::public_recorrido_panorama_ligero", "to": "f:amalaya-board:public/recorrido/index.html", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "f:amalaya-board:public/recorrido/index.html", "to": "f:amalaya-board:public/recorrido/vendor/three-0.160.0.min.js", "label": "carga el script", "title": "carga el script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "f:amalaya-board:public/capas/index.html", "to": "amalaya-board::public_capas_app", "label": "carga el script", "title": "carga el script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::public_capas_app", "to": "amalaya-board::public_capas_model", "label": "se llaman (7)", "title": "se llaman (7) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "amalaya-board::public_capas_app", "to": "amalaya-board::public_capas_scene", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "f:amalaya-board:public/sector-amalaya/index.html", "to": "amalaya-board::public_sector_amalaya_sector", "label": "carga el script", "title": "carga el script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "f:amalaya-board:public/obregon-ob01/index.html", "to": "amalaya-board::public_obregon_ob01_review", "label": "carga el script", "title": "carga el script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "f:amalaya-board:public/piloto-modelo/index.html", "to": "amalaya-board::public_piloto_modelo_piloto", "label": "carga el script", "title": "carga el script [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}];
+const LEGEND = [{"cid": 0, "color": "#4E79A7", "label": "(esta carpeta) \u00b7 P\u00e1ginas", "count": 2}, {"cid": 1, "color": "#F28E2B", "label": "(esta carpeta) \u00b7 C\u00f3digo", "count": 1}, {"cid": 2, "color": "#E15759", "label": "(esta carpeta) \u00b7 Documentos y datos", "count": 5}, {"cid": 3, "color": "#76B7B2", "label": "levantamiento/ \u00b7 C\u00f3digo", "count": 9}, {"cid": 4, "color": "#59A14F", "label": "levantamiento/ \u00b7 Documentos y datos", "count": 9}, {"cid": 5, "color": "#EDC948", "label": "levantamiento/ \u00b7 P\u00e1ginas", "count": 9}, {"cid": 6, "color": "#B07AA1", "label": "recorrido/ \u00b7 C\u00f3digo", "count": 2}, {"cid": 7, "color": "#FF9DA7", "label": "recorrido/ \u00b7 Documentos y datos", "count": 4}, {"cid": 8, "color": "#9C755F", "label": "recorrido/ \u00b7 P\u00e1ginas", "count": 1}, {"cid": 9, "color": "#BAB0AC", "label": "capas/ \u00b7 C\u00f3digo", "count": 3}, {"cid": 10, "color": "#4E79A7", "label": "capas/ \u00b7 P\u00e1ginas", "count": 1}, {"cid": 11, "color": "#F28E2B", "label": "fuentes/ \u00b7 Documentos y datos", "count": 4}, {"cid": 12, "color": "#E15759", "label": "sector-amalaya/ \u00b7 C\u00f3digo", "count": 1}, {"cid": 13, "color": "#76B7B2", "label": "sector-amalaya/ \u00b7 P\u00e1ginas", "count": 1}, {"cid": 14, "color": "#59A14F", "label": "obregon-ob01/ \u00b7 C\u00f3digo", "count": 1}, {"cid": 15, "color": "#EDC948", "label": "obregon-ob01/ \u00b7 P\u00e1ginas", "count": 1}, {"cid": 16, "color": "#B07AA1", "label": "piloto-modelo/ \u00b7 C\u00f3digo", "count": 1}, {"cid": 17, "color": "#FF9DA7", "label": "piloto-modelo/ \u00b7 P\u00e1ginas", "count": 1}, {"cid": 18, "color": "#9C755F", "label": "activos3d/ \u00b7 P\u00e1ginas", "count": 1}, {"cid": 19, "color": "#BAB0AC", "label": "activos3d/ \u00b7 Documentos y datos", "count": 1}, {"cid": 20, "color": "#4E79A7", "label": "brand/ \u00b7 Documentos y datos", "count": 2}, {"cid": 21, "color": "#F28E2B", "label": "otras carpetas \u00b7 Documentos y datos", "count": 2}, {"cid": 22, "color": "#E15759", "label": "otras carpetas \u00b7 P\u00e1ginas", "count": 1}];
+
+// HTML-escape helper — prevents XSS when injecting graph data into innerHTML
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Build vis datasets
+const nodesDS = new vis.DataSet(RAW_NODES.map((n, i) => ({
+  id: n.id, label: n.label, color: n.color, size: n.size,
+  font: n.font, title: n.title,
+  // Fermat/golden-angle spiral seed positions (#3699): spreading nodes out
+  // before physics runs keeps avoidOverlap from computing near-zero-distance
+  // repulsion that blows the BarnesHut recursion into a stack overflow on large
+  // graphs. `i` is the map index — physics still settles small graphs identically.
+  x: 30 * Math.sqrt(i) * Math.cos(i * 2.4),
+  y: 30 * Math.sqrt(i) * Math.sin(i * 2.4),
+  community: n.community, community_name: n.community_name,
+  source_file: n.source_file, file_type: n.file_type, degree: n.degree,
+  member_count: n.member_count,
+})));
+
+const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({
+  id: i, from: e.from, to: e.to,
+  label: '',
+  title: e.title,
+  dashes: e.dashes,
+  width: e.width,
+  color: e.color,
+  arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+})));
+
+const container = document.getElementById('graph');
+const network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, {
+  physics: {
+    enabled: false,
+    solver: 'forceAtlas2Based',
+    forceAtlas2Based: {
+      gravitationalConstant: -60,
+      centralGravity: 0.005,
+      springLength: 120,
+      springConstant: 0.08,
+      damping: 0.4,
+      avoidOverlap: 0.8,
+    },
+    stabilization: { iterations: 200, fit: true },
+  },
+  interaction: {
+    hover: true,
+    tooltipDelay: 100,
+    hideEdgesOnDrag: true,
+    navigationButtons: false,
+    keyboard: false,
+  },
+  nodes: { shape: 'dot', borderWidth: 1.5 },
+  edges: { smooth: { type: 'continuous', roundness: 0.2 }, selectionWidth: 3 },
+});
+
+// Theme toggle (#3894): Light / Dark / System, persisted in localStorage.
+const THEME_KEY = 'graphify-theme';
+const themeMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+let themeLabelColor = '#ffffff';  // matches the per-node font color set in Python
+function themePref() {
+  let p = null;
+  try { p = localStorage.getItem(THEME_KEY); } catch (e) {}
+  return (p === 'light' || p === 'dark' || p === 'system') ? p : null;
+}
+function applyTheme(pref) {
+  const t = pref === 'light' ? 'light' : (pref === 'system' && themeMQ && themeMQ.matches) ? 'light' : 'dark';
+  const root = document.documentElement;
+  if (!root) return;
+  root.setAttribute('data-theme', t);
+  document.querySelectorAll('[data-theme-choice]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.themeChoice === (pref || 'system')));
+  });
+  const labelColor = getComputedStyle(root).getPropertyValue('--node-label').trim();
+  if (labelColor && labelColor !== themeLabelColor) {
+    themeLabelColor = labelColor;
+    nodesDS.update(nodesDS.get().map(n => ({ id: n.id, font: Object.assign({}, n.font, { color: labelColor }) })));
+  }
+}
+document.querySelectorAll('[data-theme-choice]').forEach(b => {
+  b.addEventListener('click', () => {
+    const pref = b.dataset.themeChoice;
+    try { localStorage.setItem(THEME_KEY, pref); } catch (e) {}
+    applyTheme(pref);
+  });
+});
+if (themeMQ) {
+  const onSchemeChange = () => { if (themePref() === 'system') applyTheme('system'); };
+  if (themeMQ.addEventListener) themeMQ.addEventListener('change', onSchemeChange);
+  else if (themeMQ.addListener) themeMQ.addListener(onSchemeChange);
+}
+applyTheme(themePref() || 'system');
+
+
+// ── YOD: acomodo fijo en cuadrante sobre el visor de Graphify. Los nodos y las flechas son los que exportó Graphify. ──
+(function () {
+  const Y = window.YOD;
+  // Cuando la portada enseña un borrador, trae la lámina como texto: los enlaces a otras láminas se le piden a ella.
+  const SUELTA = location.protocol === 'about:';
+  const yodIr = h => { const m = String(h).match(/^([A-Za-z0-9._-]+)\.html(?:#(.*))?$/);
+    if (SUELTA && m) { try { parent.postMessage({ yod: 2, ir: m[1], nodo: m[2] ? decodeURIComponent(m[2]) : '' }, '*'); } catch (e) {} } else location.href = h; };
+  if (SUELTA) document.addEventListener('click', e => { const a = e.target && e.target.closest ? e.target.closest('a[href]') : null; if (!a || a.target === '_blank') return;
+    const h = a.getAttribute('href') || ''; if (/^[A-Za-z0-9._-]+\.html(#.*)?$/.test(h)) { e.preventDefault(); yodIr(h); } }, true);
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const esc2 = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const fuente = p => p.forma === 'box'
+    ? { size: 13, color: '#1d1d1f', face: 'system-ui, -apple-system, sans-serif', multi: 'html', align: 'left', bold: { color: '#111111', size: 14, face: 'system-ui, -apple-system, sans-serif' } }
+    : { size: 14, color: css('--node-label') || '#222', face: 'system-ui, -apple-system, sans-serif', strokeWidth: 3, strokeColor: css('--bg') || '#fff' };
+  const estiloNodo = (n, apagado) => {
+    const p = Y.nodos[n.id] || {};
+    const o = { id: n.id, x: p.x, y: p.y, label: p.lbl, shape: p.forma, size: p.tam, opacity: apagado ? 0.14 : 1, title: undefined,
+      color: { background: p.color, border: p.al ? '#C8102E' : (p.bc || p.color), highlight: { background: p.color, border: '#111' }, hover: { background: p.color, border: '#111' } },
+      borderWidth: p.al ? 2.6 : (p.bc ? 2.4 : 1), borderWidthSelected: 3.5, font: fuente(p) };
+    if (p.forma === 'box') { o.widthConstraint = { minimum: p.caja, maximum: p.caja }; o.margin = 9; o.shapeProperties = { borderRadius: 7 }; }
+    return o;
+  };
+  const ocultas = new Set();
+  let foco = null;
+  const recto = RAW_EDGES.length > 380;
+  const det = r => Y.flechas[r.from + '>' + r.to] || Y.flechas[r.to + '>' + r.from] || {};
+  const estiloArista = e => {
+    const r = RAW_EDGES[e.id], fl = det(r), f = Y.familias[fl.f] || Y.familias.inferida;
+    const con = !foco || foco.aristas.has(e.id);
+    return { id: e.id, hidden: ocultas.has(fl.f || 'inferida'), width: con && foco ? f.ancho + 1.3 : f.ancho, title: undefined,
+             color: { color: f.color, opacity: con ? f.opacidad : 0.05, highlight: f.color, hover: f.color },
+             dashes: f.punteada, arrows: { to: { enabled: true, scaleFactor: 0.55 } }, smooth: recto ? false : { type: 'curvedCW', roundness: 0.12 } };
+  };
+  const pintar = () => {
+    nodesDS.update(nodesDS.get().map(n => estiloNodo(n, foco && !foco.nodos.has(n.id))));
+    edgesDS.update(edgesDS.get().map(estiloArista));
+  };
+  pintar();
+  network.setOptions({ physics: { enabled: false }, nodes: { labelHighlightBold: false, scaling: { label: { drawThreshold: 5, maxVisible: 44 } } },
+                       interaction: { hover: true, tooltipDelay: 150, zoomSpeed: 0.8, hideEdgesOnDrag: RAW_EDGES.length > 250, hideEdgesOnZoom: RAW_EDGES.length > 600 } });
+  new MutationObserver(() => setTimeout(pintar, 30)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  const enfocar = id => { foco = { nodos: new Set([id, ...network.getConnectedNodes(id)]), aristas: new Set(network.getConnectedEdges(id)) }; pintar(); };
+  network.on('selectNode', p => enfocar(p.nodes[0]));
+  network.on('deselectNode', () => { foco = null; pintar(); });
+
+  // barra: subir, familias de flecha y «Ver todo»
+  const barra = document.createElement('div');
+  barra.id = 'yod-barra';
+  barra.innerHTML = (Y.padre ? `<a class="yod-fuerte" href="${Y.padre[0]}">↑ ${esc2(Y.padre[1])}</a>` : '') +
+    Object.entries(Y.familias).filter(([k]) => Y.usadas.includes(k)).map(([k, f]) =>
+      `<button type="button" data-fam="${k}" aria-pressed="true" title="${f.nombre}"><i style="background:${f.color}"></i><span class="yod-l">${f.nombre}</span><span class="yod-c">${f.corto}</span></button>`).join('') +
+    '<button type="button" id="yod-todo" class="yod-fuerte">Ver todo</button>';
+  document.body.appendChild(barra);
+  barra.addEventListener('click', ev => {
+    const b = ev.target.closest('button'); if (!b) return;
+    if (b.id === 'yod-todo') { foco = null; network.unselectAll(); pintar(); ajustar(true); inicio(); return; }
+    const k = b.dataset.fam; if (ocultas.has(k)) ocultas.delete(k); else ocultas.add(k);
+    b.setAttribute('aria-pressed', String(!ocultas.has(k))); pintar();
+  });
+
+  // rejilla del cuadrante: los títulos crecen al alejarse para que siempre se lean
+  const g = Y.rejilla, W = g.cols.reduce((s, c) => s + c.w, 0), Ht = g.filas.reduce((s, f) => s + f.h, 0);
+  const MS = Math.max(70, Math.min(150, Ht * 0.07));
+  const letra = (ctx, t) => { ctx.font = '600 ' + t + 'px system-ui, -apple-system, sans-serif'; };
+  network.on('beforeDrawing', ctx => {
+    const sc = network.getScale() || 1;
+    const linea = css('--border') || '#ccc', texto = css('--text-2') || '#666', fondo = css('--panel') || '#f6f6f6';
+    ctx.save();
+    g.filas.forEach((f, i) => { if (i % 2 === 0) { ctx.fillStyle = fondo; ctx.globalAlpha = 0.6; ctx.fillRect(0, f.y, W, f.h); } });
+    ctx.globalAlpha = 1; ctx.strokeStyle = linea; ctx.lineWidth = 1.5 / Math.min(1, sc * 1.6);
+    g.cols.forEach(c => { ctx.beginPath(); ctx.moveTo(c.x, -MS); ctx.lineTo(c.x, Ht); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(W, -MS); ctx.lineTo(W, Ht); ctx.stroke();
+    g.filas.forEach(f => { ctx.beginPath(); ctx.moveTo(0, f.y); ctx.lineTo(W, f.y); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(0, Ht); ctx.lineTo(W, Ht); ctx.stroke();
+    ctx.fillStyle = texto; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'center';
+    g.cols.forEach(c => {
+      let t = Math.max(20, Math.min(15 / sc, MS * 0.62)); letra(ctx, t);
+      while (t > 11 && ctx.measureText(c.nombre).width > c.w - 14) { t -= 1; letra(ctx, t); }
+      if (ctx.measureText(c.nombre).width > c.w - 14) { const p = c.nombre.split(' '), m = Math.ceil(p.length / 2); ctx.fillText(p.slice(0, m).join(' '), c.x + c.w / 2, -t - 14); ctx.fillText(p.slice(m).join(' '), c.x + c.w / 2, -10); }
+      else ctx.fillText(c.nombre, c.x + c.w / 2, -12);
+    });
+    ctx.textAlign = 'left';
+    g.filas.forEach(f => {
+      let t = Math.max(17, Math.min(14 / sc, f.h * 0.4)); letra(ctx, t);
+      while (t > 12 && ctx.measureText(f.nombre).width > W - 20) { t -= 2; letra(ctx, t); }
+      ctx.globalAlpha = t > 30 ? 0.42 : 0.8; ctx.fillText(f.nombre, 9, f.y + t + 5);
+    });
+    ctx.globalAlpha = 1; ctx.restore();
+  });
+  const marco = (x0, y0, x1, y1, animar) => {
+    const el = document.getElementById('graph'), w = el.clientWidth, h = el.clientHeight;
+    const arriba = (document.getElementById('yod-barra') || { offsetHeight: 0 }).offsetHeight + 12;
+    const s = Math.max(0.04, Math.min((w - 10) / (x1 - x0), (h - arriba - 8) / (y1 - y0), 1.5));
+    network.moveTo({ position: { x: (x0 + x1) / 2, y: (y0 + y1) / 2 - arriba / 2 / s }, scale: s, animation: animar ? { duration: 350, easingFunction: 'easeInOutQuad' } : false });
+  };
+  const ajustar = animar => marco(-14, -MS - 6, W + 14, Ht + 12, animar);
+  const aFila = f => { const el = document.getElementById('graph'), r = el.clientWidth / Math.max(200, el.clientHeight - 60); marco(-10, f.y - 10, Math.min(W + 10, Math.max(540, (f.h + 20) * r)) - 10, f.y + f.h + 10, true); };
+  const aCol = c => { const el = document.getElementById('graph'), r = Math.max(200, el.clientHeight - 60) / el.clientWidth; marco(c.x - 12, -MS, c.x + c.w + 12, Math.min(Ht + 10, Math.max(420, (c.w + 24) * r) - MS), true); };
+  let tocado = false;
+  const cont = document.getElementById('graph');
+  ['pointerdown', 'wheel', 'touchstart'].forEach(ev => cont.addEventListener(ev, () => { tocado = true; }, { passive: true }));
+  network.once('afterDrawing', () => { if (!foco) ajustar(false); });
+  [60, 250, 700, 1500].forEach(ms => setTimeout(() => { if (!foco && !tocado) ajustar(false); }, ms));
+  window.addEventListener('resize', () => setTimeout(() => { if (!foco) ajustar(false); }, 80));
+  const ir = document.createElement('select'); ir.id = 'yod-ir'; ir.setAttribute('aria-label', 'Acercar a una fila o columna');
+  ir.innerHTML = '<option value="">Acercar a…</option><optgroup label="Filas">' + g.filas.map((f, i) => `<option value="f${i}">${esc2(f.nombre)}</option>`).join('') +
+    '</optgroup><optgroup label="Columnas">' + g.cols.map((c, i) => `<option value="c${i}">${esc2(c.nombre)}</option>`).join('') + '</optgroup>';
+  barra.insertBefore(ir, barra.querySelector('button'));
+  ir.addEventListener('change', () => { const v = ir.value; if (!v) return; tocado = true; if (v[0] === 'f') aFila(g.filas[+v.slice(1)]); else aCol(g.cols[+v.slice(1)]); ir.value = ''; });
+
+  // panel de detalle
+  const enlace = (t, id) => t[0] ? `<a href="${t[0]}#${encodeURIComponent(id)}">${esc2(t[1])}</a>` : esc2(t[1]);
+  window.showInfo = function (nodeId) {
+    const p = Y.nodos[nodeId]; if (!p) return;
+    const eds = network.getConnectedEdges(nodeId);
+    const vecinos = eds.map(eid => {
+      const r = RAW_EDGES[eid], otro = r.from === nodeId ? r.to : r.from, fl = det(r), q = Y.nodos[otro] || {};
+      return `<span class="neighbor-link" style="border-left-color:${esc2((Y.familias[fl.f] || {}).color || '#888')}" data-nid="${esc2(otro)}">${r.from === nodeId ? '→' : '←'} ${esc2(q.nombre || otro)} <i style="opacity:.72">· ${esc2(fl.r || '')}</i></span>`;
+    }).join('');
+    let h = `<div class="field"><b>${esc2(p.nombre)}</b></div><div class="field yod-tipo">${esc2(p.tipo)}${p.estado ? ' · ' + esc2(p.estado) : ''}</div>`;
+    if (p.dentro) h += `<a class="yod-entrar" href="${p.dentro[0]}">Entrar a ${esc2(p.dentro[1])} →</a>`;
+    if (p.nota) h += `<div class="field">${esc2(p.nota)}</div>`;
+    if (p.err) h += p.err.map(x => `<div class="field yod-alerta"><b>${x.tipo === 'cambio' ? 'Cambió' : 'Error'}</b> · ${esc2(x.msg)}${x.desde ? ' · desde ' + esc2(String(x.desde).slice(0, 10)) : ''}${x.url ? ` · <a href="${esc2(x.url)}" target="_blank" rel="noopener" style="color:inherit">ver</a>` : ''}</div>`).join('');
+    if (p.al) h += p.al.map(a => `<div class="field yod-alerta"><b>Hallazgo</b> · <a href="hallazgos.html#${encodeURIComponent(a[0])}" style="color:inherit">${esc2(a[1])}</a></div>`).join('');
+    if (p.lista) h += `<details class="yod-lista"${p.lista.length <= 24 ? ' open' : ''}><summary>${esc2(p.lt)}</summary><div>${p.lista.map(x => `<span>${esc2(x)}</span>`).join('')}</div></details>`;
+    if (p.ev) h += `<div class="field yod-ev">Evidencia: ${esc2(p.ev)}</div>`;
+    if (p.url) h += `<a class="yod-abrir" href="${esc2(p.url)}" target="_blank" rel="noopener">Abrir la fuente ↗</a>`;
+    if (p.tb && p.tb.length) h += `<div class="field yod-tb">También aparece en: ${p.tb.map(t => enlace(t, nodeId)).join(' · ')}</div>`;
+    h += `<div class="field yod-ev">Celda: ${esc2(p.celda)}</div>`;
+    if (eds.length) h += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Conexiones (${eds.length})</div><div id="neighbors-list">${vecinos}</div>`;
+    document.getElementById('info-content').innerHTML = h;
+  };
+  window.focusNode = function (id) {
+    const p = Y.nodos[id] || {}, el = document.getElementById('graph');
+    const s = p.forma === 'box' ? Math.min(1, (el.clientWidth - 24) / ((p.caja || 300) + 40)) : Math.min(0.9, Math.max(0.6, el.clientWidth / 520));
+    network.focus(id, { scale: s, animation: true }); network.selectNodes([id]); showInfo(id); enfocar(id);
+  };
+  const inicio = () => { const c = document.getElementById('info-content');
+    if (c) c.innerHTML = `<div class="field"><b>${esc2(Y.titulo)}</b></div><div class="field">${esc2(Y.sub)}</div><div class="field yod-ev">Toca un nodo para ver qué es, de dónde le llega y a dónde va. Con «Acercar a…» saltas a una fila o a una columna.</div>`; };
+  inicio();
+  network.on('click', p => {
+    if (p.nodes.length) return;
+    if (p.edges.length) {
+      const r = RAW_EDGES[p.edges[0]], fl = det(r), a = Y.nodos[r.from] || {}, b = Y.nodos[r.to] || {};
+      document.getElementById('info-content').innerHTML = `<div class="field"><b>${esc2(a.nombre)} → ${esc2(b.nombre)}</b></div><div class="field">${esc2(fl.r || '')}</div>` +
+        `<div class="field yod-tipo">${esc2((Y.familias[fl.f] || {}).nombre || '')}</div>` + (fl.nota ? `<div class="field">${esc2(fl.nota)}</div>` : '') +
+        (fl.ev ? `<div class="field yod-ev">Evidencia: ${esc2(fl.ev)}</div>` : '') +
+        `<span class="neighbor-link" data-nid="${esc2(r.from)}">← ${esc2(a.nombre)}</span><span class="neighbor-link" data-nid="${esc2(r.to)}">→ ${esc2(b.nombre)}</span>`;
+      return;
+    }
+    const c = p.pointer.canvas;
+    if (c.y < 0 && c.y > -MS - 30) { const col = g.cols.find(k => c.x >= k.x && c.x <= k.x + k.w); if (col) { aCol(col); return; } }
+    inicio();
+  });
+  network.on('doubleClick', p => { const d = p.nodes.length && Y.nodos[p.nodes[0]] && Y.nodos[p.nodes[0]].dentro; if (d) yodIr(d[0]); });
+
+  // textos del visor en español
+  const tx = (sel, t) => { const el = document.querySelector(sel); if (el) el.textContent = t; };
+  tx('#info-panel h3', 'Detalle'); tx('#legend-wrap h3', 'Celdas de esta lámina');
+  const inp = document.getElementById('search'); if (inp) inp.placeholder = 'Buscar en esta lámina…';
+  const lbl = document.querySelector('#legend-controls label'); if (lbl) lbl.lastChild.textContent = 'Todas';
+  document.querySelectorAll('[data-theme-choice]').forEach(b => { b.textContent = { light: 'Claro', dark: 'Oscuro', system: 'Sistema' }[b.dataset.themeChoice] || b.textContent; });
+  const st = document.getElementById('stats'); if (st) st.textContent = Y.pie;
+  const sim = document.createElement('div'); sim.id = 'yod-simbolos';
+  sim.innerHTML = Y.simbolos.map(s => `<b><span style="color:${s[1]}">${s[0]}</span> ${esc2(s[2])}</b>`).join('');
+  if (st && st.parentNode) st.parentNode.insertBefore(sim, st);
+
+  // errores en vivo: estado.json lo escribe el flujo «Grafo · estado» del repositorio
+  fetch(Y.estado || 'estado.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(E => {
+    if (!E || !E.errores) return; let n = 0;
+    E.errores.forEach(x => (x.nodos || []).forEach(id => { const p = Y.nodos[id]; if (!p) return; (p.err = p.err || []).push(x); if (x.tipo !== 'cambio') { p.al = p.al || []; p.bc = '#C8102E'; } else if (!p.bc) p.bc = '#C99A12'; n++; }));
+    if (n) { pintar(); const st2 = document.getElementById('stats'); if (st2) st2.textContent = Y.pie + ' · estado del ' + (E.generado || '').slice(0, 16).replace('T', ' ') + ' UTC'; }
+  }).catch(() => {});
+  // llegar con un nodo señalado en la liga, y avisar a la portada qué lámina es
+  const abrir = () => { let id = ''; try { id = window.YOD_FOCO || decodeURIComponent(location.hash.slice(1)); } catch (e) {} if (Y.nodos[id]) focusNode(id); };
+  if (window.YOD_FOCO || location.hash.length > 1) setTimeout(abrir, 280);
+  window.addEventListener('hashchange', abrir);
+  try { if (window.parent && window.parent !== window) window.parent.postMessage({ yod: 1, id: Y.id }, '*'); } catch (e) {}
+})();
+
+network.once('stabilizationIterationsDone', () => {
+  network.setOptions({ physics: { enabled: false } });
+});
+
+function showInfo(nodeId) {
+  const n = nodesDS.get(nodeId);
+  if (!n) return;
+  const neighborIds = network.getConnectedNodes(nodeId);
+  const neighborItems = neighborIds.map(nid => {
+    const nb = nodesDS.get(nid);
+    const color = nb ? nb.color.background : '#555';
+    return `<span class="neighbor-link" style="border-left-color:${esc(color)}" data-nid="${esc(nid)}">${esc(nb ? nb.label : nid)}</span>`;
+  }).join('');
+  const isMetaNode = !n.file_type && !n.source_file;
+  let html = `<div class="field"><b>${esc(n.label)}</b></div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Type: ${esc(n.file_type || 'unknown')}</div>`;
+  }
+  html += `<div class="field">Community: ${esc(n.community_name || '')}</div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Source: ${esc(n.source_file || '-')}</div>`;
+  } else if (n.member_count !== undefined && n.member_count !== null) {
+    html += `<div class="field">Members: ${esc(n.member_count)}</div>`;
+  }
+  html += `<div class="field">Degree: ${n.degree}</div>`;
+  if (neighborIds.length) {
+    html += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Neighbors (${neighborIds.length})</div><div id="neighbors-list">${neighborItems}</div>`;
+  }
+  document.getElementById('info-content').innerHTML = html;
+}
+
+function focusNode(nodeId) {
+  network.focus(nodeId, { scale: 1.4, animation: true });
+  network.selectNodes([nodeId]);
+  showInfo(nodeId);
+}
+
+// Neighbor links use a data attribute + one delegated listener rather than an
+// inline onclick. A node id/label sourced from a document or a scraped URL
+// (graphify add) can contain a double-quote; dropping the stringified id
+// unescaped into a quoted onclick both broke every link and allowed a hostile
+// source to inject an event handler into the local report (stored XSS, #1838).
+// esc() on data-nid keeps the value inside the attribute; the listener reads it
+// back verbatim. Bound to document so it survives the innerHTML rebuild that
+// recreates #neighbors-list on each showInfo().
+document.addEventListener('click', e => {
+  const el = e.target.closest('.neighbor-link');
+  if (el && el.dataset.nid !== undefined) focusNode(el.dataset.nid);
+});
+
+// Sidebar tooltips reuse vis-network's .vis-tooltip style and 100ms tooltipDelay.
+// Names get one only when CSS ellipsis truncates them (the full text is still in
+// the DOM); counts always get one, to say what the number is. Text is set with
+// textContent only (labels are untrusted). Delegated on document so rows rebuilt
+// later (search results, showInfo()) are covered.
+const sidebarTip = document.createElement('div');
+sidebarTip.className = 'vis-tooltip';
+sidebarTip.style.cssText = 'white-space: normal; max-width: 360px; overflow-wrap: break-word;';
+document.body.appendChild(sidebarTip);
+let sidebarTipTimer = null;
+let sidebarTipEl = null;    // element whose text the tooltip shows
+let sidebarTipZone = null;  // element the pointer must leave to hide it
+function hideSidebarTip() {
+  clearTimeout(sidebarTipTimer);
+  sidebarTip.style.visibility = 'hidden';
+  sidebarTip.textContent = '';
+  sidebarTipEl = sidebarTipZone = null;
+}
+document.addEventListener('mouseover', e => {
+  const zone = e.target.closest && e.target.closest('.legend-count, .legend-item, .search-item, .neighbor-link');
+  // Anywhere on a legend row except its count (dot, checkbox, gaps, padding)
+  // stands for the row's name, so moving within the row never re-triggers it.
+  const el = zone && zone.classList.contains('legend-item') ? zone.querySelector('.legend-label') : zone;
+  if (!el || el === sidebarTipEl) return;
+  hideSidebarTip();
+  const isCount = el.classList.contains('legend-count');
+  if (!isCount && el.scrollWidth <= el.clientWidth) return;
+  const text = isCount ? `${el.textContent} ${el.textContent === '1' ? 'nodo' : 'nodos'}` : el.textContent;
+  sidebarTipEl = el;
+  sidebarTipZone = zone;
+  const x = e.clientX, y = e.clientY;
+  sidebarTipTimer = setTimeout(() => {
+    sidebarTip.textContent = text;
+    sidebarTip.style.left = sidebarTip.style.top = '0px';  // measure at full max-width
+    sidebarTip.style.visibility = 'visible';
+    const w = sidebarTip.offsetWidth, h = sidebarTip.offsetHeight;
+    sidebarTip.style.left = Math.max(4, Math.min(x + 12, window.innerWidth - w - 4)) + 'px';
+    sidebarTip.style.top = (y + 16 + h > window.innerHeight ? Math.max(4, y - h - 8) : y + 16) + 'px';
+  }, 100);
+});
+document.addEventListener('mouseout', e => {
+  if (sidebarTipZone && !sidebarTipZone.contains(e.relatedTarget)) hideSidebarTip();
+});
+// A click rebuilds or hides the row (showInfo(), search pick) without a mouseout.
+document.addEventListener('mousedown', hideSidebarTip);
+
+// Track hovered node — hover detection is more reliable than click params
+let hoveredNodeId = null;
+network.on('hoverNode', params => {
+  hoveredNodeId = params.node;
+  container.style.cursor = 'pointer';
+});
+network.on('blurNode', () => {
+  hoveredNodeId = null;
+  container.style.cursor = 'default';
+});
+container.addEventListener('click', () => {
+  if (hoveredNodeId !== null) {
+    showInfo(hoveredNodeId);
+    network.selectNodes([hoveredNodeId]);
+  }
+});
+network.on('click', params => {
+  if (params.nodes.length > 0) {
+    showInfo(params.nodes[0]);
+  } else if (hoveredNodeId === null) {
+    document.getElementById('info-content').innerHTML = '<span class="empty">Toca un nodo para ver su detalle</span>';
+  }
+});
+
+const searchInput = document.getElementById('search');
+const searchResults = document.getElementById('search-results');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  searchResults.innerHTML = '';
+  if (!q) { searchResults.style.display = 'none'; return; }
+  const matches = RAW_NODES.filter(n => n.label.toLowerCase().includes(q)).slice(0, 20);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.style.display = 'block';
+  matches.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'search-item';
+    el.textContent = n.label;
+    el.style.borderLeft = `3px solid ${n.color.background}`;
+    el.style.paddingLeft = '8px';
+    el.onclick = () => {
+      network.focus(n.id, { scale: 1.5, animation: true });
+      network.selectNodes([n.id]);
+      showInfo(n.id);
+      searchResults.style.display = 'none';
+      searchInput.value = '';
+    };
+    searchResults.appendChild(el);
+  });
+});
+document.addEventListener('click', e => {
+  if (!searchResults.contains(e.target) && e.target !== searchInput)
+    searchResults.style.display = 'none';
+});
+
+const hiddenCommunities = new Set();
+
+const selectAllCb = document.getElementById('select-all-cb');
+
+function updateSelectAllState() {
+  const total = LEGEND.length;
+  const hidden = hiddenCommunities.size;
+  selectAllCb.checked = hidden === 0;
+  selectAllCb.indeterminate = hidden > 0 && hidden < total;
+}
+
+function toggleAllCommunities(hide) {
+  document.querySelectorAll('.legend-item').forEach(item => {
+    hide ? item.classList.add('dimmed') : item.classList.remove('dimmed');
+  });
+  document.querySelectorAll('.legend-cb').forEach(cb => {
+    cb.checked = !hide;
+  });
+  LEGEND.forEach(c => {
+    if (hide) hiddenCommunities.add(c.cid); else hiddenCommunities.delete(c.cid);
+  });
+  const updates = RAW_NODES.map(n => ({ id: n.id, hidden: hide }));
+  nodesDS.update(updates);
+  updateSelectAllState();
+}
+
+const legendEl = document.getElementById('legend');
+LEGEND.forEach(c => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.className = 'legend-cb';
+  cb.checked = true;
+  cb.addEventListener('change', (e) => {
+    e.stopPropagation();
+    if (cb.checked) {
+      hiddenCommunities.delete(c.cid);
+      item.classList.remove('dimmed');
+    } else {
+      hiddenCommunities.add(c.cid);
+      item.classList.add('dimmed');
+    }
+    const updates = RAW_NODES
+      .filter(n => n.community === c.cid)
+      .map(n => ({ id: n.id, hidden: !cb.checked }));
+    nodesDS.update(updates);
+    updateSelectAllState();
+  });
+  item.innerHTML = `<div class="legend-dot" style="background:${c.color}"></div>
+    <span class="legend-label">${c.label}</span>
+    <span class="legend-count">${c.count}</span>`;
+  item.prepend(cb);
+  item.onclick = (e) => {
+    if (e.target === cb) return;
+    cb.checked = !cb.checked;
+    cb.dispatchEvent(new Event('change'));
+  };
+  legendEl.appendChild(item);
+});
+</script>
+<script>
+// Render hyperedges as shaded regions
+const hyperedges = [];
+// afterDrawing passes ctx already transformed to network coordinate space.
+// Draw node positions raw — no manual pan/zoom/DPR math needed.
+
+// Andrew's monotone chain. Returns the hull in counter-clockwise order, which
+// is what the perimeter must be traced in. Collinear and duplicate points
+// collapse to the extremes, so degenerate member sets render as a segment
+// rather than a zero-area crossed path.
+function convexHull(pts) {
+    const p = pts.slice().sort((a, b) => (a.x - b.x) || (a.y - b.y));
+    if (p.length < 3) return p;
+    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const build = seq => {
+        const out = [];
+        for (const q of seq) {
+            while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+            out.push(q);
+        }
+        out.pop();
+        return out;
+    };
+    const hull = build(p).concat(build(p.slice().reverse()));
+    return hull.length >= 3 ? hull : p;
+}
+network.on('afterDrawing', function(ctx) {
+    hyperedges.forEach(h => {
+        // Legend toggles only set `hidden` on nodes; getPositions() still
+        // returns them, so skip hidden members or their hull lingers.
+        const positions = h.nodes
+            .filter(nid => { const n = nodesDS.get(nid); return n && n.hidden !== true; })
+            .map(nid => network.getPositions([nid])[nid])
+            .filter(p => p !== undefined);
+        if (positions.length < 2) return;
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#6366f1';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Centroid and expanded hull in network coordinates.
+        // The perimeter must follow hull order, not h.nodes order: tracing the
+        // raw member order self-intersects whenever the layout does not happen
+        // to place members in angular order, filling as crossed wedges.
+        const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length;
+        const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length;
+        const hull = convexHull(positions);
+        const expanded = hull.map(p => ({
+            x: cx + (p.x - cx) * 1.15,
+            y: cy + (p.y - cy) * 1.15
+        }));
+        ctx.moveTo(expanded[0].x, expanded[0].y);
+        expanded.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+        // Label
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#4f46e5';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(h.label, cx, cy - 5);
+        ctx.restore();
+    });
+});
+</script>
+</body>
+</html>

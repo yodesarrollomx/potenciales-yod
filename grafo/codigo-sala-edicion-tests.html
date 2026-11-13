@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Código · sala-edicion · tests/ · YOD OS en Graphify</title>
+<script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
+        integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"
+        crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #0f0f1a; --panel: #1a1a2e; --border: #2a2a4e; --input-border: #3a3a5e;
+    --text: #e0e0e0; --text-2: #aaa; --text-3: #ccc; --muted: #555; --count: #666;
+    --neighbor-border: #333; --node-label: #ffffff;
+  }
+  [data-theme="light"] {
+    --bg: #ffffff; --panel: #f8f9fa; --border: #d9dee5; --input-border: #c3cad4;
+    --text: #222222; --text-2: #666666; --text-3: #333333; --muted: #888888; --count: #777777;
+    --neighbor-border: #ccc; --node-label: #222222;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  #graph { flex: 1; }
+  #sidebar { width: 280px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  #search-wrap { padding: 12px; border-bottom: 1px solid var(--border); }
+  #search { width: 100%; background: var(--bg); border: 1px solid var(--input-border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+  #search:focus { border-color: #4E79A7; }
+  #search-results { max-height: 140px; overflow-y: auto; padding: 4px 12px; border-bottom: 1px solid var(--border); display: none; }
+  .search-item { padding: 4px 6px; cursor: pointer; border-radius: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-item:hover { background: var(--border); }
+  #info-panel { padding: 14px; border-bottom: 1px solid var(--border); min-height: 140px; }
+  #info-panel h3 { font-size: 13px; color: var(--text-2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #info-content { font-size: 13px; color: var(--text-3); line-height: 1.6; }
+  #info-content .field { margin-bottom: 5px; }
+  #info-content .field b { color: var(--text); }
+  #info-content .empty { color: var(--muted); font-style: italic; }
+  .neighbor-link { display: block; padding: 2px 6px; margin: 2px 0; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--neighbor-border); }
+  .neighbor-link:hover { background: var(--border); }
+  #neighbors-list { max-height: 160px; overflow-y: auto; margin-top: 4px; }
+  #legend-wrap { flex: 1; overflow-y: auto; padding: 12px; }
+  #legend-wrap h3 { font-size: 13px; color: var(--text-2); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
+  .legend-item:hover { background: var(--border); padding-left: 4px; }
+  .legend-item.dimmed { opacity: 0.35; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-count { color: var(--count); font-size: 11px; }
+  #stats { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  #legend-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 4px 0; }
+  #legend-controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-2); user-select: none; }
+  #legend-controls label:hover { color: var(--text); }
+  .legend-cb, #select-all-cb { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid var(--input-border); border-radius: 3px; background: var(--bg); cursor: pointer; position: relative; flex-shrink: 0; }
+  .legend-cb:checked, #select-all-cb:checked { background: #4E79A7; border-color: #4E79A7; }
+  .legend-cb:checked::after, #select-all-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  #select-all-cb:indeterminate { background: #4E79A7; border-color: #4E79A7; }
+  #select-all-cb:indeterminate::after { content: ''; position: absolute; left: 2px; top: 5px; width: 8px; height: 2px; background: #fff; border: none; transform: none; }
+  #theme-wrap { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  #theme-wrap button { flex: 1; background: var(--bg); color: var(--text-2); border: 1px solid var(--input-border); border-radius: 4px; padding: 3px 0; font-size: 11px; cursor: pointer; }
+  #theme-wrap button:hover { color: var(--text); }
+  #theme-wrap button[aria-pressed="true"] { background: #4E79A7; border-color: #4E79A7; color: #fff; }
+</style>
+<script id="graphify-theme-init">
+// Apply the saved theme before first paint (#3894). No saved choice keeps the
+// historical dark look; "system" follows prefers-color-scheme.
+(function () {
+  var pref = null;
+  try { pref = localStorage.getItem('graphify-theme'); } catch (e) {}
+  var t = pref === 'light' ? 'light'
+    : pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light'
+    : window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<style id="yod-capa">
+  #graph { position: relative; }
+  #yod-barra { position: fixed; top: 8px; left: 8px; right: 296px; z-index: 5; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+  #yod-barra button, #yod-barra a, #yod-barra select { pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; font: 500 12px system-ui, -apple-system, sans-serif; text-decoration: none;
+    color: var(--text); background: var(--panel); border: 1px solid var(--input-border); border-radius: 999px; padding: 5px 10px; min-height: 30px; cursor: pointer; }
+  #yod-barra button[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+  #yod-barra select { max-width: 150px; appearance: auto; }
+  #yod-barra i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  #yod-barra .yod-fuerte { font-weight: 650; }
+  #yod-barra .yod-c { display: none; }
+  .neighbor-link { white-space: normal !important; overflow-wrap: anywhere; line-height: 1.35; padding: 5px 6px !important; }
+  #neighbors-list { max-height: 260px !important; }
+  #info-content .field { overflow-wrap: anywhere; }
+  #info-content a { color: #4E79A7; }
+  [data-theme="dark"] #info-content a { color: #8FB8E8; }
+  .yod-tipo { color: var(--text-2); font-size: 12px; }
+  .yod-ev { color: var(--text-2); font-size: 11.5px; }
+  .yod-alerta { color: #C8102E; } [data-theme="dark"] .yod-alerta { color: #FF7B8A; }
+  .yod-entrar { display: block; margin: 8px 0; padding: 9px 11px; border-radius: 8px; background: #4E79A7; color: #fff !important; font-weight: 600; text-decoration: none; font-size: 13px; }
+  .yod-abrir { display: inline-block; margin: 2px 0 6px; font-size: 12px; }
+  .yod-lista { margin: 6px 0; font-size: 12px; } .yod-lista summary { cursor: pointer; color: var(--text-2); padding: 3px 0; }
+  .yod-lista div { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 0; } .yod-lista span { border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font: 11.5px ui-monospace, Menlo, monospace; }
+  .yod-tb { font-size: 12px; line-height: 1.7; }
+  #yod-simbolos { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 3px 10px; }
+  #yod-simbolos b { font-weight: 400; }
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    #graph { flex: 1 1 auto; min-height: 54vh; }
+    #sidebar { display: block; width: auto; max-height: 46vh; overflow-y: auto; border-left: 0; border-top: 1px solid var(--border); }
+    #theme-wrap { display: none; }
+    #info-panel { min-height: 0; }
+    #legend-wrap { overflow: visible; }
+    #yod-barra { right: 8px; gap: 4px; }
+    #yod-barra button, #yod-barra a, #yod-barra select { font-size: 11px; padding: 4px 8px; min-height: 28px; }
+    #yod-barra .yod-l { display: none; } #yod-barra .yod-c { display: inline; }
+    #yod-barra select { max-width: 112px; }
+    #yod-barra a.yod-fuerte { max-width: 150px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: inline-block; line-height: 20px; }
+  }
+</style>
+<script id="yod-datos">window.YOD = {"id":"codigo-sala-edicion-tests","titulo":"Código · sala-edicion · tests/","sub":"Carpeta tests/ del repositorio sala-edicion.","padre":["codigo-sala-edicion.html","Código · sala-edicion"],"nodos":{"sala-edicion::tests_sala_salida_test_py_tests_sala_salida_test":{"x":111,"y":72,"nombre":"sala_salida_test.py","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"(esta carpeta) · Flujos y pruebas","lbl":"\nsala_salida_test.py","ev":"sala-edicion/tests/sala_salida_test.py · 670 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/tests/sala_salida_test.py","lt":"Funciones y símbolos (81)","lista":["png()  · L42","md5()  · L46","tira()  · L50","toma()  · L51","carta()  · L66","decision()  · L72","Drive  · L78",".__init__()  · L81","._nuevo()  · L86",".listar()  · L92",".asegurar_carpeta()  · L98",".ruta_carpetas()  · L104",".subir()  · L109",".subir_documento()  · L120",".mover()  · L127",".hijos()  · L132","Escenario  · L139",".__init__()  · L140",".__enter__()  · L149","get()  · L155","post()  · L167","bajar()  · L177",".__exit__()  · L204",".filas()  · L207",".sello()  · L211",".empacar()  · L214",".de()  · L219","TextoTests  · L223",".test_un_texto_de_la_casa_pasa()  · L224",".test_cada_candado_comprobable_tiene_su_codigo()  · L227",".test_el_plan_va_completo_y_con_sus_mayusculas()  · L242",".test_largo_corto_y_caracteres_raros()  · L247",".test_reglas_agregan_ubicaciones_y_palabras()  · L253",".test_las_ligas_las_pone_la_estacion_y_se_miden_por_pieza()  · L257","PiezaCompletaTests  · L269",".test_completa_lleva_las_tomas_elegidas_en_orden_y_el_original()  · L270",".test_una_lamina_sin_aprobar_o_rechazada_no_sale()  · L278",".test_guion_con_laminas_por_hacer_no_sale()  · L287",".test_guion_heredado_en_texto_no_frena()  · L294",".test_manda_la_tira_viva_mas_reciente_de_cada_pieza()  · L300",".test_entre_dos_tiras_vivas_manda_la_que_publico_la_mesa()  · L308",".test_una_tira_rota_no_detiene_a_las_demas()  · L317",".test_cortes_de_video_y_ejes_no_son_piezas()  · L325",".test_una_lamina_aprobada_con_la_prueba_ligera_sale_con_su_original()  · L334",".test_formato_de_salida()  · L341",".test_un_reel_sale_como_carrusel_solo_con_el_video_en_pausa()  · L350",".test_frenos_excluir_y_proyeccion_de_la_mesa()  · L358",".test_una_ruta_rara_no_es_publicable()  · L367",".test_publicada_no_vuelve()  · L373","PaqueteTests  · L380",".test_paquete_completo_en_drive_y_en_la_sala()  · L381",".test_conserva_la_historia_del_expediente()  · L406",".test_repetir_no_duplica_ni_vuelve_a_subir()  · L418",".test_si_el_sheet_no_confirma_se_reintenta_sin_duplicar_en_drive()  · L428",".test_el_texto_con_un_candado_roto_regresa_y_no_se_escribe_nada()  · L440",".test_el_texto_nunca_se_imprime()  · L448",".test_un_texto_escrito_para_otra_version_no_entra()  · L459",".test_ensayo_no_escribe_en_ningun_lado()  · L468",".test_en_pausa_no_empaca()  · L474",".test_sin_drive_raiz_no_inventa_carpeta()  · L480",".test_una_falla_de_drive_no_detiene_a_las_demas()  · L485",".test_dos_paquetes_nuevos_llevan_numeros_distintos()  · L496",".test_la_imagen_tiene_que_ser_la_que_se_aprobo()  · L510",".test_los_textos_mal_formados_fallan_sin_tocar_nada()  · L528","PublicadaTests  · L545",".publicada()  · L546",".test_ya_la_publique_cierra_el_expediente_y_guarda_el_paquete()  · L551",".test_una_liga_rara_no_se_guarda_como_publicacion()  · L570",".test_solo_cierra_lo_que_la_estacion_entrego()  · L580",".test_si_drive_no_mueve_la_carpeta_el_registro_no_se_pierde()  · L587","… y 11 más"],"tb":[["codigo-sala-edicion.html","Código · sala-edicion"]]},"sala-edicion::tests_snapshots_online_test":{"x":277,"y":72,"nombre":"snapshots_online_test.py","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"(esta carpeta) · Flujos y pruebas","lbl":"snapshots_online_t\nest.py","ev":"sala-edicion/tests/snapshots_online_test.py · 726 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/tests/snapshots_online_test.py","lt":"Funciones y símbolos (80)","lista":["ArchiveTests  · L21",".setUp()  · L22",".test_roundtrip_and_hash()  · L29",".test_wrong_archive_hash()  · L35",".test_archive_bytes_are_reproducible_for_recovery()  · L39",".test_delta_identity_binds_base_and_patch()  · L46",".test_wrong_repo()  · L57",".test_wrong_data_hash()  · L61",".test_paths_and_secret_files_rejected()  · L65",".test_invalid_json()  · L74",".altered_zip()  · L78",".test_file_checksum_tampering()  · L90",".test_undeclared_and_duplicate_entry()  · L95",".test_symlink()  · L103",".test_declared_size_and_limits()  · L114",".test_room_and_early_warning()  · L122",".test_deletion_contract()  · L135",".test_receipt_is_exact()  · L143",".test_receipt_differences_never_return_untrusted_values_or_keys()  · L150","FakeGitHub  · L161",".__init__()  · L162",".request()  · L168",".upload()  · L211",".asset()  · L219","TransportTests  · L223",".test_only_get_retries_transient_failures()  · L224","LifecycleTests  · L238",".setUp()  · L239",".tearDown()  · L258",".run_git()  · L261",".prepare()  · L265",".next_run()  · L270",".mark_published()  · L277",".test_snapshot_reentry_reuses_release_and_asset()  · L282",".test_delta_keeps_parent_media_without_uploading_it_again()  · L289",".test_incremental_flag_is_off_by_default_and_full_checkpoint_reads_delta()  · L309",".test_snapshot_published_state_is_not_downgraded_on_reentry()  · L331",".test_chain_bound_fails_without_applying_partial_files()  · L337",".test_replay_preserves_deletion_then_restoration()  · L349",".test_delta_rejects_wrong_parent_hash_and_order()  · L366",".test_site_budget_blocks_before_upload_and_preserves_bundle()  · L387",".test_same_attempt_recovers_existing_lease()  · L400",".test_new_run_attempt_can_replace_previous_attempt_lease()  · L405","observed()  · L410",".test_lost_write_response_is_reconciled_without_duplicate()  · L420","ambiguous()  · L424","ambiguous_upload()  · L431",".test_lost_lock_cas_response_is_reconciled()  · L443","ambiguous()  · L446",".test_published_dispatch_is_recovered_without_sending_again()  · L457","observed()  · L465",".test_duplicate_dispatches_never_report_publication()  · L481","observed()  · L486",".test_lost_dispatch_response_waits_for_delayed_index_without_second_post()  · L493","observed()  · L500","advance()  · L514",".test_no_change_is_not_a_new_snapshot()  · L528",".test_prepare_is_private_and_not_published()  · L533",".test_other_process_output_rejected()  · L540",".test_code_change_needs_pr()  · L545",".test_main_move_rejected()  · L551",".test_lease_fences_old_writer()  · L557",".test_stage_rejects_wrong_code_or_parent()  · L567",".test_stage_and_receipt_confirm_exact_file()  · L578",".test_staging_alone_never_counts_as_a_published_receipt()  · L588",".test_plan_drift_after_stage_blocks_bundle_and_confirmation_before_network()  · L595",".test_bundle_preserves_staged_plan_hash_exactly()  · L610",".test_stale_receipt_retries_with_fresh_url_and_safe_field_diagnostic()  · L621","opened()  · L629","advance()  · L632","… y 10 más"],"tb":[["codigo-sala-edicion.html","Código · sala-edicion"]]},"sala-edicion::tests_sala_produccion_test":{"x":443,"y":72,"nombre":"sala_produccion_test.py","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"(esta carpeta) · Flujos y pruebas","lbl":"sala_produccion_te\nst.py","ev":"sala-edicion/tests/sala_produccion_test.py · 528 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/tests/sala_produccion_test.py","lt":"Funciones y símbolos (69)","lista":["day()  · L20","card()  · L25","tira()  · L29","yes()  · L40","ProductionReadTests  · L44",".test_closed_card_is_recovered_with_current_decision_not_old_date()  · L45","getter()  · L47",".test_retired_source_is_not_recreated_from_local_tira()  · L56","getter()  · L57",".test_network_error_cannot_become_empty_aligned_queue()  · L64","getter()  · L65",".test_ok_false_or_wrong_date_is_rejected()  · L72","getter()  · L74",".test_selected_image_text_are_exact_and_original_does_not_change()  · L79",".test_ambiguous_or_out_of_range_selection_is_blocked()  · L87",".test_editor_veto_does_not_become_approval()  · L92",".test_explicit_clear_revokes_carried_approval()  · L98",".test_duplicate_guion_numbers_cannot_open_cut()  · L104","PlanningTests  · L111",".test_legacy_script_never_opens_cut_but_keeps_approved_branches()  · L112",".plan()  · L122",".test_first_approved_slide_opens_its_branches_and_never_short_cut()  · L130",".test_job_identity_matches_selected_png_and_voice_text()  · L136",".test_idempotent_second_pass_enqueues_nothing()  · L150",".test_carousel_is_not_silently_converted_to_video()  · L155",".test_carried_approved_branch_advances_with_other_slides_unanswered()  · L159",".test_whole_approved_piece_can_open_cut()  · L168","MesaTests  · L174",".test_legacy_script_keeps_existing_drafts_without_inventing_continuation()  · L175",".test_invalid_visual_list_still_fails_instead_of_looking_complete()  · L186",".test_legacy_script_diagnostic_is_partial_and_only_contains_a_count()  · L193",".test_current_rejection_note_wins_over_original_date()  · L201",".test_first_approval_creates_only_missing_guion_drafts()  · L208",".test_pending_new_candidates_are_not_rejected_by_old_note()  · L215",".test_candidates_never_shown_by_live_card_return_to_the_table()  · L221",".test_never_shown_takes_return_without_the_ones_the_gate_rejects()  · L231",".test_source_without_live_sheet_record_is_blocked()  · L240",".test_reference_for_following_slides_uses_the_approved_choice()  · L245",".test_piece_with_open_request_does_not_produce_or_mount()  · L251","MesaIntegrationTests  · L262",".run_wave()  · L263","fake_images()  · L264","get()  · L275",".test_two_limited_waves_preserve_approved_choice_and_unanswered_candidates()  · L293",".test_two_corrections_same_day_never_overwrite_prior_images()  · L310",".test_unverified_historical_candidates_are_not_presented_as_new()  · L322","RejectionSourceTests  · L337",".test_rejection_reads_the_displayed_candidate_not_the_older_image()  · L338",".test_image_mismatch_note_preserves_displayed_text()  · L346","ProductionStatusTests  · L365",".test_recent_saved_decisions_precede_old_alphabetical_backlog()  · L366",".test_second_wave_inherits_priority_of_its_saved_base()  · L372",".test_all_failed_images_fail_the_run_and_publish_blocked_state()  · L380",".test_partial_work_is_reported_partial_not_as_whole_success()  · L403","BrainAvailabilityTests  · L411",".test_default_uses_live_light_alias_not_retired_model()  · L412",".test_transient_primary_uses_verified_gemini_fallback()  · L422",".test_thought_text_is_not_mixed_with_final_json()  · L434",".test_non_transient_authorization_error_is_not_bypassed()  · L444",".test_recorrido_does_not_repeat_mesa_with_the_same_run_id()  · L454","PublishedRecoveryTests  · L462",".test_unmounted_new_tira_does_not_hide_active_parent()  · L463",".test_new_generated_files_are_reused_without_new_image_calls()  · L471",".test_changed_approved_reference_creates_a_new_version()  · L486",".test_snapshot_state_report_is_allowed_and_survives_archive_roundtrip()  · L497",".test_montage_steps_receive_snapshot_identity_and_preserve_pipe_error()  · L508",".test_snapshot_read_error_is_explicit_not_missing_image()  · L517","__init__()  · L520","file_is_published()  · L521"],"tb":[["codigo-sala-edicion.html","Código · sala-edicion"]]},"sala-edicion::tests_medios_publicos_test":{"x":609,"y":72,"nombre":"medios_publicos_test.py","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"(esta carpeta) · Flujos y pruebas","lbl":"medios_publicos_te\nst.py","ev":"sala-edicion/tests/medios_publicos_test.py · 538 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/tests/medios_publicos_test.py","lt":"Funciones y símbolos (57)","lista":["synthetic_image()  · L16","FakeGitHub  · L29",".__init__()  · L31","._id()  · L40",".request()  · L44",".upload()  · L82",".fetch()  · L102",".writes()  · L112","CrashAfterApplied  · L116",".__init__()  · L118",".request()  · L121",".upload()  · L129",".fetch()  · L135","ManifestTests  · L139",".setUp()  · L140",".test_public_contract_and_detached_json()  · L145",".test_private_fields_signed_urls_and_extra_keys_rejected()  · L155",".test_duplicate_json_keys_rejected()  · L173",".test_raw_limit_is_checked_before_json_parse_and_final_size_includes_newline()  · L177",".test_exact_path_policy()  · L187",".test_inconsistent_asset_ids_rejected()  · L197","LifecycleTests  · L206",".setUp()  · L207",".upload()  · L210",".test_draft_upload_publication_anonymous_verification_order()  · L214",".test_same_batch_reentry_has_no_second_mutation()  · L224",".test_existing_manifest_preserved_and_same_path_not_replaced()  · L231",".test_all_three_formats_and_jpeg_suffix()  · L243",".test_same_bytes_same_suffix_only_one_asset_and_fetch()  · L249",".test_applied_500_reconciles_without_second_post()  · L256",".test_unknown_ambiguous_write_fails_closed_without_retry()  · L267",".test_durable_journal_blocks_ambiguous_reentry_for_each_write()  · L279",".test_checkpoint_precedes_mutation_and_applied_errors_reconcile_journal()  · L295","checkpoint()  · L299",".test_checkpoint_failure_stops_before_post_and_does_not_leak()  · L314","fail()  · L317",".test_journal_is_bound_to_exact_batch()  · L327",".test_draft_owned_by_other_descriptor_never_published()  · L339",".test_new_runner_without_journal_recovers_each_applied_remote_write()  · L353",".test_stable_batch_hash_ignores_provenance_but_binds_payload_and_process()  · L377",".test_private_repository_blocks_all_writes()  · L389",".test_wrong_repo_client_blocks_all_calls()  · L395",".test_immutable_setting_mandatory_before_return_or_download()  · L401",".test_resumed_draft_without_digest_never_becomes_public()  · L407",".test_combined_manifest_limit_is_checked_before_publication()  · L425",".test_wrong_anonymous_bytes_rejected()  · L432",".test_metadata_digest_size_state_mime_and_url_are_enforced()  · L436",".test_existing_mutable_or_draft_release_rejected()  · L451",".test_wrong_magic_or_oversize_rejected_before_api()  · L461",".test_renamed_binary_and_missing_decoder_fail_before_any_api()  · L470",".test_unique_asset_limit_checked_before_api()  · L477",".test_no_new_files_preserves_validated_existing_manifest()  · L482","DraftTemporaryURLTests  · L492",".test_draft_temporary_url_recovers_existing_upload_without_resending()  · L493","upload()  · L496","request()  · L506",".test_temporary_url_only_before_publication_with_exact_digest()  · L520"],"tb":[["codigo-sala-edicion.html","Código · sala-edicion"]]},"sala-edicion::tests_auditar_fallos_test":{"x":111,"y":156,"nombre":"auditar_fallos_test.py","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"(esta carpeta) · Flujos y pruebas","lbl":"auditar_fallos_tes\nt.py","ev":"sala-edicion/tests/auditar_fallos_test.py · 622 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/tests/auditar_fallos_test.py","lt":"Funciones y símbolos (68)","lista":["AuditoriaFallosTests  · L16",".setUp()  · L17",".resolver_sintetico()  · L67",".evaluar()  · L75",".candidato()  · L81",".bloqueado()  · L85",".test_corte_validado_es_elegible_y_usa_decision_actual()  · L91",".test_etapas_ausentes_o_sin_corte_no_acreditan_habilitacion()  · L101",".test_solo_considera_fallos_de_corte_y_excluye_veto_de_ubicacion()  · L112",".test_fuente_ausente_no_se_inventa_desde_decision_o_tira()  · L122",".test_sin_fuente_ni_decision_no_atribuye_defectos_de_guion_o_plan()  · L130",".test_decision_ausente_no_evalua_guion_ni_plan_aunque_existan_locales()  · L141",".test_tira_sin_resolver_no_se_evalua_ni_puede_ser_elegible()  · L149",".test_fuente_retirada_no_autoriza_reintento()  · L159",".test_fuente_duplicada_no_acredita_vigencia_unica()  · L165",".test_no_actual_bloquea_aunque_el_corte_se_planeo_antes()  · L169",".test_borrado_actual_no_hereda_la_aprobacion_anterior()  · L173",".test_formato_imagen_no_se_convierte_en_video()  · L180",".test_guion_con_lamina_ausente_no_esta_completo()  · L184",".test_guion_vacio_o_con_numeros_duplicados_no_esta_completo()  · L188",".test_candidato_y_plan_truncados_no_acreditan_tira_completa()  · L194",".test_plan_con_otro_id_no_acredita_el_corte_fallido()  · L199",".test_plan_con_otra_huella_no_hereda_identidad_del_corte()  · L203",".test_plan_con_otra_fuente_no_acredita_mismo_id()  · L207",".test_plan_con_id_duplicado_no_acredita_identidad_unica()  · L211",".test_id_de_corte_no_puede_usar_dependencias_de_otra_familia()  · L215",".test_campos_del_plan_deben_coincidir_con_descriptor_del_corte()  · L224",".test_candidato_y_plan_no_pueden_compartir_descriptor_incoherente_con_id()  · L236",".test_plan_con_lamina_faltante_adicional_o_duplicada_no_coincide()  · L248",".test_plan_recibe_cola_sin_candidatos_y_conserva_todo_lo_demas()  · L256",".test_dependencia_con_otra_version_no_suple_id_exacto()  · L268",".test_dependencia_existente_sin_hecho_bloquea()  · L272",".test_id_exacto_no_acredita_campos_incoherentes_de_dependencia()  · L276",".test_medio_perdido_o_md5_distinto_bloquean_sin_exponer_detalle()  · L286",".test_snapshot_sin_acuse_bloquea()  · L294",".test_ventana_ambigua_no_acredita_elegibilidad()  · L298",".test_evaluar_no_muta_entradas_ni_produce_trabajos()  · L303",".test_resumen_publico_solo_tiene_conteos_y_codigos_constantes()  · L308","MediosRecibosYAcuseTests  · L323",".setUp()  · L324",".descarga()  · L348","bajar()  · L349",".snapshots_doble()  · L354","get()  · L362",".respuesta_recibo()  · L371",".test_medio_exige_metadata_y_bytes_con_mismo_md5()  · L378",".test_metadata_correcta_no_acredita_bytes_alterados_del_mismo_tamano()  · L387",".test_recibo_vincula_codigo_datos_y_snapshot_antes_de_auditar()  · L395",".test_recibo_de_medios_exige_el_pin_exacto_del_snapshot()  · L407",".test_recibo_ajeno_a_codigo_datos_o_snapshot_no_acredita_lectura()  · L423",".test_release_sin_corrida_publicada_no_autoriza_recibo_autorreferente()  · L434",".test_release_publicada_debe_vincular_codigo_datos_e_identidad_del_padre()  · L442",".test_release_sin_validacion_no_llega_a_leer_recibo()  · L456",".test_acuse_privado_relee_exactamente_los_bytes_subidos()  · L465","subir()  · L468","bajar()  · L471",".test_acuse_privado_con_bytes_distintos_no_declara_exito()  · L482",".test_main_confirma_ventana_y_acuse_sin_escrituras_de_negocio()  · L489","bootstrap()  · L492","guardar()  · L506",".test_main_no_confirma_si_falla_la_relectura_del_acuse_privado()  · L532","GitHubSoloLecturaTests  · L557",".test_repositorio_se_expone_sin_ampliar_capacidad_de_escritura()  · L558",".test_get_implicitito_o_explicito_se_delega_como_get_sin_cuerpo()  · L569",".test_metodos_de_escritura_se_rechazan_antes_del_delegado()  · L585",".test_cuerpo_incluso_vacio_se_rechaza_antes_del_delegado()  · L594",".test_descarga_asset_delega_solo_el_get_existente()  · L604",".test_upload_se_rechaza_antes_del_delegado()  · L612"],"tb":[["codigo-sala-edicion.html","Código · sala-edicion"]]},"sala-edicion::tests_sala_consejo_nube_test":{"x":277,"y":156,"nombre":"sala_consejo_nube_test.py","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"(esta carpeta) · Flujos y pruebas","lbl":"sala_consejo_nube_\ntest.py","ev":"sala-edicion/tests/sala_consejo_nube_test.py · 509 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/tests/sala_consejo_nube_test.py","lt":"Funciones y símbolos (64)","lista":["tira()  · L41","toma()  · L42","carta_laminas()  · L56","dia()  · L61","votos()  · L66","Escenario  · L80",".__init__()  · L83",".__enter__()  · L89","subir()  · L94","get()  · L99",".__exit__()  · L122",".salida_doble()  · L128",".expediente()  · L131",".sello()  · L135",".aplicar()  · L139","ExpedienteTests  · L144",".test_lleva_cartas_tomas_y_candados_y_no_decide()  · L145",".test_no_lleva_llaves_y_es_ascii()  · L165",".test_los_cortes_de_video_y_lo_que_pasa_del_tope_quedan_omitidos()  · L173",".test_una_carta_sin_tira_no_se_manda_a_juzgar()  · L186",".test_el_expediente_trae_las_piezas_que_esperan_su_texto()  · L192",".test_si_la_salida_no_se_puede_leer_el_expediente_sale_igual()  · L199",".test_apagado_por_regla_no_lee_la_mesa()  · L209",".test_un_eje_lleva_sus_opciones()  · L216","AplicarTests  · L226",".test_aprueba_y_dice_que_toma()  · L227",".test_la_decision_que_firma_la_acepta_el_contrato_de_produccion()  · L240",".test_regresa_con_las_notas_de_los_jueces_y_no_las_imprime()  · L252",".test_un_si_sin_toma_valida_no_se_firma()  · L263",".test_un_no_no_necesita_toma()  · L271",".test_otra_carta_que_la_que_se_juzgo_no_se_firma()  · L276",".test_una_carta_que_ya_decidio_un_humano_no_se_toca()  · L282",".test_solo_se_vota_lo_que_sigue_abierto()  · L292",".test_un_candado_inventado_no_veta_y_uno_real_si()  · L299",".test_con_menos_de_cinco_jueces_completos_se_abstiene()  · L307",".test_apagado_por_regla_no_aplica_ni_lee_la_mesa()  · L316",".test_veredictos_mal_formados_fallan_sin_decidir()  · L322",".test_el_ensayo_valida_y_no_firma()  · L335",".test_un_corte_de_video_no_lo_juzga_la_nube()  · L341",".test_un_id_que_no_es_de_la_mesa_no_llega_al_registro_publico()  · L350",".test_si_el_sheet_no_confirma_una_carta_las_demas_siguen_y_la_sesion_avisa()  · L358","enviar()  · L361",".test_una_regla_mal_escrita_no_tumba_la_sesion()  · L372",".test_la_misma_carta_dos_veces_se_firma_una()  · L378",".test_el_modelo_declarado_se_limpia()  · L384","TomaPorHermesTests  · L391",".res()  · L394",".test_un_si_lleva_la_toma_de_la_portada()  · L398",".test_si_la_portada_no_es_una_de_las_tomas_no_se_firma()  · L405",".test_sin_tira_no_se_aprueba_pero_si_se_regresa()  · L410",".test_una_lamina_sin_tomas_no_lleva_marca()  · L415",".corrida()  · L424",".test_la_corrida_por_hermes_firma_con_la_toma_que_vio()  · L437",".test_la_corrida_por_hermes_se_abstiene_si_no_sabe_que_toma_aprobo()  · L444",".test_hermes_queda_en_reserva_sin_alarma_si_la_regla_solo_pide_claude()  · L449","TiraTests  · L458",".test_la_tira_que_no_esta_en_el_checkout_se_lee_de_pages()  · L459","bajar()  · L462",".test_un_id_raro_no_sale_a_la_red()  · L470","WorkflowTests  · L478",".test_los_votos_viajan_por_variable_y_no_dentro_del_guion()  · L481",".test_solo_corre_en_main_y_no_en_pull_request()  · L487",".test_la_siguiente_ronda_solo_se_lanza_tras_aplicar_de_verdad()  · L491",".test_los_modos_del_workflow_existen_en_el_codigo()  · L497"],"tb":[["codigo-sala-edicion.html","Código · sala-edicion"]]},"sala-edicion::tests_sala_cambios_test":{"x":443,"y":156,"nombre":"sala_cambios_test.py","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"(esta carpeta) · Flujos y pruebas","lbl":"\nsala_cambios_test.py","ev":"sala-edicion/tests/sala_cambios_test.py · 420 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/tests/sala_cambios_test.py","lt":"Funciones y símbolos (47)","lista":["tira_de_una()  · L35","si()  · L46","orden()  · L50","LeerTests  · L55",".test_una_orden_bien_formada_se_lee_por_tira()  · L56",".test_lo_ilegible_se_ignora_sin_tumbar_nada()  · L60",".test_la_nota_llega_en_una_linea_y_con_tope()  · L73",".test_una_orden_por_lamina_y_tope_de_ordenes()  · L79",".test_solo_vale_para_la_tira_para_la_que_se_pidio()  · L85",".test_la_nube_y_la_pantalla_leen_igual_el_mismo_contrato()  · L91",".test_el_modulo_no_escribe_ni_decide()  · L103","AplicarTests  · L109",".test_solo_reabre_laminas_aprobadas_y_no_toca_el_original()  · L110",".test_sin_ordenes_devuelve_la_misma_tira()  · L124",".test_una_lamina_sin_aprobar_sigue_su_camino()  · L131","MesaTests  · L139",".abiertas()  · L140",".test_sin_orden_una_pieza_aprobada_no_abre_nada()  · L144",".test_con_orden_la_lamina_aprobada_se_rehace_con_la_nota_del_editor()  · L148",".test_la_orden_no_convierte_en_rechazo_lo_que_sigue_por_decidir()  · L155",".test_si_la_produccion_no_alcanzo_la_siguiente_vuelta_hace_tomas_nuevas()  · L159","MontadorTests  · L170",".correr()  · L171","tomas_de_mentira()  · L176","get()  · L191",".test_la_orden_produce_una_rehecha_con_id_nuevo_y_su_origen()  · L216",".test_sin_orden_o_con_orden_de_otra_version_no_se_produce_nada()  · L238",".seleccion()  · L247","._en_tmp()  · L251",".test_una_orden_sobre_una_tira_que_no_es_la_vigente_se_avisa_y_no_produce()  · L258",".test_una_orden_ya_atendida_sobre_la_tira_base_de_la_vigente_no_cuenta_como_perdida()  · L266",".test_una_orden_vigente_cuenta_y_no_se_avisa_como_perdida()  · L278",".test_una_orden_sobre_una_pieza_publicada_segun_su_expediente_se_ignora()  · L284",".test_las_piezas_con_orden_van_primero_aunque_el_tope_sea_de_una_lamina()  · L290",".test_si_no_se_pueden_leer_las_ordenes_la_mesa_sigue_sin_reabrir()  · L303","SalidaTests  · L310",".lista()  · L311",".test_con_orden_la_pieza_lista_deja_de_estar_lista()  · L318",".test_una_orden_de_otra_version_no_la_saca()  · L332",".test_una_pieza_completa_con_orden_no_llega_al_jurado()  · L338","SoloLecturaTests  · L345",".arbol()  · L350",".documentacion()  · L354",".otros_modulos()  · L365",".test_la_llave_cambio_solo_aparece_en_sala_cambios()  · L368",".test_sala_cambios_no_importa_red_ni_cliente()  · L381",".test_solo_sala_cambios_usa_su_prefijo()  · L394"],"tb":[["codigo-sala-edicion.html","Código · sala-edicion"]]},"sala-edicion::tests_cierre_online_test":{"x":609,"y":156,"nombre":"cierre_online_test.py","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"(esta carpeta) · Flujos y pruebas","lbl":"cierre_online_test\n.py","ev":"sala-edicion/tests/cierre_online_test.py · 308 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/tests/cierre_online_test.py","lt":"Funciones y símbolos (47)","lista":["API  · L18",".request()  · L19","MailTests  · L22",".test_record_is_not_receipt()  · L23",".test_old_or_missing_is_unknown()  · L30",".test_rejected_malformed_and_future()  · L34",".test_only_daily_event_counts()  · L40","CloseTests  · L45",".getter()  · L46",".test_read_only_preserves_operations()  · L51",".test_backup_failure_prevents_mail()  · L58","save()  · L60",".test_unknown_mail_attempt_is_saved_and_never_retried()  · L65","operation()  · L67",".test_second_run_attempt_never_sends()  · L75",".test_disabled_workflow_prevents_effect()  · L82","request()  · L84",".test_missing_stage_prevents_effect()  · L91","getter()  · L92",".test_single_transport_no_fallback_for_ambiguous_mail()  · L97",".test_rate_limit_is_not_sent()  · L105",".test_mail_ack_without_destination_rejected()  · L113",".test_unexpected_zone_rejected()  · L120","DiagnosisTests  · L127",".test_only_allowlisted_codes_and_http_status_are_public()  · L128",".test_arbitrary_exception_text_type_names_and_context_never_escape()  · L138","__str__()  · L140",".test_authentication_error_is_classified_without_identity()  · L148",".test_main_identifies_private_configuration_failure_without_effect()  · L154",".test_network_failure_identifies_each_read_without_effect()  · L168","getter()  · L172",".test_workflow_failure_is_located_before_any_write()  · L185","request()  · L187",".test_preflight_drive_failure_keeps_phase_and_does_not_send()  · L198","save()  · L204",".test_byte_verification_failure_has_its_own_step()  · L216",".test_ambiguous_effect_is_saved_once_without_retry()  · L228","operation()  · L230",".test_drive_failure_after_ambiguous_effect_never_retries_effect()  · L243","operation()  · L245","save()  · L248","SafeProbeTests  · L258",".test_typed_sala_error_preserves_safe_diagnostics()  · L259",".test_main_probes_failed_read_once_without_sending_or_saving_business_data()  · L267","getter()  · L271",".test_probe_success_never_turns_failed_preflight_into_an_operation()  · L290","execute()  · L292"],"tb":[["codigo-sala-edicion.html","Código · sala-edicion"]]},"sala-edicion::tests_snapshots_medios_test":{"x":111,"y":240,"nombre":"snapshots_medios_test.py","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"(esta carpeta) · Flujos y pruebas","lbl":"snapshots_medios_t\nest.py","ev":"sala-edicion/tests/snapshots_medios_test.py · 392 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/tests/snapshots_medios_test.py","lt":"Funciones y símbolos (40)","lista":["GitHub  · L19",".__init__()  · L20",".request()  · L26",".upload()  · L39","MediaSnapshots  · L45",".setUp()  · L46",".git()  · L67",".new_snapshot()  · L70",".new_images()  · L75",".prepare()  · L84",".publish()  · L90",".archive()  · L96",".test_json_receipts_stay_in_snapshot_and_only_images_are_externalized()  · L101",".test_default_off_keeps_legacy_full_bytes_and_has_no_media_api_effect()  · L114",".test_external_full_omits_only_new_images_but_preserves_workers_and_old_urls()  · L121",".test_new_reader_hydrates_full_then_flag_off_never_reembeds_external_bytes()  · L141",".test_reentry_does_not_repeat_media_writes_or_change_manifest()  · L160",".test_manipulated_manifest_or_bytes_never_credit_publication()  · L170",".test_old_reader_fails_closed_and_immutable_release_is_required()  · L183",".test_historical_paths_are_never_uploaded()  · L197",".test_marker_without_approved_reader_never_creates_public_assets()  · L206",".large_new_image()  · L220",".test_external_bytes_stop_bundle_and_snapshot_growth_under_existing_budgets()  · L228",".test_unacknowledged_dirty_manifest_is_not_a_bootstrap_baseline()  · L243",".test_receipt_requires_exact_manifest_pin()  · L251","advance()  · L257",".test_legacy_receipt_cannot_claim_an_unavailable_manifest()  · L266",".reader_proof()  · L272","request()  · L279",".test_emitter_requires_completed_reader_deploy_proved_independently()  · L287","opened()  · L292",".test_incompatible_or_unfinished_reader_proof_has_zero_remote_effects()  · L303","opened()  · L323",".test_real_image_decoder_rejects_renamed_private_payload_before_remote_effects()  · L335","AnonymousDownload  · L345",".test_redirect_is_anonymous_bounded_and_rejects_other_hosts()  · L346","opened()  · L351","rejected()  · L364",".test_limits_and_malformed_initial_url_fail_without_remote_details()  · L372","redirect()  · L382"]},"sala-edicion::tests_v4_test":{"x":277,"y":240,"nombre":"v4_test.py","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"(esta carpeta) · Flujos y pruebas","lbl":"v4_test.py","ev":"sala-edicion/tests/v4_test.py · 778 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/tests/v4_test.py","lt":"Funciones y símbolos (48)","lista":["foto()  · L10","ID()  · L17","clip()  · L22","flujos()  · L31","Drive  · L41","DriveError  · L42",".__init__()  · L45",".ruta_carpetas()  · L48",".subir()  · L51",".bajar()  · L58","serie()  · L65","V4Tests  · L82",".setUp()  · L83",".e()  · L91",".ajustes()  · L95",".pintado()  · L98",".test_almacen_separa_y_respeta_duenos()  · L104",".test_semilla_ajustes_y_reglas()  · L121",".test_validar_serie()  · L153",".test_prompt_un_personaje_nota_y_gancho()  · L170",".test_prompt_con_referencias_e_invitado()  · L189",".test_pendiente_piloto_cambio_y_no()  · L208",".test_no_va_deja_fuera_al_episodio()  · L224",".test_productor_reserva_tope_y_fallo()  · L266","ruta_carpetas()  · L289",".test_el_episodio_espera_sus_imagenes_y_lo_gratis_va_antes_de_reservar()  · L303",".test_bloque_de_30_y_continuidad()  · L332",".test_retrato_del_personaje_viaja_a_los_episodios()  · L350",".test_retrato_rechazado_por_google_no_detiene()  · L390","gen()  · L392","cobra()  · L407",".test_primer_cuadro_rechazado_no_pierde_la_toma_pagada()  · L418","gen()  · L420",".test_unir_tolera_un_clip_mudo()  · L436",".test_semillero_sigue_la_temporada()  · L443",".test_un_borrador_de_direccion_no_frena_al_semillero()  · L483",".test_semillero_libre_cuando_no_hay_temporada()  · L498",".test_candados_entran_al_pedido()  · L515","caida()  · L520",".test_historias_que_se_cruzan()  · L530",".test_referencias_del_canon()  · L570","quisquilloso()  · L614","sin_caras()  · L624",".test_fichas_pinta_el_canon_una_vez()  · L641","ruta_carpetas()  · L710",".test_paquete()  · L716",".test_main_siembra_universo_deja_estado_y_no_actua_a_ciegas()  · L745",".test_motores_listos_pregunta_sin_gastar()  · L763"]},"sala-edicion::tests_sala_consejo_test":{"x":443,"y":240,"nombre":"sala_consejo_test.py","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"(esta carpeta) · Flujos y pruebas","lbl":"\nsala_consejo_test.py","ev":"sala-edicion/tests/sala_consejo_test.py · 332 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/tests/sala_consejo_test.py","lt":"Funciones y símbolos (44)","lista":["votos()  · L30","VeredictoTests  · L40",".test_aprueba_con_cuatro_de_seis()  · L41",".test_tres_de_seis_regresa_con_notas_ordenadas()  · L46",".test_veto_de_alejandro_tumba_cinco_a_favor()  · L52",".test_no_de_alejandro_sin_candado_de_veto_no_veta()  · L60",".test_veto_de_sayri_virtual_no_es_veto_del_consejo()  · L66",".test_con_menos_de_cinco_jueces_se_abstiene()  · L71","dia()  · L78","CartasTests  · L87",".test_sin_decisiones_juzga_todas()  · L88",".test_lamina_marcada_por_un_humano_no_se_juzga()  · L92",".test_carta_ya_firmada_por_el_consejo_no_se_repite()  · L97",".test_tipos_desconocidos_quedan_para_los_humanos()  · L101","MotoresTests  · L105",".test_solo_motores_con_llave()  · L106",".test_con_hermes_compiten_sol_y_opus_sin_llaves_de_api()  · L112",".test_hermes_recibe_proveedor_modelo_e_imagen()  · L118","falso()  · L121",".hermes_contesta_con()  · L136",".test_voto_de_otro_modelo_no_cuenta_como_opus()  · L143",".test_voto_del_modelo_pedido_si_cuenta()  · L151",".test_apagado_no_lee_la_mesa()  · L156","contrato()  · L162","firma()  · L177","ContratoTests  · L181",".cargar()  · L182",".test_si_del_consejo_sin_humanos_aprueba()  · L185",".test_no_humano_manda_sobre_si_del_consejo()  · L189",".test_si_humano_manda_sobre_no_del_consejo()  · L195",".test_tres_firmas_caben()  · L201",".test_rol_desconocido_sigue_bloqueado()  · L205","CandadoVerificarTests  · L210",".test_el_decidir_del_consejo_usa_su_llave()  · L211",".test_ningun_otro_archivo_decide()  · L220","InstaladorHermesTests  · L227",".setUp()  · L235",".instalar()  · L256",".leer()  · L262",".test_toma_las_llaves_del_perfil_sin_archivo_previo()  · L265",".test_gateway_compartido_escucha_en_default_y_entra_por_p_perfil()  · L281",".test_quita_el_escucha_viejo_del_perfil_y_conserva_su_llave()  · L296",".test_segunda_corrida_no_duplica_la_api()  · L312",".test_sin_llaves_avisa_y_no_escribe()  · L321"]},"sala-edicion::tests_sala_recibos_test":{"x":609,"y":240,"nombre":"sala_recibos_test.py","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"(esta carpeta) · Flujos y pruebas","lbl":"\nsala_recibos_test.py","ev":"sala-edicion/tests/sala_recibos_test.py · 198 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/tests/sala_recibos_test.py","lt":"Funciones y símbolos (35)","lista":["API  · L25",".__init__()  · L26",".request()  · L32",".upload()  · L43",".asset()  · L52","Repairs  · L55",".test_negative_or_visual_notes_preserve_exact_caption_both_paths()  · L56",".test_visual_correction_never_disappears_when_translator_fails()  · L63",".test_new_caption_limit_both_paths_and_historical_not_rewritten()  · L69",".test_receipt_only_preserves_original_recipe_hash()  · L76",".test_positive_edit_allowed()  · L85","Persistence  · L89",".setUp()  · L90",".store()  · L91",".run_image()  · L92",".test_completed_result_survives_new_client_without_generation()  · L94",".test_plan_saved_before_dispatch_and_only_safe_configuration()  · L100","gen()  · L101",".test_default_engine_stays_frozen_when_configuration_changes()  · L109","lookup()  · L112",".test_corrupt_quota_refusal_cannot_authorize_another_send()  · L119",".test_changed_input_requires_new_identity()  · L125",".test_uncertain_send_only_attempts_receipt_lookup()  · L130","lookup()  · L133",".test_uncertain_send_can_recover_provider_receipt()  · L140","lookup()  · L143",".test_quota_refusal_allows_next_run_but_not_same_attempt()  · L150",".test_lost_create_and_upload_ack_reconciled_without_duplicate()  · L158",".test_existing_conflicting_plan_not_overwritten()  · L164",".test_missing_upload_ack_without_remote_file_does_not_succeed()  · L168",".test_published_release_is_rejected()  · L171",".test_corrupt_result_is_not_reused()  · L174",".test_private_upload_requires_exclusive_draft()  · L180",".test_snapshot_latest_ignores_private_receipts()  · L183",".test_invalid_photo_hash_rejected()  · L189"]},"sala-edicion::tests_publicar_git_test":{"x":111,"y":324,"nombre":"publicar_git_test.py","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"(esta carpeta) · Flujos y pruebas","lbl":"\npublicar_git_test.py","ev":"sala-edicion/tests/publicar_git_test.py · 382 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/tests/publicar_git_test.py","lt":"Funciones y símbolos (42)","lista":["FakeGitHub  · L19",".__init__()  · L20",".now()  · L45",".sleep()  · L48",".__call__()  · L51",".make_run()  · L109","PublicationTests  · L125",".setUp()  · L126",".commands()  · L141",".assert_no_merge()  · L144",".test_integrates_exact_checked_head_without_push_main_or_bypass()  · L147",".test_no_changes_does_not_mutate_git_or_github()  · L163",".test_mesa_without_changes_returns_sha_to_verify_before_mount()  · L168",".test_unexpected_changed_code_fails_before_any_mutation()  · L176",".test_staged_outside_allowed_routes_fails_before_commit()  · L182",".test_invalid_generated_json_is_rejected()  · L188",".test_generated_symlink_is_rejected()  · L194",".test_existing_bot_pr_does_not_generate_duplicate()  · L200",".test_old_bot_pr_does_not_block_a_new_snapshot()  · L207",".test_same_revision_in_pending_mesa_pr_is_not_recreated()  · L213",".test_different_mesa_revision_not_blocked_by_old_pr()  · L223",".test_no_change_in_other_process_still_one_git_read()  · L232",".test_failed_guard_leaves_pr_without_merge()  · L237",".test_guard_wrong_head_times_out_instead_of_accepting_green()  · L244",".test_ambiguous_new_guard_runs_are_rejected()  · L250",".test_old_guard_does_not_count_as_new_dispatch()  · L256",".test_missing_required_architecture_check_is_blocked()  · L263",".test_bot_pr_dispatches_verification_on_exact_commit()  · L269",".test_failed_explicit_verification_never_merges()  · L277",".test_missing_verification_check_never_merges()  · L283",".test_empty_checks_while_github_registers_dispatch_are_retried()  · L289",".test_failed_required_check_is_blocked()  · L295",".test_pending_required_check_times_out()  · L301",".test_head_changed_after_checks_is_blocked()  · L307",".test_merge_rejection_is_not_retried_or_bypassed()  · L313",".test_queued_merge_is_not_reported_as_integrated()  · L322",".test_publish_dispatches_branch_with_exact_sha_and_correlation()  · L327",".test_failed_publication_never_reports_success()  · L334",".test_publication_reentry_recovers_same_dispatch()  · L340",".test_invalid_publication_sha_never_dispatches()  · L349",".test_all_generated_route_contracts_and_traversal()  · L354",".test_workflows_keep_verification_before_pr_and_publication_before_mount()  · L363"]},"sala-edicion::tests_contenido_reglas_test_py_tests_contenido_reglas_test":{"x":277,"y":324,"nombre":"contenido_reglas_test.py","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"(esta carpeta) · Flujos y pruebas","lbl":"contenido_reglas_t\nest.py","ev":"sala-edicion/tests/contenido_reglas_test.py · 183 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/tests/contenido_reglas_test.py","lt":"Funciones y símbolos (17)","lista":["ContenidoReglasTests  · L20",".test_acentos_capitalizacion_y_limites()  · L21",".test_reglas_aditivas_sin_quitar_vetos()  · L29",".test_campos_publicables_y_historicos()  · L34",".test_prompts_tienen_regla_y_no_contexto_que_induce_veto()  · L47",".test_arranque_reintenta_todo_guion_invalido()  · L55",".test_semillero_rechaza_titulo_bajada_y_premisa()  · L62",".test_candidata_invalida_no_se_fija_y_usa_respaldo()  · L72",".test_receta_base_no_evita_regla_y_rechazo_previo_a_imagen()  · L84",".test_compositor_rechaza_antes_de_leer_o_escribir_imagen()  · L93",".test_cliente_rechaza_lote_completo_antes_de_la_red()  · L99",".test_montar_detecta_texto_oculto_en_tira_antes_del_post()  · L105",".test_voz_rechaza_toda_escena_antes_del_motor()  · L118",".test_escena_rechaza_antes_de_elegir_motor_o_subir()  · L127",".test_corte_existente_no_reusa_media_invalida()  · L140",".test_toma_valida_compone_png_y_jpg_sinteticos()  · L151",".test_cliente_admite_contenido_valido_sin_confundir_urls_con_copy()  · L170"]},"mas:codigo-sala-edicion-tests:flujo:(esta carpeta)":{"x":443,"y":324,"nombre":"+70 archivos más","forma":"dot","tam":9,"color":"#8A8F98","tipo":"Grupo","celda":"(esta carpeta) · Flujos y pruebas","lbl":"+70 archivos más","lt":"Incluye","lista":["sala_cliente_test.py","medios_reconexion_test.py","adaptativa_test.py","plan_agregados_test.py","produccion_historica_test.py","sala-imagenes.test.cjs","sala_chinches_test.py","imagen_negativas_test.py","reanudar_cortes_metadatos_test.py","sonda_medios_publicos_test.py","imagenes_reemision_test.py","mantenimiento_queued_test.py","sala-carga.test.cjs","salida.browser.cjs","tablero-sala.browser.cjs","activar_regla_contenido_test.py","corregir_metadatos_editoriales_test.py","imagen_hidream_o1_test.py","imagen_hidream_test.py","modelos_imagen_vetados_test.py","montador_tiempos_test.py","revision_diaria_test.py","revision_video_test.py","sala_corta_test.py","sala_durable_test.py","salud_canario_test.py","arranque-progresivo.browser.cjs","auditoria_medios_test.py","conciliar_medios_test.py","correo_estado_test.py","entregar_cortes_test.py","guion_referencia_test.py","imagen_broker_cliente_test.py","mesa-local.browser.cjs","mesa-local.test.cjs","mesa_seleccion_test.py","montaje_online_test.py","presentation_reviews_test.py","produccion-historica-adversaria.test.cjs","sala-correcciones.test.cjs","sala2.browser.cjs","sala_montaje_commit_test.py","sala_transporte_test.py","sala_vigencia_test.py","video-privado.browser.cjs","cola_identidad_test.py","cola_salud_test.py","correo-estado.test.cjs","fusion-lecturas.test.cjs","historias.test.cjs","imagen-broker.test.mjs","presentaciones-agente-gas.test.cjs","presentaciones-gas.test.cjs","produccion-historica.test.cjs","recuperar_escena_cpu_test.py","reemision_guion_vigente_test.py","roast-room-gas.test.cjs","sala-salida.test.cjs","sala_catalogo_test.py","sala_publicaciones_test.py","tablero-sala.test.cjs","video-privado-gas.test.cjs","video-revision.test.cjs","wan_limite_test.py","cola-lote.test.cjs","contenido-reglas.test.cjs","sala-modelos.test.cjs","sala_rendimiento_test.py","tablero-publicaciones.test.cjs","video_revision_test.py"]},"f:sala-edicion:tests/fixtures/cambios-casos.json":{"x":111,"y":468,"nombre":"cambios-casos.json","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"fixtures/ · Flujos y pruebas","lbl":"cambios-casos.json","ev":"sala-edicion/tests/fixtures/cambios-casos.json · 403 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/tests/fixtures/cambios-casos.json"},"f:sala-edicion:tests/fixtures/ppp-storyboard.json":{"x":277,"y":468,"nombre":"ppp-storyboard.json","forma":"hexagon","tam":7,"color":"#C5CBD2","tipo":"Prueba automática","celda":"fixtures/ · Flujos y pruebas","lbl":"\nppp-storyboard.json","ev":"sala-edicion/tests/fixtures/ppp-storyboard.json · 413 líneas","url":"https://github.com/yodesarrollomx/sala-edicion/blob/07a7076de1/tests/fixtures/ppp-storyboard.json"}},"flechas":{"sala-edicion::tests_sala_recibos_test>sala-edicion::tests_snapshots_medios_test":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::tests_medios_publicos_test>sala-edicion::tests_snapshots_medios_test":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::tests_sala_cambios_test>sala-edicion::tests_sala_salida_test_py_tests_sala_salida_test":{"f":"viva","r":"se llaman (4)","ev":"grafo de código de Graphify"},"sala-edicion::tests_sala_consejo_nube_test>sala-edicion::tests_sala_salida_test_py_tests_sala_salida_test":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"},"sala-edicion::tests_sala_consejo_nube_test>sala-edicion::tests_v4_test":{"f":"viva","r":"se llaman","ev":"grafo de código de Graphify"}},"familias":{"viva":{"corto":"Visto","nombre":"Visto en código u hoja","color":"#5B6470","ancho":1.3,"opacidad":0.75,"punteada":false},"inferida":{"corto":"Atlas","nombre":"Del atlas o deducido","color":"#9AA1AB","ancho":1.0,"opacidad":0.6,"punteada":false},"propuesta":{"corto":"Propuesta","nombre":"Propuesta","color":"#C99A12","ancho":1.6,"opacidad":0.9,"punteada":[7,5]},"hueco":{"corto":"Falta","nombre":"Falta o hallazgo","color":"#C8102E","ancho":1.7,"opacidad":0.9,"punteada":[3,5]}},"usadas":["viva"],"rejilla":{"cols":[{"x":0,"w":720,"nombre":"Flujos y pruebas"}],"filas":[{"y":0,"h":396,"nombre":"(esta carpeta)"},{"y":396,"h":144,"nombre":"fixtures/"}]},"eje_x":"Tipo de archivo","eje_y":"Carpeta","estado":"https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/grafo-datos/estado.json","simbolos":[["■","#59A14F","Tablero o página"],["▭","#F1CE63","Pantalla propuesta"],["◆","#F28E2B","Motor"],["⬢","#79706E","Repositorio o código"],["▲","#4E79A7","Libro"],["▼","#A0CBE8","Pestaña"],["●","#B07AA1","Quién"],["★","#EDC948","Propuesta"],["★","#E15759","Hallazgo o clave"]],"pie":"17 nodos · 5 flechas · Código · sala-edicion · tests/ · Graphify 0.9.106"};</script>
+</head>
+<body>
+<div id="graph"></div>
+<div id="sidebar">
+  <div id="theme-wrap" role="group" aria-label="Theme">
+    <button type="button" data-theme-choice="light">Claro</button>
+    <button type="button" data-theme-choice="dark">Oscuro</button>
+    <button type="button" data-theme-choice="system">Sistema</button>
+  </div>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Buscar…" autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div id="info-panel">
+    <h3>Detalle</h3>
+    <div id="info-content"><span class="empty">Toca un nodo para ver su detalle</span></div>
+  </div>
+  <div id="legend-wrap">
+    <h3>Grupos</h3>
+    <div id="legend-controls">
+      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">Todos</label>
+    </div>
+    <div id="legend"></div>
+  </div>
+  <div id="stats">17 nodes &middot; 5 edges &middot; 2 communities</div>
+</div>
+<script>
+const RAW_NODES = [{"id": "sala-edicion::tests_sala_salida_test_py_tests_sala_salida_test", "label": "sala_salida_test.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "sala_salida_test.py", "community": 0, "community_name": "(esta carpeta) \u00b7 Flujos y pruebas", "source_file": "sala-edicion/tests/sala_salida_test.py \u00b7 670 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "sala-edicion::tests_snapshots_online_test", "label": "snapshots_online_test.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "snapshots_online_test.py", "community": 0, "community_name": "(esta carpeta) \u00b7 Flujos y pruebas", "source_file": "sala-edicion/tests/snapshots_online_test.py \u00b7 726 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "sala-edicion::tests_sala_produccion_test", "label": "sala_produccion_test.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "sala_produccion_test.py", "community": 0, "community_name": "(esta carpeta) \u00b7 Flujos y pruebas", "source_file": "sala-edicion/tests/sala_produccion_test.py \u00b7 528 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "sala-edicion::tests_medios_publicos_test", "label": "medios_publicos_test.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 25.0, "font": {"size": 12, "color": "#ffffff"}, "title": "medios_publicos_test.py", "community": 0, "community_name": "(esta carpeta) \u00b7 Flujos y pruebas", "source_file": "sala-edicion/tests/medios_publicos_test.py \u00b7 538 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "sala-edicion::tests_auditar_fallos_test", "label": "auditar_fallos_test.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "auditar_fallos_test.py", "community": 0, "community_name": "(esta carpeta) \u00b7 Flujos y pruebas", "source_file": "sala-edicion/tests/auditar_fallos_test.py \u00b7 622 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "sala-edicion::tests_sala_consejo_nube_test", "label": "sala_consejo_nube_test.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "sala_consejo_nube_test.py", "community": 0, "community_name": "(esta carpeta) \u00b7 Flujos y pruebas", "source_file": "sala-edicion/tests/sala_consejo_nube_test.py \u00b7 509 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "sala-edicion::tests_sala_cambios_test", "label": "sala_cambios_test.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 25.0, "font": {"size": 12, "color": "#ffffff"}, "title": "sala_cambios_test.py", "community": 0, "community_name": "(esta carpeta) \u00b7 Flujos y pruebas", "source_file": "sala-edicion/tests/sala_cambios_test.py \u00b7 420 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "sala-edicion::tests_cierre_online_test", "label": "cierre_online_test.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "cierre_online_test.py", "community": 0, "community_name": "(esta carpeta) \u00b7 Flujos y pruebas", "source_file": "sala-edicion/tests/cierre_online_test.py \u00b7 308 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "sala-edicion::tests_snapshots_medios_test", "label": "snapshots_medios_test.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "snapshots_medios_test.py", "community": 0, "community_name": "(esta carpeta) \u00b7 Flujos y pruebas", "source_file": "sala-edicion/tests/snapshots_medios_test.py \u00b7 392 l\u00edneas", "file_type": "code", "degree": 2}, {"id": "sala-edicion::tests_v4_test", "label": "v4_test.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 25.0, "font": {"size": 12, "color": "#ffffff"}, "title": "v4_test.py", "community": 0, "community_name": "(esta carpeta) \u00b7 Flujos y pruebas", "source_file": "sala-edicion/tests/v4_test.py \u00b7 778 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "sala-edicion::tests_sala_consejo_test", "label": "sala_consejo_test.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "sala_consejo_test.py", "community": 0, "community_name": "(esta carpeta) \u00b7 Flujos y pruebas", "source_file": "sala-edicion/tests/sala_consejo_test.py \u00b7 332 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "sala-edicion::tests_sala_recibos_test", "label": "sala_recibos_test.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 25.0, "font": {"size": 12, "color": "#ffffff"}, "title": "sala_recibos_test.py", "community": 0, "community_name": "(esta carpeta) \u00b7 Flujos y pruebas", "source_file": "sala-edicion/tests/sala_recibos_test.py \u00b7 198 l\u00edneas", "file_type": "code", "degree": 1}, {"id": "sala-edicion::tests_publicar_git_test", "label": "publicar_git_test.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "publicar_git_test.py", "community": 0, "community_name": "(esta carpeta) \u00b7 Flujos y pruebas", "source_file": "sala-edicion/tests/publicar_git_test.py \u00b7 382 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "sala-edicion::tests_contenido_reglas_test_py_tests_contenido_reglas_test", "label": "contenido_reglas_test.py", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "contenido_reglas_test.py", "community": 0, "community_name": "(esta carpeta) \u00b7 Flujos y pruebas", "source_file": "sala-edicion/tests/contenido_reglas_test.py \u00b7 183 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "mas:codigo-sala-edicion-tests:flujo:(esta carpeta)", "label": "+70 archivos m\u00e1s", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "+70 archivos m\u00e1s", "community": 0, "community_name": "(esta carpeta) \u00b7 Flujos y pruebas", "source_file": "", "file_type": "concept", "degree": 0}, {"id": "f:sala-edicion:tests/fixtures/cambios-casos.json", "label": "cambios-casos.json", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "cambios-casos.json", "community": 1, "community_name": "fixtures/ \u00b7 Flujos y pruebas", "source_file": "sala-edicion/tests/fixtures/cambios-casos.json \u00b7 403 l\u00edneas", "file_type": "code", "degree": 0}, {"id": "f:sala-edicion:tests/fixtures/ppp-storyboard.json", "label": "ppp-storyboard.json", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "ppp-storyboard.json", "community": 1, "community_name": "fixtures/ \u00b7 Flujos y pruebas", "source_file": "sala-edicion/tests/fixtures/ppp-storyboard.json \u00b7 413 l\u00edneas", "file_type": "code", "degree": 0}];
+const RAW_EDGES = [{"from": "sala-edicion::tests_sala_cambios_test", "to": "sala-edicion::tests_sala_salida_test_py_tests_sala_salida_test", "label": "se llaman (4)", "title": "se llaman (4) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::tests_sala_consejo_nube_test", "to": "sala-edicion::tests_sala_salida_test_py_tests_sala_salida_test", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::tests_medios_publicos_test", "to": "sala-edicion::tests_snapshots_medios_test", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::tests_sala_consejo_nube_test", "to": "sala-edicion::tests_v4_test", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "sala-edicion::tests_sala_recibos_test", "to": "sala-edicion::tests_snapshots_medios_test", "label": "se llaman", "title": "se llaman [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}];
+const LEGEND = [{"cid": 0, "color": "#4E79A7", "label": "(esta carpeta) \u00b7 Flujos y pruebas", "count": 15}, {"cid": 1, "color": "#F28E2B", "label": "fixtures/ \u00b7 Flujos y pruebas", "count": 2}];
+
+// HTML-escape helper — prevents XSS when injecting graph data into innerHTML
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Build vis datasets
+const nodesDS = new vis.DataSet(RAW_NODES.map((n, i) => ({
+  id: n.id, label: n.label, color: n.color, size: n.size,
+  font: n.font, title: n.title,
+  // Fermat/golden-angle spiral seed positions (#3699): spreading nodes out
+  // before physics runs keeps avoidOverlap from computing near-zero-distance
+  // repulsion that blows the BarnesHut recursion into a stack overflow on large
+  // graphs. `i` is the map index — physics still settles small graphs identically.
+  x: 30 * Math.sqrt(i) * Math.cos(i * 2.4),
+  y: 30 * Math.sqrt(i) * Math.sin(i * 2.4),
+  community: n.community, community_name: n.community_name,
+  source_file: n.source_file, file_type: n.file_type, degree: n.degree,
+  member_count: n.member_count,
+})));
+
+const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({
+  id: i, from: e.from, to: e.to,
+  label: '',
+  title: e.title,
+  dashes: e.dashes,
+  width: e.width,
+  color: e.color,
+  arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+})));
+
+const container = document.getElementById('graph');
+const network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, {
+  physics: {
+    enabled: false,
+    solver: 'forceAtlas2Based',
+    forceAtlas2Based: {
+      gravitationalConstant: -60,
+      centralGravity: 0.005,
+      springLength: 120,
+      springConstant: 0.08,
+      damping: 0.4,
+      avoidOverlap: 0.8,
+    },
+    stabilization: { iterations: 200, fit: true },
+  },
+  interaction: {
+    hover: true,
+    tooltipDelay: 100,
+    hideEdgesOnDrag: true,
+    navigationButtons: false,
+    keyboard: false,
+  },
+  nodes: { shape: 'dot', borderWidth: 1.5 },
+  edges: { smooth: { type: 'continuous', roundness: 0.2 }, selectionWidth: 3 },
+});
+
+// Theme toggle (#3894): Light / Dark / System, persisted in localStorage.
+const THEME_KEY = 'graphify-theme';
+const themeMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+let themeLabelColor = '#ffffff';  // matches the per-node font color set in Python
+function themePref() {
+  let p = null;
+  try { p = localStorage.getItem(THEME_KEY); } catch (e) {}
+  return (p === 'light' || p === 'dark' || p === 'system') ? p : null;
+}
+function applyTheme(pref) {
+  const t = pref === 'light' ? 'light' : (pref === 'system' && themeMQ && themeMQ.matches) ? 'light' : 'dark';
+  const root = document.documentElement;
+  if (!root) return;
+  root.setAttribute('data-theme', t);
+  document.querySelectorAll('[data-theme-choice]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.themeChoice === (pref || 'system')));
+  });
+  const labelColor = getComputedStyle(root).getPropertyValue('--node-label').trim();
+  if (labelColor && labelColor !== themeLabelColor) {
+    themeLabelColor = labelColor;
+    nodesDS.update(nodesDS.get().map(n => ({ id: n.id, font: Object.assign({}, n.font, { color: labelColor }) })));
+  }
+}
+document.querySelectorAll('[data-theme-choice]').forEach(b => {
+  b.addEventListener('click', () => {
+    const pref = b.dataset.themeChoice;
+    try { localStorage.setItem(THEME_KEY, pref); } catch (e) {}
+    applyTheme(pref);
+  });
+});
+if (themeMQ) {
+  const onSchemeChange = () => { if (themePref() === 'system') applyTheme('system'); };
+  if (themeMQ.addEventListener) themeMQ.addEventListener('change', onSchemeChange);
+  else if (themeMQ.addListener) themeMQ.addListener(onSchemeChange);
+}
+applyTheme(themePref() || 'system');
+
+
+// ── YOD: acomodo fijo en cuadrante sobre el visor de Graphify. Los nodos y las flechas son los que exportó Graphify. ──
+(function () {
+  const Y = window.YOD;
+  // Cuando la portada enseña un borrador, trae la lámina como texto: los enlaces a otras láminas se le piden a ella.
+  const SUELTA = location.protocol === 'about:';
+  const yodIr = h => { const m = String(h).match(/^([A-Za-z0-9._-]+)\.html(?:#(.*))?$/);
+    if (SUELTA && m) { try { parent.postMessage({ yod: 2, ir: m[1], nodo: m[2] ? decodeURIComponent(m[2]) : '' }, '*'); } catch (e) {} } else location.href = h; };
+  if (SUELTA) document.addEventListener('click', e => { const a = e.target && e.target.closest ? e.target.closest('a[href]') : null; if (!a || a.target === '_blank') return;
+    const h = a.getAttribute('href') || ''; if (/^[A-Za-z0-9._-]+\.html(#.*)?$/.test(h)) { e.preventDefault(); yodIr(h); } }, true);
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const esc2 = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const fuente = p => p.forma === 'box'
+    ? { size: 13, color: '#1d1d1f', face: 'system-ui, -apple-system, sans-serif', multi: 'html', align: 'left', bold: { color: '#111111', size: 14, face: 'system-ui, -apple-system, sans-serif' } }
+    : { size: 14, color: css('--node-label') || '#222', face: 'system-ui, -apple-system, sans-serif', strokeWidth: 3, strokeColor: css('--bg') || '#fff' };
+  const estiloNodo = (n, apagado) => {
+    const p = Y.nodos[n.id] || {};
+    const o = { id: n.id, x: p.x, y: p.y, label: p.lbl, shape: p.forma, size: p.tam, opacity: apagado ? 0.14 : 1, title: undefined,
+      color: { background: p.color, border: p.al ? '#C8102E' : (p.bc || p.color), highlight: { background: p.color, border: '#111' }, hover: { background: p.color, border: '#111' } },
+      borderWidth: p.al ? 2.6 : (p.bc ? 2.4 : 1), borderWidthSelected: 3.5, font: fuente(p) };
+    if (p.forma === 'box') { o.widthConstraint = { minimum: p.caja, maximum: p.caja }; o.margin = 9; o.shapeProperties = { borderRadius: 7 }; }
+    return o;
+  };
+  const ocultas = new Set();
+  let foco = null;
+  const recto = RAW_EDGES.length > 380;
+  const det = r => Y.flechas[r.from + '>' + r.to] || Y.flechas[r.to + '>' + r.from] || {};
+  const estiloArista = e => {
+    const r = RAW_EDGES[e.id], fl = det(r), f = Y.familias[fl.f] || Y.familias.inferida;
+    const con = !foco || foco.aristas.has(e.id);
+    return { id: e.id, hidden: ocultas.has(fl.f || 'inferida'), width: con && foco ? f.ancho + 1.3 : f.ancho, title: undefined,
+             color: { color: f.color, opacity: con ? f.opacidad : 0.05, highlight: f.color, hover: f.color },
+             dashes: f.punteada, arrows: { to: { enabled: true, scaleFactor: 0.55 } }, smooth: recto ? false : { type: 'curvedCW', roundness: 0.12 } };
+  };
+  const pintar = () => {
+    nodesDS.update(nodesDS.get().map(n => estiloNodo(n, foco && !foco.nodos.has(n.id))));
+    edgesDS.update(edgesDS.get().map(estiloArista));
+  };
+  pintar();
+  network.setOptions({ physics: { enabled: false }, nodes: { labelHighlightBold: false, scaling: { label: { drawThreshold: 5, maxVisible: 44 } } },
+                       interaction: { hover: true, tooltipDelay: 150, zoomSpeed: 0.8, hideEdgesOnDrag: RAW_EDGES.length > 250, hideEdgesOnZoom: RAW_EDGES.length > 600 } });
+  new MutationObserver(() => setTimeout(pintar, 30)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  const enfocar = id => { foco = { nodos: new Set([id, ...network.getConnectedNodes(id)]), aristas: new Set(network.getConnectedEdges(id)) }; pintar(); };
+  network.on('selectNode', p => enfocar(p.nodes[0]));
+  network.on('deselectNode', () => { foco = null; pintar(); });
+
+  // barra: subir, familias de flecha y «Ver todo»
+  const barra = document.createElement('div');
+  barra.id = 'yod-barra';
+  barra.innerHTML = (Y.padre ? `<a class="yod-fuerte" href="${Y.padre[0]}">↑ ${esc2(Y.padre[1])}</a>` : '') +
+    Object.entries(Y.familias).filter(([k]) => Y.usadas.includes(k)).map(([k, f]) =>
+      `<button type="button" data-fam="${k}" aria-pressed="true" title="${f.nombre}"><i style="background:${f.color}"></i><span class="yod-l">${f.nombre}</span><span class="yod-c">${f.corto}</span></button>`).join('') +
+    '<button type="button" id="yod-todo" class="yod-fuerte">Ver todo</button>';
+  document.body.appendChild(barra);
+  barra.addEventListener('click', ev => {
+    const b = ev.target.closest('button'); if (!b) return;
+    if (b.id === 'yod-todo') { foco = null; network.unselectAll(); pintar(); ajustar(true); inicio(); return; }
+    const k = b.dataset.fam; if (ocultas.has(k)) ocultas.delete(k); else ocultas.add(k);
+    b.setAttribute('aria-pressed', String(!ocultas.has(k))); pintar();
+  });
+
+  // rejilla del cuadrante: los títulos crecen al alejarse para que siempre se lean
+  const g = Y.rejilla, W = g.cols.reduce((s, c) => s + c.w, 0), Ht = g.filas.reduce((s, f) => s + f.h, 0);
+  const MS = Math.max(70, Math.min(150, Ht * 0.07));
+  const letra = (ctx, t) => { ctx.font = '600 ' + t + 'px system-ui, -apple-system, sans-serif'; };
+  network.on('beforeDrawing', ctx => {
+    const sc = network.getScale() || 1;
+    const linea = css('--border') || '#ccc', texto = css('--text-2') || '#666', fondo = css('--panel') || '#f6f6f6';
+    ctx.save();
+    g.filas.forEach((f, i) => { if (i % 2 === 0) { ctx.fillStyle = fondo; ctx.globalAlpha = 0.6; ctx.fillRect(0, f.y, W, f.h); } });
+    ctx.globalAlpha = 1; ctx.strokeStyle = linea; ctx.lineWidth = 1.5 / Math.min(1, sc * 1.6);
+    g.cols.forEach(c => { ctx.beginPath(); ctx.moveTo(c.x, -MS); ctx.lineTo(c.x, Ht); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(W, -MS); ctx.lineTo(W, Ht); ctx.stroke();
+    g.filas.forEach(f => { ctx.beginPath(); ctx.moveTo(0, f.y); ctx.lineTo(W, f.y); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(0, Ht); ctx.lineTo(W, Ht); ctx.stroke();
+    ctx.fillStyle = texto; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'center';
+    g.cols.forEach(c => {
+      let t = Math.max(20, Math.min(15 / sc, MS * 0.62)); letra(ctx, t);
+      while (t > 11 && ctx.measureText(c.nombre).width > c.w - 14) { t -= 1; letra(ctx, t); }
+      if (ctx.measureText(c.nombre).width > c.w - 14) { const p = c.nombre.split(' '), m = Math.ceil(p.length / 2); ctx.fillText(p.slice(0, m).join(' '), c.x + c.w / 2, -t - 14); ctx.fillText(p.slice(m).join(' '), c.x + c.w / 2, -10); }
+      else ctx.fillText(c.nombre, c.x + c.w / 2, -12);
+    });
+    ctx.textAlign = 'left';
+    g.filas.forEach(f => {
+      let t = Math.max(17, Math.min(14 / sc, f.h * 0.4)); letra(ctx, t);
+      while (t > 12 && ctx.measureText(f.nombre).width > W - 20) { t -= 2; letra(ctx, t); }
+      ctx.globalAlpha = t > 30 ? 0.42 : 0.8; ctx.fillText(f.nombre, 9, f.y + t + 5);
+    });
+    ctx.globalAlpha = 1; ctx.restore();
+  });
+  const marco = (x0, y0, x1, y1, animar) => {
+    const el = document.getElementById('graph'), w = el.clientWidth, h = el.clientHeight;
+    const arriba = (document.getElementById('yod-barra') || { offsetHeight: 0 }).offsetHeight + 12;
+    const s = Math.max(0.04, Math.min((w - 10) / (x1 - x0), (h - arriba - 8) / (y1 - y0), 1.5));
+    network.moveTo({ position: { x: (x0 + x1) / 2, y: (y0 + y1) / 2 - arriba / 2 / s }, scale: s, animation: animar ? { duration: 350, easingFunction: 'easeInOutQuad' } : false });
+  };
+  const ajustar = animar => marco(-14, -MS - 6, W + 14, Ht + 12, animar);
+  const aFila = f => { const el = document.getElementById('graph'), r = el.clientWidth / Math.max(200, el.clientHeight - 60); marco(-10, f.y - 10, Math.min(W + 10, Math.max(540, (f.h + 20) * r)) - 10, f.y + f.h + 10, true); };
+  const aCol = c => { const el = document.getElementById('graph'), r = Math.max(200, el.clientHeight - 60) / el.clientWidth; marco(c.x - 12, -MS, c.x + c.w + 12, Math.min(Ht + 10, Math.max(420, (c.w + 24) * r) - MS), true); };
+  let tocado = false;
+  const cont = document.getElementById('graph');
+  ['pointerdown', 'wheel', 'touchstart'].forEach(ev => cont.addEventListener(ev, () => { tocado = true; }, { passive: true }));
+  network.once('afterDrawing', () => { if (!foco) ajustar(false); });
+  [60, 250, 700, 1500].forEach(ms => setTimeout(() => { if (!foco && !tocado) ajustar(false); }, ms));
+  window.addEventListener('resize', () => setTimeout(() => { if (!foco) ajustar(false); }, 80));
+  const ir = document.createElement('select'); ir.id = 'yod-ir'; ir.setAttribute('aria-label', 'Acercar a una fila o columna');
+  ir.innerHTML = '<option value="">Acercar a…</option><optgroup label="Filas">' + g.filas.map((f, i) => `<option value="f${i}">${esc2(f.nombre)}</option>`).join('') +
+    '</optgroup><optgroup label="Columnas">' + g.cols.map((c, i) => `<option value="c${i}">${esc2(c.nombre)}</option>`).join('') + '</optgroup>';
+  barra.insertBefore(ir, barra.querySelector('button'));
+  ir.addEventListener('change', () => { const v = ir.value; if (!v) return; tocado = true; if (v[0] === 'f') aFila(g.filas[+v.slice(1)]); else aCol(g.cols[+v.slice(1)]); ir.value = ''; });
+
+  // panel de detalle
+  const enlace = (t, id) => t[0] ? `<a href="${t[0]}#${encodeURIComponent(id)}">${esc2(t[1])}</a>` : esc2(t[1]);
+  window.showInfo = function (nodeId) {
+    const p = Y.nodos[nodeId]; if (!p) return;
+    const eds = network.getConnectedEdges(nodeId);
+    const vecinos = eds.map(eid => {
+      const r = RAW_EDGES[eid], otro = r.from === nodeId ? r.to : r.from, fl = det(r), q = Y.nodos[otro] || {};
+      return `<span class="neighbor-link" style="border-left-color:${esc2((Y.familias[fl.f] || {}).color || '#888')}" data-nid="${esc2(otro)}">${r.from === nodeId ? '→' : '←'} ${esc2(q.nombre || otro)} <i style="opacity:.72">· ${esc2(fl.r || '')}</i></span>`;
+    }).join('');
+    let h = `<div class="field"><b>${esc2(p.nombre)}</b></div><div class="field yod-tipo">${esc2(p.tipo)}${p.estado ? ' · ' + esc2(p.estado) : ''}</div>`;
+    if (p.dentro) h += `<a class="yod-entrar" href="${p.dentro[0]}">Entrar a ${esc2(p.dentro[1])} →</a>`;
+    if (p.nota) h += `<div class="field">${esc2(p.nota)}</div>`;
+    if (p.err) h += p.err.map(x => `<div class="field yod-alerta"><b>${x.tipo === 'cambio' ? 'Cambió' : 'Error'}</b> · ${esc2(x.msg)}${x.desde ? ' · desde ' + esc2(String(x.desde).slice(0, 10)) : ''}${x.url ? ` · <a href="${esc2(x.url)}" target="_blank" rel="noopener" style="color:inherit">ver</a>` : ''}</div>`).join('');
+    if (p.al) h += p.al.map(a => `<div class="field yod-alerta"><b>Hallazgo</b> · <a href="hallazgos.html#${encodeURIComponent(a[0])}" style="color:inherit">${esc2(a[1])}</a></div>`).join('');
+    if (p.lista) h += `<details class="yod-lista"${p.lista.length <= 24 ? ' open' : ''}><summary>${esc2(p.lt)}</summary><div>${p.lista.map(x => `<span>${esc2(x)}</span>`).join('')}</div></details>`;
+    if (p.ev) h += `<div class="field yod-ev">Evidencia: ${esc2(p.ev)}</div>`;
+    if (p.url) h += `<a class="yod-abrir" href="${esc2(p.url)}" target="_blank" rel="noopener">Abrir la fuente ↗</a>`;
+    if (p.tb && p.tb.length) h += `<div class="field yod-tb">También aparece en: ${p.tb.map(t => enlace(t, nodeId)).join(' · ')}</div>`;
+    h += `<div class="field yod-ev">Celda: ${esc2(p.celda)}</div>`;
+    if (eds.length) h += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Conexiones (${eds.length})</div><div id="neighbors-list">${vecinos}</div>`;
+    document.getElementById('info-content').innerHTML = h;
+  };
+  window.focusNode = function (id) {
+    const p = Y.nodos[id] || {}, el = document.getElementById('graph');
+    const s = p.forma === 'box' ? Math.min(1, (el.clientWidth - 24) / ((p.caja || 300) + 40)) : Math.min(0.9, Math.max(0.6, el.clientWidth / 520));
+    network.focus(id, { scale: s, animation: true }); network.selectNodes([id]); showInfo(id); enfocar(id);
+  };
+  const inicio = () => { const c = document.getElementById('info-content');
+    if (c) c.innerHTML = `<div class="field"><b>${esc2(Y.titulo)}</b></div><div class="field">${esc2(Y.sub)}</div><div class="field yod-ev">Toca un nodo para ver qué es, de dónde le llega y a dónde va. Con «Acercar a…» saltas a una fila o a una columna.</div>`; };
+  inicio();
+  network.on('click', p => {
+    if (p.nodes.length) return;
+    if (p.edges.length) {
+      const r = RAW_EDGES[p.edges[0]], fl = det(r), a = Y.nodos[r.from] || {}, b = Y.nodos[r.to] || {};
+      document.getElementById('info-content').innerHTML = `<div class="field"><b>${esc2(a.nombre)} → ${esc2(b.nombre)}</b></div><div class="field">${esc2(fl.r || '')}</div>` +
+        `<div class="field yod-tipo">${esc2((Y.familias[fl.f] || {}).nombre || '')}</div>` + (fl.nota ? `<div class="field">${esc2(fl.nota)}</div>` : '') +
+        (fl.ev ? `<div class="field yod-ev">Evidencia: ${esc2(fl.ev)}</div>` : '') +
+        `<span class="neighbor-link" data-nid="${esc2(r.from)}">← ${esc2(a.nombre)}</span><span class="neighbor-link" data-nid="${esc2(r.to)}">→ ${esc2(b.nombre)}</span>`;
+      return;
+    }
+    const c = p.pointer.canvas;
+    if (c.y < 0 && c.y > -MS - 30) { const col = g.cols.find(k => c.x >= k.x && c.x <= k.x + k.w); if (col) { aCol(col); return; } }
+    inicio();
+  });
+  network.on('doubleClick', p => { const d = p.nodes.length && Y.nodos[p.nodes[0]] && Y.nodos[p.nodes[0]].dentro; if (d) yodIr(d[0]); });
+
+  // textos del visor en español
+  const tx = (sel, t) => { const el = document.querySelector(sel); if (el) el.textContent = t; };
+  tx('#info-panel h3', 'Detalle'); tx('#legend-wrap h3', 'Celdas de esta lámina');
+  const inp = document.getElementById('search'); if (inp) inp.placeholder = 'Buscar en esta lámina…';
+  const lbl = document.querySelector('#legend-controls label'); if (lbl) lbl.lastChild.textContent = 'Todas';
+  document.querySelectorAll('[data-theme-choice]').forEach(b => { b.textContent = { light: 'Claro', dark: 'Oscuro', system: 'Sistema' }[b.dataset.themeChoice] || b.textContent; });
+  const st = document.getElementById('stats'); if (st) st.textContent = Y.pie;
+  const sim = document.createElement('div'); sim.id = 'yod-simbolos';
+  sim.innerHTML = Y.simbolos.map(s => `<b><span style="color:${s[1]}">${s[0]}</span> ${esc2(s[2])}</b>`).join('');
+  if (st && st.parentNode) st.parentNode.insertBefore(sim, st);
+
+  // errores en vivo: estado.json lo escribe el flujo «Grafo · estado» del repositorio
+  fetch(Y.estado || 'estado.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(E => {
+    if (!E || !E.errores) return; let n = 0;
+    E.errores.forEach(x => (x.nodos || []).forEach(id => { const p = Y.nodos[id]; if (!p) return; (p.err = p.err || []).push(x); if (x.tipo !== 'cambio') { p.al = p.al || []; p.bc = '#C8102E'; } else if (!p.bc) p.bc = '#C99A12'; n++; }));
+    if (n) { pintar(); const st2 = document.getElementById('stats'); if (st2) st2.textContent = Y.pie + ' · estado del ' + (E.generado || '').slice(0, 16).replace('T', ' ') + ' UTC'; }
+  }).catch(() => {});
+  // llegar con un nodo señalado en la liga, y avisar a la portada qué lámina es
+  const abrir = () => { let id = ''; try { id = window.YOD_FOCO || decodeURIComponent(location.hash.slice(1)); } catch (e) {} if (Y.nodos[id]) focusNode(id); };
+  if (window.YOD_FOCO || location.hash.length > 1) setTimeout(abrir, 280);
+  window.addEventListener('hashchange', abrir);
+  try { if (window.parent && window.parent !== window) window.parent.postMessage({ yod: 1, id: Y.id }, '*'); } catch (e) {}
+})();
+
+network.once('stabilizationIterationsDone', () => {
+  network.setOptions({ physics: { enabled: false } });
+});
+
+function showInfo(nodeId) {
+  const n = nodesDS.get(nodeId);
+  if (!n) return;
+  const neighborIds = network.getConnectedNodes(nodeId);
+  const neighborItems = neighborIds.map(nid => {
+    const nb = nodesDS.get(nid);
+    const color = nb ? nb.color.background : '#555';
+    return `<span class="neighbor-link" style="border-left-color:${esc(color)}" data-nid="${esc(nid)}">${esc(nb ? nb.label : nid)}</span>`;
+  }).join('');
+  const isMetaNode = !n.file_type && !n.source_file;
+  let html = `<div class="field"><b>${esc(n.label)}</b></div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Type: ${esc(n.file_type || 'unknown')}</div>`;
+  }
+  html += `<div class="field">Community: ${esc(n.community_name || '')}</div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Source: ${esc(n.source_file || '-')}</div>`;
+  } else if (n.member_count !== undefined && n.member_count !== null) {
+    html += `<div class="field">Members: ${esc(n.member_count)}</div>`;
+  }
+  html += `<div class="field">Degree: ${n.degree}</div>`;
+  if (neighborIds.length) {
+    html += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Neighbors (${neighborIds.length})</div><div id="neighbors-list">${neighborItems}</div>`;
+  }
+  document.getElementById('info-content').innerHTML = html;
+}
+
+function focusNode(nodeId) {
+  network.focus(nodeId, { scale: 1.4, animation: true });
+  network.selectNodes([nodeId]);
+  showInfo(nodeId);
+}
+
+// Neighbor links use a data attribute + one delegated listener rather than an
+// inline onclick. A node id/label sourced from a document or a scraped URL
+// (graphify add) can contain a double-quote; dropping the stringified id
+// unescaped into a quoted onclick both broke every link and allowed a hostile
+// source to inject an event handler into the local report (stored XSS, #1838).
+// esc() on data-nid keeps the value inside the attribute; the listener reads it
+// back verbatim. Bound to document so it survives the innerHTML rebuild that
+// recreates #neighbors-list on each showInfo().
+document.addEventListener('click', e => {
+  const el = e.target.closest('.neighbor-link');
+  if (el && el.dataset.nid !== undefined) focusNode(el.dataset.nid);
+});
+
+// Sidebar tooltips reuse vis-network's .vis-tooltip style and 100ms tooltipDelay.
+// Names get one only when CSS ellipsis truncates them (the full text is still in
+// the DOM); counts always get one, to say what the number is. Text is set with
+// textContent only (labels are untrusted). Delegated on document so rows rebuilt
+// later (search results, showInfo()) are covered.
+const sidebarTip = document.createElement('div');
+sidebarTip.className = 'vis-tooltip';
+sidebarTip.style.cssText = 'white-space: normal; max-width: 360px; overflow-wrap: break-word;';
+document.body.appendChild(sidebarTip);
+let sidebarTipTimer = null;
+let sidebarTipEl = null;    // element whose text the tooltip shows
+let sidebarTipZone = null;  // element the pointer must leave to hide it
+function hideSidebarTip() {
+  clearTimeout(sidebarTipTimer);
+  sidebarTip.style.visibility = 'hidden';
+  sidebarTip.textContent = '';
+  sidebarTipEl = sidebarTipZone = null;
+}
+document.addEventListener('mouseover', e => {
+  const zone = e.target.closest && e.target.closest('.legend-count, .legend-item, .search-item, .neighbor-link');
+  // Anywhere on a legend row except its count (dot, checkbox, gaps, padding)
+  // stands for the row's name, so moving within the row never re-triggers it.
+  const el = zone && zone.classList.contains('legend-item') ? zone.querySelector('.legend-label') : zone;
+  if (!el || el === sidebarTipEl) return;
+  hideSidebarTip();
+  const isCount = el.classList.contains('legend-count');
+  if (!isCount && el.scrollWidth <= el.clientWidth) return;
+  const text = isCount ? `${el.textContent} ${el.textContent === '1' ? 'nodo' : 'nodos'}` : el.textContent;
+  sidebarTipEl = el;
+  sidebarTipZone = zone;
+  const x = e.clientX, y = e.clientY;
+  sidebarTipTimer = setTimeout(() => {
+    sidebarTip.textContent = text;
+    sidebarTip.style.left = sidebarTip.style.top = '0px';  // measure at full max-width
+    sidebarTip.style.visibility = 'visible';
+    const w = sidebarTip.offsetWidth, h = sidebarTip.offsetHeight;
+    sidebarTip.style.left = Math.max(4, Math.min(x + 12, window.innerWidth - w - 4)) + 'px';
+    sidebarTip.style.top = (y + 16 + h > window.innerHeight ? Math.max(4, y - h - 8) : y + 16) + 'px';
+  }, 100);
+});
+document.addEventListener('mouseout', e => {
+  if (sidebarTipZone && !sidebarTipZone.contains(e.relatedTarget)) hideSidebarTip();
+});
+// A click rebuilds or hides the row (showInfo(), search pick) without a mouseout.
+document.addEventListener('mousedown', hideSidebarTip);
+
+// Track hovered node — hover detection is more reliable than click params
+let hoveredNodeId = null;
+network.on('hoverNode', params => {
+  hoveredNodeId = params.node;
+  container.style.cursor = 'pointer';
+});
+network.on('blurNode', () => {
+  hoveredNodeId = null;
+  container.style.cursor = 'default';
+});
+container.addEventListener('click', () => {
+  if (hoveredNodeId !== null) {
+    showInfo(hoveredNodeId);
+    network.selectNodes([hoveredNodeId]);
+  }
+});
+network.on('click', params => {
+  if (params.nodes.length > 0) {
+    showInfo(params.nodes[0]);
+  } else if (hoveredNodeId === null) {
+    document.getElementById('info-content').innerHTML = '<span class="empty">Toca un nodo para ver su detalle</span>';
+  }
+});
+
+const searchInput = document.getElementById('search');
+const searchResults = document.getElementById('search-results');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  searchResults.innerHTML = '';
+  if (!q) { searchResults.style.display = 'none'; return; }
+  const matches = RAW_NODES.filter(n => n.label.toLowerCase().includes(q)).slice(0, 20);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.style.display = 'block';
+  matches.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'search-item';
+    el.textContent = n.label;
+    el.style.borderLeft = `3px solid ${n.color.background}`;
+    el.style.paddingLeft = '8px';
+    el.onclick = () => {
+      network.focus(n.id, { scale: 1.5, animation: true });
+      network.selectNodes([n.id]);
+      showInfo(n.id);
+      searchResults.style.display = 'none';
+      searchInput.value = '';
+    };
+    searchResults.appendChild(el);
+  });
+});
+document.addEventListener('click', e => {
+  if (!searchResults.contains(e.target) && e.target !== searchInput)
+    searchResults.style.display = 'none';
+});
+
+const hiddenCommunities = new Set();
+
+const selectAllCb = document.getElementById('select-all-cb');
+
+function updateSelectAllState() {
+  const total = LEGEND.length;
+  const hidden = hiddenCommunities.size;
+  selectAllCb.checked = hidden === 0;
+  selectAllCb.indeterminate = hidden > 0 && hidden < total;
+}
+
+function toggleAllCommunities(hide) {
+  document.querySelectorAll('.legend-item').forEach(item => {
+    hide ? item.classList.add('dimmed') : item.classList.remove('dimmed');
+  });
+  document.querySelectorAll('.legend-cb').forEach(cb => {
+    cb.checked = !hide;
+  });
+  LEGEND.forEach(c => {
+    if (hide) hiddenCommunities.add(c.cid); else hiddenCommunities.delete(c.cid);
+  });
+  const updates = RAW_NODES.map(n => ({ id: n.id, hidden: hide }));
+  nodesDS.update(updates);
+  updateSelectAllState();
+}
+
+const legendEl = document.getElementById('legend');
+LEGEND.forEach(c => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.className = 'legend-cb';
+  cb.checked = true;
+  cb.addEventListener('change', (e) => {
+    e.stopPropagation();
+    if (cb.checked) {
+      hiddenCommunities.delete(c.cid);
+      item.classList.remove('dimmed');
+    } else {
+      hiddenCommunities.add(c.cid);
+      item.classList.add('dimmed');
+    }
+    const updates = RAW_NODES
+      .filter(n => n.community === c.cid)
+      .map(n => ({ id: n.id, hidden: !cb.checked }));
+    nodesDS.update(updates);
+    updateSelectAllState();
+  });
+  item.innerHTML = `<div class="legend-dot" style="background:${c.color}"></div>
+    <span class="legend-label">${c.label}</span>
+    <span class="legend-count">${c.count}</span>`;
+  item.prepend(cb);
+  item.onclick = (e) => {
+    if (e.target === cb) return;
+    cb.checked = !cb.checked;
+    cb.dispatchEvent(new Event('change'));
+  };
+  legendEl.appendChild(item);
+});
+</script>
+<script>
+// Render hyperedges as shaded regions
+const hyperedges = [];
+// afterDrawing passes ctx already transformed to network coordinate space.
+// Draw node positions raw — no manual pan/zoom/DPR math needed.
+
+// Andrew's monotone chain. Returns the hull in counter-clockwise order, which
+// is what the perimeter must be traced in. Collinear and duplicate points
+// collapse to the extremes, so degenerate member sets render as a segment
+// rather than a zero-area crossed path.
+function convexHull(pts) {
+    const p = pts.slice().sort((a, b) => (a.x - b.x) || (a.y - b.y));
+    if (p.length < 3) return p;
+    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const build = seq => {
+        const out = [];
+        for (const q of seq) {
+            while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+            out.push(q);
+        }
+        out.pop();
+        return out;
+    };
+    const hull = build(p).concat(build(p.slice().reverse()));
+    return hull.length >= 3 ? hull : p;
+}
+network.on('afterDrawing', function(ctx) {
+    hyperedges.forEach(h => {
+        // Legend toggles only set `hidden` on nodes; getPositions() still
+        // returns them, so skip hidden members or their hull lingers.
+        const positions = h.nodes
+            .filter(nid => { const n = nodesDS.get(nid); return n && n.hidden !== true; })
+            .map(nid => network.getPositions([nid])[nid])
+            .filter(p => p !== undefined);
+        if (positions.length < 2) return;
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#6366f1';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Centroid and expanded hull in network coordinates.
+        // The perimeter must follow hull order, not h.nodes order: tracing the
+        // raw member order self-intersects whenever the layout does not happen
+        // to place members in angular order, filling as crossed wedges.
+        const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length;
+        const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length;
+        const hull = convexHull(positions);
+        const expanded = hull.map(p => ({
+            x: cx + (p.x - cx) * 1.15,
+            y: cy + (p.y - cy) * 1.15
+        }));
+        ctx.moveTo(expanded[0].x, expanded[0].y);
+        expanded.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+        // Label
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#4f46e5';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(h.label, cx, cy - 5);
+        ctx.restore();
+    });
+});
+</script>
+</body>
+</html>

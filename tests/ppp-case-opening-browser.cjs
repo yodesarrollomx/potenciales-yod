@@ -11,7 +11,11 @@ const parent='<!doctype html><meta name="viewport" content="width=device-width,i
   if(['pending-conflict','job-conflict'].includes(scenario))await context.addInitScript(({model,job})=>{const old=JSON.parse(JSON.stringify(model));old.revision+='-older';localStorage.setItem('pyod_patrimonial_native_v1:synthetic-case',JSON.stringify({model:old,metadata:{caso_id:'synthetic-case',nombre_caso:'PPP de prueba',palabra:'ensayo',version:1},pending:job?{}:{inCus:4},job:job?{tipo:'sheet-cantidades',caso_id:'synthetic-case',escenario_id:old.activo,revision_esperada:old.revision,inputs:{inCus:4},request_id:'board-uncertain-140'}:null,receipts:[]}));},{model:fixture,job:scenario==='job-conflict'});
   await context.route('https://script.google.com/**',async route=>{
    const request=route.request(),url=new URL(request.url()),action=url.searchParams.get('recurso');let out={ok:true};
-   if(request.method()==='POST'){const payload=request.postDataJSON();if(payload?.tipo!=='bitacora')businessPosts.push(payload);}
+   if(request.method()==='POST'){const payload=request.postDataJSON();
+    // Session/context reads use POST; the shared fixture keeps them separate from model writes.
+    if(payload?.tipo==='despacho-v1'&&payload.operation==='resolvePresentationContext')return route.fallback();
+    if(payload?.tipo!=='bitacora')businessPosts.push(payload);
+   }
    else {
     reads.push(action);
     if(action==='canje')out={ok:true,token:session,boards:'PT',rol:'admin'};
@@ -76,6 +80,7 @@ const parent='<!doctype html><meta name="viewport" content="width=device-width,i
     assert.equal(await input.evaluate(el=>el.validity.valid),false);await page.waitForTimeout(650);assert.equal(businessPosts.length,0,'inactive read does not authorize a zero write');
    }
   }
+  if(scenario==='catalog-independent')await frame.getByText('La generación de presentaciones todavía no está disponible para este plan.',{exact:true}).waitFor();
   const inner=page.frames().find(f=>f.url().includes('patrimonial.html'));
   assert.equal(await inner.evaluate(()=>localStorage.getItem('pyod_clave_v1')),session,'PPP must not erase OS credential');
   assert.ok(!reads.includes('lista'),'exact opening does not await or load the full catalog');

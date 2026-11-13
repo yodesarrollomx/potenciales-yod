@@ -238,6 +238,7 @@
       }
       doc.querySelectorAll('.kpi-val,.hero-grid .big,.hero-grid .sub2,.micro-readout,.lectura,[id^="hud"],#covenantPanel,.pm-fig-main,.pm-fig-sub,.pm-secsum,.pm-secfig,.pm-sum,.pm-hudline').forEach(el=>el.textContent='Por definir');
       doc.getElementById('escChips')?.replaceChildren();
+      win?.PPPCadena?.limpiar?.();
       main.querySelectorAll('[id^="read"]').forEach(el=>{if(!el.querySelector('input,button,select'))el.textContent='Resultados pendientes de cálculo en Sheets.';});
       main.querySelectorAll('.viz-svg').forEach(el=>el.replaceChildren());
       main.querySelectorAll('.flow-table tbody,.proforma-table tbody,#sourcesUses,#rentaRows,#flowRows').forEach(el=>el.replaceChildren());
@@ -406,6 +407,11 @@
         receipt=confirmed;draft={...draft,...copy(confirmed.intake),inputs:Object.fromEntries(Object.entries(confirmed.intake.inputs).filter(([,v])=>v!==null))};for(const control of controls)control.value=own(draft.inputs,control.id)?draft.inputs[control.id]:'';stageJob=null;stagePending=false;recoveredStage=false;stageResumeAllowed=false;
       }catch{}finally{if(generation===writeEpoch){stageOperation=false;paint();persist();}}
     }
+    function presentationContext(){
+      if(!active||!receipt||identity!==getIdentity())return null;
+      const scenario=receipt.escenarios?.find(v=>v.id===(receipt.activo||'base'));
+      return {board_case_id:receipt.caso_id,viewed_scenario_id:receipt.activo||'base',ppp_revision:receipt.revision,model_type:type,name:draft.nombre_caso,scenario_name:scenario?.nombre||'Base',confirmed:true,pending:!!job||!!saveError||Object.keys(pending).length>0||!!stagePending||!!stageJob||!!recoveredStage,busy:busy||stageLocked()||!!stageOperation};
+    }
     function checkIdentity(){
       const next=getIdentity();if(next===identity)return;
       const hadCapture=active||opening;deactivate();identity=next;scopeReady=resolveScope();
@@ -416,7 +422,7 @@
     function resumePage(){if(!leaving)return;leaving=false;if(active&&stageJob){recoveredStage=true;stagePending=true;stageOperation=false;paint();persist();}}
     doc.addEventListener('click',preventAction,true);
     win.addEventListener('storage',checkIdentity);win.addEventListener('focus',checkIdentity);win.addEventListener('pagehide',leavePage);win.addEventListener('pageshow',resumePage);const identityTimer=win.setInterval(checkIdentity,1000);
-    return {get active(){return active;},get blocking(){return active||opening;},get draft(){return draft?copy(draft):null;},readGuard,open,paint,persist,flush,checkSave,acceptRead,stageContext,saveStages,deactivate,destroy(){disposed=true;epoch++;deactivate();win.clearInterval(identityTimer);win.removeEventListener('storage',checkIdentity);win.removeEventListener('focus',checkIdentity);win.removeEventListener('pagehide',leavePage);win.removeEventListener('pageshow',resumePage);doc.removeEventListener('click',preventAction,true);host.remove();}};
+    return {get active(){return active;},get blocking(){return active||opening;},get draft(){return draft?copy(draft):null;},readGuard,open,paint,persist,flush,checkSave,acceptRead,stageContext,presentationContext,saveStages,deactivate,destroy(){disposed=true;epoch++;deactivate();win.clearInterval(identityTimer);win.removeEventListener('storage',checkIdentity);win.removeEventListener('focus',checkIdentity);win.removeEventListener('pagehide',leavePage);win.removeEventListener('pageshow',resumePage);doc.removeEventListener('click',preventAction,true);host.remove();}};
   }
   return {REQUEST_TIMEOUT_MS,boundedRequest,createReadGuard,PREWRITE_ERRORS,prewriteRejected,safeError,diagnosticText,models,normalizeType,modelFor,parseNumber,validate,boardPath,validateRead,nativeAdapter,createController,mount,mountBoard};
 });

@@ -10,7 +10,11 @@ const session='sy-synthetic-browser-session';
   context.on('request',request=>{if(new URL(request.url()).pathname.endsWith('/os/shell.js'))shellLoads++;});
   await context.route('https://script.google.com/**',async route=>{
    const request=route.request(),url=new URL(request.url()),action=url.searchParams.get('recurso');let out={ok:true};
-   if(request.method()==='POST'){const payload=request.postDataJSON();if(payload?.tipo!=='bitacora')businessPosts.push(payload);}
+   if(request.method()==='POST'){const payload=request.postDataJSON();
+    // Session/context reads use POST; the shared fixture keeps them separate from model writes.
+    if(payload?.tipo==='despacho-v1'&&payload.operation==='resolvePresentationContext')return route.fallback();
+    if(payload?.tipo!=='bitacora')businessPosts.push(payload);
+   }
    else if(action==='canje')out={ok:true,token:session,boards:'PT',rol:'admin',nombre:'Usuario sintético',correo:'synthetic@example.invalid'};
    else if(action==='caso'){
     reads++;
@@ -43,6 +47,7 @@ const session='sy-synthetic-browser-session';
   await page.locator('#patrimonialNative').waitFor();
   assert.equal(await page.locator('#pppCaseOpening').isVisible(),false);assert.equal(await page.locator('.yod-shell').isVisible(),true);
   assert.equal(await page.evaluate(()=>localStorage.getItem('pyod_clave_v1')),session);
+  if(scenario==='loading')await page.getByText('La generación de presentaciones todavía no está disponible para este plan.',{exact:true}).waitFor();
   assert.equal(reads,scenario==='loading'?1:2);assert.equal(businessPosts.length,0);assert.deepEqual(errors,[]);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
   await context.close();console.log(engineName+' '+width+' standalone '+scenario+': actual HTML and pinned shell, recovery visible, zero business writes');
