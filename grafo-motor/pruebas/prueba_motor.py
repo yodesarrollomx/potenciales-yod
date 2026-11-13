@@ -138,12 +138,13 @@ class LoPublicado(unittest.TestCase):
         if str(self.B.get('armado') or '') >= '2026-11-12T18:00':
             Y = refrescar.Base(json.loads(json.dumps(self.B))); self.assertEqual(refrescar.excluye(Y, R), [], 'la base publicada aún trae piezas excluidas')
 
-    # Notas curadas que nombran lo excluido y que Dirección aún decide si se quedan (dictamen GRAFO-05: «las 4 notas conocidas»).
-    NOTAS_PENDIENTES = {'PLAN-lo-que-vive-fuera-del-menu', 'MEJ-lo-que-vive-fuera-del-menu-6', 'HAL-25', 'HAL-31'}
+    # Las 4 notas curadas que nombraban lo excluido (dictamen GRAFO-05) se quitaron el 12-nov-2026 por decisión de Dirección:
+    # ya no hay excepciones.
+    NOTAS_PENDIENTES = set()
 
     def test_lo_excluido_no_se_nombra_en_los_textos(self):
-        """Ni en las piezas ni en las ligas de la base, ni en el registro de versiones o los datos de presentaciones. Sólo
-        quedan las notas pendientes de decisión."""
+        """Ni en las piezas ni en las ligas de la base, ni en el registro de versiones o los datos de presentaciones. Sin
+        excepciones."""
         with open(os.path.join(MOTOR, 'datos', 'reglas.json'), encoding='utf-8') as x: pats = [re.compile(p) for p in json.load(x)['excluir']['textos']]
         dice = lambda v: any(p.search(t) for t in (v if isinstance(v, list) else [v]) if isinstance(t, str) for p in pats)
         malos = [(i, k) for i, n in self.B['nodos'].items() if i not in self.NOTAS_PENDIENTES for k, v in n.items() if dice(v)]

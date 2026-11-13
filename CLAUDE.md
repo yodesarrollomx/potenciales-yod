@@ -9,14 +9,14 @@ Lee este archivo completo antes de tocar nada.
 Dos cosas en un mismo repo:
 
 1. **El board de Potenciales** — calculadora de potencial de desarrollos, sheet-driven. Cinco motores vivos: VERTICAL (`mixto.html`), MACROLOTES (`macrolotes.html`), UNIFAMILIAR (`unifamiliar.html`), RESIDENCIAL (`residencial.html`), PATRIMONIAL (`patrimonial.html`), más portal (`index.html`) y mapa (`mapa.html`). Lo usan Alejandro y el equipo YoDesarrollo.
-2. **EL PORTERO** (`portero.js`) — la cerradura compartida de **todos** los tableros YOD. No es un archivo de este board: otros repos lo cargan por URL absoluta (`yodesarrollo-board/index.html`, `obra-board/index.html`, los 5 HTML de `real-miramar-board/` traen `src="https://yodesarrollomx.github.io/potenciales-yod/portero.js"`). Trae además el tema claro/oscuro de todos los boards (bloque «TEMA CLARO / OSCURO» de `portero.js`, hasta el final del archivo).
+2. **EL PORTERO** (`portero.js`) — la cerradura compartida de **todos** los tableros YOD. No es un archivo de este board: otros repos lo cargan por URL absoluta (`yodesarrollo-board/index.html`, los 5 HTML de `real-miramar-board/` y otros tableros traen `src="https://yodesarrollomx.github.io/potenciales-yod/portero.js"`). Trae además el tema claro/oscuro de todos los boards (bloque «TEMA CLARO / OSCURO» de `portero.js`, hasta el final del archivo).
 
 **Dirección en vivo (curl, 2026-09-04):** `https://yodesarrollomx.github.io/potenciales-yod/` → **200** (casa canónica) · `/portero.js` → **200** · `/accesos.html` → **200** · `https://alexpueblag.github.io/potenciales-yod/` → **200** (cascarón viejo, sigue respondiendo) · `https://tableros.yodesarrollo.mx/potenciales-yod/` → **000, no resuelve** (el DNS del dominio propio no existe todavía).
 
 ## Reglas INVIOLABLES
 
 1. **Nunca crear implementación nueva del Apps Script.** Editor → Implementar → Administrar → lápiz → *Nueva versión*. Una nueva cambia la URL `/exec` y rompe TODOS los tableros a la vez, más los `?open=` ya enviados por correo. Ya pasó: 2026-07-12, implementación archivada e irrecuperable (`653795e`).
-2. **`portero.js` no es de este board: es de todos.** Se despliega desde este repo y al instante lo cargan Miramar, obra-board y yodesarrollo-board. Romperlo deja al equipo fuera de todo.
+2. **`portero.js` no es de este board: es de todos.** Se despliega desde este repo y al instante lo cargan Miramar, yodesarrollo-board y los demás tableros que lo usan. Romperlo deja al equipo fuera de todo.
 3. **El HTML público no lleva secretos.** La clave vive en la hoja `CONFIG` (servidor); el `client_id` de Google sí es público por diseño (`Code.gs:36`). Verificado: sin `k`, `?recurso=lista` → `{"ok":false,"error":"clave"}`.
 4. **Un relevo de emergencia jamás se persiste como destino.** El original va primero en cada llamada; el respaldo solo si aquel falla ahí mismo (`portero.js:16-24`). Persistirlo causó el "pagué Workspace y ya no entra" ([[google-workspace-reactivado-16ago]]).
 5. **Nunca se borra una fila del Sheet.** Archivar = `archivado:"si"` (`Code.gs:12`); las pruebas van con `source='test'` y se archivan.
@@ -65,7 +65,7 @@ Google Sheet "YOD - POTENCIALES"  (el ID vive en Script Properties, llave SHEET_
         │
         ▼
    portero.js  ──inyecta gate + bitácora + tema──▶  los 8 HTML de este repo
-                                                 +  yodesarrollo-board · obra-board · real-miramar-board
+                                                 +  yodesarrollo-board · real-miramar-board · otros tableros
 ```
 
 > ⚠ **El repo es ESPEJO: lo que corre es lo pegado en el editor de Apps Script.** `gas/Code.gs` ni
