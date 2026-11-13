@@ -55,6 +55,23 @@ test('el resumen que lee el servidor trae edad, versión mostrada y lo que recib
   assert.notEqual(resumen('v2.huella'), resumen('v3.huella'));
 });
 
+test('el tope de capital (1/3 de las ventas) sólo avisa: cuánto se pasa cada versión, al final del Resumen', () => {
+  const dato = fila('Datos', 'din.capital');
+  assert.match(String(dato[1]), /^Tope de capital: 1\/3 de las ventas/);
+  const tope = Number(dato[2]), capital = fila('Modelo', 'capital').slice(4, 7);
+  for (let k = 0; k < 3; k++) {
+    const espera = Math.max(0, Math.round((Number(capital[k]) - tope) * 1000) / 1000);
+    assert.ok(Math.abs(Number(ver('capital_sobre_tope')[k]) - espera) < 1e-6, 'V' + (k + 1) + ': capital ' + capital[k] + ' contra tope ' + tope);
+    assert.equal(resumen('v' + (k + 1) + '.capital_sobre_tope'), ver('capital_sobre_tope')[k], 'el Resumen dice lo mismo');
+  }
+  // las claves nuevas del Resumen van al final, después de las que ya leían los libros vivos
+  const claves = L.Resumen.valores.map((f) => String(f[0]).trim()).filter(Boolean);
+  assert.deepEqual(claves.slice(claves.indexOf('plan.consejo_sin_leer') + 1), ['v1.capital_sobre_tope', 'v2.capital_sobre_tope', 'v3.capital_sobre_tope']);
+  // y en Versiones va después de las comprobaciones: no mueve ningún renglón que ya existía
+  const filas = L.Versiones.valores.map((f) => String(f[0]).trim());
+  assert.ok(filas.indexOf('capital_sobre_tope') > filas.indexOf('ck_unidades'));
+});
+
 /* tests/fixtures/ppp2-ciclo.json sale de ppp2/libro/ciclo.py: la plantilla real con el plan inventado en
    distintos momentos de su vida, recalculada por LibreOffice. La edad y el siguiente paso los calcula el libro. */
 const CICLO = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/ppp2-ciclo.json'), 'utf8'));

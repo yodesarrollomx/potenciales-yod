@@ -96,6 +96,13 @@
       propuesta: 'azul', investigando: 'azul', 'en revisión': 'azul', 'no aplica': 'gris', base: 'gris', alterna: 'gris' }[e] || '';
   }
   function chip(texto, clase) { return texto ? '<span class="p2-chip ' + (clase || claseEstado(texto)) + '">' + esc(texto) + '</span>' : ''; }
+  /* El tope de capital (1/3 de las ventas) sólo avisa: el libro dice cuánto se pasa cada versión y la revisión no cambia. */
+  function avisoTope(v, corto) {
+    var n = num(v && v.capital_sobre_tope);
+    if (n === null || n < 0.005) return '';
+    return corto ? ' ' + chip('Pasa del tope', 'ambar') :
+      '<div class="p2-aviso">' + chip('Aviso', 'ambar') + '<span>El capital pasa ' + mdp(n) + ' del tope de 1/3 de las ventas. Entre menos capital, mejor; es aviso: no cambia la revisión para fondos.</span></div>';
+  }
   function edad(e) {
     var x = EDADES[e] || EDADES.semilla;
     return '<span class="p2-edad" title="' + esc(x.que) + '"><i class="ti ' + x.icono + '" aria-hidden="true"></i>' + x.texto + '</span>';
@@ -346,6 +353,7 @@
     else if (v.estado === 'vigente') aviso = '<div class="p2-aviso">' + chip('Vigente', 'verde') + '<span>Aprobada por ' + esc(v.aprobada_por || '—') + (v.fecha_aprobacion ? ' el ' + esc(v.fecha_aprobacion) : '') + '.</span></div>';
     else if (puede.aprobar && v.estado !== 'descartada') aviso = '<div class="p2-aviso">' + chip(v.estado || '', claseEstado(v.estado)) +
       '<button class="p2-btn" data-accion="aprobar" data-v="' + estado.version + '"><i class="ti ti-check"></i> Volver vigente esta versión</button></div>';
+    aviso += avisoTope(v);
     var rv = v.rv_resultado || '';
     raiz.innerHTML =
       '<div class="p2-migas"><a href="#/">Vivero</a><i class="ti ti-chevron-right"></i><span>' + esc(r['plan.nombre'] || '') + '</span></div>' +
@@ -429,7 +437,7 @@
       ['Estado', function (x) { return chip(x.estado); }], ['Qué cambia', function (x) { return '<span class="p2-chico">' + esc(x.que_cambia || '') + '</span>'; }],
       ['El dueño recibe', function (x) { return '<b>' + mdp(x.dueno_recibe) + '</b>'; }, 'n'], ['Veces su tierra', function (x) { return veces(x.dueno_veces); }, 'n'],
       ['En cuántos meses', function (x) { return num(x.dueno_meses) === null ? '—' : esc(x.dueno_meses); }, 'n'], ['Ganancia real', function (x) { return mdp(x.ganancia); }, 'n'],
-      ['Dinero ajeno máximo', function (x) { return mdp(x.max_ajeno); }, 'n'], ['Capital', function (x) { return mdp(x.capital); }, 'n'],
+      ['Dinero ajeno máximo', function (x) { return mdp(x.max_ajeno); }, 'n'], ['Capital', function (x) { return mdp(x.capital) + avisoTope(x, true); }, 'n'],
       ['Banco, saldo máximo', function (x) { return mdp(x.banco_max); }, 'n'], ['Respaldo que faltaría', function (x) { return mdp(x.respaldo); }, 'n'],
       ['Costo del dinero', function (x) { return mdp(x.costo_dinero); }, 'n'], ['Obra', function (x) { return 'mes ' + esc(x.obra_inicio || '—') + ' a ' + esc(x.fin_obra || '—'); }, 'n'],
       ['Saldos desde el mes', function (x) { return esc(x.mes_saldos || '—'); }, 'n'], ['Revisión para fondos', function (x) { return esc(x.rv_resultado || '—'); }]
@@ -693,7 +701,7 @@
           '<p class="p2-chico p2-tenue">Sólo propongo lo que pasa la revisión para fondos. Entre las que pasan va primero la que aguanta los golpes leves, cada uno por separado (' +
           esc((c.golpes || []).map(function (g) { return g.nombre.toLowerCase(); }).join(', ')) + '): que con ninguno le falte dinero. Si ninguna aguanta, cuenta el peor golpe: gana la que le quita a la de partida al menos un paso entero de capital' +
           (num(det.paso_capital) ? ' (' + mdpCorto(det.paso_capital) + ' MDP)' : '') + ' de faltante; quitarle menos no cuenta, y una a la que le falta más nunca le gana. ' +
-          'Después, la que pasa sin quedar justa, la que no le alarga el plazo al dueño, la que más le deja (a décimas de MDP) y la que usa menos capital.</p></details>' : '') + '</div>';
+          'Después, la que pasa sin quedar justa, la que no le alarga el plazo al dueño, la que usa menos capital y la que más le deja (a décimas de MDP).</p></details>' : '') + '</div>';
     }).join('');
     var hall = (p.hallazgos || []).slice().reverse().map(function (h) {
       return '<li><div><b>' + esc(h.tema) + '</b> ' + chip(h.estado) + ' ' + chip('confianza ' + (h.confianza || '—'), 'gris') + '<div>' + esc(h.hallazgo) + '</div>' +
