@@ -36,9 +36,30 @@
     return true;
   }
   function pyodVolverAlOriginal(){ ENDPOINT = P_().original; }
-  /* Manda al portero y, si el original falla, reintenta con el respaldo. */
-  function pyodConLimite(p, ms){
-    return Promise.race([p, new Promise((_,rj)=>setTimeout(()=>rj(new Error('timeout')), ms||12000))]);
+  /* 13-nov-2026 (issue 22): un plazo que SÍ corta la petición. Promise.race dejaba la petición
+     viva en la red aunque ya se hubiera dado por perdida. El reloj cubre también la lectura de la
+     respuesta. Sin AbortController (navegador viejo) se comporta como antes. */
+  async function pyodTraerJSON(url, opciones, ms){
+    const C = typeof AbortController === 'function' ? new AbortController() : null;
+    let reloj;
+    const corte = new Promise((_, rj) => { reloj = setTimeout(() => { try { if (C) C.abort(); } catch(e){} rj(new Error('timeout')); }, ms || 12000); });
+    try {
+      const t = await Promise.race([fetch(url, C ? Object.assign({}, opciones, { signal: C.signal }) : opciones).then(r => r.text()), corte]);
+      try { return JSON.parse(t); } catch(e){ return { ok:false, error:'servidor' }; }
+    } finally { clearTimeout(reloj); }
+  }
+  /* Una sola verificación a la vez: si Google llama dos veces seguidas (One Tap y el botón), la
+     segunda espera a la primera en vez de mandar otra. Al terminar, bien o mal, se puede volver a intentar. */
+  function pyodUnaALaVez(fn){
+    let enVuelo = null;
+    return function(){
+      if (enVuelo) return enVuelo;
+      const args = arguments, self = this;
+      enVuelo = Promise.resolve().then(() => fn.apply(self, args));
+      const libera = () => { enVuelo = null; };
+      enVuelo.then(libera, libera);
+      return enVuelo;
+    };
   }
   /* Éxito claro = el portero resolvió la entrada. Cualquier otra cosa (no
      autorizado, error, HTML de login, tardanza) hace que se pruebe el respaldo:
@@ -46,20 +67,18 @@
      su Sheet ya no conoce las credenciales nuevas. */
   function pyodOk(j){ return !!(j && j.ok !== false && (j.autorizado || j.token || j.enviado)); }
 
+  /* POST al portero (acceso-google, acceso-solicitar): tiene efecto — crea una sesión o manda un
+     correo. Si el original no contestó, NO se repite contra el mismo original: la petición pudo haber
+     llegado (issue 22: dos POST seguidos podían sumar más de 61 s). Sólo un respaldo vivo, que es
+     otro servidor, recibe un segundo intento. */
   async function pyodManda(cuerpo){
-    async function intenta(base){
-      const r = await pyodConLimite(fetch(base, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        credentials:'omit', body: JSON.stringify(cuerpo) }), 30000);
-      const t = await r.text();
-      try { return JSON.parse(t); } catch(e){ return { ok:false, error:'servidor' }; }
-    }
+    const intenta = base => pyodTraerJSON(base, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      credentials:'omit', body: JSON.stringify(cuerpo) }, 30000);
     await ACCESO_LISTO;
     pyodVolverAlOriginal();
     let j;
     try { j = await intenta(ENDPOINT); } catch(e){ j = { ok:false, error:'servidor' }; }
-    const fallaDeRed = !j || j.error === 'servidor';
-    if (!pyodOk(j) && (RESPALDO_VIVO || fallaDeRed) && pyodUsarRespaldo()) {
-      if (!RESPALDO_VIVO) await new Promise(ok => setTimeout(ok, 1500));
+    if (!pyodOk(j) && RESPALDO_VIVO && pyodUsarRespaldo()) {
       try { j = await intenta(ENDPOINT); } catch(e){ j = { ok:false, error:'servidor' }; }
     }
     return j;
@@ -67,11 +86,7 @@
 
   /* Pide a un portero y, si el original falla, reintenta con el respaldo. */
   async function pyodPide(qs){
-    async function intenta(base){
-      const r = await pyodConLimite(fetch(base + qs, { credentials: 'omit' }), 25000);
-      const t = await r.text();
-      try { return JSON.parse(t); } catch(e){ return { ok:false, error:'servidor' }; }
-    }
+    const intenta = base => pyodTraerJSON(base + qs, { credentials: 'omit' }, 25000);   // GET: leer no tiene efecto; sí se reintenta
     await ACCESO_LISTO;
     pyodVolverAlOriginal();
     let j;
@@ -228,7 +243,7 @@
     if (GCID && GCID !== 'PENDIENTE') {
       const arma = () => {
         try {
-          google.accounts.id.initialize({ client_id: GCID, auto_select: true, use_fedcm_for_prompt: true, cancel_on_tap_outside: false, itp_support: true, callback: async resp => {
+          google.accounts.id.initialize({ client_id: GCID, auto_select: true, use_fedcm_for_prompt: true, cancel_on_tap_outside: false, itp_support: true, callback: pyodUnaALaVez(async resp => {
             $('pgMsg').textContent = 'Verificando con Google… (puede tardar hasta 30 s)';
             try {
               const r = await pyodManda({ tipo: 'acceso-google', credential: resp.credential, request_id: (crypto.randomUUID?.() || Date.now() + '') });
@@ -236,7 +251,7 @@
               else if (r.ok && !r.autorizado) { $('pgMsg').textContent = 'Tu cuenta de Google aún no tiene acceso — pídelo por WhatsApp:'; const ws = $('pgWs'); ws.style.display = 'block'; ws.onclick = () => window.open('https://wa.me/' + (r.whatsapp || '525518331100') + '?text=' + encodeURIComponent('Hola Alejandro, solicito acceso a los boards YOD (' + pagina + ').'), '_blank'); }
               else $('pgMsg').textContent = r.error === 'servidor' ? 'El servidor de acceso no contestó a tiempo — vuelve a tocar «Continuar con Google»' : 'No se pudo con Google: ' + (r.error || 'reintenta');
             } catch (e) { $('pgMsg').textContent = 'Sin conexión — reintenta'; }
-          } });
+          }) });
           google.accounts.id.renderButton(document.getElementById('pgGoogle'), { theme: 'outline', size: 'large', text: 'continue_with', locale: 'es', width: 280 });
           // One Tap: si ya diste permiso antes, Google te mete solo, sin clic
           google.accounts.id.prompt();

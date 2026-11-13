@@ -24,7 +24,7 @@ jobs:
         run: |
           node --check portero.js
           node --check tests/access-browser.cjs
-          node --test tests/access-gates.cjs tests/sheets-offline.cjs
+          node --test tests/access-gates.cjs tests/sheets-offline.cjs tests/portero-red.test.cjs
       - name: Instalar navegadores de prueba
         run: |
           npm install --prefix "$RUNNER_TEMP/yod-browser" --no-audit --no-fund playwright@1.55.1 vis-network@9.1.6
