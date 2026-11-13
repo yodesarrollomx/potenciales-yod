@@ -80,10 +80,14 @@ PORT = """<!DOCTYPE html>
 <iframe id="marco" title="Grafo de YOD OS en el visor de Graphify"></iframe>
 <script>
 let L = __LISTA__;
-// Con ?rama=<rama> la portada enseña el grafo de esa rama (el borrador) sin que esté publicado: trae cada lámina como texto.
-const RAMA = (new URLSearchParams(location.search).get('rama') || '').replace(/[^A-Za-z0-9._-]/g, '').slice(0, 60);
-const CRUDO = RAMA ? 'https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/' + RAMA + '/grafo/' : '';
+// Con ?rama=grafo-borrador la portada enseña el borrador sin que esté publicado: trae cada lámina como texto. Sólo esa
+// rama: cualquier otro valor se ignora y se ve lo publicado. La lámina traída se dibuja en un marco aislado (sandbox que
+// no le devuelve el origen: queda opaco y no alcanza lo que esta página guarda); sólo habla con la portada por postMessage.
+const BORRADOR = new URLSearchParams(location.search).get('rama') === 'grafo-borrador';
+const CRUDO = BORRADOR ? 'https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/grafo-borrador/grafo/' : '';
 const sel = document.getElementById('sel'), marco = document.getElementById('marco'), sube = document.getElementById('sube');
+if (CRUDO) marco.setAttribute('sandbox', 'allow-scripts allow-popups');
+const LAM_ID = /^[a-z0-9][a-z0-9-]*$/;
 let actual = null, turno = 0;
 function lista() { let grupo = null, og = null; sel.textContent = '';
   L.forEach(l => { if (l[2] !== grupo) { grupo = l[2]; og = document.createElement('optgroup'); og.label = grupo; sel.appendChild(og); }
@@ -98,13 +102,13 @@ function ir(id, nodo) { const l = L.find(x => x[0] === id) || L[0]; if (!l) retu
 sel.addEventListener('change', () => ir(sel.value));
 document.getElementById('casa').addEventListener('click', () => ir(L[0][0]));
 sube.addEventListener('click', () => { if (actual && actual[3]) ir(actual[3]); });
-window.addEventListener('message', e => { const d = e.data; if (!d) return;
+window.addEventListener('message', e => { const d = e.data; if (!d || e.source !== marco.contentWindow) return;
   if (d.yod === 1) { const l = L.find(x => x[0] === d.id); if (l) marca(l); }
   if (d.yod === 2 && typeof d.ir === 'string') ir(d.ir, typeof d.nodo === 'string' ? d.nodo : ''); });
 window.addEventListener('hashchange', () => { const id = location.hash.slice(1); if (id && (!actual || actual[0] !== id)) ir(id); });
 function arranca() { lista(); ir(location.hash.slice(1)); }
 if (CRUDO) { document.getElementById('borr').hidden = false;
-  fetch(CRUDO + 'laminas.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : Promise.reject()).then(j => { if (Array.isArray(j.laminas) && j.laminas.length) L = j.laminas;
+  fetch(CRUDO + 'laminas.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : Promise.reject()).then(j => { const ok = Array.isArray(j.laminas) ? j.laminas.filter(l => Array.isArray(l) && LAM_ID.test(String(l[0]))) : []; if (ok.length) L = ok;
     const c = document.getElementById('cuenta'); if (c && j.piezas) c.textContent = j.piezas.toLocaleString('es-MX') + ' piezas · ' + L.length + ' láminas'; }).catch(() => {}).then(arranca);
 } else arranca();
 </script>
