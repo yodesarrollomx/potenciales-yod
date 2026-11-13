@@ -42,7 +42,9 @@ test('con la clave, los siete jueces votan por separado y la sesión queda compl
     assert.equal(p.headers['x-api-key'], CLAVE);
     assert.ok(!p.crudo.includes(CLAVE), 'la clave no viaja en el cuerpo');
     assert.equal(p.cuerpo.model, 'claude-sonnet-5-5');
-    assert.deepEqual(p.cuerpo.tool_choice, { type: 'tool', name: 'votar' });
+    assert.deepEqual(p.cuerpo.tool_choice, { type: 'auto' }, 'la herramienta se ofrece, no se fuerza (el modelo rechaza «tool» y «any»)');
+    assert.equal(p.cuerpo.tools[0].name, 'votar');
+    assert.match(p.cuerpo.system, /Entrega tu voto sólo llamando a la herramienta «votar»/);
     const enumVoto = p.cuerpo.tools[0].input_schema.properties.voto.enum;
     assert.deepEqual(enumVoto, /Alejandro virtual/.test(p.cuerpo.system) ? ['aprueba', 'regresa', 'veto'] : ['aprueba', 'regresa'], 'sólo Alejandro virtual puede vetar');
     const texto = p.cuerpo.messages[0].content[0].text;
@@ -98,7 +100,7 @@ test('a quien no contesta bien se le pregunta una vez más; si sigue sin contest
 
   const w2 = enConsejo({ ia: jueces({ Hormozi: { voto: 'regresa', razon: 'corta', condicion: '' } }) });
   w2.propiedades.set('ANTHROPIC_API_KEY', CLAVE);
-  assert.deepEqual(convoca(w2), { ok: false, error: 'consejo_incompleto' });
+  assert.deepEqual(convoca(w2), { ok: false, error: 'consejo_incompleto', codigos: [200] });
   assert.equal(consejo(w2).length, 0, '«no contestó» nunca es «aprobado»: una sesión sólo vale completa');
   assert.ok(!bitacora(w2).some((f) => /Convocó al consejo/.test(f[2])));
   assert.equal(w2.lee('plan.paso'), 'consejo');
@@ -107,7 +109,7 @@ test('a quien no contesta bien se le pregunta una vez más; si sigue sin contest
 test('sólo Alejandro virtual veta: el veto de otro juez no cuenta como voto', () => {
   const w = enConsejo({ ia: jueces({ 'Broker de campo': { voto: 'veto', razon: 'Los precios no tienen comparables cerrados en la zona.', condicion: 'Comparables.' } }) });
   w.propiedades.set('ANTHROPIC_API_KEY', CLAVE);
-  assert.deepEqual(convoca(w), { ok: false, error: 'consejo_incompleto' });
+  assert.deepEqual(convoca(w), { ok: false, error: 'consejo_incompleto', codigos: [200] });
   const w2 = enConsejo({ ia: jueces({ 'Alejandro virtual': { voto: 'veto', razon: 'El candado de tenencia está reprobado: el predio tiene un litigio.', condicion: 'Resolver el litigio.' } }) });
   w2.propiedades.set('ANTHROPIC_API_KEY', CLAVE);
   const r = convoca(w2);
@@ -117,12 +119,34 @@ test('sólo Alejandro virtual veta: el veto de otro juez no cuenta como voto', (
 test('una clave rechazada (401) no escribe nada y lo dice', () => {
   const w = enConsejo({ ia: () => ({ codigo: 401, cuerpo: { error: { message: 'invalid x-api-key', cuenta: 'datos de la cuenta' } } }) });
   w.propiedades.set('ANTHROPIC_API_KEY', CLAVE);
-  assert.deepEqual(convoca(w), { ok: false, error: 'ia_clave' });
+  assert.deepEqual(convoca(w), { ok: false, error: 'ia_clave', codigos: [401] });
   assert.equal(consejo(w).length, 0);
   assert.ok(!JSON.stringify(w.libro.getSheetByName('Bitácora').v).includes('datos de la cuenta'), 'el texto de error del proveedor no se guarda');
   const w2 = enConsejo({ ia: () => ({ codigo: 503, cuerpo: 'caído' }) });
   w2.propiedades.set('ANTHROPIC_API_KEY', CLAVE);
-  assert.deepEqual(convoca(w2), { ok: false, error: 'ia' });
+  assert.deepEqual(convoca(w2), { ok: false, error: 'ia', codigos: [503] }, 'dice qué contestó la API, sólo con números');
+});
+
+test('la herramienta «votar» se ofrece sin forzarla: con un modelo que rechaza forzarla, el consejo vota; un voto en texto también cuenta', () => {
+  /* 12-nov-2026, en vivo: el modelo contestó 400 a tool_choice «tool» y ningún voto llegó. La API de juguete
+     (jueces) ahora contesta igual que la real si se fuerza; aquí además un juez vota con el objeto en texto. */
+  const votos = {};
+  JUECES.slice(0, 5).forEach((j) => { votos[j] = aprueba; });
+  const enTexto = { voto: 'regresa', razon: 'Le faltan la escritura y la constancia de zonificación; con lo que trae el libro no firmaría hoy.', condicion: 'Escritura y zonificación.' };
+  const base = jueces(votos);
+  const w = enConsejo({ ia: (q) => {
+    if (/Eres «Hormozi»/.test(q.cuerpo.system)) return { codigo: 200, cuerpo: { content: [{ type: 'text', text: JSON.stringify(enTexto) }], stop_reason: 'end_turn' } };
+    return base(q);
+  } });
+  w.propiedades.set('ANTHROPIC_API_KEY', CLAVE);
+  const r = convoca(w);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.deepEqual([r.aprueban, r.resultado], [5, 'aprobada']);
+  assert.equal(w.iaPedidos.length, 7, 'nadie tuvo que repetir');
+  assert.ok(w.iaPedidos.every((p) => p.cuerpo.tool_choice.type === 'auto'));
+  assert.equal(consejo(w).find((f) => f[3] === 'Hormozi')[4], 'regresa', 'el voto en texto quedó anotado');
+  // y si alguien volviera a forzarla, la API de juguete lo rechaza como la real
+  assert.equal(base({ url: 'https://api.anthropic.com/v1/messages', cuerpo: { system: 'Eres «Hormozi»', tool_choice: { type: 'tool', name: 'votar' } }, n: 1 }).codigo, 400);
 });
 
 test('si el libro cambia mientras votan, los votos ya no son de estos números y no se escriben', () => {

@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
-const { mundo, ADMIN, EDITOR, LECTOR, PLAN, filaDe, jugueteConCiclo, jueces } = require('./ppp2-mundo.cjs');
+const { mundo, ADMIN, EDITOR, LECTOR, PLAN, filaDe, jugueteConCiclo, jueces, enConsejo } = require('./ppp2-mundo.cjs');
 
 const RAIZ = path.join(__dirname, '..');
 const FOTOS = process.env.PPP_SCREENSHOTS || '';
@@ -29,7 +29,8 @@ function servidor() {
 async function pagina(navegador, base, w, llave, opciones) {
   const op = opciones || {};
   const ctx = await navegador.newContext({ viewport: op.movil ? { width: 390, height: 844 } : { width: 1280, height: 900 }, deviceScaleFactor: 1 });
-  const posts = [];
+  const posts = [], gets = [];
+  const red = op.red || {};      // red.demora (ms) retrasa al servidor; red.caida lo deja sin conexión
   await ctx.route('**/*', async (route) => {
     const req = route.request(), url = req.url();
     if (url.startsWith(base)) {
@@ -37,6 +38,8 @@ async function pagina(navegador, base, w, llave, opciones) {
       return route.continue();
     }
     if (url.startsWith(ENDPOINT)) {
+      if (red.caida) return route.abort('internetdisconnected');
+      if (red.demora) await new Promise((ok) => setTimeout(ok, red.demora));
       let cuerpo;
       if (req.method() === 'POST') {
         const b = JSON.parse(req.postData() || '{}');
@@ -44,6 +47,7 @@ async function pagina(navegador, base, w, llave, opciones) {
         cuerpo = w.ctx.doPost({ postData: { contents: JSON.stringify(b) } }).contenido;
       } else {
         const p = Object.fromEntries(new URL(url).searchParams);
+        gets.push(p.recurso);
         cuerpo = w.ctx.doGet({ parameter: p }).contenido;
       }
       return route.fulfill({ status: 200, contentType: 'application/json', body: cuerpo });
@@ -52,14 +56,15 @@ async function pagina(navegador, base, w, llave, opciones) {
     return route.fulfill({ status: 200, contentType: vacio, body: '' });
   });
   await ctx.addInitScript(([llaveSesion, ep]) => {
-    if (llaveSesion !== null) localStorage.setItem('pyod_clave_v1', llaveSesion);
+    // la sesión se pone al abrir la pestaña; al recargar se queda la que haya (una prueba puede cambiarla)
+    if (llaveSesion !== null && !sessionStorage.getItem('__ppp2_llave_puesta')) { localStorage.setItem('pyod_clave_v1', llaveSesion); sessionStorage.setItem('__ppp2_llave_puesta', '1'); }
     window.PPP2_ENDPOINT = ep;
   }, [llave === undefined ? null : llave, op.sinServidor ? 'https://script.google.com/macros/s/PENDIENTE/exec' : ENDPOINT]);
   const page = await ctx.newPage();
   const errores = [];
   page.on('pageerror', (e) => errores.push(e.message));
-  await page.goto(base + '/ppp2.html' + (op.hash || ''));
-  return { ctx, page, posts, errores };
+  await page.goto(base + '/ppp2.html' + (op.query || '') + (op.hash || ''));
+  return { ctx, page, posts, gets, errores };
 }
 
 /* El mundo en el momento que más importa: el consejo ya regresó la V2 del ejemplo (con sus pruebas y sus siete
@@ -90,7 +95,9 @@ async function foto(page, nombre) {
   const base = 'http://127.0.0.1:' + s.address().port;
   const navegador = await chromium.launch();
   let fallos = 0;
+  const solo = process.env.PPP2_SOLO ? new RegExp(process.env.PPP2_SOLO) : null;     // PPP2_SOLO=texto corre sólo esos recorridos
   const caso = async (nombre, fn) => {
+    if (solo && !solo.test(nombre)) return;
     try { await fn(); console.log('ok · ' + nombre); } catch (e) { fallos++; console.error('FALLA · ' + nombre + '\n  ' + (e && e.stack || e)); }
   };
   try {
@@ -273,7 +280,7 @@ async function foto(page, nombre) {
       // con el latido corriendo (el servidor anota cada vez que late), sí
       w.propiedades.set('latido_t', String(Date.now()));
       await page.reload();
-      await page.locator('.p2-voz').waitFor();
+      await page.waitForFunction(() => window.PPP2 && window.PPP2.estado.plan && window.PPP2.estado.fresco === true && !document.querySelector('.p2-refresco'));
       assert.match(await page.locator('.p2-voz').innerText(), /Si nadie me lo pide, lo hago solo en mi siguiente latido\./);
       await page.getByRole('button', { name: /Correr mi ronda/ }).click();
       await page.getByText('Propuesta lista y probada: ahora le toca al consejo.').waitFor({ timeout: 15000 });
@@ -612,6 +619,115 @@ async function foto(page, nombre) {
         const c = x.libro.getSheetByName('Consejo');
         for (let i = 4; i < c.v.length; i++) if (c.v[i][1]) { if (i > 7) c.v[i] = c.v[i].map(() => ''); else c.v[i][1] = MALO; }
       }, /La sesión <img src=x onerror="window\.__xss=1"><b>negrita<\/b> del consejo sobre mi V2 quedó incompleta/);
+    });
+
+    /* ───────── abrir rápido (12-nov-2026): lo último que vi, mientras llega lo nuevo del libro ───────── */
+
+    const fresco = (page) => page.waitForFunction(() => window.PPP2 && window.PPP2.estado.plan && window.PPP2.estado.fresco === true && !document.querySelector('.p2-refresco'), null, { timeout: 15000 });
+    const memorias = (page) => page.evaluate(() => Object.keys(localStorage).filter((k) => k.indexOf('yodcg_cache_v1:ppp2:') === 0));
+
+    await caso('abrir otra vez un plan pinta al instante lo que vi y trae lo nuevo en fondo; mientras, no guarda nada; una escritura pinta el plan que trae su respuesta', async () => {
+      const w = mundo(), red = { demora: 0 };
+      const { page, ctx, posts, gets, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN + '/preguntas', red });
+      await page.locator('.p2-pregunta').waitFor();
+      assert.equal(await page.locator('.p2-refresco').count(), 0, 'la primera vez no hay nada de antes');
+      const cifra = async () => (await page.locator('.p2-recibe .p2-cifra').innerText()).replace(/\s+/g, '');
+      const antes = await cifra();
+      assert.equal((await memorias(page)).length, 1, 'guardó lo que vio');
+      // mientras la página está cerrada, el libro cambia (como si alguien lo editara)
+      const res = w.libro.getSheetByName('Resumen');
+      res.v[filaDe(res, 'v2.dueno_recibe') - 1][1] = 77.7;
+      red.demora = 1500;
+      await page.reload();
+      await page.locator('.p2-refresco').waitFor({ timeout: 1000 });
+      assert.match(await page.locator('.p2-refresco').innerText(), /Te enseño lo que vi hace un momento mientras traigo lo último de mi libro\./);
+      assert.equal(await cifra(), antes, 'al instante, lo que vi');
+      await page.locator('.p2-pregunta [data-accion="nose"]').first().click();
+      await page.getByText('Un momento: estoy trayendo lo último de mi libro. Vuelve a intentarlo en unos segundos.').waitFor();
+      assert.equal(posts.length, 0, 'no escribe encima de lo que quizá ya cambió');
+      await fresco(page);
+      assert.equal(await cifra(), '77.7MDP', 'y luego lo nuevo');
+      red.demora = 0;
+      const pedidos = gets.filter((g) => g === 'ppp2-plan').length;
+      await page.locator('.p2-pregunta [data-accion="nose"]').first().click();
+      await page.getByText('Anotado: no se sabe todavía.').waitFor();
+      await page.waitForFunction(() => window.PPP2 && !window.PPP2.estado.ocupado);
+      assert.equal(posts.length, 1);
+      assert.equal(gets.filter((g) => g === 'ppp2-plan').length, pedidos, 'no volvió a pedir el plan: venía en la respuesta');
+      assert.equal(await page.evaluate(() => window.PPP2.estado.plan.rev), 2, 'pintó la revisión nueva');
+      assert.deepEqual(errores, []);
+      await foto(page, 'ppp2-lo-que-vi');
+      await ctx.close();
+    });
+
+    await caso('sin conexión enseña lo que vi y lo dice; con «Intentar de nuevo» trae lo nuevo', async () => {
+      const w = mundo(), red = {};
+      const { page, ctx, posts, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN + '/preguntas', red });
+      await fresco(page);
+      red.caida = true;
+      await page.reload();
+      await page.locator('.p2-refresco.sin-red').waitFor();
+      assert.match(await page.locator('.p2-refresco').innerText(), /No pude traer lo último de mi libro: te enseño lo que vi hace un momento\. Mientras, no guardo cambios\./);
+      await page.locator('.p2-pregunta').first().waitFor();
+      await page.locator('.p2-pregunta [data-accion="nose"]').first().click();
+      await page.getByText('No tengo conexión con mi servidor: no guardo cambios hasta traer lo último de mi libro.').waitFor();
+      assert.equal(posts.length, 0);
+      red.caida = false;
+      await page.getByRole('button', { name: /Intentar de nuevo/ }).click();
+      await fresco(page);
+      await sinDesborde(page, 'lo que vi');
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
+    await caso('lo que vi con una sesión no se enseña con otra; si la sesión deja de servir, se borra y se pide entrar', async () => {
+      const w = mundo(), red = {};
+      const { page, ctx } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN, red });
+      await fresco(page);
+      await page.evaluate((k) => localStorage.setItem('pyod_clave_v1', k), LECTOR);     // otra persona en el mismo navegador
+      red.demora = 1500;
+      await page.reload();
+      await page.getByText('Abriendo el plan…').waitFor({ timeout: 1000 });
+      assert.equal(await page.locator('.p2-refresco').count(), 0, 'lo de la otra sesión no se enseña');
+      await fresco(page);
+      assert.equal(await page.locator('input[data-palanca]').count(), 0, 'y lo nuevo es lo del lector');
+      assert.equal((await memorias(page)).length, 2, 'cada sesión con lo suyo');
+      // al lector le revocan la sesión: al volver, lo que vio se borra
+      w.revocados.add(LECTOR); w.cache.clear();
+      await page.reload();
+      await page.getByText('Tu sesión ya no sirve aquí').waitFor({ timeout: 15000 });
+      assert.deepEqual(await memorias(page), [], 'no queda nada de lo que vi');
+      assert.equal(await page.evaluate(() => localStorage.getItem('pyod_clave_v1')), LECTOR, 'nunca borra la credencial');
+      await ctx.close();
+    });
+
+    await caso('el vivero también se abre al instante con lo que vi; con ?cargador=legacy no se guarda nada', async () => {
+      const w = mundo(), red = {};
+      let r = await pagina(navegador, base, w, EDITOR, { red });
+      await r.page.locator('a.p2-tarjeta').waitFor();
+      red.demora = 1500;
+      await r.page.reload();
+      await r.page.locator('.p2-refresco').waitFor({ timeout: 1000 });
+      assert.equal(await r.page.locator('a.p2-tarjeta').count(), 1, 'las tarjetas, al instante');
+      await r.page.waitForFunction(() => !document.querySelector('.p2-refresco'), null, { timeout: 15000 });
+      await r.ctx.close();
+      r = await pagina(navegador, base, w, EDITOR, { query: '?cargador=legacy', hash: '#/plan/' + PLAN });
+      await fresco(r.page);
+      assert.deepEqual(await memorias(r.page), []);
+      await r.ctx.close();
+    });
+
+    await caso('si la API de IA rechaza el pedido, el aviso dice qué contestó (sólo el código) y no se escribe nada', async () => {
+      const w = enConsejo({ ia: () => ({ codigo: 400, cuerpo: { type: 'error', error: { type: 'invalid_request_error', message: 'detalle del proveedor' } } }) });
+      w.propiedades.set('ANTHROPIC_API_KEY', 'sk-ant-prueba');
+      const { page, ctx, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN + '/rondas' });
+      await page.getByRole('button', { name: /Convocar al consejo/ }).click();
+      await page.getByText('La API de IA no contestó bien (o tardó de más). No escribí nada; vuelve a intentarlo en unos minutos. (La API contestó: 400.)').waitFor({ timeout: 15000 });
+      assert.doesNotMatch(await page.content(), /detalle del proveedor/, 'el texto del proveedor no llega a la página');
+      assert.equal(w.libro.getSheetByName('Consejo').v.slice(4).filter((f) => f[1]).length, 0);
+      await page.getByRole('button', { name: /^\s*Convocar al consejo\s*$/ }).waitFor();
+      assert.deepEqual(errores, []);
+      await ctx.close();
     });
 
     await caso('la página publicada no lleva datos de planes reales', async () => {

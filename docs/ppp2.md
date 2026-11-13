@@ -200,7 +200,8 @@ votos **dejan de contar** y el plan vuelve a probarse y a defenderse.
 3. **La página** (`ppp2.html`, `ppp2.js`, `ppp2.css`): el vivero y el plan vivo. Primero lo que
    recibe el dueño y en cuánto tiempo; después lo que el plan dice de sí mismo, sus versiones, sus
    rondas, cómo aguanta los golpes, cómo se defendió ante el consejo, lo que pide y lo que encontró.
-   Sin datos de ningún plan en el HTML.
+   Sin datos de ningún plan en el HTML (lo último que vio vive en el navegador de quien lo abrió;
+   ver «Abrir rápido»).
 
 ## Edades
 
@@ -265,7 +266,12 @@ cuando el libro dice `consejo` (se apaga con `Config!consejo_latido = no`).
   hallazgos, las preguntas respondidas, la última sesión del consejo y las rondas recientes. Cada juez
   lo lee por separado, con su oficio y las reglas de siempre (aprueba sólo si hoy firmaría; razones
   con cifras del expediente; nada de cuentas nuevas), y contesta con un objeto fijo: voto, razón y
-  condición. Sólo Alejandro virtual puede vetar.
+  condición. Sólo Alejandro virtual puede vetar. Con Anthropic la herramienta «votar» se **ofrece, no se
+  fuerza** (`tool_choice` «auto»): forzarla («tool» o «any») la rechazan los modelos de esta generación
+  con un 400, y así fue la primera sesión en vivo (12-nov-2026: ningún voto llegó y no se escribió nada).
+  El sistema le pide votar sólo con la herramienta; si contesta el objeto en texto, también cuenta.
+- **Si la API falla,** no se escribe nada y el aviso dice qué contestó, sólo con los códigos HTTP (por
+  ejemplo «La API contestó: 400.»); el texto del proveedor no se guarda ni se enseña.
 - **Cuándo se escribe.** Sólo si el libro dice `consejo`, la versión tiene pruebas con su huella y
   llegan **los siete votos válidos** (a quien no contestó bien se le pregunta una vez más). Antes de
   escribir se vuelve a leer el Resumen: si la versión, la huella o la evidencia cambiaron mientras
@@ -295,6 +301,37 @@ cuando el libro dice `consejo` (se apaga con `Config!consejo_latido = no`).
 - Las pruebas de estrés las calcula el libro: el servidor cambia la columna Prueba, lee y la deja
   como estaba (con la misma fórmula que tenía, sea cual sea el idioma del libro).
 
+## Abrir rápido: lo que ya se leyó del libro
+
+Abrir un plan leía su libro entero cada vez: de 5 a 8 s sólo en el servidor (medido en el editor el
+12-nov-2026: unas 40 lecturas de 0.2 a 0.7 s cada una), más el canje, el arranque del servidor y la
+red; en el teléfono, de 26 a 35 s. Desde el 12-nov-2026:
+
+- **El servidor guarda lo que leyó del libro** (CacheService, comprimido y en trozos de 90 KB) con
+  una llave que cambia en cuanto el libro cambia: su última modificación en Drive (cualquier cambio,
+  también el de una persona directo en la hoja) y un sello que mueve cada renglón de la bitácora, o
+  sea cada escritura del servidor, del latido o de una persona desde la página (por si Drive tarda
+  en enterarse). Si el libro cambió, la llave ya es otra y se vuelve a leer: nunca se sirve un libro
+  viejo. Lo que depende de quién abre o del momento (permisos, liga al libro, latido, ronda en curso,
+  clave de la API) se calcula en cada llamada y nunca se guarda con el plan. Si la caché o Drive
+  fallan, se lee el libro como siempre.
+- **La respuesta de cada escritura trae el plan ya leído** (fuera del candado y sólo si sobra
+  tiempo): la página lo pinta sin volver a pedirlo y queda en la caché. Lo que se recuerda del
+  `request_id` va sin el plan.
+- **El latido deja leído cada plan activo** al terminar (fuera del candado, mientras no pase de
+  4 min): abrir un plan después de que el latido trabajó no espera al libro. Si el libro no cambió,
+  no lo vuelve a leer.
+- **El registro de planes para leer** se guarda 2 min (archivar un plan a mano tarda eso en notarse
+  al abrirlo); escribir y el latido siempre lo leen de la hoja, y sembrar lo olvida.
+- **La página pinta al instante lo último que vio** con esa misma sesión y trae lo nuevo en fondo,
+  con el aviso «Te enseño lo que vi hace… mientras traigo lo último de mi libro». Mientras no llega
+  lo nuevo **no guarda nada** (lo dice si se intenta). Sin conexión lo dice, lo deja a la vista y
+  ofrece «Intentar de nuevo». Misma disciplina que el cargador de YOD OS (`CHG-CARGADOR-FASE1-001`):
+  la copia vive en ese navegador atada al hash de la sesión (otra sesión no la ve), dura 12 h, se
+  borra si la sesión se rechaza o el plan deja de estar a su alcance, guarda a lo más tres planes y
+  vive bajo el prefijo del cargador (`yodcg_cache_v1:ppp2:`), así que su purga también la limpia.
+  `?cargador=legacy` (o `localStorage.yodcg_legacy = '1'`) la apaga.
+
 ## Invariantes
 
 - El PPP actual (motores, Portero, `recurso=lista|caso`) no cambia.
@@ -308,9 +345,11 @@ cuando el libro dice `consejo` (se apaga con `Config!consejo_latido = no`).
 
 ## Pruebas
 
-- `node --test tests/ppp2-servidor.test.cjs tests/ppp2-ronda.test.cjs tests/ppp2-libro.test.cjs tests/ppp2-consejo.test.cjs`
-  (`ppp2-consejo`: el consejo y la investigación con una API de juguete; nada sale a la red)
-- `node tests/ppp2-browser.cjs`
+- `node --test tests/ppp2-servidor.test.cjs tests/ppp2-ronda.test.cjs tests/ppp2-libro.test.cjs tests/ppp2-consejo.test.cjs tests/ppp2-cache.test.cjs`
+  (`ppp2-consejo`: el consejo y la investigación con una API de juguete; nada sale a la red;
+  `ppp2-cache`: lo que ya se leyó del libro, con un Drive cuya última modificación cambia con el
+  contenido y una caché que, como la real, no acepta más de 100 KB por valor)
+- `node tests/ppp2-browser.cjs` (`PPP2_SOLO=texto` corre sólo los recorridos cuyo nombre lo lleva)
 - Tres accesorios salen de una hoja de cálculo de verdad (LibreOffice) con el plan inventado, y se
   regeneran juntos con `python3 ppp2/libro/regenerar.py`:
   - `ppp2-libro-ejemplo.json`: el libro de ejemplo recalculado;

@@ -7,6 +7,13 @@
  *
  * Nunca borra la credencial del Portero (pyod_clave_v1): si la sesión no sirve,
  * avisa y ofrece entrar de nuevo.
+ *
+ * Lo último que vio: para no esperar al libro, la página pinta al instante lo que
+ * vio la última vez CON ESTA MISMA SESIÓN y trae lo nuevo en fondo; mientras no
+ * llega, no guarda cambios. Misma disciplina que el cargador de YOD OS
+ * (CHG-CARGADOR-FASE1-001): la copia vive en este navegador atada al hash de la
+ * sesión, dura 12 h como máximo, se borra si la sesión se rechaza y va bajo el
+ * prefijo del cargador (su purga también la limpia). ?cargador=legacy la apaga.
  */
 (function () {
   'use strict';
@@ -54,7 +61,10 @@
   var FIJOS = ['tiempo', 'trabajando', 'cambio', 'lectura', 'sin_lugar', 'modelo', 'rejilla', 'prueba', 'paso', 'pausa',
     'sin_clave', 'ia_clave', 'ia', 'consejo_incompleto', 'sin_pruebas', 'apagado', 'busqueda'];
   var CICLO = [['explorar', 'Muevo capital y arranque'], ['probar', 'Me pruebo contra los golpes'], ['consejo', 'Me defiendo ante el consejo'], ['direccion', 'Dirección decide']];
-  var estado = { vivero: null, plan: null, planId: '', pestana: 'versiones', version: 0, ocupado: false };
+  /* fresco = lo que se ve llegó del servidor en esta visita; si es false, es lo último que vi (visto = cuándo) y,
+     con sinRed, no pude traer lo nuevo. Mientras no sea fresco no se guarda nada. */
+  var estado = { vivero: null, plan: null, planId: '', pestana: 'versiones', version: 0, ocupado: false, fresco: true, visto: 0, sinRed: false,
+    viveroCopia: null };
   var raiz = document.getElementById('ppp2');
 
   /* ───────── utilidades ───────── */
@@ -102,6 +112,74 @@
     if (!fijo) toastT = setTimeout(function () { el.hidden = true; }, 4200);
   }
   function configurado() { return !/\/PENDIENTE\//.test(ENDPOINT); }
+  /* Si la API de IA no dio los votos, el servidor dice qué códigos contestó (sólo números). */
+  function codigosAPI(r) {
+    var c = r && Array.isArray(r.codigos) ? r.codigos.filter(function (x) { return typeof x === 'number'; }) : [];
+    return c.length ? ' (La API contestó: ' + c.map(function (x) { return x || 'sin respuesta'; }).join(', ') + '.)' : '';
+  }
+
+  /* ───────── lo último que vi (ver la cabecera) ───────── */
+  var MEMO = 'yodcg_cache_v1:ppp2:', MEMO_MS = 43200000, MEMO_PLANES = 3;
+  function huellaSesion(t) {
+    if (window.YodCargador && typeof window.YodCargador.hash === 'function') return window.YodCargador.hash(t);
+    var h = 0x811c9dc5; t = String(t == null ? '' : t);            // el mismo FNV-1a del cargador
+    for (var i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    return ('0000000' + h.toString(16)).slice(-8);
+  }
+  function sinMemoria() {
+    if (window.YodCargador && window.YodCargador.legacy) return true;
+    try { return /[?&#]cargador=legacy(?=$|[&#])/.test(location.search + '&' + location.hash) || localStorage.getItem('yodcg_legacy') === '1'; } catch (e) { return true; }
+  }
+  function llaveMemo(que, id, t) { return MEMO + que + ':' + (id ? id + ':' : '') + huellaSesion(t); }
+  function memorias() {
+    var r = [];
+    try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf(MEMO) === 0) r.push(k); } } catch (e) { }
+    return r;
+  }
+  function recuerda(que, id) {
+    var t = token();
+    if (!t || sinMemoria()) return null;
+    try {
+      var o = JSON.parse(localStorage.getItem(llaveMemo(que, id, t)) || 'null'), edad = o ? Date.now() - Number(o.ts) : NaN;
+      return o && o.data && o.data.ok === true && edad >= 0 && edad < MEMO_MS ? o : null;
+    } catch (e) { return null; }
+  }
+  /* A lo más tres planes guardados; sin espacio, se van las copias de los otros planes. */
+  function podaPlanes(llave, todas) {
+    memorias().filter(function (k) { return k.indexOf(MEMO + 'plan:') === 0 && k !== llave; })
+      .map(function (k) { var ts = 0; try { ts = Number(JSON.parse(localStorage.getItem(k)).ts) || 0; } catch (e) { } return { k: k, ts: ts }; })
+      .sort(function (a, b) { return b.ts - a.ts; })
+      .slice(todas ? 0 : MEMO_PLANES - 1)
+      .forEach(function (x) { try { localStorage.removeItem(x.k); } catch (e) { } });
+  }
+  /* t = la sesión con la que se pidió: si cambió mientras volaba, no se guarda. */
+  function memoriza(que, id, data, t) {
+    if (!t || t !== token() || sinMemoria() || !data || data.ok !== true) return;
+    var llave = llaveMemo(que, id, t), txt;
+    try { txt = JSON.stringify({ ts: Date.now(), data: data }); } catch (e) { return; }
+    if (que === 'plan') podaPlanes(llave);
+    try { localStorage.setItem(llave, txt); } catch (e) {
+      podaPlanes(llave, true);
+      try { localStorage.setItem(llave, txt); } catch (x) { }
+    }
+  }
+  function olvida(que, id) { try { localStorage.removeItem(llaveMemo(que, id, token())); } catch (e) { } }
+  function olvidaTodo() { memorias().forEach(function (k) { try { localStorage.removeItem(k); } catch (e) { } }); }
+  function haceCuanto(ts) {
+    var m = Math.round((Date.now() - ts) / 60000);
+    if (m < 1) return 'hace un momento';
+    if (m < 60) return 'hace ' + m + (m === 1 ? ' minuto' : ' minutos');
+    var h = Math.round(m / 60);
+    return 'hace ' + h + (h === 1 ? ' hora' : ' horas');
+  }
+  function refresco(copia) {
+    if (!copia) return '';
+    return '<div class="p2-refresco' + (copia.sinRed ? ' sin-red' : '') + '" role="status">' +
+      (copia.sinRed
+        ? '<i class="ti ti-cloud-off" aria-hidden="true"></i><span>No pude traer lo último de mi libro: te enseño lo que vi ' + haceCuanto(copia.visto) + '. Mientras, no guardo cambios.</span>' +
+          '<button class="p2-btn suave" data-accion="refrescar"><i class="ti ti-refresh"></i> Intentar de nuevo</button>'
+        : '<i class="ti ti-loader-2" aria-hidden="true"></i><span>Te enseño lo que vi ' + haceCuanto(copia.visto) + ' mientras traigo lo último de mi libro.</span>') + '</div>';
+  }
 
   /* ───────── red ───────── */
   function conTiempo(promesa, ms) {
@@ -130,7 +208,7 @@
       estado.planId = h[1];
       var pes = h[2] === 'auton' ? 'rondas' : h[2];
       estado.pestana = ['versiones', 'preguntas', 'rondas', 'bitacora'].indexOf(pes) >= 0 ? pes : 'versiones';
-      if (cambio || !estado.plan) { estado.plan = null; estado.version = 0; cargarPlan(); } else pintarPlan();
+      if (cambio || !estado.plan) { estado.plan = null; estado.version = 0; estado.fresco = true; estado.sinRed = false; cargarPlan(); } else pintarPlan();
     } else {
       estado.planId = ''; estado.plan = null;
       if (estado.vivero) pintarVivero(); else cargarVivero();
@@ -156,22 +234,59 @@
   function cargarVivero() {
     if (!configurado()) { raiz.innerHTML = '<div class="p2-error"><h2>El servidor de PPP 2 aún no está instalado</h2><p>La página está lista; falta publicar su servidor.</p></div>'; return; }
     if (!token()) { sinSesion(); return; }
-    cargando('Abriendo el vivero…');
+    var t = token(), previo = recuerda('vivero', '');
+    if (previo) { estado.vivero = previo.data; estado.viveroCopia = { visto: previo.ts, sinRed: false }; pintarVivero(); }
+    else cargando('Abriendo el vivero…');
     leer('ppp2-vivero').then(function (r) {
-      if (!r || !r.ok) return fallo(r);
-      estado.vivero = r; pintarVivero();
-    }, function () { fallo({ error: 'red' }); });
+      if (r && r.ok) memoriza('vivero', '', r, t);
+      if (estado.planId) return;                          // ya se fue a un plan
+      if (!r || !r.ok) {
+        var e = (r && r.error) || 'red';
+        if (RECHAZOS.indexOf(e) >= 0) olvidaTodo();
+        else if (e === 'board') olvida('vivero', '');
+        else if (previo && estado.viveroCopia) { estado.viveroCopia.sinRed = true; pintarVivero(); return; }   // lo que vi sigue a la vista
+        estado.viveroCopia = null;
+        return fallo(r);
+      }
+      estado.vivero = r; estado.viveroCopia = null; pintarVivero();
+    }, function () {
+      if (estado.planId) return;
+      if (previo && estado.viveroCopia) { estado.viveroCopia.sinRed = true; pintarVivero(); return; }
+      fallo({ error: 'red' });
+    });
   }
+  /* Sin plan en pantalla, se pinta al instante lo último que vi de él (si hay) y se trae lo nuevo en fondo. */
   function cargarPlan(silencioso) {
     if (!configurado()) { cargarVivero(); return; }
     if (!token()) { sinSesion(); return; }
-    if (!silencioso) cargando('Abriendo el plan…');
-    return leer('ppp2-plan', { plan: estado.planId }).then(function (r) {
-      if (!r || !r.ok) return fallo(r);
-      estado.plan = r;
+    var id = estado.planId, t = token(), previo = null;
+    if (!estado.plan) {
+      previo = recuerda('plan', id);
+      if (previo) {
+        estado.plan = previo.data; estado.fresco = false; estado.visto = previo.ts; estado.sinRed = false;
+        if (!estado.version) estado.version = Number(previo.data.resumen['plan.version_mostrada']) || 1;
+        pintarPlan();
+      } else if (!silencioso) cargando('Abriendo el plan…');
+    }
+    return leer('ppp2-plan', { plan: id }).then(function (r) {
+      if (r && r.ok) memoriza('plan', id, r, t);
+      if (id !== estado.planId) return;                   // ya se fue a otro lado
+      if (!r || !r.ok) {
+        var e = (r && r.error) || 'red';
+        if (RECHAZOS.indexOf(e) >= 0) olvidaTodo();
+        else if (e === 'plan' || e === 'board') olvida('plan', id);
+        else if (estado.fresco === false && estado.plan) { estado.sinRed = true; pintarPlan(); return; }   // lo que vi sigue a la vista
+        estado.fresco = true;
+        return fallo(r);
+      }
+      estado.plan = r; estado.fresco = true; estado.sinRed = false;
       if (!estado.version) estado.version = Number(r.resumen['plan.version_mostrada']) || 1;
       pintarPlan();
-    }, function () { fallo({ error: 'red' }); });
+    }, function () {
+      if (id !== estado.planId) return;
+      if (estado.fresco === false && estado.plan) { estado.sinRed = true; pintarPlan(); return; }
+      fallo({ error: 'red' });
+    });
   }
 
   /* ───────── vivero ───────── */
@@ -196,7 +311,7 @@
         '<div class="p2-pie">' + chip(p.a_medias ? 'en trabajo' : (p.revision || 'sin revisión'), p.a_medias ? 'ambar' : (/^Pasa/.test(p.revision || '') ? 'verde' : (/^No/.test(p.revision || '') ? 'rojo' : 'gris'))) +
         chip((p.candados_abiertos || 0) + ' candados abiertos', p.candados_abiertos ? 'rojo' : 'verde') + chip((p.preguntas_abiertas || 0) + ' preguntas abiertas', 'gris') + '</div></a>';
     }).join('');
-    raiz.innerHTML =
+    raiz.innerHTML = refresco(estado.viveroCopia) +
       '<div class="p2-cabeza"><div><div class="p2-sobre">Plan de Potencial 2</div><h1>El vivero</h1>' +
       '<p class="p2-intro">Cada plan nace como semilla y crece con cada dato que se confirma. El plan mismo investiga, pregunta lo que más mueve el resultado y propone versiones; Dirección decide cuál queda vigente.</p></div>' +
       (puede.editar ? '<button class="p2-btn oro" data-accion="sembrar"><i class="ti ti-seedling"></i> Sembrar un plan</button>' : '') + '</div>' +
@@ -234,6 +349,7 @@
     var rv = v.rv_resultado || '';
     raiz.innerHTML =
       '<div class="p2-migas"><a href="#/">Vivero</a><i class="ti ti-chevron-right"></i><span>' + esc(r['plan.nombre'] || '') + '</span></div>' +
+      (estado.fresco === false ? refresco({ visto: estado.visto, sinRed: estado.sinRed }) : '') +
       '<div class="p2-cabeza"><div><h1>' + esc(r['plan.nombre'] || 'Plan') + '</h1><div class="p2-lugar">' + esc(r['plan.ubicacion'] || '') + '</div>' +
       '<div class="p2-crecer">' + edad(r['plan.edad']) + '<span class="p2-tenue"><b>Para crecer falta:</b> ' + esc(r['plan.para_crecer'] || '—') + '</span></div></div>' +
       (p.libro_url ? '<a class="p2-btn suave" href="' + esc(p.libro_url) + '" target="_blank" rel="noopener"><i class="ti ti-table"></i> Abrir el libro</a>' : '') + '</div>' +
@@ -645,7 +761,12 @@
 
   function enviar(cuerpo, mensaje, ms, espera) {
     if (estado.ocupado) return Promise.resolve();
+    if (estado.planId && estado.fresco === false) {     // lo que se ve es lo último que vi: no se guarda nada encima
+      toast(estado.sinRed ? 'No tengo conexión con mi servidor: no guardo cambios hasta traer lo último de mi libro.' : 'Un momento: estoy trayendo lo último de mi libro. Vuelve a intentarlo en unos segundos.');
+      return Promise.resolve({ ok: false, error: 'fresco' });
+    }
     estado.ocupado = true;
+    var t = token();
     if (estado.plan) { cuerpo.plan = estado.planId; cuerpo.rev = estado.plan.rev; }
     // lo que tarda (las pruebas de estrés: el libro recalcula cada escenario) deja el aviso puesto hasta terminar
     if (ms > 60000) toast(espera || 'Corriendo en el libro… tarda cerca de un minuto; no cierres la página.', true);
@@ -657,16 +778,26 @@
         if (RECHAZOS.indexOf(e) >= 0) {        // la sesión ya no sirve: el aviso de «estoy trabajando» se quita y queda la pantalla de entrar
           var av = document.getElementById('p2Toast');
           if (av) av.hidden = true;
+          olvidaTodo();
           fallo(r); return r;
         }
-        toast(r && r.recuperado ? 'Una ronda mía había quedado a medias: ya dejé la versión como estaba y no hice tu cambio. Revisa las cifras y vuelve a intentarlo.' : (ERRORES[e] || 'No se pudo guardar.'), !!(r && r.recuperado) || FIJOS.indexOf(e) >= 0);
+        toast(r && r.recuperado ? 'Una ronda mía había quedado a medias: ya dejé la versión como estaba y no hice tu cambio. Revisa las cifras y vuelve a intentarlo.' : (ERRORES[e] || 'No se pudo guardar.') + codigosAPI(r), !!(r && r.recuperado) || FIJOS.indexOf(e) >= 0);
         if ((e === 'revision' || e === 'sin_lugar' || e === 'paso' || e === 'cambio') && estado.planId) cargarPlan(true);
         return r;
       }
       toast((r && r.nota) || mensaje || 'Guardado: el libro recalculó.', !!(r && r.nota));
       cerrarDialogo();
       if (cuerpo.tipo === 'ppp2-sembrar') { estado.vivero = null; location.hash = '#/plan/' + r.plan_id; return r; }
-      if (estado.planId) return cargarPlan(true).then(function () { return r; });
+      if (estado.planId) {
+        // la respuesta trae el plan ya leído: se pinta sin volver a pedirlo
+        if (r.plan && r.plan.ok === true && r.plan.plan_id === estado.planId) {
+          memoriza('plan', estado.planId, r.plan, t);
+          estado.plan = r.plan; estado.fresco = true; estado.sinRed = false;
+          pintarPlan();
+          return r;
+        }
+        return cargarPlan(true).then(function () { return r; });
+      }
       return r;
     }, function () { estado.ocupado = false; toast('Sin respuesta del servidor; tu cambio puede no haberse guardado. Recarga para revisar.', true); });
   }
@@ -714,6 +845,11 @@
     var a = b.getAttribute('data-accion');
     if (a === 'entrar') { if (window.YODPortero && window.YODPortero.entrar) window.YODPortero.entrar(); else location.reload(); return; }
     if (a === 'reintentar') { estado.vivero = null; ruta(); return; }
+    if (a === 'refrescar') {
+      if (estado.planId) { estado.sinRed = false; pintarPlan(); cargarPlan(true); }
+      else { estado.vivero = null; estado.viveroCopia = null; cargarVivero(); }
+      return;
+    }
     if (a === 'cerrar') { cerrarDialogo(); return; }
     if (a === 'sembrar') { dialogoSembrar(); return; }
     if (a === 'version') { estado.version = Number(b.getAttribute('data-v')); pintarPlan(); return; }
@@ -828,6 +964,12 @@
   });
 
   document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') cerrarDialogo(); });
+  /* Si el Portero rechaza la sesión (lo avisa el cargador), lo que vi se borra y, si estaba a la vista, se pide entrar. */
+  window.addEventListener('yodcargador:sesion-rechazada', function () {
+    olvidaTodo();
+    if ((estado.planId && estado.fresco === false) || (!estado.planId && estado.viveroCopia)) fallo({ error: 'liga' });
+  });
+  window.addEventListener('yodcargador:sesion-cerrada', olvidaTodo);
   window.addEventListener('hashchange', ruta);
   window.PPP2 = { estado: estado, recargar: function () { estado.vivero = null; estado.plan = null; ruta(); } };
   ruta();
