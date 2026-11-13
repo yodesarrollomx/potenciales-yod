@@ -22,7 +22,7 @@ async function run(){
     for(const [nombre,tipo,viewport] of [['Chromium',chromium,{width:1280,height:800}],['WebKit móvil',webkit,{width:390,height:844}]]){
       const browser=await tipo.launch({headless:true});
       try{
-        for(const modo of ['admin','sin-admin','lista-falla','vista-previa']){
+        for(const modo of ['admin','sin-admin','lista-falla','vista-previa','portero-lento']){
           const ctx=await browser.newContext({viewport});ctx.setDefaultTimeout(20000);
           // Este guion corre en CADA documento del contexto, también en los marcos y en about:blank. La sesión sintética se siembra
           // una sola vez y sólo en la página: si se sembrara siempre, al apagarse el grafo (su marco se vacía y pasa por about:blank)
@@ -45,6 +45,8 @@ async function run(){
             }
             if(u.pathname.endsWith('/yod-acceso.js'))return da("window.YOD_PORTERO={original:'https://synthetic.invalid/exec'};",'text/javascript');
             if(u.hostname==='synthetic.invalid'){
+              // Portero lento: el primer canje se retiene y la prueba lo contesta cuando el reloj de la página marca 22 s.
+              if(u.searchParams.get('recurso')==='canje'&&modo==='portero-lento'&&!mundo.retenido){mundo.retenido=da;return;}
               if(u.searchParams.get('recurso')==='canje')return da({ok:true,rol:modo==='sin-admin'?'vista':'admin',boards:'*'});
               if(u.searchParams.get('recurso')==='accesos-lista')return modo==='lista-falla'?route.abort('failed'):da({ok:true,usuarios:[]});
               return da({ok:false});
@@ -94,10 +96,23 @@ async function run(){
             assert.ok(pedidos.every(p=>!p.url.includes('synthetic-session')),'la sesión no viaja a ningún lado');
             recorridos++;await ctx.close();continue;
           }
+          if(modo==='portero-lento')await page.clock.install();
           await page.goto(origen+'/accesos.html',{waitUntil:'domcontentloaded'});
           const sec=page.locator('#grafo-sistema'),caja=page.locator('#grafoControl'),marco=page.frameLocator('#grafoMarco'),lamina=marco.frameLocator('#marco');
           const cabe=()=>page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2);
-          if(modo==='lista-falla'){
+          const canjes=()=>pedidos.filter(p=>p.url.startsWith('https://synthetic.invalid/')&&new URL(p.url).searchParams.get('recurso')==='canje').length;
+          if(modo==='portero-lento'){
+            // 12-nov-2026: la primera llamada al Portero tardó de 20 a 25 s y Accesos la cortaba a los 20. Uno que contesta a los
+            // 22 s debe entrar a la primera: sin cortar, sin reintento y sin pintar nada privado mientras tanto.
+            for(let i=0;i<200&&!mundo.retenido;i++)await new Promise(r=>setTimeout(r,25));assert.ok(mundo.retenido,'el canje llegó al Portero');
+            await page.clock.fastForward(22000);await page.waitForTimeout(150);
+            assert.match(await page.locator('#lista').textContent(),/Validando sesión/);assert.equal(await sec.isVisible(),false);
+            assert.equal(await page.locator('#aCorreo').isDisabled(),true);assert.equal(await page.locator('#aBtn').isDisabled(),true);assert.equal(canjes(),1,'a los 22 s no se corta ni se reintenta');
+            await mundo.retenido({ok:true,rol:'admin',boards:'*'});
+            await sec.waitFor({state:'visible'});await sec.scrollIntoViewIfNeeded();await caja.locator('.gc-ver b').first().filter({hasText:APROBADO}).waitFor();
+            await page.waitForFunction(()=>!document.querySelector('#aCorreo').disabled);assert.doesNotMatch(await page.locator('#lista').textContent(),/No se pudo/);
+            assert.equal(canjes(),1,'un solo canje');
+          }else if(modo==='lista-falla'){
             // El Portero confirma admin pero la lista no llega (12-nov-2026: tardó más de 20 s): lo privado se borra y el grafo se queda.
             await page.waitForFunction(()=>document.querySelector('#lista').textContent.includes('no contestó a tiempo'));
             await sec.waitFor({state:'visible'});await sec.scrollIntoViewIfNeeded();
@@ -159,7 +174,7 @@ async function run(){
           recorridos++;await ctx.close();
         }
       }finally{await browser.close();}
-      console.log(nombre+': aprobado, borrador con su pregunta, vista previa sin publicar y aislada (sólo la rama del borrador), dejar en borrador, pedido de rehacer, registro, apagado sin sesión y grafo visible aunque la lista no llegue correctos');
+      console.log(nombre+': aprobado, borrador con su pregunta, vista previa sin publicar y aislada (sólo la rama del borrador), dejar en borrador, pedido de rehacer, registro, apagado sin sesión y grafo visible aunque la lista no llegue correctos, y Portero lento (22 s)');
     }
   }finally{await new Promise(r=>server.close(r));}
   console.log('GRAFO_ACCESOS: '+recorridos+' recorridos; Portero, rama de datos y borrador exclusivamente sintéticos');

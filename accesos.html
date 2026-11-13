@@ -255,13 +255,24 @@
     observarSesion();
     return s.token===k()&&s.token===tokenActual&&s.generacion===generacion&&(!exigeAdmin||admin);
   }
-  async function leer(recurso,s){
-    const ctrl=new AbortController(),to=setTimeout(()=>ctrl.abort(),20000);
-    try{
-      const param=recurso==='canje'?'t':'k';
-      const r=await fetch(PORTERO_ORIGINAL+'?recurso='+recurso+'&'+param+'='+encodeURIComponent(s.token),{credentials:'omit',cache:'no-store',signal:ctrl.signal});
-      return await r.text();
-    }finally{clearTimeout(to)}
+  // Lecturas del Portero (canje y lista). Su primera llamada puede tardar de 20 a 25 s (medido el 12-nov-2026; la cabina
+  // de yod-portal ya espera 25 s): se espera hasta ESPERA_LECTURA y, sólo si venció ese tiempo y la sesión sigue siendo la
+  // misma, se intenta UNA vez más. Una respuesta del Portero (también un rechazo) o un fallo de red se toman como vienen.
+  // Mientras se espera la pantalla sigue en «Validando sesión…»: nada privado se pinta antes de que el canje diga admin.
+  const ESPERA_LECTURA=30000;
+  async function leer(recurso,s,{seguir=()=>vigente(s),alReintentar}={}){
+    for(let intento=1;;intento++){
+      const ctrl=new AbortController();let vencio=false;
+      const to=setTimeout(()=>{vencio=true;ctrl.abort()},ESPERA_LECTURA);
+      try{
+        const param=recurso==='canje'?'t':'k';
+        const r=await fetch(PORTERO_ORIGINAL+'?recurso='+recurso+'&'+param+'='+encodeURIComponent(s.token),{credentials:'omit',cache:'no-store',signal:ctrl.signal});
+        return await r.text();
+      }catch(e){
+        if(!vencio||intento>1||!seguir())throw e;
+        try{alReintentar?.()}catch(_){}
+      }finally{clearTimeout(to)}
+    }
   }
   // Escritura única, con timeout; nunca se reenvía al respaldo ni se reintenta.
   async function post(b,s){
@@ -371,7 +382,7 @@
     const solicitud=++listado,cont=$('lista');
     const actual=()=>vigente(s,true)&&solicitud===listado;
     try{
-      const raw=await leer('accesos-lista',s);
+      const raw=await leer('accesos-lista',s,{seguir:actual});
       if(!actual())return;
       let r; try{r=JSON.parse(raw)}catch(_){throw new Error(/sign in|accounts\.google/i.test(raw)?'sesión de Google caducada':'respuesta inesperada')}
       if(!r.ok){limpiarVista(r.error==='admin'?'Necesitas sesión de administrador para ver esto.':'Error: '+(r.error||'sesión no validada'));return}
@@ -452,7 +463,7 @@
   }
   async function esperarAdminYcargar(s){
     try{
-      const raw=await leer('canje',s);
+      const raw=await leer('canje',s,{alReintentar:()=>{if(vigente(s))limpiarVista('El Portero está tardando en contestar; lo intento una vez más…')}});
       if(!vigente(s))return;
       const j=JSON.parse(raw);
       if(!j.ok){limpiarVista('Tu sesión no se pudo validar: '+(j.error||'rechazada')+'. Vuelve a entrar.');return}
