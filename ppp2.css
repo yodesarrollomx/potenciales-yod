@@ -24,6 +24,13 @@ body{background:#f6f3ed;margin:0}
 .p2-semilla{font-size:34px;color:var(--p2-verde);animation:p2-late 1.6s ease-in-out infinite}
 @keyframes p2-late{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
 @media (prefers-reduced-motion:reduce){.p2-semilla{animation:none}}
+/* lo último que vi, mientras llega lo nuevo del libro */
+.p2-refresco{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:9px 14px;border-radius:12px;background:var(--p2-azul-claro);color:var(--p2-azul);font-size:13.5px;line-height:1.35}
+.p2-refresco span{flex:1 1 220px;min-width:0}
+.p2-refresco .ti-loader-2{animation:p2-gira 1.1s linear infinite}
+.p2-refresco.sin-red{background:var(--p2-oro-claro);color:#6b5426}
+@keyframes p2-gira{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.p2-refresco .ti-loader-2{animation:none}}
 
 /* botones y chips */
 .p2-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--p2-linea);background:var(--p2-papel);color:var(--p2-tinta);border-radius:999px;padding:7px 14px;font-size:13.5px;font-weight:600;line-height:1.2;text-decoration:none}

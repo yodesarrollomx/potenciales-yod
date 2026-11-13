@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const crypto = require('node:crypto');
+const zlib = require('node:zlib');
 
 const RAIZ = path.join(__dirname, '..');
 const CODIGO = fs.readFileSync(path.join(RAIZ, 'server/ppp2/PPP2.gs'), 'utf8');
@@ -115,15 +116,30 @@ class Rango {
   }
 }
 class Libro {
-  constructor(hojas) { this.hojas = hojas; }
+  constructor(hojas, id) { this.hojas = hojas; this.id = id || ''; }
+  getId() { return this.id; }
   getSheetByName(n) { return this.hojas[n] || null; }
   insertSheet(n) { this.hojas[n] = new Hoja(n, []); return this.hojas[n]; }
 }
-function libroDeAccesorio(idioma) {
+function libroDeAccesorio(idioma, id) {
   const hojas = {};
   for (const [nombre, d] of Object.entries(ACCESORIO)) if (nombre.charAt(0) !== '_') hojas[nombre] = new Hoja(nombre, d.valores, d.formulas, idioma);
-  return new Libro(hojas);
+  return new Libro(hojas, id);
 }
+/* «Última modificación» de un libro como la da Drive: cambia con CUALQUIER cambio de su contenido, también los
+   que las pruebas hacen a mano (como una persona que edita la hoja). Aquí sale de una huella del contenido. */
+function ultimoCambio(libro) {
+  const h = crypto.createHash('sha256');
+  for (const [n, hj] of Object.entries(libro.hojas)) h.update(n).update(JSON.stringify(hj.v)).update(JSON.stringify(hj.f)).update(JSON.stringify(hj.roto));
+  return new Date(1.7e12 + parseInt(h.digest('hex').slice(0, 8), 16));
+}
+/* Blob de Apps Script con lo que usa el servidor: bytes con signo (como Java), texto en UTF-8. */
+class Blob {
+  constructor(buf, tipo) { this.buf = Buffer.from(buf); this.tipo = tipo || ''; }
+  getBytes() { return Array.from(this.buf, (b) => (b > 127 ? b - 256 : b)); }
+  getDataAsString() { return this.buf.toString('utf8'); }
+}
+const bytes = (xs) => Buffer.from(Array.from(xs, (b) => b & 255));
 
 /* ── el mundo de cada prueba ── */
 const PLAN = 'p2ejemplo001';
@@ -135,7 +151,8 @@ const SESIONES = {
 };
 function mundo(opciones) {
   const op = opciones || {};
-  const libros = { 'libro-ejemplo': libroDeAccesorio(op.idioma), 'libro-plantilla': libroDeAccesorio(op.idioma) };
+  const libros = { 'libro-ejemplo': libroDeAccesorio(op.idioma, 'libro-ejemplo'), 'libro-plantilla': libroDeAccesorio(op.idioma, 'libro-plantilla') };
+  const aperturas = {};          // cuántas veces el servidor abrió cada libro (leerlo es lo que tarda)
   let flushes = 0;
   const vivero = new Libro({
     Planes: new Hoja('Planes', [
@@ -151,6 +168,7 @@ function mundo(opciones) {
     'Bitácora': new Hoja('Bitácora', [['fecha', 'actor', 'accion', 'plan_id', 'detalle', 'request_id', 'resultado', 'nota']])
   });
   const llamadas = [];
+  const revocados = new Set();   // sesiones que el Portero dejó de aceptar a media prueba
   const iaPedidos = [];          // lo que el servidor le pidió a la API de IA (op.ia contesta; sin op.ia, la API «no está»)
   const cache = new Map();
   const propiedades = new Map();
@@ -166,11 +184,27 @@ function mundo(opciones) {
     console,
     SpreadsheetApp: {
       getActiveSpreadsheet: () => vivero,
-      openById: (id) => { if (!libros[id]) throw new Error('no existe ' + id); return libros[id]; },
+      openById: (id) => { if (!libros[id]) throw new Error('no existe ' + id); aperturas[id] = (aperturas[id] || 0) + 1; return libros[id]; },
       flush: () => { flushes++; if (op.alFlush) op.alFlush(flushes, libros['libro-ejemplo']); },
       CopyPasteType: { PASTE_FORMULA: 'PASTE_FORMULA' }
     },
-    CacheService: { getScriptCache: () => ({ get: (k) => (cache.has(k) ? cache.get(k) : null), put: (k, v) => cache.set(k, v), remove: (k) => cache.delete(k) }) },
+    /* Como CacheService: valores de texto de hasta 100 KB (más truena) y llaves de hasta 250 caracteres. */
+    CacheService: { getScriptCache: () => {
+      const pon = (k, v) => {
+        if (typeof v !== 'string') throw new Error('CacheService guarda texto');
+        if (String(k).length > 250) throw new Error('Argument too large: key');
+        if (Buffer.byteLength(v, 'utf8') > 100 * 1024) throw new Error('Argument too large: value');
+        if (op.cacheLlena) throw new Error('Service invoked too many times');
+        cache.set(k, v);
+      };
+      return {
+        get: (k) => (cache.has(k) ? cache.get(k) : null),
+        getAll: (ks) => { const o = {}; ks.forEach((k) => { if (cache.has(k)) o[k] = cache.get(k); }); return o; },
+        put: (k, v) => pon(k, v),
+        putAll: (o) => { Object.keys(o).forEach((k) => pon(k, o[k])); },
+        remove: (k) => cache.delete(k)
+      };
+    } },
     UrlFetchApp: {
       fetchAll: (pedidos) => {
         if (op.fetchAllTruena) throw new Error('Exception: Service invoked too many times');
@@ -181,7 +215,7 @@ function mundo(opciones) {
         llamadas.push(url);
         const t = decodeURIComponent((/[?&]t=([^&]+)/.exec(url) || [])[1] || '');
         if (op.originalCaido && url.includes('ORIGINAL123')) return { getResponseCode: () => 503, getContentText: () => 'caído' };
-        const r = SESIONES[t] || { ok: false, error: 'liga' };
+        const r = (revocados.has(t) ? { ok: false, error: 'revocado' } : SESIONES[t]) || { ok: false, error: 'liga' };
         return { getResponseCode: () => 200, getContentText: () => JSON.stringify(r) };
       }
     },
@@ -200,13 +234,23 @@ function mundo(opciones) {
         return fmt === 'yyyy-MM-dd' ? '2026-11-12' : fmt === 'HH:mm' ? '10:00' : '2026-11-12 10:00';
       },
       computeDigest: (alg, s) => Array.from(crypto.createHash('sha256').update(String(s)).digest()),
-      base64EncodeWebSafe: (bytes) => Buffer.from(bytes).toString('base64url'),
+      base64EncodeWebSafe: (bs) => Buffer.from(bs).toString('base64url'),
+      base64Encode: (bs) => bytes(bs).toString('base64'),
+      base64Decode: (t) => Array.from(Buffer.from(String(t), 'base64'), (b) => (b > 127 ? b - 256 : b)),
+      newBlob: (d, tipo) => new Blob(typeof d === 'string' ? Buffer.from(d, 'utf8') : bytes(d), tipo),
+      gzip: (b) => new Blob(zlib.gzipSync(b.buf), 'application/x-gzip'),
+      ungzip: (b) => new Blob(zlib.gunzipSync(b.buf)),
       getUuid: () => crypto.randomUUID(),
       DigestAlgorithm: { SHA_256: 'sha256' }
     },
     DriveApp: {
       getFileById: (id) => ({
-        makeCopy: () => { const nuevo = 'libro-copia-' + (++copias); libros[nuevo] = libroDeAccesorio(); return { getId: () => nuevo }; }
+        makeCopy: () => { const nuevo = 'libro-copia-' + (++copias); libros[nuevo] = libroDeAccesorio(undefined, nuevo); return { getId: () => nuevo }; },
+        getLastUpdated: () => {
+          if (op.driveCaido) throw new Error('Drive no contesta');
+          if (!libros[id]) throw new Error('no existe ' + id);
+          return op.driveTarda ? new Date(1.7e12) : ultimoCambio(libros[id]);     // driveTarda: Drive todavía no se entera de ningún cambio
+        }
       }),
       getFolderById: () => ({})
     },
@@ -216,7 +260,7 @@ function mundo(opciones) {
   vm.runInContext(CODIGO, ctx, { filename: 'PPP2.gs' });
   const get = (p) => JSON.parse(ctx.doGet({ parameter: p }).contenido);
   const post = (b) => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(b) } }).contenido);
-  return { ctx, libros, vivero, llamadas, iaPedidos, propiedades, cache, get, post, libro: libros['libro-ejemplo'] };
+  return { ctx, libros, vivero, llamadas, iaPedidos, propiedades, cache, aperturas, revocados, get, post, libro: libros['libro-ejemplo'] };
 }
 const ADMIN = 'syadmin00000000000000000';
 const EDITOR = 'syeditor0000000000000000';

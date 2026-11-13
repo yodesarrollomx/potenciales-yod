@@ -24,6 +24,8 @@
  *  - El consejo de planes y la investigación corren aquí, por la API de IA (botón de la
  *    página o latido), con la clave en las propiedades del script: ver «el consejo y la
  *    investigación, por API». La clave nunca sale del servidor.
+ *  - Lo que se lee de un libro se guarda con una llave que cambia en cuanto el libro cambia
+ *    (ver «caché del plan»): abrir un plan que nadie tocó no vuelve a leer su libro.
  */
 var PPP2 = {
   SCHEMA: 'ppp2-servidor-v1',
@@ -32,6 +34,13 @@ var PPP2 = {
   CANJE_S: 600,          // caché del canje: 10 minutos, igual que el Portero
   IDEM_S: 21600,         // idempotencia de request_id: 6 horas
   VIVERO_S: 60,          // caché del vivero
+  PLANES_S: 120,         // registro de planes para LEER (abrir un plan, el vivero); las escrituras lo leen siempre de la hoja
+  PLAN_S: 21600,         // lo que se leyó del libro de un plan: su llave cambia en cuanto el libro cambia (ver «caché del plan»)
+  CACHE: 'plan-1',       // forma de lo guardado: si cambia lo que se lee del libro, se sube y lo viejo deja de servir
+  TROZO: 90000,          // CacheService guarda hasta 100 KB por valor: lo grande va en trozos
+  TROZOS_MAX: 8,
+  CON_PLAN_MS: 240000,   // la respuesta de una escritura trae el plan ya leído si sobra tiempo (el límite de Apps Script es 6 min)
+  CALIENTA_MS: 240000,   // el latido deja leído lo que cambió mientras no pase de 4 min
   TEXTO_MAX: 2000,
   MESES: 60
 };
@@ -111,7 +120,7 @@ function config_() {
   if (hit) return JSON.parse(hit);
   var vals = vivero_().getSheetByName('Config').getDataRange().getValues(), c = {};
   for (var i = 1; i < vals.length; i++) if (vals[i][0]) c[String(vals[i][0]).trim()] = String(vals[i][1] == null ? '' : vals[i][1]).trim();
-  cache.put('cfg', JSON.stringify(c), 120);
+  try { cache.put('cfg', JSON.stringify(c), 120); } catch (e) { }      // una caché que falla no tumba la lectura
   return c;
 }
 function lista_(s) { return String(s || '').toLowerCase().split(/[,;| ]+/).filter(function (x) { return x; }); }
@@ -144,8 +153,10 @@ function canje_(k) {
     if (rol !== 'admin' && lb.indexOf('*') < 0 && lb.indexOf(board.toUpperCase()) < 0) s = { ok: false, error: 'board' };
     else s = { ok: true, correo: low_(j.correo), nombre: txt_(j.nombre || j.correo, 120), rol: rol, boards: boards };
   }
-  if (s.ok) cache.put(ck, JSON.stringify(s), PPP2.CANJE_S);
-  else if (s.error !== 'portero') cache.put(ck, JSON.stringify(s), 60);
+  try {
+    if (s.ok) cache.put(ck, JSON.stringify(s), PPP2.CANJE_S);
+    else if (s.error !== 'portero') cache.put(ck, JSON.stringify(s), 60);
+  } catch (e) { }
   return s;
 }
 function puede_(s, que) {
@@ -159,19 +170,24 @@ function puede_(s, que) {
 function actor_(s) { return s.nombre || s.correo || 'usuario'; }
 
 /* ───────────────────────── registro y libros ───────────────────────── */
-function planes_() {
+/* paraLeer: para abrir un plan o el vivero basta el registro de hace un par de minutos (archivar un plan a mano
+   tarda eso en notarse al leer). Escribir y el latido siempre lo leen de la hoja. */
+function planes_(paraLeer) {
+  var cache = CacheService.getScriptCache();
+  if (paraLeer) { var hit = cache.get('planes'); if (hit) { try { return JSON.parse(hit); } catch (e) { } } }
   var vals = vivero_().getSheetByName('Planes').getDataRange().getValues(), cab = vals[0], out = [];
   for (var i = 1; i < vals.length; i++) {
     var o = { _fila: i + 1 };
     for (var j = 0; j < cab.length; j++) o[String(cab[j]).trim()] = limpio_(vals[i][j]);
     if (o.plan_id) out.push(o);
   }
+  try { cache.put('planes', JSON.stringify(out), PPP2.PLANES_S); } catch (e) { }
   return out;
 }
-function planPorId_(id) {
+function planPorId_(id, paraLeer) {
   id = String(id || '').trim();
   if (!/^p2[a-z0-9]{6,20}$/.test(id)) return null;
-  var p = planes_().filter(function (x) { return x.plan_id === id; })[0];
+  var p = planes_(paraLeer).filter(function (x) { return x.plan_id === id; })[0];
   return p && low_(p.estado) !== 'archivado' ? p : null;
 }
 function libro_(plan) { return SpreadsheetApp.openById(plan.libro_id); }
@@ -208,15 +224,83 @@ function revision_(libro) {
 function bitacora_(libro, s, accion, pestana, clave, antes, despues, fuente, revBase, requestId) {
   libro.getSheetByName('Bitácora').appendRow(fila_([ahora_(), actor_(s), txt_(accion, 300), pestana, txt_(clave, 120),
     txt_(antes, 300), txt_(despues, 300), txt_(fuente, 500), revBase == null ? '' : revBase, txt_(requestId, 80)]));
+  sella_(libro.getId());          // toda escritura deja renglón aquí: lo que se había leído de este libro ya no sirve
 }
 function bitacoraVivero_(s, accion, planId, detalle, requestId, resultado) {
   vivero_().getSheetByName('Bitácora').appendRow(fila_([ahora_(), s ? actor_(s) : 'sistema', accion, planId || '', txt_(detalle, 500), txt_(requestId, 80), resultado || 'ok', '']));
 }
 
+/* ───────────────────────── caché del plan ─────────────────────────
+   Abrir un plan leía su libro entero cada vez: de 5 a 8 s sólo en el servidor (medido el 12-nov-2026).
+   Lo que sale del libro se guarda con una llave que cambia en cuanto el libro cambia: su última
+   modificación en Drive (cualquier cambio, también el de una persona en la hoja) y un sello que mueve
+   cada escritura de este servidor (por si Drive tarda en enterarse). Así nunca se sirve un libro viejo:
+   si cambió, la llave ya es otra y se vuelve a leer. Lo que depende de quién abre o del momento
+   (permisos, latido, ronda en curso, clave de la API) se calcula en cada llamada (vistaPlan_).
+   Si la caché falla, se lee el libro como siempre. */
+function selloClave_(libroId) { return 'se_' + libroId; }
+function sella_(libroId) {
+  try { CacheService.getScriptCache().put(selloClave_(libroId), Utilities.getUuid().slice(0, 8), PPP2.PLAN_S); } catch (e) { }
+}
+function llavePlan_(p) {
+  var m = 0;
+  try { m = DriveApp.getFileById(p.libro_id).getLastUpdated().getTime(); } catch (e) { return ''; }
+  if (!m) return '';
+  var sello = '';
+  try { sello = CacheService.getScriptCache().get(selloClave_(p.libro_id)) || '0'; } catch (e) { return ''; }
+  return 'pl_' + hash_([PPP2.SCHEMA, PPP2.CACHE, p.plan_id, p.libro_id, m, sello].join('|'));
+}
+function cacheGuarda_(clave, texto, segundos) {
+  try {
+    var z = Utilities.base64Encode(Utilities.gzip(Utilities.newBlob(texto, 'application/json')).getBytes());
+    var n = Math.ceil(z.length / PPP2.TROZO);
+    if (!n || n > PPP2.TROZOS_MAX) return false;
+    var o = {};
+    for (var i = 0; i < n; i++) o[clave + '.' + i] = z.slice(i * PPP2.TROZO, (i + 1) * PPP2.TROZO);
+    o[clave] = String(n);
+    CacheService.getScriptCache().putAll(o, segundos);
+    return true;
+  } catch (e) { return false; }
+}
+function cacheLee_(clave) {
+  try {
+    var cache = CacheService.getScriptCache(), n = Number(cache.get(clave));
+    if (!(n > 0) || n > PPP2.TROZOS_MAX) return null;
+    var llaves = [], z = '';
+    for (var i = 0; i < n; i++) llaves.push(clave + '.' + i);
+    var t = cache.getAll(llaves);
+    for (var j = 0; j < n; j++) { if (typeof t[llaves[j]] !== 'string') return null; z += t[llaves[j]]; }   // falta un trozo: como si no hubiera nada
+    return Utilities.ungzip(Utilities.newBlob(Utilities.base64Decode(z), 'application/x-gzip')).getDataAsString();
+  } catch (e) { return null; }
+}
+/* fresco: leer el libro aunque haya algo guardado (justo después de escribir en él). */
+function basePlan_(p, fresco) {
+  var clave = llavePlan_(p);          // ANTES de leer: si el libro cambia mientras se lee, esto queda con la llave vieja y no se vuelve a servir
+  if (clave && !fresco) {
+    var hit = cacheLee_(clave);
+    if (hit) { try { var b = JSON.parse(hit); if (b && b.plan_id === p.plan_id) return b; } catch (e) { } }
+  }
+  var base = leePlan_(p, libro_(p));
+  if (clave) cacheGuarda_(clave, JSON.stringify(base), PPP2.PLAN_S);
+  return base;
+}
+/* El latido deja leído cada plan activo: abrirlo después ya no espera al libro. Sólo lee si su libro cambió. */
+function calienta_(desde) {
+  var planes = [];
+  try { planes = planes_(true).filter(function (p) { return low_(p.estado) === 'activo'; }); } catch (e) { return 0; }
+  var n = 0;
+  for (var i = 0; i < planes.length; i++) {
+    if (Date.now() - desde > PPP2.CALIENTA_MS) break;
+    try { basePlan_(planes[i]); n++; } catch (e) { }
+  }
+  return n;
+}
+
 /* ───────────────────────── lectura ───────────────────────── */
 function tarjeta_(p) {
-  var r = {};
-  try { r = resumen_(libro_(p)); } catch (e) { return { plan_id: p.plan_id, nombre: p.nombre, error: 'libro' }; }
+  var r = null;
+  try { var clave = llavePlan_(p), hit = clave ? cacheLee_(clave) : null; if (hit) r = JSON.parse(hit).resumen || null; } catch (e) { r = null; }   // si ya se leyó su libro y no cambió
+  if (!r) { try { r = resumen_(libro_(p)); } catch (e) { return { plan_id: p.plan_id, nombre: p.nombre, error: 'libro' }; } }
   var v = Number(r['plan.version_mostrada']) || 1, pre = 'v' + v + '.';
   // Si una ronda está escribiendo (o se quedó a medias) en la versión que se muestra, sus cifras son de una
   // combinación de prueba: no se enseñan como «lo que recibe el dueño».
@@ -238,15 +322,20 @@ function vivero_get_(s) {
   var cache = CacheService.getScriptCache(), hit = cache.get('vivero');
   var tarjetas = hit ? JSON.parse(hit) : null;
   if (!tarjetas) {
-    tarjetas = planes_().filter(function (p) { return low_(p.estado) !== 'archivado'; }).map(tarjeta_);
-    cache.put('vivero', JSON.stringify(tarjetas), PPP2.VIVERO_S);
+    tarjetas = planes_(true).filter(function (p) { return low_(p.estado) !== 'archivado'; }).map(tarjeta_);
+    try { cache.put('vivero', JSON.stringify(tarjetas), PPP2.VIVERO_S); } catch (e) { }
   }
   return { ok: true, planes: tarjetas, puede: { editar: puede_(s, 'editar'), aprobar: puede_(s, 'aprobar') }, yo: { nombre: s.nombre, rol: s.rol } };
 }
-function plan_get_(s, id) {
-  var p = planPorId_(id);
+/* fresco: leer el libro aunque haya algo guardado (la respuesta de una escritura). */
+function plan_get_(s, id, fresco) {
+  var p = planPorId_(id, !fresco);
   if (!p) return { ok: false, error: 'plan' };
-  var libro = libro_(p), r = resumen_(libro);
+  return vistaPlan_(s, p, basePlan_(p, fresco));
+}
+/* Lo que el libro dice del plan: es igual para cualquiera que lo abra, por eso se puede guardar (basePlan_). */
+function leePlan_(p, libro) {
+  var r = resumen_(libro);
   var datos = tabla_(libro, 'Datos', 5, 11).filter(function (f) { return /^[a-z]+\.[a-z0-9_]+$/.test(String(f[0])); }).map(function (f) {
     return { clave: f[0], concepto: f[1], valor: f[2], unidad: f[3], estado: f[4], fuente: f[5], fecha: f[6], quien: f[7], pregunta: f[8], nota: f[9], requerido: f[10] === 'sí' };
   });
@@ -286,17 +375,9 @@ function plan_get_(s, id) {
     try { det = f[11] ? JSON.parse(f[11]) : null; } catch (e) { det = null; }
     return { n: f[0], fecha: f[1], quien: f[2], parte_de: f[3], huella_partida: f[4], motivo: f[5], resultado: f[6], version: f[7], huella: f[8], que_cambia: f[9], probadas: f[10], detalle: det };
   });
-  // un diario reciente es una ronda corriendo ahora mismo; uno viejo, una ronda que murió a medias.
-  // En los dos casos las cifras de la versión de trabajo están a medias: la página lo avisa y no deja aprobarla.
-  var crudo = PropertiesService.getScriptProperties().getProperty(diarioClave_(p.plan_id)), diario = '', trabajo = 0;
-  if (crudo) {
-    try { var dj = JSON.parse(crudo); diario = Date.now() - (dj.t || 0) < 420000 ? 'en curso' : 'interrumpida'; trabajo = Number(dj.ks) || 0; }
-    catch (e) { diario = 'interrumpida'; }
-  }
   var fi = fichas_(r), defiende = Number(r['plan.defiende']) || 0;
   var mod = libro.getSheetByName('Modelo');
   var lugar = defiende ? lugarRonda_(fi.estados, delPlan_(libro, fi, mod, palancasFilas_(mod), rondasCrudas), defiende, 0, false) : { ks: 0, modo: '', presta: [] };
-  var cfg = config_();
   var ciclo = {
     paso: r['plan.paso'] || '', paso_texto: r['plan.paso_texto'] || '', defiende: defiende, huella: r['plan.huella'] || '',
     vigente: Number(r['plan.vigente']) || 0, probada: r['plan.probada'] === true,
@@ -304,14 +385,7 @@ function plan_get_(s, id) {
     vetos: Number(r['plan.consejo_vetos']) || 0, votaron: Number(r['plan.consejo_votaron']) || 0, aprobada: r['plan.consejo_aprobada'] === true,
     sin_leer: Number(r['plan.consejo_sin_leer']) || 0, sin_mejora: r['plan.sin_mejora'] === true,
     evidencia: r['plan.evidencia'] || '', evidencia_sesion: r['plan.evidencia_sesion'] || '', paso_capital: num_(r['plan.paso_capital']),
-    en_ronda: diario === 'en curso', interrumpida: diario === 'interrumpida', trabajo: trabajo,
     lugar: { version: lugar.ks, modo: lugar.modo, presta: lugar.presta.map(function (k) { return { version: k, nombre: fi.nombres[k - 1], estado: fi.estados[k - 1] }; }) },
-    latido: latidoEstado_(cfg),                    // 'activo' (corrió hace poco), 'apagado' (pausa o latido = no) o 'sin latido' (nadie lo instaló)
-    pausa: pausa_(cfg),
-    revision: txt_(cfg.revision, 200),             // cuándo se reúne el consejo (lo dice Config; vacío si nadie lo programó)
-    ia: iaEstado_(cfg),                            // el consejo por API: 'listo', 'sin_clave' (falta la clave) o 'apagado' (Config!consejo = no)
-    ia_busca: !!buscaIA_(cfg),                     // ¿puedo investigar en la web? (va por la API de Anthropic)
-    consejo_solo: consejoSolo_(cfg) && latidoEstado_(cfg) === 'activo',   // el latido convoca solo al consejo
     golpes: ESCENARIOS.filter(function (e) { return RONDA.GOLPES.indexOf(e.id) >= 0; }).map(function (e) { return { id: e.id, nombre: e.nombre }; })
   };
   var hb = libro.getSheetByName('Bitácora'), ub = hb.getLastRow(), desde = Math.max(5, ub - 39);
@@ -331,11 +405,37 @@ function plan_get_(s, id) {
     ok: true, plan_id: p.plan_id, rev: revision_(libro), resumen: r, datos: datos, productos: productos, palancas: palancas,
     versiones: versiones, reparto: { parametros: repParams, resultados: repRes, version: limpio_(rep.getRange('B4').getValue()), esquema: limpio_(rep.getRange('B5').getValue()) },
     candados: candados, preguntas: preguntas, hallazgos: hallazgos, consejo: consejo, pruebas: pruebas, rondas: rondas, ciclo: ciclo, bitacora: bit, series: series,
-    libro_url: puede_(s, 'aprobar') ? 'https://docs.google.com/spreadsheets/d/' + p.libro_id + '/edit' : '',
-    puede: { editar: puede_(s, 'editar'), aprobar: puede_(s, 'aprobar') }, yo: { nombre: s.nombre, rol: s.rol },
     escenarios: ESCENARIOS.map(function (e) { return { id: e.id, nombre: e.nombre }; })
   };
 }
+/* Lo que depende de quién abre y del momento: nunca se guarda con el plan. */
+function vistaPlan_(s, p, b) {
+  var cfg = config_(), d = diario_(p.plan_id), c = b.ciclo || (b.ciclo = {});
+  c.en_ronda = d.estado === 'en curso';
+  c.interrumpida = d.estado === 'interrumpida';
+  c.trabajo = d.trabajo;
+  c.latido = latidoEstado_(cfg);                   // 'activo' (corrió hace poco), 'apagado' (pausa o latido = no) o 'sin latido' (nadie lo instaló)
+  c.pausa = pausa_(cfg);
+  c.revision = txt_(cfg.revision, 200);            // cuándo se reúne el consejo (lo dice Config; vacío si nadie lo programó)
+  c.ia = iaEstado_(cfg);                           // el consejo por API: 'listo', 'sin_clave' (falta la clave) o 'apagado' (Config!consejo = no)
+  c.ia_busca = !!buscaIA_(cfg);                    // ¿puedo investigar en la web? (va por la API de Anthropic)
+  c.consejo_solo = c.ia === 'listo' && low_(cfg.consejo_latido) !== 'no' && c.latido === 'activo';   // el latido convoca solo al consejo (consejoSolo_)
+  b.libro_url = puede_(s, 'aprobar') ? 'https://docs.google.com/spreadsheets/d/' + p.libro_id + '/edit' : '';
+  b.puede = { editar: puede_(s, 'editar'), aprobar: puede_(s, 'aprobar') };
+  b.yo = { nombre: s.nombre, rol: s.rol };
+  return b;
+}
+/* Un diario reciente es una ronda corriendo ahora mismo; uno viejo, una ronda que murió a medias.
+   En los dos casos las cifras de la versión de trabajo están a medias: la página lo avisa y no deja aprobarla. */
+function diario_(planId) {
+  var crudo = PropertiesService.getScriptProperties().getProperty(diarioClave_(planId)), o = { estado: '', trabajo: 0 };
+  if (crudo) {
+    try { var dj = JSON.parse(crudo); o.estado = Date.now() - (dj.t || 0) < 420000 ? 'en curso' : 'interrumpida'; o.trabajo = Number(dj.ks) || 0; }
+    catch (e) { o.estado = 'interrumpida'; }
+  }
+  return o;
+}
+
 
 /* ───────────────────────── entradas ───────────────────────── */
 function doGet(e) {
@@ -354,25 +454,33 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  var b;
+  var t0 = Date.now(), b;
   try { b = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (x) { return out_({ ok: false, error: 'json' }); }
   try {
     var s = canje_(b.k);
     if (!s.ok) return out_({ ok: false, error: s.error });
     var rid = txt_(b.request_id, 80), cache = CacheService.getScriptCache();
-    if (rid) { var prev = cache.get('r_' + hash_(rid)); if (prev) return out_(JSON.parse(prev)); }
+    if (rid) { var prev = cache.get('r_' + hash_(rid)); if (prev) return out_(conPlan_(s, b, JSON.parse(prev), t0)); }
     if (pausa_(config_())) return out_({ ok: false, error: 'pausa' });
     var lock = LockService.getScriptLock();
     // una ronda o unas pruebas tardan minutos: si el plan está en eso, se dice, en vez de «intenta en unos segundos»
     if (!lock.tryLock(25000)) return out_({ ok: false, error: cache.get('trabajando') ? 'trabajando' : 'ocupado' });
     var res;
     try { res = accion_(s, b, rid); } finally { lock.releaseLock(); }
-    if (rid && res && res.ok) cache.put('r_' + hash_(rid), JSON.stringify(res), PPP2.IDEM_S);
+    // lo que se recuerda del request_id va sin el plan (CacheService guarda hasta 100 KB por valor); si no cabe, no se recuerda
+    if (rid && res && res.ok) { try { cache.put('r_' + hash_(rid), JSON.stringify(res), PPP2.IDEM_S); } catch (x) { } }
     if (res && res.ok) cache.remove('vivero');
-    return out_(res);
+    return out_(conPlan_(s, b, res, t0));
   } catch (err) {
     return out_({ ok: false, error: 'interno', detalle: String(err && err.message || err).slice(0, 200) });
   }
+}
+/* La respuesta de una escritura trae el plan ya leído (y lo deja en la caché): la página lo pinta sin volver a
+   pedirlo. Se lee fuera del candado, y sólo si sobra tiempo; si algo falla, la página lo pide como antes. */
+function conPlan_(s, b, res, t0) {
+  if (!res || !res.ok || !b || !b.plan || String(b.tipo) === 'ppp2-sembrar' || Date.now() - t0 > PPP2.CON_PLAN_MS) return res;
+  try { var pl = plan_get_(s, b.plan, true); if (pl && pl.ok) res.plan = pl; } catch (x) { }
+  return res;
 }
 
 function accion_(s, b, rid) {
@@ -1496,7 +1604,7 @@ function latidoEstado_(cfg) {
   return Date.now() - t < RONDA.LATIDO_MS ? 'activo' : 'sin latido';   // sin activador instalado (o lleva horas sin correr) nada corre solo
 }
 function latido() {
-  var props = PropertiesService.getScriptProperties();
+  var inicio = Date.now(), props = PropertiesService.getScriptProperties();
   props.setProperty('latido_t', String(Date.now()));   // la página sólo promete «lo hago solo» si el latido de verdad corre
   var cfg = config_();
   if (pausa_(cfg) || low_(cfg.latido) === 'no') return 'pausa';
@@ -1552,6 +1660,7 @@ function latido() {
     lock.releaseLock();
     CacheService.getScriptCache().remove('vivero');
   }
+  calienta_(inicio);       // fuera del candado: deja leído lo que cambió, para que abrir el plan no espere al libro
   return hecho;
 }
 
@@ -1584,6 +1693,7 @@ function sembrar_(s, b, rid) {
   vivero_().getSheetByName('Planes').appendRow(fila_([id, nombre, copia.getId(), 'activo', hoyISO_(), actor_(s), txt_(b.caso_ppp, 40), cfg.esquema_libro || PPP2.LIBRO, '']));
   bitacoraVivero_(s, 'sembrar', id, nombre, rid, 'ok');
   CacheService.getScriptCache().remove('vivero');
+  CacheService.getScriptCache().remove('planes');      // el plan nuevo se abre enseguida
   return { ok: true, hecho: 'sembrar', plan_id: id };
 }
 
