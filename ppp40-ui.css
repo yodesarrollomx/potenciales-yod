@@ -20,3 +20,6 @@ body.ppp40-mode .ppp40-session {background:#f4f1e9!important;color:#201c16!impor
 body.ppp40-mode #toast:empty {display:none}
 /* Reserve a clear rail for the shared fixed tools at every viewport width. */
 body.ppp40-mode #ppp40-root .ppp40 {padding-right:68px}
+/* La barra fija de YOD OS (56 px) no debe tapar el control al que se lleva la vista. */
+html:has(body.ppp40-mode) {scroll-padding-top:72px}
+body.ppp40-mode .ppp40 :is(input,select,textarea,button,summary) {scroll-margin-top:72px}
