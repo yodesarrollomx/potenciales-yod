@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-13T19:02:46.701Z",
+ "generado": "2026-11-13T19:58:45.923Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -8,7 +8,7 @@
     "repo:yodesarrollomx/yod-portal"
    ],
    "desde": "2026-11-13T02:09:31Z",
-   "url": "https://github.com/yodesarrollomx/yod-portal/commit/44f4aa0b9888b764f8c6b14ea208b0744913066c",
+   "url": "https://github.com/yodesarrollomx/yod-portal/commit/834008df8a687e87d9ae23aa3b0550c8f390855d",
    "msg": "yod-portal cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
@@ -28,20 +28,8 @@
     "repo:yodesarrollomx/yodesarrollo-board"
    ],
    "desde": "2026-11-13T02:18:50Z",
-   "url": "https://github.com/yodesarrollomx/yodesarrollo-board/commit/9eb431c9baecb3385b6b3603c1b67de39a657dae",
+   "url": "https://github.com/yodesarrollomx/yodesarrollo-board/commit/d8ed8e7173c1f4b6c6dcd984e74cb197fa1cfe9a",
    "msg": "yodesarrollo-board cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
-  },
-  {
-   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-mesa.yml",
-   "tipo": "flujo",
-   "nodos": [
-    "sala-edicion::github_workflows_sala_mesa",
-    "repo:yodesarrollomx/sala-edicion",
-    "SYS-SALA"
-   ],
-   "desde": "2026-11-13T18:06:20Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/43479333863",
-   "msg": "Falló el flujo «Montador de la mesa» de sala-edicion, trabajo «mesa», paso 14 «Avisar si algo falló»"
   },
   {
    "clave": "chinche:yodesarrollomx/sala-edicion#393",
