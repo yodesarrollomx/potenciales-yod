@@ -337,7 +337,7 @@
   <div class="clave-banner" id="modoLocalBanner">Estás <b>sin conexión a la nube</b>: los cambios viven solo en este navegador. Entra con la clave del board para guardar y compartir casos.</div>
 
   <div class="caso-bar">
-    <div class="caso-activo">Caso de trabajo<b id="casoNombreBar">Supuestos de referencia · sin guardar</b><span class="sync-dot" id="syncDot"></span></div>
+    <div class="caso-activo">Caso de trabajo<b id="casoNombreBar">Supuestos de referencia · sin guardar</b><span id="casoFolio"></span><span class="sync-dot" id="syncDot"></span></div>
     <div class="caso-actions">
       <button class="small-btn secondary" id="btnMisCasos"><i class="ti ti-folder"></i>Mis casos</button>
       <button class="small-btn secondary" id="btnNuevo"><i class="ti ti-plus"></i>Nuevo</button>
@@ -1304,7 +1304,7 @@
     const nombre=caso.nombre_caso||'Supuestos de referencia';
     $('heroNombre').innerHTML='';$('heroNombre').append(document.createTextNode(nombre));
     const pill=document.createElement('span');pill.className='estado-pill';pill.id='heroEstado';pill.textContent=caso.estado||'EXPLORACIÓN';$('heroNombre').append(pill);
-    window.YodPPPFolio&&window.YodPPPFolio.caso('mixto',caso.caso_id,$('heroNombre'));   // etapa 2 · el terreno y su etapa, leídos del folio (ppp-folio.js)
+    if(window.YodPPPFolio){window.YodPPPFolio.caso('mixto',caso.caso_id,$('casoFolio'));window.YodPPPFolio.caso('mixto',caso.caso_id,$('heroNombre'));}   // etapa 2 · el terreno y su etapa, leídos del folio (ppp-folio.js)
     txt('heroSub',caso.caso_id?`palabra: ${caso.palabra} · v${caso.version||1}${caso.siguiente_paso?' · siguiente: '+caso.siguiente_paso:''}`:'Mueve los supuestos y guarda el caso con una palabra para volver.');
     txt('casoNombreBar',caso.caso_id?`${nombre} · ${caso.palabra}`:'Supuestos de referencia · sin guardar');
     const dot=$('syncDot');dot.className='sync-dot';dot.textContent=sheetModel?(sheetNeedsRefresh?'Copia de Sheets · conexión por verificar':sheetPending||sheetBusy||sheetFailure?'Sheets · cambios pendientes de confirmar':'Sheets · revisión '+sheetModel.revision.slice(0,8)):legacyStatus();
