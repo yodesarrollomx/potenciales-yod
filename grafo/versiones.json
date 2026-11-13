@@ -1,7 +1,7 @@
 {
  "esquema": 1,
- "aprobado": "G-20261112-1420",
- "actualizado": "2026-11-12T14:20:17-07:00",
+ "aprobado": "G-20261112-1823",
+ "actualizado": "2026-11-12T18:23:14-07:00",
  "versiones": [
   {
    "id": "G-20261111-2354",
@@ -292,7 +292,7 @@
    "id": "G-20261112-1420",
    "armado": "2026-11-12T14:20:17-07:00",
    "fecha": "12-nov 14:20",
-   "estado": "aprobado",
+   "estado": "anterior",
    "huella": "6767abefa075",
    "piezas": 3167,
    "ligas": 10529,
@@ -459,6 +459,178 @@
     "por": "alexpueblag",
     "numero": 82,
     "motivo": "borrador limpio tras el PR 81 (el informe del rehecho ya no nombra lo excluido por DEC-19); reemplaza al G-20261112-1351, que no se aprueba"
+   }
+  },
+  {
+   "id": "G-20261112-1823",
+   "armado": "2026-11-12T18:23:14-07:00",
+   "fecha": "12-nov 18:23",
+   "estado": "aprobado",
+   "huella": "574fbb173df3",
+   "piezas": 3173,
+   "ligas": 10552,
+   "repos": {
+    "yodesarrollomx/yod-portal": "01d77be",
+    "yodesarrollomx/potenciales-yod": "3a855ba",
+    "yodesarrollomx/yodesarrollo-board": "3848603",
+    "yodesarrollomx/yod-despacho": "d89b151",
+    "yodesarrollomx/board-aurum": "93bf624",
+    "yodesarrollomx/board-flujo-yod": "e9d122f",
+    "yodesarrollomx/real-miramar-board": "9db34a9",
+    "yodesarrollomx/interiores-aurum": "8bcdfc3",
+    "yodesarrollomx/aurum-board": "e3dd428",
+    "yodesarrollomx/sala-edicion": "051785e",
+    "yodesarrollomx/plan-potencial": "9f036c7",
+    "yodesarrollomx/crokiss": "7a7a557",
+    "yodesarrollomx/Co-desarrolladores-Yod": "bdaf46b",
+    "yodesarrollomx/alquimia-urbana": "0c0da90",
+    "yodesarrollomx/aurum-experiencia": "70c63b3",
+    "yodesarrollomx/pintarron": "0979d3f",
+    "yodesarrollomx/prueba-dominio": "715c6c7",
+    "yodesarrollomx/yodesarrollomx.github.io": "a5680f2",
+    "alexpueblag/pizarron-claude-yodbot": "31593a1",
+    "yodesarrollo/amalaya-board": "e3f94e6",
+    "aurumarquitectos/experiencia": "89d29e8",
+    "aurumarquitectos/aurumarquitectos.github.io": "d33f765",
+    "alexpueblag/codesarrolladores-libre": "96d26c5",
+    "alexpueblag/yod-terreno-si": "09f75f4",
+    "alexpueblag/yod-terreno-dormido": "1159ca5"
+   },
+   "cambios": {
+    "piezas_mas": {
+     "codigo": 3,
+     "prueba": 3,
+     "llave": 2
+    },
+    "piezas_menos": {
+     "codigo": 1,
+     "prueba": 1
+    },
+    "piezas_cambiadas": 43,
+    "ligas_mas": 28,
+    "ligas_menos": 5,
+    "piezas": 3173,
+    "ligas": 10552,
+    "ppp": {},
+    "primer_ppp": false,
+    "repos": [
+     {
+      "repo": "yodesarrollomx/potenciales-yod",
+      "de": "15a27a2",
+      "a": "3a855ba",
+      "nuevos": 6,
+      "quitados": 2,
+      "cambiados": 28
+     },
+     {
+      "repo": "yodesarrollomx/sala-edicion",
+      "de": "55cfff2",
+      "a": "051785e",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 4
+     },
+     {
+      "repo": "yodesarrollomx/yod-portal",
+      "de": "f6f342b",
+      "a": "01d77be",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 4
+     },
+     {
+      "repo": "yodesarrollomx/yodesarrollo-board",
+      "de": "53893b3",
+      "a": "3848603",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 3
+     }
+    ],
+    "atlas": {
+     "componentes_nuevos": [],
+     "componentes_fuera": [],
+     "conexiones_mas": 0,
+     "conexiones_menos": 0,
+     "estados": [],
+     "propuestas": [],
+     "revision": "2026-11-12.panorama-refresco.1"
+    },
+    "sin_clon": [],
+    "sin_respuesta": 0,
+    "sin_campo": [],
+    "notas": [
+     "potenciales-yod/ppp2.js L14: llama a un Apps Script que el grafo no conoce (AKfycbywqwBh…)"
+    ]
+   },
+   "ia": {
+    "titulo": "Grafo: el libro PPP2 cambia de piezas y hay una conexión externa sin registrar",
+    "resumen": "El grafo tiene 3,173 piezas y 10,552 conexiones. Se sumaron 8 piezas (3 de código, 3 de pruebas y 2 llaves), se quitaron 2 y se modificaron 43. Hay 28 conexiones nuevas y 5 menos. Casi todo ocurre en el libro PPP2 del repositorio de potenciales: se agregan un ciclo, una rejilla y una regeneración, y se retira el consejo por edad. El mapa de componentes no cambió. Un archivo llama a un Apps Script que el grafo no conoce, y eso conviene revisarlo.",
+    "presentaciones": "Las tres audiencias (cliente o inversionista, dueño del terreno, y departamentos, lotes o casas) siguen igual y no desaparece ningún campo. Aun así, se ajustó el aviso del grafo en la presentación, así que conviene revisar cómo se ve.",
+    "recomendacion": "revisar",
+    "cambios": [
+     {
+      "que": "Se agregaron tres piezas nuevas al libro PPP2: ciclo, regenerar y rejilla.",
+      "donde": "Repositorio de potenciales, carpeta del libro PPP2",
+      "importa": "Cambian la forma en que se arma y se rehace el libro, y por eso aparecen conexiones nuevas en el grafo."
+     },
+     {
+      "que": "Se retiró la pieza del consejo por edad y su archivo de prueba.",
+      "donde": "Repositorio de potenciales, libro PPP2 y pruebas",
+      "importa": "Esa función ya no existe. Hay que confirmar que fue una sustitución intencional por el ciclo y la rejilla, y no una pérdida."
+     },
+     {
+      "que": "Se sumaron pruebas nuevas: una de la ronda PPP2 y dos archivos de datos de prueba, uno para el ciclo y otro para la rejilla.",
+      "donde": "Repositorio de potenciales, carpeta de pruebas",
+      "importa": "Las piezas nuevas llegan con pruebas propias, lo cual es buena señal."
+     },
+     {
+      "que": "Se modificaron el servidor PPP2, el script de la página y la documentación de instalación y de uso.",
+      "donde": "Repositorio de potenciales: ppp2.js, servidor PPP2 y documentos",
+      "importa": "El cambio no se limita al libro. También toca la parte que ven y usan los equipos."
+     },
+     {
+      "que": "Se ajustó el motor que rehace el grafo, con sus avisos, láminas, refresco y flujos de automatización.",
+      "donde": "Repositorio de potenciales: motor del grafo y flujos de trabajo",
+      "importa": "Es el mecanismo que produce este mismo análisis, así que conviene confirmar que el grafo se sigue rehaciendo bien."
+     },
+     {
+      "que": "Hubo ajustes menores en producción histórica y mesa de selección.",
+      "donde": "Repositorio de sala de edición: un módulo y dos pruebas",
+      "importa": "Son cambios pequeños y acotados, sin piezas nuevas ni retiradas."
+     },
+     {
+      "que": "Se tocaron un flujo de pruebas, el modelo de arquitectura y una prueba de la oficina panorámica.",
+      "donde": "Repositorio del portal",
+      "importa": "Son actualizaciones de documentación y de pruebas, sin impacto visible."
+     },
+     {
+      "que": "Se actualizaron el aviso del grafo en la presentación y sus pruebas.",
+      "donde": "Repositorio del tablero de desarrollo",
+      "importa": "Es el punto donde las presentaciones leen el grafo, por lo que conviene verificar que se vean correctamente."
+     }
+    ],
+    "riesgos": [
+     "Una llamada en ppp2.js apunta a un Apps Script que el grafo no conoce. No se sabe si es intencional o si falta registrarlo.",
+     "El consejo por edad se eliminó y no se indica qué lo reemplaza. Si alguien dependía de él, podría faltar esa información.",
+     "El mismo cambio toca el motor que rehace el grafo y el servidor PPP2, así que un error se notaría en ambos lados.",
+     "Se agregaron 2 piezas de tipo llave que los datos no detallan. Conviene saber a qué corresponden.",
+     "No hubo cambios en el mapa de componentes. Si se esperaba que la reorganización del libro apareciera ahí, no se reflejó."
+    ]
+   },
+   "ia_informe": {
+    "pedidos": [
+     "claude"
+    ],
+    "gano": "claude:claude-sonnet-5-5",
+    "fallos": {},
+    "segundos": 16.2,
+    "reintentos": []
+   },
+   "pedido": {
+    "por": "alexpueblag",
+    "numero": 93,
+    "motivo": "reflejar lo fusionado el 12-nov por la tarde: vista previa segura (PR 89), sólo repositorios públicos, Accesos paciente, vigilante y DEC-21 (PR 91), la pastilla de las presentaciones (yodesarrollo-board PR 71), la prueba del Despacho (yod-portal PR 356) y la Sala (sala-edicion PR"
    }
   }
  ]
