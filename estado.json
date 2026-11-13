@@ -1,6 +1,26 @@
 {
- "generado": "2026-11-13T02:05:26.657Z",
+ "generado": "2026-11-13T02:11:57.638Z",
  "errores": [
+  {
+   "clave": "cambio:yodesarrollomx/yod-portal",
+   "tipo": "cambio",
+   "nodos": [
+    "repo:yodesarrollomx/yod-portal"
+   ],
+   "desde": "2026-11-13T02:09:31Z",
+   "url": "https://github.com/yodesarrollomx/yod-portal/commit/c6cbfe93804290761bf6bbf30076ad43241005bd",
+   "msg": "yod-portal cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
+  },
+  {
+   "clave": "cambio:yodesarrollomx/potenciales-yod",
+   "tipo": "cambio",
+   "nodos": [
+    "repo:yodesarrollomx/potenciales-yod"
+   ],
+   "desde": "2026-11-13T02:10:58Z",
+   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/86ebaa84bcbc8e9b4463ec639a527b897cbf8d87",
+   "msg": "potenciales-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
+  },
   {
    "clave": "flujo:yodesarrollomx/yodesarrollo-board:.github/workflows/arquitectura.yml",
    "tipo": "flujo",
