@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-13T00:54:27.963Z",
+ "generado": "2026-11-13T01:02:51.338Z",
  "errores": [
   {
    "clave": "flujo:yodesarrollomx/yod-portal:.github/workflows/conocimiento-browser.yml",
@@ -15,6 +15,16 @@
    "msg": "Falló el flujo «Conocimiento del Despacho» de yod-portal, trabajo «navegador», paso 10 «Recorrido real y encuentro por cercanía»"
   },
   {
+   "clave": "cambio:yodesarrollomx/yod-portal",
+   "tipo": "cambio",
+   "nodos": [
+    "repo:yodesarrollomx/yod-portal"
+   ],
+   "desde": "2026-11-13T00:56:15Z",
+   "url": "https://github.com/yodesarrollomx/yod-portal/commit/01d77be217c7d64450bb5e0569dba59b70dc4ff0",
+   "msg": "yod-portal cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
+  },
+  {
    "clave": "cambio:yodesarrollomx/potenciales-yod",
    "tipo": "cambio",
    "nodos": [
@@ -23,6 +33,16 @@
    "desde": "2026-11-13T00:52:36Z",
    "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/a2facc2356f697a1a5350e3acd26fbf91fcb00be",
    "msg": "potenciales-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
+  },
+  {
+   "clave": "cambio:yodesarrollomx/yodesarrollo-board",
+   "tipo": "cambio",
+   "nodos": [
+    "repo:yodesarrollomx/yodesarrollo-board"
+   ],
+   "desde": "2026-11-13T00:55:13Z",
+   "url": "https://github.com/yodesarrollomx/yodesarrollo-board/commit/3848603628270a35ccf8fe75dbbd975999316c97",
+   "msg": "yodesarrollo-board cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-consejo.yml",
@@ -116,6 +136,16 @@
    "desde": "2026-10-10T07:45:52Z",
    "url": "https://github.com/yodesarrollomx/sala-edicion/issues/249",
    "msg": "Chinche #249 en sala-edicion (sobre yod-portal): 📌 yod-portal/os · no me deja enviar a una que aunque estaba ahorita hablando con vos y t"
+  },
+  {
+   "clave": "cambio:yodesarrollomx/sala-edicion",
+   "tipo": "cambio",
+   "nodos": [
+    "repo:yodesarrollomx/sala-edicion"
+   ],
+   "desde": "2026-11-13T00:59:09Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/commit/051785e2e947bcf7b6a4b589a0c8df184c9eb13a",
+   "msg": "sala-edicion cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
    "clave": "chinche:yodesarrollo/amalaya-board#87",
