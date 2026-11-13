@@ -1,6 +1,30 @@
-/* Catalogue remains readable while a project list is slow or unavailable. */
-#listaTodos .lt-feedback{position:sticky;top:0!important;z-index:1;background:var(--bg,#f6f3ec);padding:8px 10px;border-bottom:1px solid var(--linea,#ddd5c5);}
-#listaTodos .lt-feedback .lt-status{margin:0 0 6px;line-height:1.4;font-size:12px;}
-#listaTodos .lt-retry,#listaTodos .lt-retry-type{min-height:44px;border:1px solid var(--linea,#ddd5c5);border-radius:9px;background:var(--card,#fff);color:var(--goldc,#7d5f1e);font:600 12px inherit;padding:8px 12px;cursor:pointer;max-width:100%;}
-#listaTodos .lt-category-status{font-size:12px;line-height:1.45;color:var(--muted,#746b5c);margin:9px 12px;}
-#listaTodos .lt-retry-type{margin:0 12px 10px;}
+#wrap{isolation:isolate;z-index:0}
+#wrap .todos{margin-top:9px}
+#wrap #btnTodos{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(35,29,20,.04);border:1px solid var(--lineaf);border-radius:11px;padding:8px 11px;color:var(--text);font:inherit;font-weight:700;cursor:pointer;min-height:44px;font-size:12px}
+#wrap #btnTodos .n{background:rgba(154,123,63,.12);border-radius:9px;padding:1px 8px;font-size:10px}
+#wrap #btnTodos[aria-expanded="true"] .lt-chevron{transform:rotate(180deg)}
+#wrap .lt-chevron{transition:transform .18s}
+#wrap #listaTodos{display:block;max-height:min(340px,38dvh);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;margin-top:7px;border:1px solid var(--linea);border-radius:11px;background:var(--card,#fff);scrollbar-width:thin}
+#wrap #listaTodos[hidden]{display:none!important}
+#wrap .lt-group{margin:0}
+#wrap .lt-tipo{position:sticky;top:0;z-index:1;margin:0;background:var(--card,#fff);color:var(--text);font-size:10px;font-weight:700;letter-spacing:.03em;padding:9px 10px;border-bottom:1px solid var(--linea);display:flex;justify-content:space-between}
+#wrap .lt-item{min-height:48px;display:flex;align-items:center;gap:8px;padding:9px 10px;color:var(--text);text-decoration:none;border-bottom:1px solid var(--linea)}
+#wrap .lt-item .nm{font-size:12px;font-weight:600;line-height:1.25;overflow-wrap:anywhere}
+#wrap .lt-item .dt{display:block;font-size:10px;font-weight:400;color:var(--muted);margin-top:3px}
+#wrap .lt-item .ir{margin-left:auto;color:var(--goldc)}
+#wrap .lt-dot{width:8px;height:8px;border-radius:50%;flex:none;background:#9a7b3f}
+#wrap .lt-vertical{background:#3e6484}
+#wrap .lt-unifamiliar{background:#39744b}
+#wrap .lt-residencial{background:#2f7d8f}
+#wrap .lt-patrimonial{background:#5f5ab0}
+#wrap .lt-status{margin:0;padding:14px 12px;font-size:12px;color:var(--muted);line-height:1.4}
+#wrap .lt-retry{margin:0 10px 10px;min-height:44px;padding:8px 12px;border:1px solid var(--lineaf);border-radius:9px;background:var(--card);color:var(--goldc);font:inherit;font-size:12px;cursor:pointer}
+#wrap #btnTodos:focus-visible,#wrap .lt-item:focus-visible,#wrap .lt-retry:focus-visible,#wrap .ppp-main-link:focus-visible,#wrap .ppp details summary:focus-visible{outline:2px solid var(--goldc);outline-offset:-3px}
+/* On the standalone map, keep the compact catalogue inside its own scroll area. */
+#listaTodos .lt-feedback{background:var(--bg,#f6f3ec);padding:8px 10px;border-bottom:1px solid var(--linea,#ddd5c5)}
+#listaTodos .lt-feedback .lt-status{margin:0 0 6px;line-height:1.4;font-size:12px}
+#listaTodos .lt-retry,#listaTodos .lt-retry-type{min-height:44px;border:1px solid var(--linea,#ddd5c5);border-radius:9px;background:var(--card,#fff);color:var(--goldc,#7d5f1e);font:inherit;font-size:12px;padding:8px 12px;cursor:pointer;max-width:100%}
+#listaTodos .lt-category-status{font-size:12px;line-height:1.45;color:var(--muted,#746b5c);margin:9px 12px}
+#listaTodos .lt-retry-type{margin:0 12px 10px}
+/* Category headings never stick above the project being read. */
+#listaTodos .lt-tipo{position:static}

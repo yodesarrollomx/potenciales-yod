@@ -16,7 +16,12 @@ const pause=p=>p.waitForTimeout(480), root=path.resolve(__dirname,'..');
    assert.equal(await p.locator('input[type=range]').count(),81);assert.equal(await p.locator('.ppp-all .kpi-box').count(),40);
    assert.equal(await p.locator('#pppModelos').count(),0);assert.equal(await p.locator('.yod-topbrand img').getAttribute('alt'),'YoDesarrollo');
    assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'No horizontal overflow');
-   const bottom=await p.locator('.ppp-card').last().evaluate(e=>e.getBoundingClientRect().bottom);assert.ok(bottom<1040,'Five summaries fit <=1.2 mobile viewports: '+bottom);
+   // CHG-PPP-CADENA-20261111: el diagrama en cadena va arriba del resumen por instrucción de Dirección.
+   // Las cinco tarjetas conservan su bloque (antes 1040-312 px) y todo cabe en dos pantallas de teléfono.
+   const deck=await p.locator('.ppp-card').evaluateAll(es=>[es[0].getBoundingClientRect().top,es[es.length-1].getBoundingClientRect().bottom]),chain=await p.locator('#pppCadena').evaluate(e=>e.getBoundingClientRect().height);
+   assert.ok(deck[1]-deck[0]<728,'Five summaries keep their block under 0.78 mobile viewports: '+(deck[1]-deck[0]));
+   assert.ok(chain>300&&chain<839,'Chain diagram stays under 0.9 mobile viewports: '+chain);
+   assert.ok(deck[1]<1864,'Diagram and five summaries fit <=2 mobile viewports: '+deck[1]);
    if(process.env.PPP_SCREENSHOTS){fs.mkdirSync(process.env.PPP_SCREENSHOTS,{recursive:true});await p.screenshot({path:path.join(process.env.PPP_SCREENSHOTS,name+'-summary.png'),fullPage:true});}
    for(const id of ['dArq','dVentas','dCostos','dMacro','dDota']){
     await p.locator('#pppToggle'+id).click();await pause(p);assert.equal(await p.locator('.ppp-open').count(),1);assert.equal(await p.locator('.ppp-muted').count(),4);

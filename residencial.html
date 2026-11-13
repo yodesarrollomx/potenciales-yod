@@ -2,14 +2,15 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=1"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=20261031-fase1-e2"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-cargador.js?v=20261031-fase1-e2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
 <title>PPP Lotes Residenciales · Potenciales · YoDesarrollo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css">
-<link rel="stylesheet" href="https://yodesarrollomx.github.io/yod-portal/os/shell.css">
+<link rel="stylesheet" href="https://yodesarrollomx.github.io/yod-portal/os/shell.css?v=20261031-fase1-e2">
 <style>
   /* ===== Fintech Editorial (oscuro) · tokens por ROL, convención de los boards YoD ===== */
   :root{--bg:#f6f3ed;--card:#ffffff;--surface:rgba(35,29,20,.04);--text:#231d14;--muted:#766f62;--suave:#8a8272;--linea:#e1dacb;--lineaf:#d8cfbb;--box:rgba(35,29,20,.04);
@@ -324,6 +325,12 @@
   #dVivienda.drawer.active{max-height:9000px}
   @media(max-width:700px){.viv-switch{grid-template-columns:1fr}.viv-grid{grid-template-columns:1fr}.viv-tipo-head{flex-wrap:wrap}.viv-tipo-head .viv-in{flex:1 1 100%}}
 </style>
+<link rel="stylesheet" href="ppp-intake.css?v=20261112-ppp2s">
+<script src="ppp-intake.js?v=20261112-ppp2s"></script>
+<link rel="stylesheet" href="ppp-presentation.css?v=20261112-ppp2s">
+<script src="ppp-presentation.js?v=20261112-ppp2s"></script>
+<link rel="stylesheet" href="ppp-stages.css?v=20261112-ppp2s">
+<script src="ppp-stages.js?v=20261112-ppp2s"></script>
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -571,6 +578,9 @@
   let cfgBoard={}, casosCache=[], modoLocal=!cloudOn;
 
   const $=id=>document.getElementById(id); const controls=[...document.querySelectorAll('input[type=range]')]; let state=null;
+  let intakeBoard=null;
+  let presentationSaved=null;
+  function rememberPresentationRead(value){presentationSaved=PPPPresentations.rememberLegacy(value);}
   const fmtN=n=>Math.round(n||0).toLocaleString('en-US'); const fmtM=n=>Math.abs(n||0)>=1e6?'$'+((n||0)/1e6).toFixed(1)+' M':'$'+Math.round(n||0).toLocaleString('en-US'); const fmtMoney=n=>'$'+Math.round(n||0).toLocaleString('en-US'); const pct=(n,d=1)=>Number(n||0).toFixed(d)+'%'; const sM=n=>(n<0?'−':'+')+fmtM(Math.abs(n||0)); const fmtHa=n=>((n||0)/10000).toFixed(1)+' ha';
   // Prellenado: Guaymas SFF (el origen de la plantilla, recalculado limpio)
   const PRELLENADO={inSuperficie:17928,inFrente:75,inFondo:239,inPctVialidades:22,inPctVerdes:10,inPctEquipamiento:7,inEfSubdiv:95,
@@ -986,6 +996,7 @@
 
   /* ================== RENDER ================== */
   function calculate(){
+    if(intakeBoard?.blocking){state=null;intakeBoard.paint();return null;}
     state=computar(inputValues(),vivienda);
     escSyncActivo();
     render();renderEscenarios();renderComparador();guardarDraft();return state}
@@ -1579,10 +1590,18 @@
   /* ================== CAPA DE NUBE ================== */
   let toastTimer=null;
   function toast(msg,ms=3200){const t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('on'),ms)}
-  function apiGet(params){const q=new URLSearchParams(Object.assign({k:clave,tipo:NUBE.TIPO},params));return fetch(NUBE.ENDPOINT+'?'+q.toString()).then(r=>r.json())}
+  /* Un cargador (Fase 1): con YodCargador activo, la PRIMERA lectura de la lista de la página sale por su transporte (caché-primero: se pinta lo último conocido y la red
+     lo actualiza en fondo). Sólo esa. La lista de después de guardar, con una clave tecleada, sin conexión o sin sesión guardada, y TODO lo demás (caso, catálogo, modelo,
+     recibos…) corre el fetch de siempre, tal cual: un caso, o un umbral que entra al cálculo, no puede salir de una copia vieja ni de la caché de otro caso. Con
+     ?cargador=legacy, o si el cargador no cargó, nada cambia. El tope de 360 s (el del lector de casos) sólo evita colgarse para siempre; el tiempo que de verdad cuenta lo
+     siguen mandando los temporizadores de cada pantalla, como antes. */
+  function apiGet(params){const q=new URLSearchParams(Object.assign({k:clave,tipo:NUBE.TIPO},params)),C=window.YodCargador;
+    const cargador=!!(C&&C.v&&!C.legacy)&&params.recurso==='lista'&&!apiGet.lista&&navigator.onLine!==false&&clave===localStorage.getItem(LS.clave)&&(apiGet.lista=true);
+    if(cargador)return C.ppp.get(NUBE.ENDPOINT,Object.fromEntries(q),{recurso:'lista',timeoutMs:360000}).then(r=>r.json());
+    return fetch(NUBE.ENDPOINT+'?'+q.toString()).then(r=>r.json())}
   function apiPost(body){body=Object.assign({k:clave,tipo_desarrollo:NUBE.TIPO},body);return fetch(NUBE.ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)}).then(r=>r.json())}
   function nuevoRequestId(){return (crypto.randomUUID?.()||Date.now()+'-'+Math.random())}
-  function guardarDraft(){try{localStorage.setItem(LS.draft,JSON.stringify({inputs:inputValues(),caso,escenarios,escActivo}))}catch(e){}}
+  function guardarDraft(){if(intakeBoard?.blocking){intakeBoard.persist();return;}try{localStorage.setItem(LS.draft,JSON.stringify({inputs:inputValues(),caso,escenarios,escActivo}))}catch(e){}}
   function cargarDraft(){try{const d=JSON.parse(localStorage.getItem(LS.draft)||'null');if(!d)return;if(d.inputs)Object.entries(d.inputs).forEach(([id,v])=>setControl(id,v));if(d.caso)caso=Object.assign(caso,d.caso);
     if(Array.isArray(d.escenarios)&&d.escenarios.length){escenarios=d.escenarios;escActivo=d.escActivo&&escGet(d.escActivo)?d.escActivo:escenarios[0].id;const e=escGet(escActivo);if(e)escAplicar(e)}}catch(e){}}
   function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -1600,16 +1619,20 @@
     $('segLog').textContent=caso.notas_seguimiento||'Sin notas todavía.'+(caso.caso_id?'':' Guarda el caso primero.');
   }
   function aplicarCasoRemoto(obj){
+    if(obj?.calculo_sheet?.model_status==='MODELO_PENDIENTE'){try{intakeBoard.acceptRead(obj.calculo_sheet);cerrarOverlays();return true;}catch{toast('No se confirmó la ficha guardada. Se conserva la captura anterior.');return false;}}
+    intakeBoard?.deactivate();
     resetNuevos();
     Object.keys(obj).forEach(kk=>{if(/^in[A-Z]/.test(kk)&&obj[kk]!==''&&isFinite(Number(obj[kk])))setControl(kk,Number(obj[kk]))});
     caso={caso_id:obj.caso_id||'',palabra:obj.palabra||'',correo:obj.correo||'',nombre_caso:obj.nombre_caso||'',estado:obj.estado||'EXPLORACIÓN',siguiente_paso:obj.siguiente_paso||'',notas_seguimiento:obj.notas_seguimiento||'',notas_caso:obj.notas_caso||'',version:Number(obj.version||1)};
     if(!escDesdeJson(obj.escenarios_json))escInicial('Base');
+    if(typeof rememberPresentationRead==='function')rememberPresentationRead({caseId:caso.caso_id,revision:obj.version,scenarios:obj.escenarios_json?escenarios:[]});
     calculate();pintaCaso();cerrarOverlays();toast('Caso "'+(caso.nombre_caso||caso.palabra)+'" cargado'+(escenarios.length>1?' · '+escenarios.length+' versiones':''))
   }
-  async function abrirPorId(id){try{const r=await apiGet({recurso:'caso',id});if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'Ese caso ya no existe':'No se pudo abrir: '+r.error)}catch(e){toast('Sin conexión: no se pudo abrir el caso')}}
-  async function abrirPorPalabra(palabra){if(!palabra.trim())return;try{const r=await apiGet({recurso:'caso',palabra:palabra.trim()});if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'No hay caso con esa palabra':'No se pudo abrir: '+r.error)}catch(e){toast('Sin conexión: no se pudo abrir')}}
-  async function cargarLista(){const cont=$('listaCasos');cont.innerHTML='<p class="note">Cargando…</p>';try{const r=await apiGet({recurso:'lista'});if(!r.ok){cont.innerHTML='<p class="note">Error: '+r.error+'</p>';if(r.error==='clave')reabrirGate();return}casosCache=r.casos||[];cfgBoard=r.config||cfgBoard;if(!casosCache.length){cont.innerHTML='<p class="note">Aún no hay casos de Lotes Residenciales. Guarda el primero.</p>';return}cont.innerHTML=casosCache.map(c=>`<div class="caso-item" data-id="${c.caso_id}"><div><div class="ci-n">${esc(c.nombre_caso||c.palabra)}<span class="badge">${esc(c.estado||'—')}</span></div><div class="ci-m">palabra: ${esc(c.palabra)} · v${c.version||1} · ${fechaCorta(c.ts_actualizado)}${c.source==='test'?' · PRUEBA':''}</div></div><div class="ci-kpi">${c.utilidad!==''&&c.utilidad!==undefined?fmtM(Number(c.utilidad)):'—'}<span>utilidad · ${c.unidades!==''&&c.unidades!==undefined?fmtN(Number(c.unidades))+' lotes':'—'}</span></div></div>`).join('');cont.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>abrirPorId(el.dataset.id))}catch(e){cont.innerHTML='<p class="note">Sin conexión. Reintenta.</p>'}}
+  async function abrirPorId(id){const current=intakeBoard.readGuard();try{const r=await apiGet({recurso:'caso',id});if(!current())return;if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'Ese caso ya no existe':'No se pudo abrir: '+r.error)}catch(e){if(current())toast('Sin conexión: no se pudo abrir el caso')}}
+  async function abrirPorPalabra(palabra){if(!palabra.trim())return;const current=intakeBoard.readGuard();try{const r=await apiGet({recurso:'caso',palabra:palabra.trim()});if(!current())return;if(r.ok)aplicarCasoRemoto(r.caso);else toast(r.error==='no_existe'?'No hay caso con esa palabra':'No se pudo abrir: '+r.error)}catch(e){if(current())toast('Sin conexión: no se pudo abrir')}}
+  async function cargarLista(){const cont=$('listaCasos');cont.innerHTML='<p class="note">Cargando…</p>';try{const r=await apiGet({recurso:'lista'});if(!r.ok){cont.innerHTML='<p class="note">Error: '+r.error+'</p>';if(r.error==='clave')reabrirGate(r.error);return}casosCache=r.casos||[];cfgBoard=r.config||cfgBoard;if(!casosCache.length){cont.innerHTML='<p class="note">Aún no hay casos de Lotes Residenciales. Guarda el primero.</p>';return}cont.innerHTML=casosCache.map(c=>`<div class="caso-item" data-id="${c.caso_id}"><div><div class="ci-n">${esc(c.nombre_caso||c.palabra)}<span class="badge">${esc(c.estado||'—')}</span></div><div class="ci-m">palabra: ${esc(c.palabra)} · v${c.version||1} · ${fechaCorta(c.ts_actualizado)}${c.source==='test'?' · PRUEBA':''}</div></div><div class="ci-kpi">${c.utilidad!==''&&c.utilidad!==undefined?fmtM(Number(c.utilidad)):'—'}<span>utilidad · ${c.unidades!==''&&c.unidades!==undefined?fmtN(Number(c.unidades))+' lotes':'—'}</span></div></div>`).join('');cont.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>abrirPorId(el.dataset.id))}catch(e){cont.innerHTML='<p class="note">Sin conexión. Reintenta.</p>'}}
   async function guardarCaso(enviarCorreo){
+    if(intakeBoard?.blocking){toast("La ficha se conserva como captura local. El guardado requiere conectar el modelo nativo de Sheets.");return;}
     if(modoLocal){toast('Estás sin nube: entra con la clave para guardar');return}
     const nombre=$('gNombre').value.trim(),palabra=$('gPalabra').value.trim(),correo=$('gCorreo').value.trim(),notas=$('gNotas').value;
     if(!palabra){toast('Elige una palabra para volver a tu caso');return}
@@ -1627,11 +1650,12 @@
       btns.forEach(b=>b.disabled=false);
       if(!r.ok){
         if(r.error==='palabra_ocupada')toast('Esa palabra ya es de otro caso: elige otra');
-        else if(r.error==='clave'){toast('La clave del board cambió');reabrirGate()}
+        else if(r.error==='clave'){toast('La clave del board cambió');reabrirGate(r.error)}
         else toast('No se guardó: '+r.error);
         return}
       if(!r.caso_id){$('gWeb').value='';toast('No se guardó: vuelve a intentar');return}
       caso.caso_id=r.caso_id;caso.palabra=r.palabra||payload.palabra;caso.correo=correo;caso.nombre_caso=nombre||'Caso sin nombre';caso.notas_caso=notas;caso.version=r.version;
+      if(typeof rememberPresentationRead==='function')rememberPresentationRead({caseId:r.caso_id,revision:r.version,scenarios:payload.escenarios});
       pintaCaso();guardarDraft();cerrarOverlays();
       toast(r.emailed?'Caso guardado · correo con la palabra enviado':'Caso guardado · palabra: '+caso.palabra)
     }catch(e){btns.forEach(b=>b.disabled=false);encolar(payload);toast('Sin conexión: se guardará al reconectar')}
@@ -1641,7 +1665,7 @@
     if(!caso.caso_id||modoLocal){toast(modoLocal?'Estado local (sin nube)':'Guarda el caso para que el estado viva en el Sheet');return}
     await postSeguimiento({tipo:'estado',caso_id:caso.caso_id,estado:nuevo,request_id:nuevoRequestId()},'Estado: '+nuevo)
   }
-  async function postSeguimiento(payload,okMsg){try{const r=await apiPost(payload);if(r.ok){toast(okMsg)}else if(r.error==='clave'){reabrirGate()}else toast('No se registró: '+r.error)}catch(e){encolar(payload);toast('Sin conexión: se registrará al reconectar')}}
+  async function postSeguimiento(payload,okMsg){try{const r=await apiPost(payload);if(r.ok){toast(okMsg)}else if(r.error==='clave'){reabrirGate(r.error)}else toast('No se registró: '+r.error)}catch(e){encolar(payload);toast('Sin conexión: se registrará al reconectar')}}
   function encolar(payload){try{let q=JSON.parse(localStorage.getItem(LS.cola)||'[]');
     if(payload.tipo==='guardar')q=q.filter(x=>!(x.tipo==='guardar'&&((x.caso_id&&x.caso_id===payload.caso_id)||(!x.caso_id&&!payload.caso_id&&x.palabra===payload.palabra))));
     q.push(payload);localStorage.setItem(LS.cola,JSON.stringify(q));const dot=$('syncDot');dot.className='sync-dot err';dot.textContent='· pendiente de sincronizar'}catch(e){}}
@@ -1659,7 +1683,7 @@
         }catch(e){resto.push(payload)}}
       let actual;try{actual=JSON.parse(localStorage.getItem(LS.cola)||'[]')}catch(e){actual=q}
       localStorage.setItem(LS.cola,JSON.stringify(resto.concat(actual.slice(q.length))));
-      if(claveVieja)reabrirGate();
+      if(claveVieja)reabrirGate('clave');
       else if(!resto.length&&!conflicto){toast('Cambios pendientes sincronizados');pintaCaso()}
     }finally{drenando=false}}
   function whatsApp(){
@@ -1669,7 +1693,18 @@
     window.open('https://wa.me/'+(num?num:'')+'?text='+encodeURIComponent(linea),'_blank')
   }
   /* ================== GATE / MODALES ================== */
-  function reabrirGate(){localStorage.removeItem(LS.clave);clave='';$('gate').classList.remove('off');$('gateErr').textContent='La clave cambió o es incorrecta'}
+  // Códigos de rechazo de credencial: portero.js:309 ∩ yod-portal/os/app.js:134 (rechazoAcceso), más «http 401/403» que ese portal ya trata como texto.
+  // Cualquier otro motivo (servidor, tiempo agotado, error de hoja…) NO autoriza borrar pyod_clave_v1: es la sesión compartida de todo YOD OS.
+  function esRechazoDeCredencial(err){return ['clave','liga','expirado','revocado','sin_sesion','unauthorized','forbidden','http 401','http 403'].includes(String(err&&err.message||err||'').trim().toLowerCase())}
+  function reabrirGate(motivo){
+    const credencial=esRechazoDeCredencial(motivo);
+    // Fase 1 (T-204): con el cargador activo la sesión rechazada se cierra con su guardia de carrera (solo se suelta la llave si sigue siendo el token rechazado,
+    // y se purgan las copias); sin él, o con ?cargador=legacy, el borrado de siempre.
+    if(credencial&&typeof window!=='undefined'&&window.YodCargador&&window.YodCargador.v&&!window.YodCargador.legacy&&window.YodCargador.sesion&&typeof window.YodCargador.sesion.cerrar==='function'){window.YodCargador.sesion.cerrar({token:clave,motivo:String(motivo&&motivo.message||motivo)});clave=''}
+    else if(credencial){localStorage.removeItem(LS.clave);clave=''}
+    const gate=$('gate');gate.classList.remove('off');gate.style.removeProperty('display');gate.removeAttribute('aria-hidden');
+    $('gateErr').textContent=credencial?'La clave cambió o es incorrecta':'El tablero no pudo leer la lista ('+String(motivo&&motivo.message||motivo||'sin detalle').slice(0,80)+'). Tu sesión sigue abierta; vuelve a intentar recargando la página.'
+  }
   async function intentarEntrar(){
     const v=$('gateClave').value.trim();if(!v){$('gateErr').textContent='Escribe la clave';return}
     $('gateBtn').disabled=true;$('gateErr').textContent='';
@@ -1693,7 +1728,7 @@
   $('casosCerrar').onclick=cerrarOverlays;
   $('btnAbrirPalabra').onclick=()=>abrirPorPalabra($('abrirPalabra').value);
   $('abrirPalabra').addEventListener('keydown',e=>{if(e.key==='Enter')abrirPorPalabra($('abrirPalabra').value)});
-  $('btnNuevo').onclick=()=>{Object.entries(DEFAULTS).forEach(([id,v])=>setControl(id,v));caso={caso_id:'',palabra:'',correo:caso.correo,nombre_caso:'',estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'',version:0};escInicial('Base');calculate();pintaCaso();toast('Caso nuevo: supuestos de Guaymas SFF (limpios)')};
+  $('btnNuevo').onclick=()=>intakeBoard.open();
   $('btnSeguimiento').onclick=()=>$('segPanel').classList.toggle('on');
   $('btnSegPaso').onclick=()=>{const v=$('segSiguiente').value.trim();caso.siguiente_paso=v;pintaCaso();guardarDraft();if(caso.caso_id&&!modoLocal)postSeguimiento({tipo:'estado',caso_id:caso.caso_id,siguiente_paso:v,request_id:nuevoRequestId()},'Siguiente paso fijado')};
   $('btnSegNota').onclick=()=>{const v=$('segNota').value.trim();if(!v)return;if(!caso.caso_id){toast('Guarda el caso primero');return}const sello=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit'});caso.notas_seguimiento=(caso.notas_seguimiento?caso.notas_seguimiento+'\n':'')+sello+' · '+v;$('segNota').value='';pintaCaso();guardarDraft();if(!modoLocal)postSeguimiento({tipo:'estado',caso_id:caso.caso_id,nota:v,request_id:nuevoRequestId()},'Nota registrada')};
@@ -1703,14 +1738,27 @@
   $('gateLocal').onclick=modoSinConexion;
   document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)cerrarOverlays()}));
   window.addEventListener('online',drenarCola);setInterval(drenarCola,25000);
-  cargarDraft();if(!escenarios.length)escInicial('Base');calculate();pintaCaso();
+  intakeBoard=PPPIntake.mountBoard({type:'residencial',controls,adapter:PPPIntake.nativeAdapter({type:'residencial',get:apiGet,post:apiPost}),onStart:(draft,receipt)=>{
+    state=null;escenarios=[];escActivo='';caso={caso_id:receipt?.caso_id||'',palabra:receipt?.palabra||'',correo:caso.correo,nombre_caso:draft.nombre_caso,estado:'EXPLORACIÓN',siguiente_paso:'',notas_seguimiento:'',notas_caso:'Ubicación: '+draft.ubicacion+(draft.fuente?'\nFuente: '+draft.fuente:''),version:0};pintaCaso();
+  },onExit:()=>{calculate();pintaCaso();}});
+  function presentationContext(){
+    if(intakeBoard?.blocking)return intakeBoard.presentationContext();
+    return PPPPresentations.legacyContext(presentationSaved,{caseId:caso.caso_id,revision:caso.version,scenarios:escenarios,active:escActivo,inputs:inputValues(),modelType:'residencial',name:caso.nombre_caso,online:!modoLocal,extras:{vivienda:viviendaClone(vivienda)}});
+  }
+  const presentationIdentity=()=>{try{return clave&&localStorage.getItem(LS.clave)===clave?clave:'';}catch{return '';}};
+  const presentationTransport=PPPPresentations.cloudTransport({getIdentity:presentationIdentity,resolve:payload=>apiPost({tipo:'despacho-v1',operation:'resolvePresentationContext',payload})});
+  const presentations=PPPPresentations.mount({read:presentationContext,transport:presentationTransport,getIdentity:presentationIdentity,save:()=>{if(intakeBoard?.blocking){void intakeBoard.flush();intakeBoard.paint();}else $('btnGuardar').click();}});
+  const intakeRequested=new URLSearchParams(location.search).get('new')==='1'&&!new URLSearchParams(location.search).get('open');
+  if(intakeRequested)intakeBoard.open();
+  if(!intakeRequested){cargarDraft();if(!escenarios.length)escInicial('Base');calculate();pintaCaso();}
   if(modoLocal){$('gate').classList.add('off');$('modoLocalBanner').classList.add('on')}
-  else if(clave){apiGet({recurso:'lista'}).then(r=>{if(r.ok){casosCache=r.casos||[];cfgBoard=r.config||{};$('gate').classList.add('off');drenarCola();procesarOpen()}else{reabrirGate()}}).catch(()=>{modoSinConexion();toast('Sin conexión: trabajando en modo local')})}
+  else if(clave){apiGet({recurso:'lista'}).then(r=>{if(r.ok){casosCache=r.casos||[];cfgBoard=r.config||{};$('gate').classList.add('off');drenarCola();procesarOpen()}else{reabrirGate(r.error)}}).catch(()=>{modoSinConexion();toast('Sin conexión: trabajando en modo local')})}
 })();
 </script>
-<script src="modelos.js?v=1"></script>
-<script src="portero.js?v=relevo9"></script>
-<script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=audit-20260930"></script>
-<script src="ppp-expediente.js?v=20261009-1"></script>
+<script src="modelos.js?v=20261112-ppp2s"></script>
+<script src="portero.js?v=20261112-ppp2s"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=20261031-fase1-e2"></script>
+<script src="ppp-expediente.js?v=20261112-ppp2s"></script>
 </body>
 </html>
+

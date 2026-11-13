@@ -35,3 +35,26 @@ test('Per-case cache preserves Local, rent zero, missing CUS and metadata drafts
  const restored=setup();restored.restore(cached(a.id,storage));assert.deepEqual(restored.pending,first.pending);assert.equal(cached(a.id,storage).metadataDraft.notas_caso,'Pendiente para A');removeCache('case-B',storage);assert.ok(cached(a.id,storage));
  data.set('pyod_patrimonial_native_v1',JSON.stringify(first));data.delete('pyod_patrimonial_native_v1:'+a.id);assert.deepEqual(cached(a.id,storage),first);assert.equal(cached('foreign',storage),null);
 });
+
+function inactiveCapModel(){const m=copy(fixture),e=m.escenarios.find(e=>e.id===m.activo),s=m.estados[m.activo];e.inputs.inCapRateMercado=0;e.inputs.inValorM2Zona=25000;s.porM2=true;s.p.capMercado=0;s.inactive_fields=['inCapRateMercado'];return m;}
+test('zero cap rate requires the exact inactive field contract and remains unwriteable',()=>{
+ const m=inactiveCapModel(),before=JSON.stringify(m),s=setup();s.load(m);
+ assert.equal(s.active().inputs.inCapRateMercado,0);assert.equal(s.fieldNote('inCapRateMercado'),'No aplicado: valuación por m²');assert.equal(s.fieldNote('inValorM2Zona'),'');
+ for(const v of [0,null,.08,4.99,14.01])assert.throws(()=>s.change('inCapRateMercado',v),/campo_invalido/);
+ assert.deepEqual(s.pending,{});assert.equal(JSON.stringify(m),before);s.change('inCapRateMercado',8);assert.equal(s.pending.inCapRateMercado,8);assert.equal(s.active().inputs.inCapRateMercado,0);
+});
+test('missing or incoherent inactive metadata never turns an invalid cap rate into a valid rate',()=>{
+ for(const mutate of [m=>delete m.estados[m.activo].inactive_fields,m=>m.estados[m.activo].inactive_fields=[],m=>m.estados[m.activo].inactive_fields=['inValorM2Zona'],m=>m.estados[m.activo].inactive_fields.push('inCapRateMercado'),m=>m.escenarios[0].inputs.inCapRateMercado=8,m=>m.escenarios[0].inputs.inValorM2Zona=0,m=>m.estados[m.activo].porM2=false,m=>m.estados[m.activo].p.capMercado=.08]){
+  const m=inactiveCapModel();mutate(m);assert.throws(()=>validate(m,m.caso_id));
+ }
+ const m=copy(fixture);m.escenarios[0].inputs.inCapRateMercado=0;assert.throws(()=>validate(m,m.caso_id));
+});
+
+test('native editor shows an inactive field as unapplied while retaining original edit constraints',()=>{
+ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),source=fs.readFileSync(path.join(__dirname,'../ppp-patrimonial-native.js'),'utf8');
+ const start=source.indexOf('const editor=c=>'),end=source.indexOf('\n      const resultNames=',start);assert.ok(start>=0&&end>start);
+ const store=setup();store.load(inactiveCapModel());const field=store.model.campos.find(c=>c.id==='inCapRateMercado');
+ const render=()=>vm.runInNewContext(source.slice(start,end)+';editor',{store,v:store.values(),escape:String,labelFor:id=>id})(field);
+ let html=render();assert.match(html,/value=""/);assert.match(html,/min="5" max="14"/);assert.match(html,/required/);assert.match(html,/No aplicado: valuación por m²/);assert.equal(store.active().inputs.inCapRateMercado,0);
+ store.change('inCapRateMercado',8);html=render();assert.match(html,/value="8"/);assert.equal(store.active().inputs.inCapRateMercado,0);
+});

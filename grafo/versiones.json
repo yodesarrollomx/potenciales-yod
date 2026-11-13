@@ -1,0 +1,808 @@
+{
+ "esquema": 1,
+ "aprobado": "G-20261112-2014",
+ "actualizado": "2026-11-12T20:14:09-07:00",
+ "versiones": [
+  {
+   "id": "G-20261111-2354",
+   "armado": "2026-11-11T23:54:15-07:00",
+   "fecha": "11-nov 23:54",
+   "estado": "anterior",
+   "huella": "1582bc4f3dbb",
+   "piezas": 3202,
+   "ligas": 10665,
+   "repos": {
+    "yodesarrollomx/yod-portal": "ed19f0b",
+    "yodesarrollomx/potenciales-yod": "1e8ae56",
+    "yodesarrollomx/yodesarrollo-board": "9f93328",
+    "yodesarrollomx/yod-despacho": "d89b151",
+    "yodesarrollomx/board-aurum": "93bf624",
+    "yodesarrollomx/board-flujo-yod": "e9d122f",
+    "yodesarrollomx/real-miramar-board": "9db34a9",
+    "yodesarrollomx/interiores-aurum": "8bcdfc3",
+    "yodesarrollomx/aurum-board": "e3dd428",
+    "yodesarrollomx/sala-edicion": "07a7076",
+    "yodesarrollomx/plan-potencial": "9f036c7",
+    "yodesarrollomx/crokiss": "7a7a557",
+    "yodesarrollomx/Co-desarrolladores-Yod": "bdaf46b",
+    "yodesarrollomx/alquimia-urbana": "0c0da90",
+    "yodesarrollomx/aurum-experiencia": "70c63b3",
+    "yodesarrollomx/pintarron": "0979d3f",
+    "yodesarrollomx/prueba-dominio": "715c6c7",
+    "yodesarrollomx/yodesarrollomx.github.io": "a5680f2",
+    "alexpueblag/pizarron-claude-yodbot": "31593a1",
+    "yodesarrollo/amalaya-board": "e3f94e6",
+    "aurumarquitectos/experiencia": "89d29e8",
+    "aurumarquitectos/aurumarquitectos.github.io": "d33f765",
+    "alexpueblag/codesarrolladores-libre": "96d26c5",
+    "alexpueblag/yod-terreno-si": "09f75f4",
+    "alexpueblag/yod-terreno-dormido": "1159ca5"
+   },
+   "nota": "Primera versión del grafo dentro del repositorio."
+  },
+  {
+   "id": "G-20261112-1056",
+   "armado": "2026-11-12T10:56:38-07:00",
+   "fecha": "12-nov 10:56",
+   "estado": "anterior",
+   "huella": "2b8c8db2d6e9",
+   "piezas": 3145,
+   "ligas": 10479,
+   "repos": {
+    "yodesarrollomx/yod-portal": "f34255b",
+    "yodesarrollomx/potenciales-yod": "ec704b0",
+    "yodesarrollomx/yodesarrollo-board": "888cbd0",
+    "yodesarrollomx/yod-despacho": "d89b151",
+    "yodesarrollomx/board-aurum": "93bf624",
+    "yodesarrollomx/board-flujo-yod": "e9d122f",
+    "yodesarrollomx/real-miramar-board": "9db34a9",
+    "yodesarrollomx/interiores-aurum": "8bcdfc3",
+    "yodesarrollomx/aurum-board": "e3dd428",
+    "yodesarrollomx/sala-edicion": "55cfff2",
+    "yodesarrollomx/plan-potencial": "9f036c7",
+    "yodesarrollomx/crokiss": "7a7a557",
+    "yodesarrollomx/Co-desarrolladores-Yod": "bdaf46b",
+    "yodesarrollomx/alquimia-urbana": "0c0da90",
+    "yodesarrollomx/aurum-experiencia": "70c63b3",
+    "yodesarrollomx/pintarron": "0979d3f",
+    "yodesarrollomx/prueba-dominio": "715c6c7",
+    "yodesarrollomx/yodesarrollomx.github.io": "a5680f2",
+    "alexpueblag/pizarron-claude-yodbot": "31593a1",
+    "yodesarrollo/amalaya-board": "e3f94e6",
+    "aurumarquitectos/experiencia": "89d29e8",
+    "aurumarquitectos/aurumarquitectos.github.io": "d33f765",
+    "alexpueblag/codesarrolladores-libre": "96d26c5",
+    "alexpueblag/yod-terreno-si": "09f75f4",
+    "alexpueblag/yod-terreno-dormido": "1159ca5"
+   },
+   "cambios": {
+    "piezas_mas": {
+     "documento": 1,
+     "codigo": 3,
+     "pagina": 1,
+     "prueba": 3,
+     "contrato": 1
+    },
+    "piezas_menos": {
+     "codigo": 3,
+     "prueba": 1,
+     "documento": 5,
+     "pagina": 1,
+     "sistema": 1,
+     "motor": 1,
+     "almacen": 2,
+     "contrato": 18,
+     "proceso": 5,
+     "paso": 24,
+     "endpoint": 1,
+     "llave": 4
+    },
+    "piezas_cambiadas": 28,
+    "ligas_mas": 36,
+    "ligas_menos": 222,
+    "piezas": 3145,
+    "ligas": 10479,
+    "ppp": {},
+    "primer_ppp": false,
+    "repos": [
+     {
+      "repo": "yodesarrollomx/potenciales-yod",
+      "de": "1e8ae56",
+      "a": "ec704b0",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 10
+     },
+     {
+      "repo": "yodesarrollomx/sala-edicion",
+      "de": "07a7076",
+      "a": "55cfff2",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 6
+     },
+     {
+      "repo": "yodesarrollomx/yod-portal",
+      "de": "ed19f0b",
+      "a": "f34255b",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 5
+     },
+     {
+      "repo": "yodesarrollomx/yodesarrollo-board",
+      "de": "9f93328",
+      "a": "888cbd0",
+      "nuevos": 8,
+      "quitados": 0,
+      "cambiados": 3
+     }
+    ],
+    "atlas": {
+     "componentes_nuevos": [],
+     "componentes_fuera": [],
+     "conexiones_mas": 1,
+     "conexiones_menos": 0,
+     "estados": [],
+     "propuestas": [],
+     "revision": "2026-11-11.grafo-accesos.3"
+    },
+    "sin_clon": [],
+    "sin_campo": [],
+    "notas": []
+   },
+   "ia": null,
+   "ia_informe": {
+    "pedidos": [
+     "claude"
+    ],
+    "gano": null,
+    "fallos": {
+     "claude": "JSONDecodeError: Expecting ',' delimiter: line 39 column 6 (char 2818)"
+    },
+    "segundos": 18.2
+   },
+   "pedido": {
+    "por": "alexpueblag",
+    "numero": 68,
+    "motivo": ""
+   }
+  },
+  {
+   "id": "G-20261112-1203",
+   "armado": "2026-11-12T12:03:04-07:00",
+   "fecha": "12-nov 12:03",
+   "estado": "anterior",
+   "huella": "df60fec4df95",
+   "piezas": 3145,
+   "ligas": 10479,
+   "repos": {
+    "yodesarrollomx/yod-portal": "f34255b",
+    "yodesarrollomx/potenciales-yod": "78c045d",
+    "yodesarrollomx/yodesarrollo-board": "888cbd0",
+    "yodesarrollomx/yod-despacho": "d89b151",
+    "yodesarrollomx/board-aurum": "93bf624",
+    "yodesarrollomx/board-flujo-yod": "e9d122f",
+    "yodesarrollomx/real-miramar-board": "9db34a9",
+    "yodesarrollomx/interiores-aurum": "8bcdfc3",
+    "yodesarrollomx/aurum-board": "e3dd428",
+    "yodesarrollomx/sala-edicion": "55cfff2",
+    "yodesarrollomx/plan-potencial": "9f036c7",
+    "yodesarrollomx/crokiss": "7a7a557",
+    "yodesarrollomx/Co-desarrolladores-Yod": "bdaf46b",
+    "yodesarrollomx/alquimia-urbana": "0c0da90",
+    "yodesarrollomx/aurum-experiencia": "70c63b3",
+    "yodesarrollomx/pintarron": "0979d3f",
+    "yodesarrollomx/prueba-dominio": "715c6c7",
+    "yodesarrollomx/yodesarrollomx.github.io": "a5680f2",
+    "alexpueblag/pizarron-claude-yodbot": "31593a1",
+    "yodesarrollo/amalaya-board": "e3f94e6",
+    "aurumarquitectos/experiencia": "89d29e8",
+    "aurumarquitectos/aurumarquitectos.github.io": "d33f765",
+    "alexpueblag/codesarrolladores-libre": "96d26c5",
+    "alexpueblag/yod-terreno-si": "09f75f4",
+    "alexpueblag/yod-terreno-dormido": "1159ca5"
+   },
+   "cambios": {
+    "piezas_mas": {},
+    "piezas_menos": {},
+    "piezas_cambiadas": 11,
+    "ligas_mas": 0,
+    "ligas_menos": 0,
+    "piezas": 3145,
+    "ligas": 10479,
+    "ppp": {},
+    "primer_ppp": false,
+    "repos": [
+     {
+      "repo": "yodesarrollomx/potenciales-yod",
+      "de": "ec704b0",
+      "a": "78c045d",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 10
+     }
+    ],
+    "atlas": {
+     "componentes_nuevos": [],
+     "componentes_fuera": [],
+     "conexiones_mas": 0,
+     "conexiones_menos": 0,
+     "estados": [],
+     "propuestas": [],
+     "revision": "2026-11-11.grafo-accesos.3"
+    },
+    "sin_clon": [],
+    "sin_campo": [],
+    "notas": []
+   },
+   "ia": {
+    "titulo": "Grafo rehecho sin cambios de estructura: sólo se tocaron archivos del propio motor",
+    "resumen": "El grafo se rehízo y su estructura quedó igual: 3,145 piezas y 10,479 ligas, sin piezas ni ligas nuevas o retiradas. Hubo 11 piezas con cambios, todas en el repositorio de potenciales. Son archivos del motor que rehace el grafo, sus avisos, sus pruebas, su documentación y el flujo automático que lo ejecuta. El atlas no muestra componentes nuevos ni fuera, ni cambios en conexiones, estados o propuestas. No hay campos que desaparezcan para las presentaciones.",
+    "presentaciones": "Las presentaciones para Cliente o inversionista, Dueño del terreno y Departamentos, lotes o casas siguen leyendo el grafo igual: no desaparece ningún campo y no hay piezas ni ligas nuevas o retiradas.",
+    "recomendacion": "aprobar",
+    "cambios": [
+     {
+      "que": "Ajustes en el motor que rehace el grafo (avisos, uso de IA y refresco)",
+      "donde": "Repositorio de potenciales, carpeta del motor del grafo",
+      "importa": "Cambia la forma en que se genera el grafo, aunque el resultado en piezas y ligas no varió."
+     },
+     {
+      "que": "Cambio en el flujo automático que rehace el grafo",
+      "donde": "Repositorio de potenciales, flujo de automatización del grafo",
+      "importa": "Define cuándo y cómo se vuelve a generar el grafo; conviene confirmar que sigue corriendo como se espera."
+     },
+     {
+      "que": "Actualización de pruebas del motor y de control/estado del grafo",
+      "donde": "Repositorio de potenciales, carpetas de pruebas",
+      "importa": "Indica que la verificación automática se ajustó junto con el motor."
+     },
+     {
+      "que": "Cambio en el script de estado del grafo",
+      "donde": "Repositorio de potenciales, carpeta de scripts",
+      "importa": "Afecta cómo se reporta la salud del grafo."
+     },
+     {
+      "que": "Actualización de documentación y del archivo de impacto en la arquitectura",
+      "donde": "Repositorio de potenciales, documentación y archivo de arquitectura",
+      "importa": "Mantiene la descripción del grafo al día con los cambios del motor."
+     }
+    ],
+    "riesgos": [
+     "Se modificó el motor y el flujo automático a la vez; un error ahí podría notarse hasta la siguiente regeneración del grafo.",
+     "Que la estructura no cambie es buena señal, pero no prueba por sí sola que el motor modificado se comporte igual en todos los casos."
+    ]
+   },
+   "ia_informe": {
+    "pedidos": [
+     "claude"
+    ],
+    "gano": "claude:claude-sonnet-5-5",
+    "fallos": {},
+    "segundos": 6.7,
+    "reintentos": []
+   },
+   "pedido": {
+    "por": "alexpueblag",
+    "numero": 73,
+    "motivo": "borrador limpio tras el PR 72 (el resumen ya no nombra lo excluido por DEC-19)"
+   }
+  },
+  {
+   "id": "G-20261112-1420",
+   "armado": "2026-11-12T14:20:17-07:00",
+   "fecha": "12-nov 14:20",
+   "estado": "anterior",
+   "huella": "6767abefa075",
+   "piezas": 3167,
+   "ligas": 10529,
+   "repos": {
+    "yodesarrollomx/yod-portal": "f6f342b",
+    "yodesarrollomx/potenciales-yod": "15a27a2",
+    "yodesarrollomx/yodesarrollo-board": "53893b3",
+    "yodesarrollomx/yod-despacho": "d89b151",
+    "yodesarrollomx/board-aurum": "93bf624",
+    "yodesarrollomx/board-flujo-yod": "e9d122f",
+    "yodesarrollomx/real-miramar-board": "9db34a9",
+    "yodesarrollomx/interiores-aurum": "8bcdfc3",
+    "yodesarrollomx/aurum-board": "e3dd428",
+    "yodesarrollomx/sala-edicion": "55cfff2",
+    "yodesarrollomx/plan-potencial": "9f036c7",
+    "yodesarrollomx/crokiss": "7a7a557",
+    "yodesarrollomx/Co-desarrolladores-Yod": "bdaf46b",
+    "yodesarrollomx/alquimia-urbana": "0c0da90",
+    "yodesarrollomx/aurum-experiencia": "70c63b3",
+    "yodesarrollomx/pintarron": "0979d3f",
+    "yodesarrollomx/prueba-dominio": "715c6c7",
+    "yodesarrollomx/yodesarrollomx.github.io": "a5680f2",
+    "alexpueblag/pizarron-claude-yodbot": "31593a1",
+    "yodesarrollo/amalaya-board": "e3f94e6",
+    "aurumarquitectos/experiencia": "89d29e8",
+    "aurumarquitectos/aurumarquitectos.github.io": "d33f765",
+    "alexpueblag/codesarrolladores-libre": "96d26c5",
+    "alexpueblag/yod-terreno-si": "09f75f4",
+    "alexpueblag/yod-terreno-dormido": "1159ca5"
+   },
+   "cambios": {
+    "piezas_mas": {
+     "documento": 3,
+     "pagina": 1,
+     "codigo": 4,
+     "datos": 2,
+     "apps_script": 1,
+     "prueba": 6,
+     "sistema": 1,
+     "motor": 1,
+     "almacen": 1,
+     "externo": 1,
+     "contrato": 1
+    },
+    "piezas_menos": {},
+    "piezas_cambiadas": 25,
+    "ligas_mas": 51,
+    "ligas_menos": 1,
+    "piezas": 3167,
+    "ligas": 10529,
+    "ppp": {},
+    "primer_ppp": false,
+    "repos": [
+     {
+      "repo": "yodesarrollomx/potenciales-yod",
+      "de": "78c045d",
+      "a": "15a27a2",
+      "nuevos": 17,
+      "quitados": 0,
+      "cambiados": 9
+     },
+     {
+      "repo": "yodesarrollomx/yod-portal",
+      "de": "f34255b",
+      "a": "f6f342b",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 13
+     },
+     {
+      "repo": "yodesarrollomx/yodesarrollo-board",
+      "de": "888cbd0",
+      "a": "53893b3",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 0
+     }
+    ],
+    "atlas": {
+     "componentes_nuevos": [
+      "SYS-PPP2",
+      "GAS-PPP2",
+      "SHEET-PPP2",
+      "EXT-ANTHROPIC"
+     ],
+     "componentes_fuera": [],
+     "conexiones_mas": 6,
+     "conexiones_menos": 1,
+     "estados": [],
+     "propuestas": [],
+     "revision": "2026-11-12.grafo-vivo.1"
+    },
+    "sin_clon": [],
+    "sin_campo": [],
+    "notas": [
+     "potenciales-yod/ppp2.js L14: llama a un Apps Script que el grafo no conoce (AKfycbywqwBh…)"
+    ]
+   },
+   "ia": {
+    "titulo": "Nuevo módulo PPP2 con servicio externo y una conexión sin identificar",
+    "resumen": "El grafo pasó a 3,167 piezas y 10,529 ligas. Lo principal es la llegada de PPP2, un módulo nuevo con su sistema, su script de servidor, su hoja de datos y un servicio externo de inteligencia artificial (Anthropic). Se sumaron 22 piezas y 25 cambiaron en total. Las ligas subieron en 51 y bajó 1. También se tocaron archivos de accesos y de arquitectura en el portal. No se quitó ninguna pieza ni se perdió ningún campo que usen las presentaciones. Hay un aviso: PPP2 llama a un script de servidor que el grafo no reconoce.",
+    "presentaciones": "Las presentaciones para cliente o inversionista, dueño del terreno y departamentos, lotes o casas no pierden ningún campo. No se detecta nada que las rompa. Conviene confirmar que PPP2 no cambie los datos que ellas leen.",
+    "recomendacion": "revisar",
+    "cambios": [
+     {
+      "que": "Se agregó PPP2 como sistema nuevo, con su script de servidor y su hoja de datos.",
+      "donde": "Mapa de componentes del grafo y repositorio de potenciales.",
+      "importa": "Es una pieza nueva de la que dependerán otras. Conviene saber quién es su responsable y qué información guarda."
+     },
+     {
+      "que": "Aparece un servicio externo de inteligencia artificial (Anthropic) conectado a PPP2.",
+      "donde": "Componentes externos del grafo.",
+      "importa": "Es la primera vez que figura este proveedor. Hay que confirmar qué información se le envía y quién autorizó su uso."
+     },
+     {
+      "que": "Se creó un módulo de generación de libro con catálogo de preguntas, un plan de ejemplo y reglas de consejo por edad.",
+      "donde": "Carpeta del libro dentro de PPP2.",
+      "importa": "Define el contenido que PPP2 entrega. Los datos de ejemplo permiten comprobar que el resultado es consistente."
+     },
+     {
+      "que": "Se añadieron una página nueva, su código y documentación de uso e instalación.",
+      "donde": "Repositorio de potenciales y su carpeta de documentos.",
+      "importa": "Es la parte visible de PPP2. Con la guía de instalación se puede replicar o auditar el servidor."
+     },
+     {
+      "que": "Se sumaron 6 pruebas automáticas que cubren el libro, el servidor y el navegador.",
+      "donde": "Carpeta de pruebas del repositorio de potenciales.",
+      "importa": "Reducen el riesgo de fallas al publicar el módulo nuevo."
+     },
+     {
+      "que": "Se modificaron archivos de accesos y de políticas de acceso, y sus pruebas.",
+      "donde": "Pantalla de accesos de potenciales y archivos de política de acceso del portal.",
+      "importa": "Los accesos controlan quién ve qué. Los datos no muestran el detalle, así que no se sabe si cambió algún permiso."
+     },
+     {
+      "que": "Se actualizaron las fichas, mapas, contratos y el modelo de arquitectura del portal, junto con el catálogo y su reporte de salud.",
+      "donde": "Documentación de arquitectura y archivos del catálogo del portal.",
+      "importa": "Mantiene la documentación alineada con PPP2. Se esperaría que describa el módulo nuevo."
+     },
+     {
+      "que": "Se ajustaron el motor del grafo, su refresco y la verificación automática.",
+      "donde": "Motor del grafo y flujo de verificación del repositorio de potenciales.",
+      "importa": "Es la herramienta que produce este mismo reporte. Un error ahí afectaría la confianza en el grafo."
+     }
+    ],
+    "riesgos": [
+     "PPP2 llama a un script de servidor que el grafo no conoce. Puede ser un servicio no registrado o uno distinto del previsto, y hay que identificarlo.",
+     "Un proveedor externo de inteligencia artificial entra al grafo. Falta confirmar qué datos recibe y bajo qué condiciones.",
+     "Se tocaron archivos de accesos sin que los datos indiquen qué cambió en los permisos.",
+     "No hay propuestas ni estados registrados en el atlas para los componentes nuevos, así que su aprobación formal queda pendiente.",
+     "El módulo es nuevo y depende de una hoja de datos y un script, que son piezas fáciles de modificar fuera de revisión."
+    ]
+   },
+   "ia_informe": {
+    "pedidos": [
+     "claude"
+    ],
+    "gano": "claude:claude-sonnet-5-5",
+    "fallos": {},
+    "segundos": 17.7,
+    "reintentos": []
+   },
+   "pedido": {
+    "por": "alexpueblag",
+    "numero": 82,
+    "motivo": "borrador limpio tras el PR 81 (el informe del rehecho ya no nombra lo excluido por DEC-19); reemplaza al G-20261112-1351, que no se aprueba"
+   }
+  },
+  {
+   "id": "G-20261112-1823",
+   "armado": "2026-11-12T18:23:14-07:00",
+   "fecha": "12-nov 18:23",
+   "estado": "anterior",
+   "huella": "574fbb173df3",
+   "piezas": 3173,
+   "ligas": 10552,
+   "repos": {
+    "yodesarrollomx/yod-portal": "01d77be",
+    "yodesarrollomx/potenciales-yod": "3a855ba",
+    "yodesarrollomx/yodesarrollo-board": "3848603",
+    "yodesarrollomx/yod-despacho": "d89b151",
+    "yodesarrollomx/board-aurum": "93bf624",
+    "yodesarrollomx/board-flujo-yod": "e9d122f",
+    "yodesarrollomx/real-miramar-board": "9db34a9",
+    "yodesarrollomx/interiores-aurum": "8bcdfc3",
+    "yodesarrollomx/aurum-board": "e3dd428",
+    "yodesarrollomx/sala-edicion": "051785e",
+    "yodesarrollomx/plan-potencial": "9f036c7",
+    "yodesarrollomx/crokiss": "7a7a557",
+    "yodesarrollomx/Co-desarrolladores-Yod": "bdaf46b",
+    "yodesarrollomx/alquimia-urbana": "0c0da90",
+    "yodesarrollomx/aurum-experiencia": "70c63b3",
+    "yodesarrollomx/pintarron": "0979d3f",
+    "yodesarrollomx/prueba-dominio": "715c6c7",
+    "yodesarrollomx/yodesarrollomx.github.io": "a5680f2",
+    "alexpueblag/pizarron-claude-yodbot": "31593a1",
+    "yodesarrollo/amalaya-board": "e3f94e6",
+    "aurumarquitectos/experiencia": "89d29e8",
+    "aurumarquitectos/aurumarquitectos.github.io": "d33f765",
+    "alexpueblag/codesarrolladores-libre": "96d26c5",
+    "alexpueblag/yod-terreno-si": "09f75f4",
+    "alexpueblag/yod-terreno-dormido": "1159ca5"
+   },
+   "cambios": {
+    "piezas_mas": {
+     "codigo": 3,
+     "prueba": 3,
+     "llave": 2
+    },
+    "piezas_menos": {
+     "codigo": 1,
+     "prueba": 1
+    },
+    "piezas_cambiadas": 43,
+    "ligas_mas": 28,
+    "ligas_menos": 5,
+    "piezas": 3173,
+    "ligas": 10552,
+    "ppp": {},
+    "primer_ppp": false,
+    "repos": [
+     {
+      "repo": "yodesarrollomx/potenciales-yod",
+      "de": "15a27a2",
+      "a": "3a855ba",
+      "nuevos": 6,
+      "quitados": 2,
+      "cambiados": 28
+     },
+     {
+      "repo": "yodesarrollomx/sala-edicion",
+      "de": "55cfff2",
+      "a": "051785e",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 4
+     },
+     {
+      "repo": "yodesarrollomx/yod-portal",
+      "de": "f6f342b",
+      "a": "01d77be",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 4
+     },
+     {
+      "repo": "yodesarrollomx/yodesarrollo-board",
+      "de": "53893b3",
+      "a": "3848603",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 3
+     }
+    ],
+    "atlas": {
+     "componentes_nuevos": [],
+     "componentes_fuera": [],
+     "conexiones_mas": 0,
+     "conexiones_menos": 0,
+     "estados": [],
+     "propuestas": [],
+     "revision": "2026-11-12.panorama-refresco.1"
+    },
+    "sin_clon": [],
+    "sin_respuesta": 0,
+    "sin_campo": [],
+    "notas": [
+     "potenciales-yod/ppp2.js L14: llama a un Apps Script que el grafo no conoce (AKfycbywqwBh…)"
+    ]
+   },
+   "ia": {
+    "titulo": "Grafo: el libro PPP2 cambia de piezas y hay una conexión externa sin registrar",
+    "resumen": "El grafo tiene 3,173 piezas y 10,552 conexiones. Se sumaron 8 piezas (3 de código, 3 de pruebas y 2 llaves), se quitaron 2 y se modificaron 43. Hay 28 conexiones nuevas y 5 menos. Casi todo ocurre en el libro PPP2 del repositorio de potenciales: se agregan un ciclo, una rejilla y una regeneración, y se retira el consejo por edad. El mapa de componentes no cambió. Un archivo llama a un Apps Script que el grafo no conoce, y eso conviene revisarlo.",
+    "presentaciones": "Las tres audiencias (cliente o inversionista, dueño del terreno, y departamentos, lotes o casas) siguen igual y no desaparece ningún campo. Aun así, se ajustó el aviso del grafo en la presentación, así que conviene revisar cómo se ve.",
+    "recomendacion": "revisar",
+    "cambios": [
+     {
+      "que": "Se agregaron tres piezas nuevas al libro PPP2: ciclo, regenerar y rejilla.",
+      "donde": "Repositorio de potenciales, carpeta del libro PPP2",
+      "importa": "Cambian la forma en que se arma y se rehace el libro, y por eso aparecen conexiones nuevas en el grafo."
+     },
+     {
+      "que": "Se retiró la pieza del consejo por edad y su archivo de prueba.",
+      "donde": "Repositorio de potenciales, libro PPP2 y pruebas",
+      "importa": "Esa función ya no existe. Hay que confirmar que fue una sustitución intencional por el ciclo y la rejilla, y no una pérdida."
+     },
+     {
+      "que": "Se sumaron pruebas nuevas: una de la ronda PPP2 y dos archivos de datos de prueba, uno para el ciclo y otro para la rejilla.",
+      "donde": "Repositorio de potenciales, carpeta de pruebas",
+      "importa": "Las piezas nuevas llegan con pruebas propias, lo cual es buena señal."
+     },
+     {
+      "que": "Se modificaron el servidor PPP2, el script de la página y la documentación de instalación y de uso.",
+      "donde": "Repositorio de potenciales: ppp2.js, servidor PPP2 y documentos",
+      "importa": "El cambio no se limita al libro. También toca la parte que ven y usan los equipos."
+     },
+     {
+      "que": "Se ajustó el motor que rehace el grafo, con sus avisos, láminas, refresco y flujos de automatización.",
+      "donde": "Repositorio de potenciales: motor del grafo y flujos de trabajo",
+      "importa": "Es el mecanismo que produce este mismo análisis, así que conviene confirmar que el grafo se sigue rehaciendo bien."
+     },
+     {
+      "que": "Hubo ajustes menores en producción histórica y mesa de selección.",
+      "donde": "Repositorio de sala de edición: un módulo y dos pruebas",
+      "importa": "Son cambios pequeños y acotados, sin piezas nuevas ni retiradas."
+     },
+     {
+      "que": "Se tocaron un flujo de pruebas, el modelo de arquitectura y una prueba de la oficina panorámica.",
+      "donde": "Repositorio del portal",
+      "importa": "Son actualizaciones de documentación y de pruebas, sin impacto visible."
+     },
+     {
+      "que": "Se actualizaron el aviso del grafo en la presentación y sus pruebas.",
+      "donde": "Repositorio del tablero de desarrollo",
+      "importa": "Es el punto donde las presentaciones leen el grafo, por lo que conviene verificar que se vean correctamente."
+     }
+    ],
+    "riesgos": [
+     "Una llamada en ppp2.js apunta a un Apps Script que el grafo no conoce. No se sabe si es intencional o si falta registrarlo.",
+     "El consejo por edad se eliminó y no se indica qué lo reemplaza. Si alguien dependía de él, podría faltar esa información.",
+     "El mismo cambio toca el motor que rehace el grafo y el servidor PPP2, así que un error se notaría en ambos lados.",
+     "Se agregaron 2 piezas de tipo llave que los datos no detallan. Conviene saber a qué corresponden.",
+     "No hubo cambios en el mapa de componentes. Si se esperaba que la reorganización del libro apareciera ahí, no se reflejó."
+    ]
+   },
+   "ia_informe": {
+    "pedidos": [
+     "claude"
+    ],
+    "gano": "claude:claude-sonnet-5-5",
+    "fallos": {},
+    "segundos": 16.2,
+    "reintentos": []
+   },
+   "pedido": {
+    "por": "alexpueblag",
+    "numero": 93,
+    "motivo": "reflejar lo fusionado el 12-nov por la tarde: vista previa segura (PR 89), sólo repositorios públicos, Accesos paciente, vigilante y DEC-21 (PR 91), la pastilla de las presentaciones (yodesarrollo-board PR 71), la prueba del Despacho (yod-portal PR 356) y la Sala (sala-edicion PR"
+   }
+  },
+  {
+   "id": "G-20261112-1900",
+   "armado": "2026-11-12T19:00:50-07:00",
+   "fecha": "12-nov 19:00",
+   "estado": "anterior",
+   "huella": "d458f5f4505c",
+   "piezas": 3174,
+   "ligas": 10553,
+   "repos": {
+    "yodesarrollomx/yod-portal": "01d77be",
+    "yodesarrollomx/potenciales-yod": "3a855ba",
+    "yodesarrollomx/yodesarrollo-board": "25de909",
+    "yodesarrollomx/yod-despacho": "d89b151",
+    "yodesarrollomx/board-aurum": "93bf624",
+    "yodesarrollomx/board-flujo-yod": "e9d122f",
+    "yodesarrollomx/real-miramar-board": "9db34a9",
+    "yodesarrollomx/interiores-aurum": "8bcdfc3",
+    "yodesarrollomx/aurum-board": "e3dd428",
+    "yodesarrollomx/sala-edicion": "051785e",
+    "yodesarrollomx/plan-potencial": "9f036c7",
+    "yodesarrollomx/crokiss": "7a7a557",
+    "yodesarrollomx/Co-desarrolladores-Yod": "bdaf46b",
+    "yodesarrollomx/alquimia-urbana": "0c0da90",
+    "yodesarrollomx/aurum-experiencia": "70c63b3",
+    "yodesarrollomx/pintarron": "0979d3f",
+    "yodesarrollomx/prueba-dominio": "715c6c7",
+    "yodesarrollomx/yodesarrollomx.github.io": "a5680f2",
+    "alexpueblag/pizarron-claude-yodbot": "31593a1",
+    "yodesarrollo/amalaya-board": "e3f94e6",
+    "aurumarquitectos/experiencia": "89d29e8",
+    "aurumarquitectos/aurumarquitectos.github.io": "d33f765",
+    "alexpueblag/codesarrolladores-libre": "96d26c5",
+    "alexpueblag/yod-terreno-si": "09f75f4",
+    "alexpueblag/yod-terreno-dormido": "1159ca5"
+   },
+   "cambios": {
+    "piezas_mas": {
+     "llave": 1
+    },
+    "piezas_menos": {},
+    "piezas_cambiadas": 3,
+    "ligas_mas": 1,
+    "ligas_menos": 0,
+    "piezas": 3174,
+    "ligas": 10553,
+    "ppp": {},
+    "primer_ppp": false,
+    "repos": [
+     {
+      "repo": "yodesarrollomx/yodesarrollo-board",
+      "de": "3848603",
+      "a": "25de909",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 2
+     }
+    ],
+    "atlas": {
+     "componentes_nuevos": [],
+     "componentes_fuera": [],
+     "conexiones_mas": 0,
+     "conexiones_menos": 0,
+     "estados": [],
+     "propuestas": [],
+     "revision": "2026-11-12.panorama-refresco.1"
+    },
+    "sin_clon": [],
+    "sin_respuesta": 0,
+    "sin_campo": [],
+    "notas": []
+   },
+   "ia": {
+    "titulo": "Refresco menor del grafo: una pieza nueva, tres ajustadas y una conexión más",
+    "resumen": "El grafo rehecho es casi idéntico al aprobado. Se añadió una pieza de tipo «llave», cambiaron tres piezas existentes y apareció una conexión nueva. El grafo suma ahora 3,174 piezas y 10,553 conexiones. No se quitó nada, el atlas no tuvo movimientos y no hay cambios en los PPP. En el tablero sólo se modificaron el aviso que acompaña al grafo en las presentaciones y su prueba automática. Las tres audiencias (cliente o inversionista, dueño del terreno, departamentos, lotes o casas) siguen igual y no desapareció ningún campo.",
+    "presentaciones": "Las tres audiencias siguen disponibles y no desapareció ningún campo, así que las presentaciones que leen el grafo deberían funcionar igual. Sólo cambió el aviso del grafo, y conviene verlo una vez en pantalla.",
+    "recomendacion": "aprobar",
+    "cambios": [
+     {
+      "que": "Se añadió una pieza nueva de tipo «llave».",
+      "donde": "Grafo general",
+      "importa": "Es el único alta del refresco. Los datos no dicen a qué corresponde, así que conviene confirmar que es esperada."
+     },
+     {
+      "que": "Tres piezas existentes cambiaron.",
+      "donde": "Grafo general",
+      "importa": "Son ajustes sobre piezas que ya estaban. No se indica cuáles son ni qué cambió en ellas."
+     },
+     {
+      "que": "Se añadió una conexión nueva entre piezas y no se quitó ninguna.",
+      "donde": "Grafo general",
+      "importa": "El grafo crece sin perder relaciones previas, lo cual es coherente con una sola pieza nueva."
+     },
+     {
+      "que": "Se modificó el aviso del grafo para presentaciones.",
+      "donde": "Tablero, módulo de presentación",
+      "importa": "Es el único código de presentación que cambió. Los datos no precisan qué dice o cómo se muestra ahora el aviso."
+     },
+     {
+      "que": "Se ajustó la prueba automática que verifica el grafo en las presentaciones.",
+      "donde": "Tablero, pruebas",
+      "importa": "La prueba se actualizó junto con el aviso, lo que indica que el cambio está cubierto por una verificación."
+     },
+     {
+      "que": "Sin cambios en el atlas ni en los PPP.",
+      "donde": "Atlas y PPP",
+      "importa": "No hay componentes nuevos o fuera, ni estados, ni propuestas, ni movimientos de PPP. La estructura general se mantiene."
+     }
+    ],
+    "riesgos": [
+     "Los datos no identifican las tres piezas cambiadas ni la pieza «llave» nueva, así que no se puede confirmar a qué parte del negocio afectan.",
+     "No se describe qué cambió en el aviso del grafo, por lo que no se sabe si altera lo que ven las audiencias.",
+     "El riesgo general es bajo: no hay bajas, no desaparecen campos y el cambio es pequeño frente a las 3,174 piezas del grafo."
+    ]
+   },
+   "ia_informe": {
+    "pedidos": [
+     "claude"
+    ],
+    "gano": "claude:claude-sonnet-5-5",
+    "fallos": {},
+    "segundos": 11.6,
+    "reintentos": []
+   },
+   "pedido": {
+    "por": "alexpueblag",
+    "numero": 96,
+    "motivo": "primera prueba en vivo de la App del grafo (DEC-21): el borrador debe abrirlo la App y sus pruebas deben correr solas, sin «Approve workflows to run». Refleja además la pastilla para Dirección en Master Brokers (yodesarrollo-board PR 72)."
+   }
+  },
+  {
+   "id": "G-20261112-2014",
+   "armado": "2026-11-12T20:14:09-07:00",
+   "fecha": "12-nov 20:14",
+   "estado": "aprobado",
+   "huella": "9d367f6fd314",
+   "piezas": 3173,
+   "ligas": 10552,
+   "repos": {
+    "yodesarrollomx/yod-portal": "01d77be",
+    "yodesarrollomx/potenciales-yod": "3a855ba",
+    "yodesarrollomx/yodesarrollo-board": "25de909",
+    "yodesarrollomx/yod-despacho": "d89b151",
+    "yodesarrollomx/board-aurum": "93bf624",
+    "yodesarrollomx/board-flujo-yod": "e9d122f",
+    "yodesarrollomx/real-miramar-board": "9db34a9",
+    "yodesarrollomx/interiores-aurum": "8bcdfc3",
+    "yodesarrollomx/aurum-board": "e3dd428",
+    "yodesarrollomx/sala-edicion": "051785e",
+    "yodesarrollomx/plan-potencial": "9f036c7",
+    "yodesarrollomx/crokiss": "7a7a557",
+    "yodesarrollomx/Co-desarrolladores-Yod": "bdaf46b",
+    "yodesarrollomx/alquimia-urbana": "0c0da90",
+    "yodesarrollomx/aurum-experiencia": "70c63b3",
+    "yodesarrollomx/pintarron": "0979d3f",
+    "yodesarrollomx/prueba-dominio": "715c6c7",
+    "yodesarrollomx/yodesarrollomx.github.io": "a5680f2",
+    "alexpueblag/pizarron-claude-yodbot": "31593a1",
+    "yodesarrollo/amalaya-board": "e3f94e6",
+    "aurumarquitectos/experiencia": "89d29e8",
+    "aurumarquitectos/aurumarquitectos.github.io": "d33f765",
+    "alexpueblag/codesarrolladores-libre": "96d26c5",
+    "alexpueblag/yod-terreno-si": "09f75f4",
+    "alexpueblag/yod-terreno-dormido": "1159ca5"
+   },
+   "nota": "Edición curada de Dirección (12-nov-2026, DEC-19): se quitaron 4 notas escritas a mano que nombraban un sistema de otro cliente (una mejora del plan «Lo que vive fuera del menú» y las menciones en los hallazgos 4, 25 y 31, con sus cuentas corregidas). Sin cambios en los repositorios ni en el atlas.",
+   "pedido": {
+    "por": "Dirección",
+    "numero": null,
+    "motivo": "Quitar las notas que nombraban un sistema de otro cliente (DEC-19)."
+   }
+  }
+ ]
+}

@@ -13,6 +13,7 @@
   const E = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const metric = (label,value,unit='',help='') => ({label,value,unit,help});
   const section = (title, items, note='') => ({title,items,note});
+  const areaReference = g => (valid(g.terrain) && g.terrain > 10000) || (valid(g.plate) && g.plate > 10000) ? 40000 : 10000;
   // Sums/ratios below describe composition or reconciliation, never recalculate returns.
   function describe(r) {
     const p=r.p||{}, finance=sum(r.interest,r.feeDebt), total=sum(r.projectCost,finance);
@@ -23,7 +24,7 @@
     return [
       {main:area(p.terrain)+' de terreno', sub:num(r.units)+' depas · '+num(r.totalFloors)+' pisos · '+area(r.vendTotal)+' vendibles',
         note: valid(delta)&&Math.abs(delta)>.5 ? area(Math.abs(delta))+' por conciliar con la mezcla' : '',
-        graphic:{kind:'architecture',values:[ratio(r.floorPlate,p.terrain),ratio(r.height,p.altMax),ratio(r.vendTotal,sum(r.resGross,r.com))],labels:['Terreno','Volumen edificado'],floors:r.totalFloors,plate:r.floorPlate,terrain:p.terrain,height:r.height,efficiency:ratio(r.vendTotal,sum(r.resGross,r.com)),caption:'Volumen conceptual · superficies 0–10,000 m² · altura 0–120 m. Huella / terreno '+percent(ratio(r.floorPlate,p.terrain))+' · altura / tope supuesto '+percent(ratio(r.height,p.altMax))+'. No representa la implantación por cuerpos.'},
+        graphic:{kind:'architecture',values:[ratio(r.floorPlate,p.terrain),ratio(r.height,p.altMax),ratio(r.vendTotal,sum(r.resGross,r.com))],labels:['Terreno','Volumen edificado'],floors:r.totalFloors,plate:r.floorPlate,terrain:p.terrain,height:r.height,efficiency:ratio(r.vendTotal,sum(r.resGross,r.com)),caption:'Volumen conceptual · superficies 0–'+num(areaReference({terrain:p.terrain,plate:r.floorPlate}))+' m² · altura 0–120 m. Huella / terreno '+percent(ratio(r.floorPlate,p.terrain))+' · altura / tope supuesto '+percent(ratio(r.height,p.altMax))+'. No representa la implantación por cuerpos.'},
         sections:[section('Terreno y capacidad',[metric('Terreno',area(p.terrain),'','lblTerreno'),metric('Huella máxima · COS '+percent(p.cos),area(r.footprint),'','lblHuella'),metric('Sobre rasante · CUS '+num(p.cus,2),area(r.gross),'','lblConstruible'),metric('Altura máxima supuesta',num(p.altMax,1)+' m')],'La envolvente indica capacidad; no acredita un permiso.'),
           section('Superficies',[metric('Vivienda vendible',area(r.resSell),'','lblVendViv'),metric('Locales vendibles',area(r.comSell),'','lblVendLoc'),metric('Vivienda bruta',area(r.resGross)),metric('Comercio bruto',area(r.com)),metric('Total vendible',area(r.vendTotal),'','lblVendTotal')]),
           section('Mezcla de departamentos',[metric('Tipología A',num(r.mixLoftUnits)+' × '+area(p.m2Loft)),metric('Tipología B',num(r.mix2Units)+' × '+area(p.m22Rec)),metric('Tipología C',num(r.mix3Units)+' × '+area(p.m23Rec))],valid(delta)?'Área de la mezcla '+area(mixedArea)+' · diferencia '+area(delta):'Inventario pendiente de conciliar.'),
@@ -61,9 +62,11 @@
     return {grid:site.uso,rows,terrain,difference,conditions,pending};
   }
   function architectureScale(g){
-    // Fixed references preserve area and height differences across cases.
-    return {ground:valid(g.terrain)?Math.sqrt(Math.max(0,Math.min(1,g.terrain/10000)))*90:null,
-      plate:valid(g.plate)?Math.sqrt(Math.max(0,Math.min(1,g.plate/10000)))*90:null,
+    // Preserve the existing scale for smaller plots and use a shared larger
+    // reference for terrain and footprint when either exceeds 10,000 m².
+    const reference=areaReference(g);
+    return {ground:valid(g.terrain)?Math.sqrt(Math.max(0,Math.min(1,g.terrain/reference)))*90:null,
+      plate:valid(g.plate)?Math.sqrt(Math.max(0,Math.min(1,g.plate/reference)))*90:null,
       height:valid(g.height)?Math.max(0,Math.min(1,g.height/120))*125:null};
   }
   if(typeof module==='object'&&module.exports)module.exports={describe,siteSummary,num,money,valid,architectureScale};
@@ -298,5 +301,54 @@
     const sheet=$('sheetPanel'),stages=$('pppEtapas');if(sheet&&sheet.parentElement!==stages.lastChild)stages.lastChild.prepend(sheet);
     $('pppVersiones').firstChild.textContent='Versiones · '+(context.versionCount||1)+' · '+(context.scenarioName||'Base');
   }
-  root.PPPView={mount,update,toggle,adjust,setCaseState};
+  const navigationSections={terreno:'dArq',ventas:'dVentas',costos:'dCostos',calendario:'dCostos',volumenes:'dVolumenes',dArq:'dArq',dVentas:'dVentas',dCostos:'dCostos',dMacro:'dMacro',dDota:'dDota',dVolumenes:'dVolumenes',plan:'plan'};
+  function editing(){const focused=document.activeElement;return focused?.isContentEditable===true||focused?.matches?.('input,textarea,select,[contenteditable="true"],[contenteditable=""]')===true||!!focused?.closest?.('[contenteditable="true"],[contenteditable=""]');}
+  function navigationVisible(node){if(!node||node.hidden||node.inert)return false;const r=node.getBoundingClientRect();return r.width>0&&r.height>0&&r.bottom>0&&r.top<root.innerHeight;}
+  function navigationState(target){
+    const section=navigationSections[target];if(!section)return {status:'unsupported',code:'target_unsupported'};
+    if(!mounted||document.body.classList.contains('ppp-unconfirmed')||document.body.classList.contains('ppp-reading')||editing())return {status:'unavailable',code:'reading_or_editing'};
+    if(section==='plan')return active===null&&navigationVisible($('pppDeck'))?{status:'confirmed',section_id:'plan'}:{status:'unavailable',code:'view_not_confirmed'};
+    if(section==='dVolumenes'){
+      const volumes=$('pppVolumes');if(!volumes||volumes.hidden||volumes.inert||volumes.dataset.verified!=='true')return {status:'unsupported',code:'volumes_not_installed'};
+      return navigationVisible(volumes)?{status:'confirmed',section_id:section}:{status:'unavailable',code:'view_not_confirmed'};
+    }
+    const item=records.find(x=>x.id===section);
+    return item&&active===section&&navigationVisible(target==='calendario'?$('inInicioObra')?.closest('.input-group'):item.card)&&item.trigger.getAttribute('aria-expanded')==='true'&&item.reveal.inert===false&&item.reveal.getAttribute('aria-hidden')==='false'?{status:'confirmed',section_id:section}:{status:'unavailable',code:'view_not_confirmed'};
+  }
+  // Navigation changes presentation only. In particular it never focuses or
+  // blurs an editable field: native inputs may save automatically on blur/input.
+  function navigate(target){
+    const section=navigationSections[target];if(!section)return {status:'unsupported',code:'target_unsupported'};
+    if(!mounted||document.body.classList.contains('ppp-unconfirmed')||document.body.classList.contains('ppp-reading')||editing())return {status:'unavailable',code:'reading_or_editing'};
+    if(section==='dVolumenes'){
+      const volumes=$('pppVolumes');if(!volumes||volumes.hidden||volumes.inert||volumes.dataset.verified!=='true')return {status:'unsupported',code:'volumes_not_installed'};
+      $('pppVolumes').scrollIntoView({block:'start',behavior:'instant'});return navigationState(target);
+    }
+    if(section==='plan'){
+      records.forEach(x=>{x.card.classList.remove('ppp-open','ppp-muted','ppp-adjusting');x.drawer.classList.remove('active');x.trigger.setAttribute('aria-expanded','false');x.reveal.inert=true;x.reveal.setAttribute('aria-hidden','true');x.adjust.setAttribute('aria-expanded','false');x.adjust.textContent='Ajustar';});
+      active=null;focusRequest++;document.body.classList.remove('ppp-focused');$('pppBack').hidden=true;$('pppDeck').scrollIntoView({block:'start',behavior:'instant'});return navigationState(target);
+    }
+    const item=records.find(x=>x.id===section);if(!item||item.trigger.disabled)return {status:'unavailable',code:'view_unavailable'};
+    toggle(section,true);
+    if(target==='calendario'){
+      focusRequest++;item.card.classList.add('ppp-adjusting');item.drawer.classList.add('active');item.adjust.setAttribute('aria-expanded','true');item.adjust.textContent='Ver detalle';
+      const input=$('inInicioObra');let parent=input?.parentElement;
+      while(parent&&parent!==item.drawer){if(parent.tagName==='DETAILS')parent.open=true;parent=parent.parentElement;}
+      input?.closest('.input-group')?.scrollIntoView({block:'center',behavior:'instant'});
+    }else item.card.scrollIntoView({block:'start',behavior:'instant'});
+    return navigationState(target);
+  }
+  // Shows an existing control inside its own card without focusing it:
+  // focus or blur on a native input may save. Used by the chain diagram links.
+  function reveal(controlId){
+    const input=$(controlId),card=input?.closest('.ppp-card'),item=card&&records.find(x=>x.card===card);
+    if(!mounted||!item||item.trigger.disabled)return null;
+    toggle(item.id,true);focusRequest++;
+    item.card.classList.add('ppp-adjusting');item.drawer.classList.add('active');item.adjust.setAttribute('aria-expanded','true');item.adjust.textContent='Ver detalle';
+    let parent=input.parentElement;while(parent&&parent!==item.drawer){if(parent.tagName==='DETAILS')parent.open=true;parent=parent.parentElement;}
+    const group=input.closest('.input-group')||input;
+    requestAnimationFrame(()=>group.scrollIntoView({block:'center',behavior:reduced()?'instant':'smooth'}));
+    return group;
+  }
+  root.PPPView={mount,update,toggle,adjust,reveal,setCaseState,navigate,navigationState};
 })(typeof window==='undefined'?globalThis:window);

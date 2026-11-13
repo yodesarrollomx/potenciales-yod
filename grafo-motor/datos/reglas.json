@@ -1,0 +1,389 @@
+{
+ "sis_area": {
+  "SYS-DESPACHO": "despacho",
+  "SYS-DESPACHO-3D": "despacho",
+  "SYS-POTENCIALES": "ppp",
+  "SYS-MERCADO": "mercado",
+  "SYS-TRACK": "codes",
+  "SYS-MIRAMAR": "codes",
+  "SYS-CODES-PORTAL": "codes",
+  "SYS-ALQUIMIA": "codes",
+  "SYS-TAREAS": "moac",
+  "SYS-FLUJO": "flujo",
+  "SYS-INTERIORES": "aurum",
+  "SYS-AURUM-EXPERIENCIA": "aurum",
+  "SYS-CROKISS": "aurum",
+  "SYS-INVERSION": "brokers",
+  "SYS-MARKETING": "embudo",
+  "SYS-SALA": "embudo",
+  "SYS-PLAN-POTENCIAL": "embudo",
+  "SYS-SALA-OPERACION": "embudo",
+  "SYS-OBRA": "obra",
+  "SYS-OBRA-CLIENTE": "obra",
+  "SYS-CONTROL": "control",
+  "SYS-YOD-OS": "control",
+  "SYS-SITIO-ORG": "control",
+  "SYS-PRUEBA-DOMINIO": "fuera",
+  "SYS-PINTARRON": "fuera",
+  "SYS-AMALAYA": "fuera",
+  "N-PUERTAS": "control",
+  "GAS-PORTERO": "control",
+  "GAS-CATALOGO": "control",
+  "GAS-PORTERO-RESPALDO": "control",
+  "GAS-OPERACION": "moac",
+  "GAS-MOAC-METAS": "moac",
+  "GAS-FLUJO": "flujo",
+  "GAS-MARKETING": "embudo",
+  "GAS-PLAN-POTENCIAL": "embudo",
+  "GAS-AUX-METRICAS": "embudo",
+  "GAS-SALA": "embudo",
+  "SVC-SALA-PRODUCTOR": "embudo",
+  "SVC-SALA-EJECUTOR": "embudo",
+  "GAS-CROKISS": "aurum",
+  "GAS-INTERIORES": "aurum",
+  "GAS-CODES": "codes",
+  "GAS-MIRAMAR": "codes",
+  "GAS-ALQUIMIA": "codes",
+  "GAS-OBRA": "obra",
+  "GAS-OBRA-CLIENTE": "obra",
+  "GAS-AMALAYA": "fuera",
+  "GAS-CRM": "brokers",
+  "GAS-INVERSION": "brokers",
+  "SVC-AUTON-CLOUD": "despacho",
+  "SVC-HORARIOS-CLOUD": "despacho",
+  "GAS-BANDEJA-NUBE": "despacho",
+  "X-HERMES": "asistentes",
+  "N-REPARTO": "ppp",
+  "SHEET-PPP-MODELOS": "ppp",
+  "STORE-DESPACHO-CORCHO": "despacho",
+  "STORE-AUTON-ESTADO": "despacho",
+  "STORE-HORARIOS-CLOUD": "despacho",
+  "STORE-BANDEJA-RECIBOS": "despacho",
+  "X-BUZON": "asistentes",
+  "N-FOLIO": "control",
+  "N-SUPUESTOS": "mercado",
+  "SHEET-CRM": "brokers",
+  "SHEET-MARKETING": "embudo",
+  "SHEET-PLAN-POTENCIAL": "embudo",
+  "SHEET-PORTERO": "control",
+  "X-FLUJO-WA": "flujo",
+  "X-REUNIONES": "brokers",
+  "EXT-META": "embudo",
+  "P-DIRECCION": "despacho",
+  "P-BROKER": "brokers",
+  "P-DUENO": "ppp",
+  "P-PROMOTOR": "brokers",
+  "P-ALIANZA": "codes",
+  "P-INVERSIONISTA": "codes",
+  "P-DESPACHO-ARQ": "aurum",
+  "P-CONSTRUCTOR": "obra",
+  "P-EQUIPO": "moac",
+  "P-CLIENTE": "obra",
+  "A-CLAUDE": "asistentes",
+  "A-CHATGPT": "asistentes",
+  "A-HERMES": "asistentes",
+  "A-AUTONES": "despacho",
+  "ORG-YOD": "control",
+  "ORG-AURUM": "aurum",
+  "ORG-AVERMONT": "codes",
+  "ORG-PGARQ": "codes",
+  "ORG-MB": "brokers",
+  "R-CONSEJO": "embudo",
+  "R-LUNES": "moac",
+  "R-CIERRE": "moac",
+  "R-BUZON": "asistentes",
+  "R-REVISOR": "asistentes",
+  "R-TYPESAFE": "asistentes",
+  "SK-EQUIPO": "asistentes",
+  "SK-JEV": "asistentes",
+  "SK-BRIEF": "aurum",
+  "gas:AKfycbzksegV": "despacho",
+  "gas:AKfycbw1Wm5w": "aurum",
+  "gas:AKfycbxJtq8d": "codes"
+ },
+ "repo_area": {
+  "yod-despacho": "despacho",
+  "potenciales-yod": "ppp",
+  "plan-potencial": "embudo",
+  "yod-terreno-si": "embudo",
+  "yod-terreno-dormido": "embudo",
+  "real-miramar-board": "codes",
+  "Co-desarrolladores-Yod": "codes",
+  "codesarrolladores-libre": "codes",
+  "alquimia-urbana": "codes",
+  "board-aurum": "moac",
+  "board-flujo-yod": "flujo",
+  "interiores-aurum": "aurum",
+  "aurum-experiencia": "aurum",
+  "experiencia": "aurum",
+  "aurumarquitectos.github.io": "aurum",
+  "crokiss": "aurum",
+  "yodesarrollo-board": "brokers",
+  "aurum-board": "embudo",
+  "sala-edicion": "embudo",
+  "yod-portal": "control",
+  "yodesarrollomx.github.io": "control",
+  "prueba-dominio": "fuera",
+  "pizarron-claude-yodbot": "asistentes",
+  "amalaya-board": "fuera",
+  "pintarron": "fuera"
+ },
+ "ruta_area": {
+  "yod-portal": [
+   [
+    "mercado/",
+    "mercado"
+   ],
+   [
+    "obra",
+    "obra"
+   ],
+   [
+    "verify-obra",
+    "obra"
+   ],
+   [
+    "track-",
+    "codes"
+   ],
+   [
+    "despacho",
+    "despacho"
+   ],
+   [
+    "emd/",
+    "fuera"
+   ],
+   [
+    "reuniones/",
+    "brokers"
+   ]
+  ],
+  "potenciales-yod": [
+   [
+    "portero",
+    "control"
+   ],
+   [
+    "accesos",
+    "control"
+   ]
+  ]
+ },
+ "hoja_area": {
+  "1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk": "control",
+  "1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y": "ppp",
+  "11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM": "moac",
+  "1HaUMdocq78kZPilNST6P-GHJjLMMPjWe0Pe8iXqnBBQ": "moac",
+  "1CMTPUu1rrjDTsS81gk4RB2Sjs3f6kZZJFvlEM_fEw4A": "asistentes",
+  "1z1ZtvcUKnx4MUfxLICo8x5bTihlDY8tBC3j2sYwNvg8": "embudo",
+  "11DiE789WIVqIybKTPapayS5XEWHtcAXUiUA11KBQUQc": "codes",
+  "1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk": "flujo",
+  "11tkKgl4W3ugthjWh80ZxHfT_PXSH_rPbCVmwM9l3CeU": "brokers",
+  "1gRFwq27ec8nM6g_3LG7xW6ORpLhOyTWkPPUQWgAnsok": "aurum",
+  "1peT5oM17danrCkbO5_Zzw5fNogh7cenMJ3KfiEOLT5M": "codes",
+  "1Mtk5uJ5i7GXqctZzxjb9RbWZ9FPBmgiO8dE6tGcSFN0": "aurum"
+ },
+ "tab_area": {
+  "1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y": [
+   [
+    [
+     "ACCESOS",
+     "SESIONES",
+     "LIGAS",
+     "CONFIG",
+     "BITACORA",
+     "CATALOGO"
+    ],
+    "control"
+   ],
+   [
+    [
+     "TRACK_"
+    ],
+    "codes"
+   ]
+  ],
+  "1z1ZtvcUKnx4MUfxLICo8x5bTihlDY8tBC3j2sYwNvg8": [
+   [
+    [
+     "BROKERS"
+    ],
+    "brokers"
+   ]
+  ]
+ },
+ "clase_area": {
+  "prueba o copia de trabajo": "ppp",
+  "libro PPP": "ppp",
+  "evaluación de terreno": "brokers",
+  "libro del autón": "despacho",
+  "ubicaciones": "brokers"
+ },
+ "menu_nom": {
+  "SYS-FLUJO": "Flujo (Tesorería)",
+  "SYS-TRACK": "Codesarrollos (tracks)",
+  "SYS-INTERIORES": "AURUM (interiores)",
+  "SYS-POTENCIALES": "PPP (Potenciales)",
+  "SYS-TAREAS": "MOAC (tareas)",
+  "SYS-YOD-OS": "YOD OS (cabina)",
+  "SYS-MERCADO": "Mercado Hermosillo"
+ },
+ "libro_corto": {
+  "1E_89GQBnOmwv5Nej2B-QEkAdVnFYQbBVQUffHWwI7Vk": "Control Maestro",
+  "1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y": "Potenciales",
+  "1z1ZtvcUKnx4MUfxLICo8x5bTihlDY8tBC3j2sYwNvg8": "CRM",
+  "1ToCxZ3sBhqKWlciGeJAnUgMcgD_MQXfj7YSEobd55vk": "Flujo",
+  "11DiE789WIVqIybKTPapayS5XEWHtcAXUiUA11KBQUQc": "Codesarrolladores",
+  "11tkKgl4W3ugthjWh80ZxHfT_PXSH_rPbCVmwM9l3CeU": "Carpeta comercial",
+  "11SU8pE4tpaIuOfiDs8dS9Fqtc2Ul0mhBqBaD2WtR_WM": "Board Aurum",
+  "1HaUMdocq78kZPilNST6P-GHJjLMMPjWe0Pe8iXqnBBQ": "MOAC",
+  "1CMTPUu1rrjDTsS81gk4RB2Sjs3f6kZZJFvlEM_fEw4A": "Buzón",
+  "1gRFwq27ec8nM6g_3LG7xW6ORpLhOyTWkPPUQWgAnsok": "Llave Maestra",
+  "1Mtk5uJ5i7GXqctZzxjb9RbWZ9FPBmgiO8dE6tGcSFN0": "Editorial",
+  "1peT5oM17danrCkbO5_Zzw5fNogh7cenMJ3KfiEOLT5M": "Alquimia"
+ },
+ "hmb": "",
+ "llaves": [
+  "KEY-PROJECT",
+  "KEY-CASO",
+  "KEY-LEAD",
+  "KEY-OPP",
+  "KEY-INV",
+  "KEY-CARPETA",
+  "KEY-HMB",
+  "KEY-TEXTO"
+ ],
+ "pantallas": [
+  {
+   "id": "hoy",
+   "n": "Hoy",
+   "q": "¿Qué necesita mi palabra y qué está atorado?"
+  },
+  {
+   "id": "cartera-ppp",
+   "n": "Cartera · PPP",
+   "q": "¿Qué se puede hacer con este terreno y cuánto le toca a cada quien?"
+  },
+  {
+   "id": "mercado",
+   "n": "Mercado",
+   "q": "¿Qué producto pide Hermosillo y qué número uso en mi plan?"
+  },
+  {
+   "id": "cartera-proyectos",
+   "n": "Cartera · Proyectos",
+   "q": "¿En qué etapa va cada proyecto y qué lo frena?"
+  },
+  {
+   "id": "equipo",
+   "n": "Equipo · MOAC",
+   "q": "¿Quién hace qué esta semana y para qué objetivo?"
+  },
+  {
+   "id": "dinero",
+   "n": "Dinero",
+   "q": "¿Alcanza la caja y cuándo entra dinero?"
+  },
+  {
+   "id": "interiores",
+   "n": "Interiores · AURUM",
+   "q": "¿Qué se eligió, cuánto cuesta y qué falta aprobar?"
+  },
+  {
+   "id": "aliados",
+   "n": "Aliados · Masterbrokers",
+   "q": "¿Qué terrenos trae cada quien y cuál es su siguiente paso?"
+  },
+  {
+   "id": "embudo",
+   "n": "Embudo · Captación",
+   "q": "¿De dónde llegan los dueños de terreno y cuánto cuesta cada uno?"
+  },
+  {
+   "id": "obra",
+   "n": "Obra · Avance",
+   "q": "¿Cuánto se avanzó, quién lo verificó y cuánto se paga?"
+  },
+  {
+   "id": "control",
+   "n": "Control · Accesos",
+   "q": "¿Quién entra, con qué rol y a qué proyectos?"
+  }
+ ],
+ "puertas": [
+  "P-DIRECCION",
+  "P-BROKER",
+  "P-DUENO",
+  "P-PROMOTOR",
+  "P-INVERSIONISTA",
+  "P-DESPACHO-ARQ",
+  "P-CONSTRUCTOR",
+  "P-CLIENTE",
+  "P-ALIANZA",
+  "P-EQUIPO"
+ ],
+ "excluir": {
+  "motivo": "Decisión de Dirección (DEC-19, 12-nov-2026): el grafo no refleja sistemas hechos para clientes externos, aunque el atlas o yod-portal publiquen su descripción saneada. Se quitan la pieza, sus contratos, procesos, hojas, almacenes y los archivos que la envuelven.",
+  "ids": [
+   "^(SYS|GAS|SHEET|STORE|CTR|PROC|N|X|R|SK)-EMD(?:$|-|·)",
+   "(?i)^(ls|sec|ss):emd",
+   "^PROP-(?:CHG-)?EMD(?:$|-|·)"
+  ],
+  "rutas": [
+   "(^|/)emd/",
+   "(^|/)emd-[^/]*\\.md$"
+  ],
+  "comp": [
+   "^(SYS|GAS|SHEET|STORE)-EMD(?:$|-)"
+  ],
+  "textos": [
+   "(?<![^\\W_])[Ee][Mm][Dd]\\w*",
+   "(?<=[a-zñáéíóúü])E(?:MD|md)\\w*"
+  ],
+  "textos_nota": "Primero: la palabra en cualquier mayúscula, sola, en una ruta o pegada a la que le sigue, con todo lo pegado. Segundo: pegada detrás de otra palabra en camelCase. No atrapa palabras que sólo la contienen por casualidad (minúsculas después de otra letra, o todo en mayúsculas después de otra letra). Revisado contra el atlas el 13-nov-2026: ninguna palabra la contiene por casualidad."
+ },
+ "publicos_motivo": "Repositorios que el grafo puede nombrar: todos son públicos (comprobado el 12-nov-2026). Lo que no está aquí no se publica, ni sus piezas ni su nombre en los textos (refrescar.py, solo_publicos). Al sumar un repositorio al grafo se agrega aquí, sólo si es público. rehacer.py lee cada uno sin credencial, con dos intentos: si el grafo lo rastrea y no contesta, no abre borrador; si sólo sale en textos (las casas viejas), tapa su nombre completo, sigue y lo avisa en el pedido.",
+ "publicos": [
+  "alexpueblag/alquimia-urbana",
+  "alexpueblag/aurum-board",
+  "alexpueblag/aurum-experiencia",
+  "alexpueblag/board-aurum",
+  "alexpueblag/board-flujo-yod",
+  "alexpueblag/Co-desarrolladores-Yod",
+  "alexpueblag/codesarrolladores-libre",
+  "alexpueblag/crokiss",
+  "alexpueblag/interiores-aurum",
+  "alexpueblag/pintarron",
+  "alexpueblag/pizarron-claude-yodbot",
+  "alexpueblag/plan-potencial",
+  "alexpueblag/potenciales-yod",
+  "alexpueblag/real-miramar-board",
+  "alexpueblag/sala-edicion",
+  "alexpueblag/yod-portal",
+  "alexpueblag/yod-terreno-dormido",
+  "alexpueblag/yod-terreno-si",
+  "alexpueblag/yodesarrollo-board",
+  "aurumarquitectos/aurumarquitectos.github.io",
+  "aurumarquitectos/experiencia",
+  "yodesarrollo/amalaya-board",
+  "yodesarrollomx/alquimia-urbana",
+  "yodesarrollomx/aurum-board",
+  "yodesarrollomx/aurum-experiencia",
+  "yodesarrollomx/board-aurum",
+  "yodesarrollomx/board-flujo-yod",
+  "yodesarrollomx/Co-desarrolladores-Yod",
+  "yodesarrollomx/crokiss",
+  "yodesarrollomx/interiores-aurum",
+  "yodesarrollomx/pintarron",
+  "yodesarrollomx/plan-potencial",
+  "yodesarrollomx/potenciales-yod",
+  "yodesarrollomx/prueba-dominio",
+  "yodesarrollomx/real-miramar-board",
+  "yodesarrollomx/sala-edicion",
+  "yodesarrollomx/yod-despacho",
+  "yodesarrollomx/yod-portal",
+  "yodesarrollomx/yodesarrollo-board",
+  "yodesarrollomx/yodesarrollomx.github.io"
+ ]
+}

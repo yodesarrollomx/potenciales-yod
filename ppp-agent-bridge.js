@@ -9,7 +9,7 @@
   inM2Construccion:'m2',inM2Rentable:'m2',inPasillosM2:'m2',inVacanciaPct:'percent',inOpexPct:'percent',
   inSeguroPct:'percent',inCapRateMercado:'percent',inPlusvaliaPct:'percent',inCreditoPct:'percent',
   inTasaCredito:'percent',inPlazoCredito:'year',inHorizonte:'year',inTasaAlternativa:'percent'};
- const patrimonialResultUnits={capacidadConstruida:'m2',yieldOnCost:'ratio',dscr:'ratio',coc:'ratio',recupAnios:'year'};
+ const patrimonialResultUnits={capacidadConstruida:'m2',yieldOnCost:'ratio',dscr:'ratio',coc:'ratio',recupAnios:'year',capMercado:'ratio'};
  function metadataFor(m,state,inputs,results){
   if(!safeId(m.modelo_tipo)||!safeId(m.modelo_revision))return null;
   const metadata={model_type:m.modelo_tipo,model_revision:m.modelo_revision};
@@ -29,7 +29,12 @@
   for(const key of ['modeloValido','geometriaEstado','noi','rentaMes','valorCap','equity','patrimH','mensCredito','yieldOnCost','dscr','coc','capacidadConstruida','areaUtil','recupAnios','unidades']){
    const v=state[key];if(v===null||['string','boolean'].includes(typeof v)||typeof v==='number'&&Number.isFinite(v))results[key]=v;
   }
+  if(m.modelo_tipo==='patrimonial'&&m.modelo_revision==='patrimonial-sheet-v1'){
+   if(typeof state.porM2==='boolean')results.porM2=state.porM2;
+   const cap=state.p?.capMercado;if(cap===null||typeof cap==='number'&&Number.isFinite(cap))results.capMercado=cap;
+  }
   const metadata=metadataFor(m,state,active.inputs,results);
+  if(metadata&&store.fieldNote?.('inCapRateMercado'))metadata.inactive_fields=['inCapRateMercado'];
   return{case_id:store.id,revision:m.revision,scenario_id:m.activo,scenario_name:active.nombre,...(metadata?{metadata}:{}),
    confirmed:store.verified&&!store.busy&&!store.error,pending:store.dirty(),observed_at:new Date().toISOString(),
    fields:m.campos.map(c=>({id:c.id,label:String(labelFor(c.id)||c.id).slice(0,160),min:c.min,max:c.max,editable:c.editable,nullable:c.nullable,kind:c.kind})),

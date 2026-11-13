@@ -1,0 +1,177 @@
+/* PPP · diagrama en cadena. Sólo presentación: sin permisos, sin red, sin cálculo.
+   Los seis colores siguen el significado que ya tienen en el tablero (verde ventas, rojo costos,
+   morado deuda, oro utilidad, azul dueño, naranja desarrollador) con el paso de cada tono que
+   pasa separación para daltonismo y contraste 3:1 sobre las superficies clara y oscura. */
+@font-face{font-family:'Caveat';font-style:normal;font-weight:700;font-display:swap;src:url(fonts/caveat-700-latin.woff2) format('woff2')}
+.cad{--cad-verde:#42975e;--cad-rojo:#8c352d;--cad-morado:#6b61c4;--cad-naranja:#884d01;--cad-oro:#a58938;--cad-azul:#3275b4;--cad-resalta:#ffe9ad;--cad-sobre-morado:#fff;--cad-arena:#b3a586;--cad-arena2:#d6ccb6;
+  --cad-velo:rgba(118,111,98,.14);--cad-mano:'Caveat','Segoe Print','Bradley Hand',cursive;
+  position:relative;margin:10px 0 12px;padding:12px 12px 8px;border:1px solid var(--linea);border-radius:19px;background:linear-gradient(120deg,var(--card),var(--bg));box-shadow:0 3px 14px #231d1405;color:var(--text)}
+[data-tema="oscuro"] .cad{--cad-verde:#52a76d;--cad-rojo:#b54b41;--cad-morado:#7f76dc;--cad-naranja:#a05b11;--cad-oro:#ae9242;--cad-azul:#4e90d2;--cad-resalta:#5d4b16;--cad-sobre-morado:#181714;--cad-arena:#a39676;--cad-arena2:#7d735c;--cad-velo:rgba(184,174,155,.16)}
+.cad [hidden]{display:none!important}
+body.ppp-reading .cad,body.ppp-unconfirmed .cad{opacity:.55;pointer-events:none}
+/* Mientras se captura o se lee otro plan no se enseña nada del anterior (igual que .ppp-hud). */
+.ppp-intake-opening .cad,.ppp-intake-reading .cad,.ppp-intake-capture .cad{display:none!important}
+
+.cad-top{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin:0 4px 8px}
+.cad-kicker{display:block;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.cad-top h2{margin:1px 0 0;font:400 25px/1.08 'Instrument Serif',Georgia,serif;letter-spacing:-.01em;color:var(--text)}
+.cad-version{max-width:46%;font-size:11px;line-height:1.35;color:var(--muted);text-align:right;overflow-wrap:anywhere}
+
+/* Eslabones. En el teléfono, acordeón: los cuatro renglones resumen la cadena y uno se abre. */
+.cad-pan{border-top:1px solid var(--linea);transition:opacity .35s}
+.cad-cab{display:grid;grid-template-columns:24px minmax(0,1fr) auto 14px;align-items:center;gap:9px;width:100%;min-height:50px;padding:7px 4px;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.cad-cab:focus-visible,.cad-liga:focus-visible,.cad-ver:focus-visible,.cad-rep:focus-visible{outline:2px solid var(--goldc);outline-offset:2px;border-radius:10px}
+.cad-num{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--text);color:var(--card);font-size:12.5px;font-weight:700;transition:transform .3s}
+.cad-nom{font-size:15px;font-weight:700;line-height:1.2}
+.cad-cifra{max-width:150px;font-size:12.5px;line-height:1.25;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.cad-chev{color:var(--gold);font-size:17px;line-height:1;transition:transform .25s}
+.cad-abierto .cad-chev{transform:rotate(180deg)}
+.cad-cuerpo{padding:0 4px 12px}
+.cad-frase{margin:0 0 7px;font-size:13px;line-height:1.4;color:var(--muted)}
+.cad-dijo{width:fit-content;max-width:100%;margin:0 0 8px;padding:2px 7px 1px;border-radius:5px;background:var(--cad-resalta);font:700 20px/1.08 var(--cad-mano);color:var(--text)}
+.cad-escribe{animation:cad-escribe .7s ease-out 1}
+@keyframes cad-escribe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.cad-cadena .cad-pan:not(.cad-foco){opacity:.45}
+.cad-foco .cad-num{transform:scale(1.18)}
+.cad-por{display:none}
+
+/* Leyendas */
+.cad-ley{display:flex;flex-wrap:wrap;gap:2px 12px;margin:0 0 7px;font-size:12px;line-height:1.4;color:var(--text)}
+.cad-ley span{white-space:nowrap}
+.cad-ley i,.cad-socios-ley i{display:inline-block;width:11px;height:11px;margin-right:5px;border-radius:3px;vertical-align:-1.5px}
+.cad-c-pre,.cad-c-entra,.cad-c-caja,.cad-b-pre,.cad-b-entra,.cad-b-caja{background:var(--cad-verde)}
+.cad-c-ent,.cad-b-ent{background:repeating-linear-gradient(135deg,var(--cad-verde) 0 2.5px,transparent 2.5px 5px);box-shadow:inset 0 0 0 1px var(--cad-verde)}
+.cad-c-sale,.cad-c-rojo,.cad-b-sale{background:var(--cad-rojo)}
+.cad-c-interes,.cad-c-credito,.cad-c-morado,.cad-b-interes,.cad-b-credito{background:var(--cad-morado)}
+.cad-c-capital,.cad-b-capital{background:var(--cad-naranja)}
+.cad-c-oro{background:var(--cad-oro)}
+.cad-c-falta,.cad-b-falta{background:repeating-linear-gradient(135deg,var(--cad-rojo) 0 2.5px,transparent 2.5px 5px);box-shadow:inset 0 0 0 1px var(--cad-rojo)}
+.cad-ley i.cad-c-obra{border-radius:0;background:var(--cad-velo);border-left:1.5px solid var(--muted)}
+.cad-ley i.cad-c-raya{width:0;margin:0 9px 0 5px;border-radius:0;border-left:2px dashed var(--gold)}
+.cad-ley i.cad-c-antes{width:18px;height:0;border-radius:0;border-top:2px dashed var(--text);vertical-align:4px}
+.cad-ley-antes{display:none}
+.cad-con-antes .cad-ley-antes{display:inline}
+
+/* Gráficas por mes */
+/* overflow:hidden: al cambiar el ancho, las notas ya colocadas (en pixeles) no deben desbordar la página
+   mientras el diagrama se reacomoda. */
+.cad-plot{position:relative;height:176px;border-bottom:1px solid var(--muted);overflow:hidden;touch-action:pan-y;-webkit-user-select:none;user-select:none}
+.cad-pan[data-k="A"] .cad-plot{height:138px}
+.cad-obra{position:absolute;top:0;bottom:0;background:var(--cad-velo);border-left:1.5px solid var(--muted);transition:left .6s,width .6s}
+.cad-raya{position:absolute;top:0;bottom:0;width:0;border-left:2px dashed var(--gold);transition:left .6s}
+.cad-cero{position:absolute;left:0;right:0;height:0;border-top:1px solid var(--muted);z-index:2}
+.cad-tope{position:absolute;left:0;right:0;height:0;border-top:1.5px dashed var(--cad-morado);z-index:2}
+.cad-tope span{position:absolute;right:2px;top:3px;font-size:10.5px;line-height:1.2;color:var(--muted);white-space:nowrap}
+.cad-tope.cad-izq span{right:auto;left:2px}
+.cad-b{position:absolute;border-radius:1.5px;transition:left .8s cubic-bezier(.3,.7,.2,1),width .6s,bottom .8s cubic-bezier(.3,.7,.2,1),top .7s cubic-bezier(.3,.7,.2,1),height .7s cubic-bezier(.3,.7,.2,1),opacity .3s}
+.cad-sinanim .cad-b,.cad-sinanim .cad-obra,.cad-sinanim .cad-raya,.cad-sinanim .cad-tira i,.cad-sinanim .cad-socios-bar i,.cad-sinanim .cad-rango-riel i{transition:none!important}
+.cad-ejes{position:relative;height:18px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cad-ejes span{position:absolute;top:3px;transform:translateX(-50%);white-space:nowrap}
+.cad-ejes span:first-child{transform:none}
+
+/* De dónde salen las ventas */
+.cad-prod{margin-top:8px}
+.cad-prod p{margin:0 0 4px;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.cad-prod-bar{display:flex;gap:2px;height:20px;margin-bottom:5px}
+.cad-prod-bar i{display:block;flex:0 1 0;min-width:3px;height:100%;padding-left:6px;border-radius:4px;overflow:hidden;font-style:normal;font-size:11px;font-weight:700;line-height:20px;white-space:nowrap;color:#fff}
+.cad-prod .cad-ley{margin:0;font-size:11.5px;gap:1px 10px}
+.cad-p0{background:var(--cad-verde)}
+.cad-p1{background:repeating-linear-gradient(135deg,var(--cad-verde) 0 2.5px,transparent 2.5px 5px);box-shadow:inset 0 0 0 1px var(--cad-verde)}
+.cad-prod-bar i.cad-p1{color:var(--text);text-shadow:0 0 2px var(--card),0 0 2px var(--card),0 0 4px var(--card),0 0 4px var(--card)}
+.cad-p2{background:var(--cad-arena)}
+.cad-p3{background:var(--cad-arena2)}
+.cad-prod-bar i.cad-p2,.cad-prod-bar i.cad-p3{color:#181714}
+
+/* Notas a mano, flechas y la línea de «antes» */
+.cad-tinta{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:3}
+.cad-tinta path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.cad-halo{stroke:var(--card);stroke-width:6;opacity:.85;transition:opacity .3s}
+.cad-fl{stroke:var(--text);stroke-width:2;stroke-dasharray:1;stroke-dashoffset:0;transition:opacity .3s}
+.cad-antes{stroke:var(--text);stroke-width:1.6;stroke-dasharray:4 3.5;opacity:.75;transition:opacity .5s}
+.cad-nota{position:absolute;left:0;top:0;z-index:4;font:700 20px/1 var(--cad-mano);color:var(--text);opacity:0;pointer-events:none;text-shadow:0 0 3px var(--card),0 0 3px var(--card),0 0 5px var(--card);text-wrap:balance;transition:opacity .3s}
+.cad-nota.on{opacity:1}
+.cad-nota.cad-alerta{color:var(--red)}
+.cad-fl.cad-alerta{stroke:var(--red)}
+.cad-sin-notas .cad-nota,.cad-sin-notas .cad-fl,.cad-sin-notas .cad-halo{opacity:0!important}
+.cad-con-cursor .cad-nota,.cad-con-cursor .cad-fl,.cad-con-cursor .cad-halo{opacity:.12!important}
+.cad-cursor{display:none;position:absolute;top:0;bottom:0;z-index:5;background:var(--cad-velo);border-left:1px solid var(--text);border-right:1px solid var(--text);pointer-events:none}
+.cad-tip{display:none;position:absolute;top:3px;z-index:6;max-width:calc(100% - 4px);padding:4px 8px;border-radius:7px;background:var(--text);color:var(--card);font-size:12px;font-weight:600;line-height:1.3;font-variant-numeric:tabular-nums;pointer-events:none}
+.cad-con-cursor .cad-cursor,.cad-con-cursor .cad-tip{display:block}
+
+/* Lo que queda */
+.cad-cuenta{display:grid;gap:3px;margin:2px 0 8px}
+.cad-fila{display:grid;grid-template-columns:12px minmax(0,1fr) auto auto;align-items:baseline;gap:6px;font-size:13.5px;line-height:1.35}
+.cad-signo{color:var(--muted);font-weight:700}
+.cad-fila strong{font-weight:700;font-variant-numeric:tabular-nums}
+.cad-fila em{padding:0 5px;border-radius:4px;background:var(--cad-resalta);font:700 18px/1 var(--cad-mano)}
+.cad-fila em:empty{display:none}
+.cad-fila-util{margin-top:3px;padding-top:6px;border-top:1px solid var(--lineaf);font-size:15px;font-weight:700}
+.cad-fila-util strong{font-size:25px;line-height:1.1;letter-spacing:-.02em}
+.cad-pierde .cad-fila-util strong{color:var(--red)}
+.cad-tira{display:flex;gap:2px;height:26px;margin:8px 0 6px}
+.cad-tira i{display:block;flex:0 1 0;min-width:0;height:100%;padding-left:6px;border-radius:4px;overflow:hidden;font-style:normal;font-size:12px;font-weight:700;line-height:26px;white-space:nowrap;color:#fff;transition:flex-grow .8s cubic-bezier(.3,.7,.2,1)}
+.cad-seg-costo{background:var(--cad-rojo)}
+.cad-tira .cad-seg-fin{background:var(--cad-morado);color:var(--cad-sobre-morado)}
+.cad-tira .cad-seg-util{background:var(--cad-oro);color:#181714}
+.cad-aviso{margin:6px 0;font-size:12px;line-height:1.4;color:var(--red)}
+.cad-rango{margin:10px 0 2px}
+.cad-rango p{margin:0 0 5px;font-size:12.5px;line-height:1.4}
+.cad-rango-riel{position:relative;height:14px;margin:0 8px}
+.cad-rango-riel::before{content:"";position:absolute;left:0;right:0;top:6px;height:2px;background:var(--lineaf)}
+.cad-rango-riel i{position:absolute;top:2px;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:var(--card);border:2px solid var(--muted);transition:left .6s,transform .3s}
+.cad-rango-riel i.cad-act{background:var(--cad-oro);border-color:var(--cad-oro);transform:scale(1.4)}
+.cad-socios-t{margin:12px 0 5px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.cad-socios-bar{display:flex;gap:2px;height:14px}
+.cad-socios-bar i{display:block;flex:0 1 0;min-width:4px;border-radius:4px;transition:flex-grow .8s cubic-bezier(.3,.7,.2,1)}
+.cad-soc-dueno{background:var(--cad-azul)}
+.cad-soc-desarrollador{background:var(--cad-naranja)}
+.cad-socios-ley{display:grid;gap:3px;margin-top:7px;font-size:12.5px;line-height:1.4}
+.cad-socios-ley b,.cad-fila strong{font-variant-numeric:tabular-nums}
+
+/* Ligas a las tarjetas del plan y muelle de versiones */
+.cad-pie{display:flex;flex-wrap:nowrap;gap:6px;margin-top:9px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.cad-pie::-webkit-scrollbar{display:none}
+.cad-pie .cad-liga{flex:none}
+.cad-liga{min-height:38px;padding:5px 11px;border:1px solid var(--lineaf);border-radius:999px;background:transparent;color:var(--text);font:600 12px/1.2 inherit;font-family:inherit;white-space:nowrap;cursor:pointer}
+.cad-pie .cad-liga:first-child{border-color:var(--gold);color:var(--gold)}
+.cad-ajuste::before{content:"⚙ ";opacity:.6}
+.cad-barra{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px}
+.cad-barra:not(:has(> :not([hidden]))){display:none}
+.cad-dock{margin:2px 0 0;padding-top:10px;border-top:1px solid var(--linea)}
+.cad-vers{display:flex;flex-wrap:wrap;gap:6px;flex:1 1 auto;min-width:0}
+.cad-ver{display:grid;gap:1px;min-width:0;min-height:44px;padding:6px 12px;border:1px solid var(--lineaf);border-radius:12px;background:transparent;color:var(--text);font:inherit;text-align:left;cursor:pointer}
+.cad-ver span{font-size:13px;font-weight:700;line-height:1.2;overflow-wrap:anywhere}
+.cad-ver small{font-size:11px;line-height:1.2;color:var(--muted);font-variant-numeric:tabular-nums}
+.cad-ver[aria-pressed="true"]{background:var(--text);border-color:var(--text);color:var(--card);cursor:default}
+.cad-ver[aria-pressed="true"] small{color:inherit;opacity:.8}
+.cad-rep{min-height:44px;padding:6px 12px;border:1px dashed var(--lineaf);border-radius:12px;background:none;color:var(--text);font:600 12.5px/1.2 inherit;font-family:inherit;cursor:pointer}
+.cad-una{flex:1 1 100%;margin:0;font-size:12.5px;line-height:1.5;color:var(--muted)}
+.cad-una .cad-liga{margin-left:2px}
+.cad-fuente{margin:8px 4px 2px;font-size:11px;line-height:1.45;color:var(--muted)}
+.cad-no-cuadra .cad-fuente{color:var(--red)}
+/* El control del plan al que lleva una liga del diagrama */
+.cad-senalado{border-radius:12px;animation:cad-senala 1.8s ease-out 1}
+@keyframes cad-senala{0%,55%{box-shadow:0 0 0 3px var(--goldc)}100%{box-shadow:0 0 0 3px transparent}}
+
+@media (max-width:360px){.cad-cifra{max-width:112px;font-size:11.5px}.cad-nom{font-size:14px}}
+/* Pantalla ancha: los cuatro eslabones a la vista, en cuadrícula; se leen 1 → 2 → 3 → 4. */
+@media (min-width:760px){
+  .cad{padding:16px 16px 10px}
+  .cad-top{margin:0 2px 12px}
+  .cad-top h2{font-size:29px}
+  .cad-riel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .cad-pan{display:flex;flex-direction:column;padding:6px 12px 0;border:1px solid var(--linea);border-radius:14px;background:var(--card)}
+  .cad-cab{min-height:40px;padding:2px 0 6px;cursor:default;pointer-events:none}
+  .cad-chev{display:none}
+  .cad-cifra{max-width:none}
+  .cad-cuerpo{display:flex;flex-direction:column;flex:1 1 auto;padding:0 0 12px}
+  .cad-pie{flex-wrap:wrap;overflow:visible;margin-top:auto;padding-top:9px}
+  .cad-liga{min-height:32px;padding:4px 10px}
+  .cad-plot,.cad-pan[data-k="A"] .cad-plot{flex:1 0 164px;height:auto;min-height:164px}
+  .cad-por{display:flex;align-items:center;gap:7px;min-height:30px;font:700 20px/1.05 var(--cad-mano);color:var(--text);transition:opacity .35s}
+  .cad-por svg{flex:none;width:30px;height:23px;overflow:visible}
+  .cad-por path{fill:none;stroke:var(--text);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:0}
+  .cad-cadena .cad-por:not(.on){opacity:.3}
+}
+@media (prefers-reduced-motion:reduce){.cad,.cad *{transition:none!important;animation:none!important}}
+.cad-tabla{min-height:24px;padding:0;border:0;background:none;color:var(--gold);font:600 11px/1.45 inherit;font-family:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer}

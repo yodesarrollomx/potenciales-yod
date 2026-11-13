@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; media-src 'none'; form-action 'none'; frame-src 'none'; img-src 'self' data:; object-src 'none'; base-uri 'none'">
+  <title>Prueba aislada · departamentos multivolumen</title>
+  <link rel="stylesheet" href="../../ppp-ui.css?v=20261020-nav1">
+  <link rel="stylesheet" href="../../ppp-volumes.css?v=20261020-native4">
+  <style>
+    :root{--bg:#f3f1eb;--card:#fffef8;--surface:#f9f8f3;--box:#edeae1;--text:#253f37;--muted:#65766b;--linea:#d8ddd1;--gold:#806b3f;--green:#44705a;--red:#985a4f;--purple:#7a678e;--orange:#987344;color-scheme:light}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,sans-serif}button,input{font:inherit}button{cursor:pointer}.container{margin:auto}.grid-2{display:grid;gap:12px}.card{background:var(--card)}.fixture-warning{position:sticky;top:0;z-index:300;background:#fff0b4;color:#594516;border-bottom:2px solid #c3a442;padding:10px 16px}.fixture-warning strong{display:block;font-size:14px}.fixture-warning p{margin:3px 0;font-size:11px}.fixture-counters{display:flex;flex-wrap:wrap;gap:5px 16px;font:11px/1.5 ui-monospace,monospace}.fixture-counters b{color:#1d6546}.fixture-controls{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}.fixture-controls button,.small-btn{border:1px solid var(--linea);border-radius:9px;background:var(--card);color:var(--text);padding:8px 12px;min-height:40px}.fixture-context{font:11px ui-monospace,monospace;overflow-wrap:anywhere}.input-header{display:flex;justify-content:space-between}.input-group input{width:100%}.sticky-header,.hero,.reference-strip,.caso-actions{padding:10px}.fixture-fineprint{font-size:11px;color:var(--muted)}.kpi-grid{padding:10px}.ppp-volumes{scroll-margin-top:110px}.fixture-aux{padding:8px}#fixtureHandshake{font-size:11px}#toast{display:none}
+  </style>
+</head>
+<body>
+  <aside class="fixture-warning" aria-label="Entorno de prueba">
+    <strong>SÓLO DATOS SINTÉTICOS · NO ES EL CASO REAL</strong>
+    <p>Módulos reales sobre un DOM y modelo de prueba. Sin sesión, cálculo financiero, conexión o guardado de negocio. El botón Guardar sólo genera un recibo sintético en memoria.</p>
+    <div class="fixture-counters"><span>Inputs nativos: <b id="fixtureNativeInputs">0</b></span><span>Cambios nativos: <b id="fixtureNativeChanges">0</b></span><span>Solicitudes simuladas: <b id="fixtureRequests">0</b></span><span>Recibos simulados: <b id="fixtureReceipts">0</b></span><span>Red de negocio: <b>bloqueada por CSP</b></span></div>
+    <div id="fixtureHandshake" role="status">Esperando el handshake sintético del puesto…</div>
+  </aside>
+  <main class="container">
+    <section id="fixtureIntro">
+      <h1>Departamentos · volúmenes nativos · prueba aislada</h1>
+      <p class="fixture-fineprint">Las tarjetas usan PPPView real. El editor usa PPPVolumes real. El protocolo usa PPPVersionBridge real. Este DOM mínimo no sustituye el recorrido autenticado de mixto.html.</p>
+      <p class="fixture-context">case_id: synthetic-departamentos-board · scenario_id: synthetic-base · revision: synthetic-rev1</p>
+      <div class="fixture-controls" aria-label="Navegación local de prueba"><button data-fixture-target="terreno">Terreno</button><button data-fixture-target="ventas">Ventas</button><button data-fixture-target="costos">Costos</button><button data-fixture-target="calendario">Calendario</button><button data-fixture-target="dVolumenes">Volúmenes</button><button data-fixture-target="plan">Plan</button></div>
+    </section>
+    <div class="caso-bar"><div class="caso-activo"><b>Modelo sintético</b><span id="syncDot" class="sync-dot">Resultados ilustrativos sin cálculo financiero</span></div></div>
+    <header class="sticky-header"><div class="header-inner"><div class="hud-row"><div class="hud-item">Métricas financieras<strong id="hudUtilidad" class="hud-val">No calculadas</strong></div></div></div></header>
+    <section class="hero">Ejemplo sintético de geometría y cantidades; ningún importe es un resultado del caso real.</section>
+    <div class="reference-strip">Sin fuentes privadas ni credenciales.</div>
+    <div id="escBar">Escenario sintético base</div><section id="compSection">Sin comparación financiera.</section>
+    <div class="grid-2" id="fixtureDeck"></div>
+    <section id="fixtureDocuments"><input id="inInventarioExplicito" type="hidden" value="0"><p>Documento sintético sin archivos vinculados.</p></section>
+    <section id="mercadoDocumento">Sin mercado real conectado.</section>
+    <section class="caso-actions"><button id="btnMisCasos" type="button">Casos sintéticos</button><button id="btnGuardar" type="button" disabled>Guardado de negocio no disponible</button></section>
+    <details id="advBoard"><summary>Herramientas sintéticas</summary><p>Sin JSON aplicable ni transporte.</p></details>
+    <section id="pppVolumes" hidden></section>
+    <p id="fixtureNavigation" role="status" class="fixture-fineprint"></p>
+  </main>
+  <div id="toast"></div>
+  <script>
+    // Only this synthetic DOM is created here. The imported modules own behavior.
+    const fixtureCards=[['dArq','Terreno','inTerreno',1800],['dVentas','Ventas','inPreViv',0],['dCostos','Costos','inInicioObra',1],['dMacro','Crédito','inMaxDeuda',0],['dDota','Dotaciones','inDotAguaHab',0]];
+    const fixtureDeck=document.getElementById('fixtureDeck');
+    for(const [id,title,field,value]of fixtureCards){
+      const card=document.createElement('article');card.className='card';card.dataset.card=id;
+      const head=document.createElement('div');head.className='card-header';head.textContent=title;
+      const kpis=document.createElement('div');kpis.className='kpi-grid';kpis.textContent='Datos ilustrativos · sin cálculo financiero';
+      const drawer=document.createElement('div');drawer.className='drawer';drawer.id=id;
+      const group=document.createElement('div');group.className='input-group';
+      const label=document.createElement('label');label.textContent='Control nativo sintético · '+field;
+      const input=document.createElement('input');input.type='range';input.id=field;input.min='0';input.max='10000000';input.value=String(value);input.disabled=true;input.dataset.nativeFixture='true';
+      group.append(label,input);drawer.append(group);
+      if(id==='dCostos'){const extra=document.createElement('input');extra.type='range';extra.id='inMesesObra';extra.min='1';extra.max='120';extra.value='12';extra.disabled=true;extra.dataset.nativeFixture='true';drawer.append(extra);}
+      card.append(head,kpis,drawer);fixtureDeck.append(card);
+    }
+  </script>
+  <script src="../../ppp-ui.js?v=20261020-nav1"></script>
+  <script src="../../ppp-volumes.js?v=20261020-native4"></script>
+  <script src="../../ppp-volumes-native.js?v=20261020-native4"></script>
+  <script src="../../ppp-version-bridge.js?v=20261020-native2"></script>
+  <script>
+    (()=>{
+      'use strict';
+      const CASE='synthetic-departamentos-board',SCENARIO='synthetic-base',REVISION='synthetic-rev1';
+      const scenarios=[{id:SCENARIO,nombre:'Base sintética',inputs:{inTerreno:1800}}];
+      const view={caseId:CASE,scenarios,active:SCENARIO,busy:false,pending:false,error:false,labels:{inTerreno:'Terreno sintético'}};
+      const result={p:{terrain:1800,cos:.5,cus:1,altMax:30},units:17,totalFloors:3,levels:3,floorPlate:400,height:10,footprint:900,areaLibre:900,greenArea:300,gross:1800,resGross:1600,resSell:1400,com:200,comSell:160,vendTotal:1560,spaces:25,basements:1,basementArea:600,flows:[]};
+      PPPView.update(result,{native:true,caseId:CASE,scenario:SCENARIO,scenarioName:'Base sintética',revision:REVISION,versionCount:1,projectName:'Modelo sintético'});
+      const bridge=PPPVersionBridge.create({modelType:'vertical',read:()=>view,win:window});
+      bridge.remember({caseId:CASE,revision:REVISION,scenarios,active:SCENARIO,states:{[SCENARIO]:{}},native:true});
+      const embedded=false;
+      const capability={schema:2,read:true,write:true,max_volumes:16,fields:PPPVolumesNative.fields,allocation_modes:['preserve','built_area'],shared_resources:[{id:'synthetic-shared-a',label:'Infraestructura común sintética'},{id:'synthetic-shared-b',label:'Amenidades sintéticas'}]};
+      const blank=(index)=>({id:'synthetic-body-'+index,values:Object.fromEntries(capability.fields.map(field=>[field.id,field.id==='name'?'Cuerpo sintético '+index:null]))});
+      const initial=[blank(1),blank(2),blank(3)];
+      Object.assign(initial[0].values,{residential_levels:3,units_per_level:4,units:12,gross_area_m2:1200,construction_start_month:0,construction_duration_months:12});
+      Object.assign(initial[1].values,{residential_levels:7,units_per_level:3,units:21,gross_area_m2:2300,construction_start_month:8,construction_duration_months:16});
+      Object.assign(initial[2].values,{residential_levels:5,units_per_level:2,units:10,gross_area_m2:1600,construction_start_month:20,construction_duration_months:14});
+      let currentRevision=REVISION,collection={schema:2,count:3,shared_allocation_mode:'preserve',volumes:initial},authorizedContext=null;
+      const counters={native_inputs:0,native_changes:0,requests:0,receipts:0};
+      const copy=value=>JSON.parse(JSON.stringify(value));
+      function editorContext(){
+        if(embedded&&!authorizedContext){const verified=bridge.getVerifiedContext();if(!verified?.confirmed||verified.board_case_id!==CASE||verified.scenario_id!==SCENARIO||verified.revision!==REVISION)return null;authorizedContext=verified;}
+        return {verified:true,ready:true,model_type:'vertical',case_id:authorizedContext?.case_id||CASE,scenario_id:SCENARIO,scenario_name:'Base sintética',revision:currentRevision,native_capability:capability,native_collection:collection};
+      }
+      const editor=PPPVolumes.mount({container:document.getElementById('pppVolumes'),getContext:editorContext,onSave:async request=>{
+        // Contract validation is real. This fixture has no fetch, session or Store.
+        PPPVolumesNative.request(editorContext(),request.volumes,request.request_id);
+        document.getElementById('fixtureRequests').textContent=String(++counters.requests);
+        const next=copy(request.volumes);
+        // Fixed synthetic readback values, deliberately not calculated from drivers.
+        next.volumes[0].values.units=777;next.volumes[0].values.gross_area_m2=8888;
+        collection=next;currentRevision='synthetic-rev'+(counters.requests+1);
+        editor.setContext(editorContext());
+        document.getElementById('fixtureReceipts').textContent=String(++counters.receipts);
+        return {ok:true,request_id:request.request_id,case_id:editorContext().case_id,scenario_id:SCENARIO,revision:currentRevision,native_collection:copy(collection),calculated:true};
+      }});
+      function syncEditor(){const context=editorContext();if(context)editor.setContext(context);else editor.revoke();document.getElementById('fixtureHandshake').textContent=context?'Modelo VERTICAL exclusivamente sintético · 21 campos nativos · 7 derivados de sólo lectura':'Esperando el handshake sintético del puesto…';}
+      for(const [event,key,id]of [['input','native_inputs','fixtureNativeInputs'],['change','native_changes','fixtureNativeChanges']])document.addEventListener(event,e=>{if(e.target.matches('[data-native-fixture]'))document.getElementById(id).textContent=String(++counters[key]);});
+      window.addEventListener('message',event=>{if(event.source!==parent||event.origin!==location.origin||event.data?.type!=='yod:ppp:hello')return;queueMicrotask(syncEditor);});
+      document.querySelectorAll('[data-fixture-target]').forEach(button=>button.addEventListener('click',()=>{const receipt=PPPView.navigate(button.dataset.fixtureTarget);document.getElementById('fixtureNavigation').textContent='Navegación local sintética: '+receipt.status+' · '+(receipt.section_id||receipt.code||'');}));
+      window.PPPFixture={kind:'synthetic_only',bridge,editor,counters,getContext:editorContext,case_id:CASE,scenario_id:SCENARIO,revision:REVISION};
+      syncEditor();
+      window.addEventListener('pagehide',()=>{editor.dispose();bridge.dispose();});
+    })();
+  </script>
+</body>
+</html>

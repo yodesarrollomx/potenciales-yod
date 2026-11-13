@@ -1,5 +1,5 @@
 {
-  "model_revision": "2026-10-08.121-puesto-ppp-original",
+  "model_revision": "2026-11-12.ppp2.1",
   "proposal_id": "PPP",
   "summary": "Presentar el libro e historial documental enlazados desde notas del caso en los cinco motores. Sólo navegación autorizada existente; sin nuevas APIs, permisos ni fórmulas.",
   "components": [

@@ -22,3 +22,7 @@ El workflow `Arquitectura YOD` compara el cambio con una versión fija del atlas
 Revertir el commit de este cambio mediante revisión y repetir las verificaciones locales. No borrar ni restaurar registros de negocio, Sheets o archivos de clientes como parte del rollback.
 
 Usa datos sintéticos y dobles para verificar integraciones. No pruebes escrituras en endpoints de producción ni publiques credenciales, datos personales o contenido privado en archivos o logs públicos.
+
+## Relevo de Jev Images · 28-oct-2026
+
+Leer [protocolo visual experimental](docs/JEV-IMAGENES-PPP-20261028.md) antes de clasificar fotografías, planos o capturas mediante Jev. La guía define un piloto en sombra y **no acredita ejecución ni despliegue**. Mantener los contratos, CI, reservas, pruebas y rutas canónicas vigentes; no usar Jev textual como visión ni dar por notificados a otros chats hasta observar su acuse.

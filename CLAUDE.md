@@ -9,14 +9,14 @@ Lee este archivo completo antes de tocar nada.
 Dos cosas en un mismo repo:
 
 1. **El board de Potenciales** — calculadora de potencial de desarrollos, sheet-driven. Cinco motores vivos: VERTICAL (`mixto.html`), MACROLOTES (`macrolotes.html`), UNIFAMILIAR (`unifamiliar.html`), RESIDENCIAL (`residencial.html`), PATRIMONIAL (`patrimonial.html`), más portal (`index.html`) y mapa (`mapa.html`). Lo usan Alejandro y el equipo YoDesarrollo.
-2. **EL PORTERO** (`portero.js`) — la cerradura compartida de **todos** los tableros YOD. No es un archivo de este board: otros repos lo cargan por URL absoluta (`yodesarrollo-board/index.html`, `obra-board/index.html`, los 5 HTML de `real-miramar-board/` traen `src="https://yodesarrollomx.github.io/potenciales-yod/portero.js"`). Trae además el tema claro/oscuro de todos los boards (bloque «TEMA CLARO / OSCURO» de `portero.js`, hasta el final del archivo).
+2. **EL PORTERO** (`portero.js`) — la cerradura compartida de **todos** los tableros YOD. No es un archivo de este board: otros repos lo cargan por URL absoluta (`yodesarrollo-board/index.html`, los 5 HTML de `real-miramar-board/` y otros tableros traen `src="https://yodesarrollomx.github.io/potenciales-yod/portero.js"`). Trae además el tema claro/oscuro de todos los boards (bloque «TEMA CLARO / OSCURO» de `portero.js`, hasta el final del archivo).
 
 **Dirección en vivo (curl, 2026-09-04):** `https://yodesarrollomx.github.io/potenciales-yod/` → **200** (casa canónica) · `/portero.js` → **200** · `/accesos.html` → **200** · `https://alexpueblag.github.io/potenciales-yod/` → **200** (cascarón viejo, sigue respondiendo) · `https://tableros.yodesarrollo.mx/potenciales-yod/` → **000, no resuelve** (el DNS del dominio propio no existe todavía).
 
 ## Reglas INVIOLABLES
 
 1. **Nunca crear implementación nueva del Apps Script.** Editor → Implementar → Administrar → lápiz → *Nueva versión*. Una nueva cambia la URL `/exec` y rompe TODOS los tableros a la vez, más los `?open=` ya enviados por correo. Ya pasó: 2026-07-12, implementación archivada e irrecuperable (`653795e`).
-2. **`portero.js` no es de este board: es de todos.** Se despliega desde este repo y al instante lo cargan Miramar, obra-board y yodesarrollo-board. Romperlo deja al equipo fuera de todo.
+2. **`portero.js` no es de este board: es de todos.** Se despliega desde este repo y al instante lo cargan Miramar, yodesarrollo-board y los demás tableros que lo usan. Romperlo deja al equipo fuera de todo.
 3. **El HTML público no lleva secretos.** La clave vive en la hoja `CONFIG` (servidor); el `client_id` de Google sí es público por diseño (`Code.gs:36`). Verificado: sin `k`, `?recurso=lista` → `{"ok":false,"error":"clave"}`.
 4. **Un relevo de emergencia jamás se persiste como destino.** El original va primero en cada llamada; el respaldo solo si aquel falla ahí mismo (`portero.js:16-24`). Persistirlo causó el "pagué Workspace y ya no entra" ([[google-workspace-reactivado-16ago]]).
 5. **Nunca se borra una fila del Sheet.** Archivar = `archivado:"si"` (`Code.gs:12`); las pruebas van con `source='test'` y se archivan.
@@ -26,15 +26,20 @@ Dos cosas en un mismo repo:
 
 ## Archivos
 
-- `portero.js` (378 líneas) — la cerradura. Canje de liga, gate, bitácora, engrane de admin y tema.
+- `portero.js` (~450 líneas) — la cerradura. Canje de liga, gate, bitácora, engrane de admin y tema. Desde la Fase 1 (30-oct-2026), si la página cargó `YodCargador` el canje sale del cargador (uno solo por página, compartido con `shell.js` y la cabina) y la bitácora lleva además los códigos de telemetría del cargador; sin él, o con `?cargador=legacy`, es el GET de siempre.
+- **El cargador compartido no vive aquí**: es `https://yodesarrollomx.github.io/yod-portal/os/yod-cargador.js` (familia `marco` de `versiones.json`), cargado en el `<head>` de los 8 HTML justo después de `yod-acceso.js`. Con él activo, la **primera** lectura de `recurso=lista` de cada motor y las listas de `ppp-catalog.js` van caché-primero («pinta lo último conocido, refresca en fondo»); `caso`, `catalogo`, modelo, recibos y guardados siguen por `fetch`. Contrato y propuesta: `CHG-CARGADOR-FASE1-001` en el atlas de yod-portal. Interruptor de reversión sin código: `?cargador=legacy` o `localStorage.yodcg_legacy='1'`. **Entrega 2 (31-oct-2026, `CHG-CARGADOR-FASE1-002`):** cuando un motor o la portada cierran la sesión por un rechazo de credencial, con el cargador activo lo hacen con `YodCargador.sesion.cerrar({token, motivo})` (borra la llave sólo si sigue siendo el token rechazado y purga las copias); sin cargador queda el borrado literal de siempre. `tests/ppp-paridad-cargador-browser.cjs` vigila que los 5 motores den las mismas cifras con y sin cargador.
 - `accesos.html` — board de admin: alta/revocación de usuarios y **matriz de permisos por tablero**.
   El botón de la línea 116 abre la hoja ACCESOS (`docs.google.com/spreadsheets/d/1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y`).
 - `index.html` — portal con mapa; redirige los `?open=ID` viejos al board que toca (líneas 12-14).
 - `mapa.html`, `macrolotes.html`, `mixto.html`, `unifamiliar.html`, `residencial.html`,
-  `patrimonial.html` — los motores. Todos cierran con `<script src="portero.js?v=relevo5">`.
+  `patrimonial.html` — los motores. Todos cierran con `<script src="portero.js?v=…">` (el `?v=` lo fija `versiones.json`).
+- `ppp-cadena.js` + `ppp-cadena.css` (+ `fonts/`) — el **diagrama en cadena** que va arriba de cada Plan de Potencial (hoy sólo en `mixto.html`): Se vende → Entra y sale → En el banco y prestado → Lo que queda. Sólo presentación: recibe el estado ya confirmado al final de `render()`, no calcula, no usa red ni almacenamiento; sus botones son las versiones del caso. Para instalarlo en otro motor se agrega un adaptador; contrato en `docs/ppp-cadena.md` (`CHG-PPP-CADENA-20261111`).
 - `gas/Code.gs` — el backend. **NO está en el repo público** (`.gitignore` excluye `gas/`).
 - `gas/parches/2026-09-02-canje-cache.gs` — el parche de caché del canje, ya integrado en Code.gs.
 - `.claude/launch.json` — server local `potenciales`, puerto 8765.
+- `versiones.json` + `scripts/versiones.cjs` — una sola etiqueta `?v=` por familia: `propia` = archivos de ESTE repo (`portero.js`, `ppp-*`, `modelos.js`…); `marco` = archivos de yod-portal (`os/shell.js`, `os/shell.css`, `os/yod-acceso.js`…).
+  **Para cambiar versiones: editar `versiones.json` y correr `node scripts/versiones.cjs --aplicar`; CI falla si una etiqueta no coincide.** Nunca teclear un `?v=` a mano en los HTML.
+  Fuera de su alcance: `?v=` armados en JS (p. ej. `portero.js:15` pide `yod-acceso.js?v=1` sólo si la página no lo cargó) y las cargas de `portero.js` desde otros repos por URL absoluta.
 
 ## Arquitectura de datos
 
@@ -60,7 +65,7 @@ Google Sheet "YOD - POTENCIALES"  (el ID vive en Script Properties, llave SHEET_
         │
         ▼
    portero.js  ──inyecta gate + bitácora + tema──▶  los 8 HTML de este repo
-                                                 +  yodesarrollo-board · obra-board · real-miramar-board
+                                                 +  yodesarrollo-board · real-miramar-board · otros tableros
 ```
 
 > ⚠ **El repo es ESPEJO: lo que corre es lo pegado en el editor de Apps Script.** `gas/Code.gs` ni
@@ -178,3 +183,33 @@ Dirección exige que **datos y fórmulas vivan en Sheets**. El tablero leerá lo
 
 **Estado real:** los cinco HTML todavía calculan con computar(); la migración no está implementada. El commit 9b88384 amplió inventario documental y no trasladó las fórmulas. El contrato, antes/ahora/futuro y pendientes están registrados en **PPP_Arquitectura** y **PPP_Cambios** del Control Maestro; se corrigió la descripción histórica de SYS-POTENCIALES. Toda nueva escritura debe registrar actor, revisión base, antes/después, fuente, validación y siguiente paso, sin sobrescribir trabajo concurrente. No publicar datos privados en Git.
 
+
+## 11-nov-2026 · Grafo del sistema en Accesos
+
+Al final de `accesos.html` (sólo admin) vive el grafo de YOD OS con sus controles. Detalle completo en **docs/grafo.md**; propuesta `CHG-GRAFO-ACCESOS-20261111`.
+
+- **`grafo/` es generado: no se edita a mano.** Sale de `grafo-motor/datos/base.json`; tras tocar el motor se regenera con `python3 grafo-motor/rehacer.py inicial`. CI comprueba que lo publicado es lo que genera la base.
+- **Ningún flujo escribe en la rama principal.** Un grafo rehecho queda en la rama `grafo-borrador` con su PR: fusionarlo es aprobar; abierto es borrador; cerrarlo lo descarta. Lo vivo (estado, registro, aviso de borrador) va en la rama de datos `grafo-datos`. **Aprobar es un toque con la App del grafo (instalada desde el 13-nov-2026) y dos sin ella** (DEC-21). Sin App, el flujo abre el PR con su credencial y GitHub deja sus pruebas en espera hasta que una persona toca «Approve workflows to run»; después, «Merge pull request» (visto en vivo el 12-nov-2026, PR 66). Con los secretos `GRAFO_APP_ID` y `GRAFO_APP_PRIVATE_KEY`, la rama y el PR del borrador los mueve la App (sólo eso), las pruebas corren solas y basta «Merge pull request» (comprobado en vivo el 13-nov-2026, PR 97; la App es «YOD Grafo borrador», instalada sólo en este repositorio); sin ellos todo vuelve a los dos toques. Lo que el propio grafo escribe aquí (`grafo/`, `grafo-motor/datos/` y el `architecture-impact.json` de cada borrador) no cuenta como «el sistema cambió».
+- **Las claves de IA del grafo son sólo secretos de Actions** (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`). Nunca en una página, archivo o registro. Sin claves el grafo se rehace igual. (PPP 2 tiene su propia regla para la clave de su servidor: ver «PPP 2» abajo.)
+- **Repo público:** lo de `grafo/` lo abre cualquiera con la liga. Dirección eligió publicar la versión completa (identificadores y pestañas de hojas, y el plan propuesto por tablero). **Nunca** debe llevar repositorios privados ni de clientes externos, hallazgos de seguridad, nombres de personas, folios o nombres de tratos, correos, claves ni identificadores completos de `/exec`; la prueba `LoPublicado` lo vigila. Desde el 12-nov-2026 (DEC-19) tampoco refleja sistemas hechos para otros clientes, aunque el atlas y `yod-portal` publiquen su descripción saneada: la regla `excluir` de `grafo-motor/datos/reglas.json` los saca en cada refresco y una prueba lo vigila; ver `docs/grafo.md`.
+- **Las presentaciones leen el grafo aprobado** (`grafo/versiones.json` y `grafo/datos/<id>.json`). Cambiar `grafo-motor/recetas.json` cambia lo que cuentan; las recetas no llevan cifras.
+- **Dónde se pinta un error:** en el repositorio donde pasó y en los tableros que viven en él (`grafo/mapa-ids.json`); no en sus vecinos de fila. Comprobado en vivo el 12-nov-2026: rehacer a pedido, el PR del borrador abierto por el flujo, aprobar (los dos toques, sin App) y descartar; el detalle, en `docs/grafo.md`, «Comprobado en producción».
+- Pruebas: `python -m unittest discover -s grafo-motor/pruebas -p 'prueba_*.py'` y `node --test tests/grafo-estado.test.cjs tests/grafo-control.test.cjs`.
+
+
+## 12-nov-2026 · PPP 2, el vivero de planes (`CHG-PPP2-20261112`)
+
+Portal **aparte** del PPP actual: `ppp2.html` + `ppp2.js` + `ppp2.css`, servidor en `server/ppp2/`, plantilla en `ppp2/libro/`. Detalle en **docs/ppp2.md**. No toca los motores, `portero.js`, `accesos.html` ni el Apps Script del Portero.
+
+- **El plan es el autón.** No hay un agente aparte: el plan es su libro, su página, sus documentos y sus herramientas; a veces se habla con él por texto o por voz. La página habla en primera persona y ningún texto nombra a un «autón» como si fuera otro (lo vigila `tests/ppp2-browser.cjs`).
+- **El cálculo vive en el libro de cada plan** (Google Sheets, plantilla `ppp2-libro-v1`): tres versiones con el mismo motor de flujo, revisión para fondos, reparto, preguntas, candados, hallazgos, consejo, pruebas, rondas y bitácora. La edad (semilla → plántula → árbol → flor → fruto), **el siguiente paso del plan** (`Resumen!plan.paso`) y hasta el paso de capital de la ronda (`plan.paso_capital`) los calcula el libro. **Nunca** escribir fórmulas financieras en `ppp2.js` ni en `PPP2.gs`.
+- **El plan itera (la ronda).** Cuando el consejo regresa una versión —o la que defiende no pasa la revisión para fondos— el servidor mueve capital y arranque de obra en una versión de trabajo, el libro recalcula cada combinación y el plan **propone sólo lo que pasa la revisión**, con un criterio fijo y escrito (`RONDA` y `ronda_` en `PPP2.gs`; explicado en docs/ppp2.md). Nunca toca la base ni la vigente, **ni escribe encima del trabajo de una persona si nadie se lo presta** (`lugarRonda_`); una propuesta del plan a la que alguien le movió una palanca ya es trabajo de esa persona (`delPlan_`). Antes de anotar una propuesta la vuelve a leer del libro. Si no hay mejora, no propone. `latido` (activador por tiempo) lo hace solo; se apaga con `Config!pausa = sí` o con el renglón `latido` = `no` en `Config`. **El latido nunca aprueba, nunca vuelve vigente nada y nunca se presta una versión.**
+- **La huella y la evidencia.** Cada versión tiene una huella que cambia si cambian sus números. Pruebas, votos del consejo y rondas guardan la huella de lo que tocaron: si la versión cambia, dejan de contar. Quien escriba un voto del consejo copia del Resumen `plan.huella` a `Consejo!H` y `plan.evidencia` a `Consejo!I`; una sesión vale sólo con los siete votos y con nombre nuevo (`CP-n`).
+- **LibreOffice no es Google Sheets.** Los accesorios de pruebas los calcula LibreOffice; los libros viven en Google Sheets. Quien cambie fórmulas del ciclo las comprueba además en un libro de Google Sheets antes de publicar (ya mordió: `ROW(rango)` de un rango que se sale de la hoja da `#N/A` en Sheets y no en LibreOffice; ver `ppp2/libro/README.md`).
+- **El libro usa «;» en sus fórmulas** (coma decimal). El servidor nunca escribe una fórmula armada con comas: copia la que ya había (`getFormula` → `setFormula`) o usa `copyTo`. Ya rompió una corrida real (12-nov-2026). Quien escriba fórmulas por la API en un libro así las escribe con «;» y sin matrices entre llaves.
+- **Servidor:** Apps Script «PPP 2 · servidor», ligado a la hoja «PPP 2 · Vivero (registro)» de la carpeta «PPP 2 · Vivero» del Drive de Dirección. Su primera implementación fue «Nueva implementación» por ser proyecto nuevo; **de aquí en adelante siempre «Nueva versión» sobre la misma** (cambiar la URL deja a `ppp2.js` sin servidor). La URL vive en `ENDPOINT` de `ppp2.js`. Instalación, latido y reversión: `server/ppp2/INSTALAR.md`. Sólo lectura sin tocar código: hoja `Config`, `pausa = sí`.
+- **Permisos:** el servidor canjea la sesión con el Portero (`board=PT`). `admin` aprueba versiones; `admin` y `editor` capturan, corren rondas y le prestan una versión al plan; quien tiene `PT` lee. La página nunca borra `pyod_clave_v1`.
+- **El consejo y la investigación corren en el servidor, por la API de IA** (12-nov-2026, Dirección: «hazlo vía en línea… un botón conectado a las APIs», sin depender de chats ni suscripciones). Botón «Convocar al consejo» (y el latido, cuando el libro dice `consejo`), «Investigar» y «Investigar lo que falta» (búsqueda en la web por Anthropic). Una sesión se escribe sólo con los siete votos válidos y si el libro no cambió mientras votaban; un hallazgo se anota sólo si su fuente salió de la búsqueda. **La clave vive sólo en las propiedades del script del servidor PPP 2** (`ANTHROPIC_API_KEY` u `OPENAI_API_KEY`), la pone Dirección: es la excepción, para PPP 2, a «claves de IA sólo como secretos de Actions» (así el expediente de un plan no pasa por un repositorio público). Nunca en la página, el repo, un libro, `Config` ni la bitácora. Cobra por uso. Detalle en docs/ppp2.md, «El consejo y la investigación, por API».
+- **Repo público:** ni nombres de planes, ni cifras, ni IDs de libros en código, pruebas, docs, mensajes de commit, descripciones de PR ni `architecture-impact.json`. El plan de `ppp2/libro/ejemplo-plan.json` y sus accesorios son inventados; los datos de planes reales viven fuera del repo.
+- **Pruebas:** `node --test tests/ppp2-servidor.test.cjs tests/ppp2-ronda.test.cjs tests/ppp2-libro.test.cjs tests/ppp2-consejo.test.cjs` y `node tests/ppp2-browser.cjs` (corren en `verificar-ppp.yml`). Los accesorios salen de una hoja de cálculo real: **si tocas `ppp2/libro/`, corre `python3 ppp2/libro/regenerar.py`** (necesita LibreOffice); si no, `tests/ppp2-libro.test.cjs` falla.
+- **Menú:** «PPP 2» en `yod-portal/os/catalogo.js` (código `PT`, después de Mercado).
