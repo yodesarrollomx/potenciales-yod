@@ -233,80 +233,107 @@ test('si la API no contesta, el latido no insiste en cada vuelta: espera dos hor
 /* ── la investigación ── */
 const URL_A = 'https://boletinoficial.sonora.gob.mx/ejemplo/programa.pdf';
 const URL_B = 'https://www.banxico.org.mx/ejemplo/tiie';
+const HALLAZGOS = [
+  { tema: 'Uso de suelo', hallazgo: 'El programa municipal fija la zonificación del predio; hay que pedir la constancia para comparar la altura.', fuente: URL_A, confianza: 'media', mueve: 'candado uso_suelo' },
+  { tema: 'Tasa', hallazgo: 'La TIIE publicada es distinta de la que usa el libro; conviene revisar el dato de la tasa del banco.', fuente: 'https://inventada.example/tiie', confianza: 'alta', mueve: 'din.tiie' },
+  { tema: 'Corto', hallazgo: 'muy corto', fuente: URL_B, confianza: 'baja', mueve: '' }
+];
+/* La API de juguete de la búsqueda: busca (server_tool_use + web_search_tool_result) y al final contesta un JSON en texto. */
 function buscador(opciones) {
   const op = opciones || {};
-  return ({ cuerpo, n }) => {
+  return ({ n }) => {
     const resultados = { type: 'web_search_tool_result', tool_use_id: 'b' + n, content: [{ type: 'web_search_result', url: URL_A, title: 'Programa', encrypted_content: 'x' }, { type: 'web_search_result', url: URL_B + '/', title: 'TIIE', encrypted_content: 'y' }] };
-    if (op.pausa && n === 1) return { codigo: 200, cuerpo: { stop_reason: 'pause_turn', content: [{ type: 'server_tool_use', id: 'b1', name: 'web_search', input: { query: 'zonificación' } }, resultados] } };
-    const hallazgos = op.hallazgos || [
-      { tema: 'Uso de suelo', hallazgo: 'El programa municipal fija la zonificación del predio; hay que pedir la constancia para comparar la altura.', fuente: URL_A, confianza: 'media', mueve: 'candado uso_suelo' },
-      { tema: 'Tasa', hallazgo: 'La TIIE publicada es distinta de la que usa el libro; conviene revisar el dato de la tasa del banco.', fuente: 'https://inventada.example/tiie', confianza: 'alta', mueve: 'din.tiie' },
-      { tema: 'Corto', hallazgo: 'muy corto', fuente: URL_B, confianza: 'baja', mueve: '' }
-    ];
-    return { codigo: 200, cuerpo: { stop_reason: 'tool_use', content: (op.pausa ? [] : [{ type: 'server_tool_use', id: 's' + n, name: 'web_search', input: { query: 'q' } }, resultados])
-      .concat([{ type: 'text', text: 'Listo.' }, { type: 'tool_use', id: 'h' + n, name: 'entregar_hallazgos', input: { hallazgos } }]) } };
+    const busca = op.sinBuscar ? [] : [{ type: 'server_tool_use', id: 'b' + n, name: 'web_search', input: { query: 'zonificación Hermosillo' } }, resultados];
+    if (op.pausa && n === 1) return { codigo: 200, cuerpo: { stop_reason: 'pause_turn', content: busca } };
+    const json = JSON.stringify({ hallazgos: op.hallazgos || HALLAZGOS });
+    return { codigo: 200, cuerpo: { stop_reason: 'end_turn', content: (op.pausa ? [] : busca).concat([
+      { type: 'text', text: 'Revisé el programa municipal.', citations: op.sinBuscar ? null : [{ type: 'web_search_result_location', url: URL_A, title: 'Programa', cited_text: 'zonificación', encrypted_index: 'z' }] },
+      { type: 'text', text: '```json\n' + json + '\n```' }]) } };
   };
 }
 const hallazgosDe = (w) => w.libro.getSheetByName('Hallazgos').v.slice(4).filter((f) => f[1]);
+const investiga = (w, extra) => w.post(Object.assign({ tipo: 'ppp2-investigar', plan: PLAN, k: EDITOR, request_id: 'inv-' + Math.random() }, extra));
 
 test('con la clave de Anthropic, «Investigar» busca en la web ahí mismo y anota sólo hallazgos con una fuente que de verdad trajo la búsqueda', () => {
   const w = enConsejo({ ia: buscador() });
   w.propiedades.set('ANTHROPIC_API_KEY', CLAVE);
   assert.equal(plan(w).ciclo.ia_busca, true);
   const antes = hallazgosDe(w).length;
-  const r = w.post({ tipo: 'ppp2-investigar', plan: PLAN, k: EDITOR, pregunta: 'M04.Q02', tema: '¿Qué usos están permitidos y con qué condiciones?', detalle: '', request_id: 'inv-1' });
+  const r = investiga(w, { pregunta: 'M04.Q02', tema: '¿Qué usos están permitidos y con qué condiciones?', detalle: '' });
   assert.equal(r.ok, true, JSON.stringify(r));
-  assert.equal(r.hallazgos, 1, 'la fuente inventada y el texto corto no cuentan');
-  assert.match(r.nota, /Investigué y dejé 1 hallazgo en «Lo que encontré», con su fuente\. Ninguno cambia un dato hasta que alguien lo acepte\./);
+  assert.deepEqual([r.hallazgos, r.busquedas, r.paginas, r.propuestos], [1, 1, 2, 3], 'la fuente inventada y el texto corto no cuentan');
+  assert.match(r.nota, /^Investigué \(1 búsqueda, 2 páginas\) y dejé 1 hallazgo en «Lo que encontré», con su fuente\. Ninguno cambia un dato hasta que alguien lo acepte\.$/);
   const nuevos = hallazgosDe(w).slice(antes);
   assert.equal(nuevos.length, 1);
   assert.deepEqual([nuevos[0][1], nuevos[0][3], nuevos[0][4], nuevos[0][6], nuevos[0][7], nuevos[0][8]], ['Uso de suelo', URL_A, 'media', 'propuesto', 'El plan (investigó por API)', 'Pregunta M04.Q02']);
   const p = w.iaPedidos[0];
   assert.equal(p.headers['x-api-key'], CLAVE);
-  const web = p.cuerpo.tools.find((x) => x.name === 'web_search');
-  assert.deepEqual([web.type, web.max_uses, web.user_location.city, web.user_location.country], ['web_search_20250305', 4, 'Hermosillo', 'MX']);
-  assert.ok(p.cuerpo.tools.some((x) => x.name === 'entregar_hallazgos'));
+  assert.ok(!p.crudo.includes(CLAVE));
+  assert.equal(p.cuerpo.tools.length, 1, 'sólo la búsqueda: el resultado llega en texto');
+  const web = p.cuerpo.tools[0];
+  assert.deepEqual([web.type, web.name, web.max_uses, web.user_location.city, web.user_location.country], ['web_search_20250305', 'web_search', 5, 'Hermosillo', 'MX']);
+  assert.match(p.cuerpo.system, /haz al menos dos búsquedas/);
   assert.match(p.cuerpo.messages[0].content[0].text, /¿Qué usos están permitidos y con qué condiciones\?/);
-  assert.match(bitacora(w).pop()[2], /Investigó por API: 1 hallazgo propuesto/);
+  const b = bitacora(w).pop();
+  assert.match(b[2], /Investigó por API: 1 hallazgo propuesto/);
+  assert.equal(b[6], '1 renglón · 1 búsqueda, 2 páginas · propuso 3');
   assert.equal(w.vivero.getSheetByName('Pedidos'), null, 'ya no queda pedido: se investigó');
+});
+
+test('la fuente se compara por sitio y ruta (sin www, sin #, sin consulta, http o https) y se anota como la trajo la búsqueda', () => {
+  const w = enConsejo({ ia: buscador({ hallazgos: [{ tema: 'Tasa', hallazgo: 'La TIIE publicada por Banco de México difiere de la del libro; conviene revisar el dato.', fuente: 'Banxico (http://banxico.org.mx/ejemplo/tiie?x=1#tabla).', confianza: 'alta', mueve: 'din.tiie' }] }) });
+  w.propiedades.set('ANTHROPIC_API_KEY', CLAVE);
+  const antes = hallazgosDe(w).length;
+  assert.equal(investiga(w, { tema: 'tasa del banco' }).hallazgos, 1);
+  assert.equal(hallazgosDe(w).slice(antes)[0][3], URL_B + '/', 'la dirección tal como la trajo la búsqueda');
 });
 
 test('una investigación larga (pause_turn) sigue con la respuesta tal cual vino', () => {
   const w = enConsejo({ ia: buscador({ pausa: true }) });
   w.propiedades.set('ANTHROPIC_API_KEY', CLAVE);
-  const r = w.post({ tipo: 'ppp2-investigar', plan: PLAN, k: EDITOR, tema: 'zonificación del predio', request_id: 'inv-2' });
+  const r = investiga(w, { tema: 'zonificación del predio' });
   assert.equal(r.ok, true);
-  assert.equal(r.hallazgos, 1);
+  assert.deepEqual([r.hallazgos, r.busquedas], [1, 1]);
   assert.equal(w.iaPedidos.length, 2);
   const segundo = w.iaPedidos[1].cuerpo.messages;
   assert.equal(segundo[1].role, 'assistant');
   assert.equal(segundo[1].content[1].type, 'web_search_tool_result', 'se devuelve sin cambios lo que mandó la API');
 });
 
-test('sin hallazgos confiables no se anota nada; sin clave de Anthropic queda pedido como antes', () => {
-  const w = enConsejo({ ia: buscador({ hallazgos: [] }) });
-  w.propiedades.set('ANTHROPIC_API_KEY', CLAVE);
-  const antes = hallazgosDe(w).length;
-  const r = w.post({ tipo: 'ppp2-investigar', plan: PLAN, k: EDITOR, tema: 'agua', request_id: 'inv-3' });
-  assert.equal(r.hallazgos, 0);
-  assert.match(r.nota, /no encontré nada nuevo y confiable/);
-  assert.equal(hallazgosDe(w).length, antes);
+test('«nada» dice por qué: sin búsquedas, sin fuentes comprobadas o sin nada nuevo; y nunca anota', () => {
+  const casos = [
+    [{ sinBuscar: true }, /^No alcancé a buscar en la web: la API no hizo ninguna búsqueda\./, 'Investigó por API: no alcanzó a buscar'],
+    [{ hallazgos: [HALLAZGOS[1]] }, /^Investigué \(1 búsqueda, 2 páginas\) y propuse 1, pero ninguno con una fuente de las páginas que consulté: no los anoté\.$/, 'Investigó por API: ninguna fuente comprobada'],
+    [{ hallazgos: [] }, /^Investigué \(1 búsqueda, 2 páginas\) y no encontré nada nuevo y confiable\. No anoté nada\.$/, 'Investigó por API: nada nuevo y confiable']
+  ];
+  for (const [op, nota, bita] of casos) {
+    const w = enConsejo({ ia: buscador(op) });
+    w.propiedades.set('ANTHROPIC_API_KEY', CLAVE);
+    const antes = hallazgosDe(w).length;
+    const r = investiga(w, { tema: 'agua' });
+    assert.equal(r.hallazgos, 0);
+    assert.match(r.nota, nota);
+    assert.equal(bitacora(w).pop()[2], bita);
+    assert.equal(hallazgosDe(w).length, antes);
+  }
+});
 
+test('sin clave de Anthropic queda pedido como antes, y «lo que falta» no se puede investigar', () => {
   const w2 = enConsejo({ ia: buscador() });
   w2.propiedades.set('OPENAI_API_KEY', 'sk-openai');          // la búsqueda en la web va por Anthropic
-  const r2 = w2.post({ tipo: 'ppp2-investigar', plan: PLAN, k: EDITOR, pregunta: 'M04.Q02', tema: 'usos', request_id: 'inv-4' });
+  const r2 = investiga(w2, { pregunta: 'M04.Q02', tema: 'usos' });
   assert.equal(r2.hecho, 'pedido');
   assert.match(r2.nota, /clave de la API de Anthropic/);
   assert.equal(w2.vivero.getSheetByName('Pedidos').v.length, 2);
   assert.equal(w2.iaPedidos.length, 0);
-  assert.deepEqual(w2.post({ tipo: 'ppp2-investigar', plan: PLAN, k: EDITOR, mundo: true, request_id: 'inv-5' }), { ok: false, error: 'busqueda' });
+  assert.deepEqual(investiga(w2, { mundo: true }), { ok: false, error: 'busqueda' });
 });
 
 test('«Investigar lo que falta» lleva los candados abiertos y lo que pidió el consejo', () => {
   const w = enConsejo({ ia: (q) => (q.url.includes('anthropic') && q.cuerpo.tools && q.cuerpo.tools.some((x) => x.name === 'web_search') ? buscador()(q) : jueces()(q)) });
   w.propiedades.set('ANTHROPIC_API_KEY', CLAVE);
   assert.equal(convoca(w).ok, true);                 // la sesión deja condiciones
-  const r = w.post({ tipo: 'ppp2-investigar', plan: PLAN, k: EDITOR, mundo: true, request_id: 'inv-6' });
+  const r = investiga(w, { mundo: true });
   assert.equal(r.ok, true, JSON.stringify(r));
   const texto = w.iaPedidos[w.iaPedidos.length - 1].cuerpo.messages[0].content[0].text;
   assert.match(texto, /Pendientes que te tocan:/);
