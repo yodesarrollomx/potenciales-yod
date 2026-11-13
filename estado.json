@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-13T05:11:49.498Z",
+ "generado": "2026-11-13T05:12:48.090Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -8,7 +8,7 @@
     "repo:yodesarrollomx/yod-portal"
    ],
    "desde": "2026-11-13T02:09:31Z",
-   "url": "https://github.com/yodesarrollomx/yod-portal/commit/f27a7140ac4969fd82f77a0ad9d1f1f45ba3db41",
+   "url": "https://github.com/yodesarrollomx/yod-portal/commit/4650277f6d1a7caa9cec82b9ed05bb86f8398425",
    "msg": "yod-portal cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
