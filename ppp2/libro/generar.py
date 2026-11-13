@@ -723,7 +723,7 @@ def V(clave, k):
 def hoja_versiones(wb, plan):
     ws = wb.create_sheet("Versiones")
     celda(ws, "A1", "Versiones: maneras de hacer el mismo proyecto", F_TITULO)
-    celda(ws, "A2", "Cada versión se calcula sola en su pestaña de flujo. Sólo Dirección vuelve vigente una versión; el autón y el equipo proponen.", F_SUB)
+    celda(ws, "A2", "Cada versión se calcula sola en su pestaña de flujo. Sólo Dirección vuelve vigente una versión; el plan y el equipo proponen.", F_SUB)
     for i, t in enumerate(["clave", "Concepto", "V1", "V2", "V3"]):
         celda(ws, f"{L(i + 1)}4", t, F_ENCABEZADO).border = BORDE
     fila = 5
@@ -995,26 +995,149 @@ def hoja_preguntas(wb, plan, catalogo):
     return ws, n
 
 
-def consejo_partes(ver_ref):
-    """La última sesión del consejo (las filas se agregan en orden): cuántas filas hay, qué sesión,
-    sobre qué versión, cuántos jueces aprueban, si hubo veto, cuántos votaron y si la sesión fue sobre
-    la versión `ver_ref` (acepta «V2», «v2» o «2»)."""
-    n = "COUNTA(Consejo!$A$5:$A$500)"
-    ses = f"INDEX(Consejo!$B$5:$B$500,{n})"
-    ver = f"INDEX(Consejo!$C$5:$C$500,{n})"
-    si = f"COUNTIFS(Consejo!$B$5:$B$500,{ses},Consejo!$E$5:$E$500,\"aprueba\")"
-    veto = f"COUNTIFS(Consejo!$B$5:$B$500,{ses},Consejo!$E$5:$E$500,\"veto\")"
-    total = f"COUNTIF(Consejo!$B$5:$B$500,{ses})"
-    misma = f"SUBSTITUTE(UPPER({ver}&\"\"),\"V\",\"\")={ver_ref}&\"\""
-    return n, ses, ver, si, veto, total, misma
+CONSEJO_N = 5000      # filas de votos que el libro alcanza a leer (7 por sesión)
+RONDAS_N = 5000
+PRUEBAS_N = 20000     # cada corrida de pruebas son 13 renglones
+JUECES = 7
+MINIMO = 5
 
 
 def resumen_consejo(ws):
-    """Consejo!A3: lo que decidió la última sesión, en palabras. Lo calcula el libro."""
-    n, ses, ver, si, veto, total, _ = consejo_partes("Plan!$B$6")
-    celda(ws, "A3", f"=IF({n}=0,\"El consejo todavía no se reúne.\",\"Última sesión \"&{ses}&\" sobre la V\"&SUBSTITUTE(UPPER({ver}&\"\"),\"V\",\"\")"
-                    f"&\": aprueban \"&{si}&\" de \"&{total}&IF({veto}>0,\", con veto\",\"\")&\". \"&IF(AND({si}>=5,{veto}=0),\"La aprueba.\",\"La regresa.\"))",
+    """Consejo!A3: lo que decidió la última sesión sobre la versión que el plan defiende, con sus números de hoy.
+    Sale del ciclo del plan (Plan!B28:B36): cuenta sólo los votos de esa sesión, esa versión y esa huella."""
+    celda(ws, "A3", "=IF(Plan!$B$31=0,\"El consejo todavía no se reúne sobre la V\"&Plan!$B$28&\" con sus números de hoy.\","
+                    "\"Última sesión sobre la V\"&Plan!$B$28&\" con sus números de hoy: \"&Plan!$B$32&\": aprueban \"&Plan!$B$33&\" de \"&Plan!$B$35"
+                    "&IF(Plan!$B$34>0,\", con veto\",\"\")&\". \"&IF(Plan!$B$36,\"La aprueba.\","
+                    f"IF(Plan!$B$35<>{JUECES},\"Sesión incompleta: deben votar {JUECES} jueces.\",\"La regresa.\")))",
           Font(name="Arial", size=10, bold=True, color=TINTA))
+
+
+# Lo que entra en la huella: resultados Y lo que depende de las palancas que no se ven en ellos
+# (la aportación cambia con el capital comprometido aunque el flujo use lo mismo).
+HUELLA_CLAVES = ["ventas", "costo_sin_tierra", "tierra", "capital", "banco_max", "max_ajeno", "costo_dinero", "ganancia",
+                 "dueno_recibe", "mes_reparto", "obra_inicio", "rv_aportacion", "rv_preventa"]
+
+
+def huella_formula(k):
+    """Huella de una versión: una cadena que cambia si cambian sus números. Con ella el libro sabe si unas
+    pruebas, un voto del consejo o una ronda hablan de ESTA versión tal como está hoy."""
+    partes = "&\"_\"&".join(f"TEXT(ROUND(N({V(c, k)})*1000,0),\"0\")" for c in HUELLA_CLAVES)
+    return f"=IF(ISNUMBER({V('ganancia', k)}),\"h\"&{partes},\"\")"
+
+
+def resumen_lista(npreg=None):
+    """Clave → fórmula del Resumen. Las claves nuevas van AL FINAL para no mover las que ya leen los libros vivos."""
+    filas = [("esquema", f"=\"{ESQUEMA}\""), ("plan.nombre", f"={D('plan.nombre')}"), ("plan.ubicacion", f"={D('plan.ubicacion')}"),
+             ("plan.tipo", f"={D('plan.tipo')}"), ("plan.objetivo", f"={D('plan.objetivo')}"), ("plan.caso_ppp", f"={D('plan.caso_ppp')}"),
+             ("plan.edad", "=Plan!$B$4"), ("plan.para_crecer", "=Plan!$B$5"), ("plan.version_mostrada", "=Plan!$B$6"),
+             ("plan.esquema", "=Reparto!$C$5"), ("plan.datos_sin_resolver", "=Plan!$B$22"), ("plan.candados_abiertos", "=Plan!$B$23"),
+             ("plan.preguntas_abiertas", "=Plan!$B$24"), ("plan.siguiente_pregunta", "=Plan!$B$25")]
+    for item in VER_FILAS:
+        if item[0] == "§":
+            continue
+        for k in range(3):
+            filas.append((f"v{k + 1}.{item[0]}", f"=IFERROR({V(item[0], k)},\"\")"))
+    filas += [("plan.defiende", "=Plan!$B$28"), ("plan.huella", "=Plan!$B$29"), ("plan.paso", "=Plan!$B$38"),
+              ("plan.paso_texto", "=Plan!$B$39"), ("plan.consejo_sesion", "=Plan!$B$32"), ("plan.consejo_aprueban", "=Plan!$B$33"),
+              ("plan.consejo_vetos", "=Plan!$B$34"), ("plan.consejo_votaron", "=Plan!$B$35"), ("plan.vigente", "=Plan!$B$40"),
+              ("plan.sin_mejora", "=Plan!$B$37")]
+    for k in range(3):
+        filas.append((f"v{k + 1}.huella", huella_formula(k)))
+    filas += [("plan.probada", "=Plan!$B$30"), ("plan.consejo_aprobada", "=Plan!$B$36"), ("plan.evidencia", "=Plan!$B$44"),
+              ("plan.evidencia_sesion", "=Plan!$B$45"), ("plan.paso_capital", "=Plan!$B$46"), ("plan.consejo_sin_leer", "=Plan!$B$47")]
+    return filas
+
+
+RES_FILA = {}
+
+
+def ciclo_plan(ws, npreg):
+    """El ciclo del plan, calculado por el libro: qué versión defiende, si ya se probó, qué dijo el consejo
+    de ESA versión (misma versión y misma huella) y cuál es el siguiente paso. Nadie lo escribe a mano.
+
+    Un voto cuenta sólo si es de la última sesión sobre esa versión con esa huella; una sesión vale sólo si
+    votaron los siete. La versión de un voto se lee por su último carácter («V2», «v2», «2», «V 2» valen)."""
+    est = f"Versiones!$C${VER_FILA['estado']}:$E${VER_FILA['estado']}"
+    rv = f"Versiones!$C${VER_FILA['rv_resultado']}:$E${VER_FILA['rv_resultado']}"
+    cst = f"Versiones!$C${VER_FILA['costo_sin_tierra']}:$E${VER_FILA['costo_sin_tierra']}"
+    tie = f"Versiones!$C${VER_FILA['tierra']}:$E${VER_FILA['tierra']}"
+    hs = f"Resumen!$B${RES_FILA['v1.huella']}:$B${RES_FILA['v3.huella']}"
+    fin = 4 + CONSEJO_N
+    cB, cC, cD, cE = (f"Consejo!${c}$5:${c}${fin}" for c in "BCDE")
+    cH = f"Consejo!$H$5:$H${fin}"
+    ses_de, ver_de, hue_de, voto_de = f"TRIM({cB}&\"\")", f"RIGHT(TRIM({cC}&\"\"),1)", f"TRIM({cH}&\"\")", f"LOWER(TRIM({cE}&\"\"))"
+    seccion(ws, 27, "EL CICLO DEL PLAN (lo calcula el libro; nadie lo escribe a mano)", "D")
+
+    # Los números de fila salen de un rango DEL MISMO ALTO que los demás. En Google Sheets un rango que se sale de
+    # la hoja (una hoja nace con 1000 renglones) se recorta al leer sus valores, pero ROW() del rango no se recorta:
+    # ROW(Consejo!C5:C5004) da 5000 números contra 996 valores y la cuenta entera queda en #N/A (visto en un libro
+    # real el 12-nov-2026; LibreOffice no recorta y no lo enseña). ROWS() sí da el alto recortado.
+    filas_de = f"ROW(OFFSET(Consejo!$C$5,0,0,ROWS({cC})))"
+
+    def fila_sesion(ver, hue):
+        return f"=IF({hue}=\"\",0,SUMPRODUCT(MAX(({ver_de}={ver}&\"\")*({hue_de}={hue})*{filas_de})))"
+
+    def cuenta(ses, ver, hue, voto=None):
+        cond = f"({ses_de}={ses})*({ver_de}={ver}&\"\")*({hue_de}={hue})" + (f"*({voto_de}=\"{voto}\")" if voto else "")
+        return f"SUMPRODUCT({cond})"
+
+    ses_vig = f"TRIM(INDEX(Consejo!$B$1:$B${fin},$B$42)&\"\")"
+    estado_t = f"INDEX({est},1,$B$28)"
+    costo = f"(N(INDEX({cst},1,$B$28))+N(INDEX({tie},1,$B$28)))"
+    filas = [
+        (28, "Versión que el plan defiende (la propuesta; si no hay, la vigente)", f"=IFERROR(MATCH(\"propuesta\",{est},0),IFERROR(MATCH(\"vigente\",{est},0),1))", ENT),
+        (29, "Su huella (cambia si cambian sus números)", f"=INDEX({hs},$B$28)", None),
+        (30, "¿Ya se probó contra golpes esta misma versión?", f"=IF($B$29=\"\",FALSE,COUNTIFS(Pruebas!$H$14:$H${13 + PRUEBAS_N},\"V\"&$B$28,Pruebas!$K$14:$K${13 + PRUEBAS_N},$B$29)>0)", None),
+        (31, "Fila de la última sesión del consejo sobre esta misma versión", fila_sesion("$B$28", "$B$29"), ENT),
+        (32, "Sesión", f"=IF($B$31=0,\"\",TRIM(INDEX(Consejo!$B$1:$B${fin},$B$31)&\"\"))", None),
+        (33, "Jueces que aprueban", f"=IF($B$31=0,0,{cuenta('$B$32', '$B$28', '$B$29', 'aprueba')})", ENT),
+        (34, "Vetos", f"=IF($B$31=0,0,{cuenta('$B$32', '$B$28', '$B$29', 'veto')})", ENT),
+        (35, "Jueces que votaron", f"=IF($B$31=0,0,{cuenta('$B$32', '$B$28', '$B$29')})", ENT),
+        (36, f"¿El consejo la aprobó? ({MINIMO} de {JUECES}, sin veto)", f"=AND($B$31>0,$B$35={JUECES},$B$33>={MINIMO},$B$34=0)", None),
+        (37, "¿Ya movió capital y arranque de obra desde aquí sin encontrar mejora?",
+         f"=IF($B$29=\"\",FALSE,COUNTIFS(Rondas!$D$5:$D${4 + RONDAS_N},$B$28,Rondas!$E$5:$E${4 + RONDAS_N},$B$29,Rondas!$G$5:$G${4 + RONDAS_N},\"sin mejora\")>0)", None),
+        # El paso. Una versión que no pasa la revisión nunca va a pruebas ni al consejo: el plan sigue moviendo
+        # palancas mientras encuentre mejora y, cuando ya no, pide que alguien arme una propuesta que pase.
+        (38, "Siguiente paso",
+         f"=IF($B$4=\"semilla\",\"datos\",IF($B$4=\"fruto\",\"cumplido\","
+         f"IF(LEFT(INDEX({rv},1,$B$28)&\"\",4)<>\"Pasa\",IF($B$37,\"proponer\",\"explorar\"),"
+         f"IF(AND({estado_t}=\"base\",NOT($B$37)),\"explorar\","
+         f"IF(NOT($B$30),\"probar\","
+         f"IF(OR($B$31=0,$B$35<>{JUECES}),\"consejo\","
+         f"IF($B$36,IF({estado_t}=\"vigente\",IF($B$4=\"flor\",\"acuerdo\",\"candados\"),\"direccion\"),"
+         f"IF(NOT($B$37),\"explorar\","
+         # Si la sesión no anotó la evidencia que había (columna I vacía), no se sabe contra qué juzgó: se vuelve a presentar.
+         f"IF($B$45<>$B$44,\"consejo\",\"mundo\")))))))))", None),
+        (39, "En palabras",
+         "=IF($B$38=\"datos\",\"capturar los datos que faltan para calcular\","
+         "IF($B$38=\"explorar\",\"mover capital y arranque de obra para proponer algo mejor\","
+         "IF($B$38=\"proponer\",\"armar una propuesta que pase la revisión para fondos (moviendo sólo capital y arranque de obra no alcanza)\","
+         "IF($B$38=\"probar\",\"probar la V\"&$B$28&\" contra los golpes (pruebas de estrés)\","
+         "IF($B$38=\"consejo\",\"presentar la V\"&$B$28&\" al consejo de planes\","
+         "IF($B$38=\"direccion\",\"que Dirección decida si la V\"&$B$28&\", que el consejo aprobó, queda vigente\","
+         "IF($B$38=\"mundo\",\"conseguir lo que pidió el consejo (candados y datos): moviendo capital y arranque de obra ya no mejora\","
+         "IF($B$38=\"candados\",\"cerrar los candados\","
+         "IF($B$38=\"acuerdo\",\"firmar el acuerdo con el dueño\",\"nada: plan cumplido\")))))))))", None),
+        (40, "Versión vigente (0 si no hay)", f"=IFERROR(MATCH(\"vigente\",{est},0),0)", ENT),
+        (41, "Huella de la vigente", f"=IF($B$40=0,\"\",INDEX({hs},$B$40))", None),
+        (42, "Fila de la última sesión del consejo sobre la vigente", fila_sesion("$B$40", "$B$41"), ENT),
+        (43, f"¿El consejo aprobó la vigente? ({MINIMO} de {JUECES}, sin veto)",
+         f"=IF($B$42=0,FALSE,AND({cuenta(ses_vig, '$B$40', '$B$41')}={JUECES},{cuenta(ses_vig, '$B$40', '$B$41', 'aprueba')}>={MINIMO},"
+         f"{cuenta(ses_vig, '$B$40', '$B$41', 'veto')}=0))", None),
+        # La evidencia del mundo real: si cambia después de una sesión que regresó la versión, el plan vuelve a presentarse.
+        (44, "Evidencia de hoy (candados resueltos, datos confirmados, hallazgos aceptados, preguntas respondidas)",
+         "=\"c\"&(COUNTIF(Candados!$D$5:$D$60,\"cerrado\")+COUNTIF(Candados!$D$5:$D$60,\"no aplica\"))&\"_d\"&COUNTIF(Datos!$E$5:$E$200,\"confirmado\")"
+         f"&\"_h\"&COUNTIF(Hallazgos!$G$5:$G$2000,\"aceptado\")&\"_p\"&COUNTIF(Preguntas!$G$5:$G${4 + npreg},\"respondida\")", None),
+        (45, "Evidencia que había en esa última sesión", f"=IF($B$31=0,\"\",TRIM(INDEX(Consejo!$I$1:$I${fin},$B$31)&\"\"))", None),
+        # El tamaño del paso con que el plan mueve el capital: 3% del costo con tierra, a una cifra. Lo decide el libro.
+        (46, "Paso de capital de la ronda (MDP): 3% del costo con tierra, a una cifra",
+         f"=IFERROR(IF({costo}>0,ROUND(3/100*{costo},-INT(LOG10(3/100*{costo}))),\"\"),\"\")", '#,##0.0##'),
+        (47, "Votos que el libro no puede leer (sin huella, o sin versión 1, 2 o 3)",
+         f"=SUMPRODUCT(({cD}<>\"\")*((({hue_de}=\"\")+({ver_de}<>\"1\")*({ver_de}<>\"2\")*({ver_de}<>\"3\"))>0))", ENT),
+    ]
+    for r, texto, frm, fmt in filas:
+        celda(ws, f"A{r}", texto)
+        celda(ws, f"B{r}", frm, fmt=fmt, align=ENVOLVER if r in (38, 39) else None)
 
 
 def hoja_plan(wb, plan, npreg):
@@ -1027,17 +1150,14 @@ def hoja_plan(wb, plan, npreg):
     # (Con el libro vacío Google Sheets da 0 donde LibreOffice da vacío: el número solo no basta.)
     calcula = (f"AND(ISNUMBER(INDEX(Versiones!$C${VER_FILA['ganancia']}:$E${VER_FILA['ganancia']},1,$B$6)),"
                f"COUNTIFS(Datos!$K$5:$K$200,\"sí\",Datos!$C$5:$C$200,\"\")=0,Productos!$B${PT}>0)")
-    vig = f"COUNTIF(Versiones!$C${VER_FILA['estado']}:$E${VER_FILA['estado']},\"vigente\")>0"
-    n_c, _, _, si_c, veto_c, _, misma_c = consejo_partes("$B$6")
-    # el consejo cuenta sólo si su ÚLTIMA sesión aprobó la versión que se muestra: 5 de 7 y sin veto
-    consejo = f"IF({n_c}=0,FALSE,AND({si_c}>=5,{veto_c}=0,{misma_c}))"
     candados = "AND(COUNTA(Candados!$A$5:$A$60)>0,COUNTIF(Candados!$D$5:$D$60,\"abierto\")+COUNTIF(Candados!$D$5:$D$60,\"en revisión\")=0)"
     fruto = f"{D('acuerdo.firmado')}=\"sí\""
-    celda(ws, "B4", f"=IF({fruto},\"fruto\",IF(AND({vig},{consejo},{candados}),\"flor\",IF(AND({vig},{consejo}),\"árbol\",IF({calcula},\"plántula\",\"semilla\"))))", F_GRANDE)
+    # árbol = hay una versión vigente y la última sesión del consejo SOBRE ESA MISMA versión (misma huella) la aprobó.
+    celda(ws, "B4", f"=IF({fruto},\"fruto\",IF(AND($B$43,{candados}),\"flor\",IF($B$43,\"árbol\",IF({calcula},\"plántula\",\"semilla\"))))", F_GRANDE)
     celda(ws, "A5", "Para crecer falta", F_SECCION)
     falta = (f"=IF(B4=\"semilla\",IF(Productos!$B${PT}=0,\"Capturar al menos un producto. \",\"\")&\"Que la versión base calcule: faltan \"&COUNTIFS(Datos!$K$5:$K$200,\"sí\",Datos!$C$5:$C$200,\"\")&\" datos para calcular.\","
-             f"IF(B4=\"plántula\",IF(NOT({vig}),\"Que Dirección apruebe una versión. \",\"\")&IF(NOT({consejo}),IF({n_c}=0,\"Que el consejo de planes revise la versión. \",\"Que el consejo de planes la apruebe (5 de 7, sin veto). \"&Consejo!$A$3&\" \"),\"\")&\"Datos sin resolver: \"&$B$22&\".\","
-             f"IF(B4=\"árbol\",\"Cerrar los candados: \"&$B$23&\" abiertos.\",IF(B4=\"flor\",\"Firmar el acuerdo con el dueño.\",\"Plan cumplido.\"))))")
+             f"IF(B4=\"plántula\",\"Para ser árbol: una versión vigente que el consejo de planes apruebe (5 de 7, sin veto). Siguiente paso: \"&$B$39&\". Datos sin resolver: \"&$B$22&\".\","
+             f"IF(B4=\"árbol\",IF(COUNTA(Candados!$A$5:$A$60)=0,\"Registrar los candados del plan en la pestaña Candados: no hay ninguno.\",\"Cerrar los candados: \"&$B$23&\" abiertos.\"),IF(B4=\"flor\",\"Firmar el acuerdo con el dueño.\",\"Plan cumplido.\"))))")
     celda(ws, "B5", falta, align=ENVOLVER)
     celda(ws, "A6", "Versión que se muestra", F_SECCION)
     est = f"Versiones!$C${VER_FILA['estado']}:$E${VER_FILA['estado']}"
@@ -1068,7 +1188,8 @@ def hoja_plan(wb, plan, npreg):
     celda(ws, "B24", f"=COUNTIF(Preguntas!$M$5:$M${4 + npreg},\">0\")", fmt=ENT)
     celda(ws, "A25", "Siguiente pregunta")
     celda(ws, "B25", f"=IFERROR(INDEX(Preguntas!$C$5:$C${4 + npreg},MATCH(\"siguiente\",Preguntas!$N$5:$N${4 + npreg},0)),\"\")", align=ENVOLVER)
-    celda(ws, "A27", "Libro del Plan de Potencial 2 (PPP 2). Todo se calcula en este libro; el tablero sólo lo lee y escribe los datos permitidos.", F_SUB)
+    ciclo_plan(ws, npreg)
+    celda(ws, "A49", "Libro del Plan de Potencial 2 (PPP 2). El plan es este libro: todo se calcula aquí; el tablero sólo lo lee y escribe los datos permitidos.", F_SUB)
     anchos(ws, {"A": 46, "B": 22, "C": 60, "D": 10})
     return ws
 
@@ -1078,16 +1199,7 @@ def hoja_resumen(wb, npreg):
     ws = wb.create_sheet("Resumen")
     celda(ws, "A1", "Resumen para el tablero (no se edita)", F_TITULO)
     celda(ws, "A2", "El servidor de PPP 2 lee estas claves. Si se mueve algo en otra pestaña, las fórmulas siguen apuntando bien.", F_SUB)
-    filas = [("esquema", f"=\"{ESQUEMA}\""), ("plan.nombre", f"={D('plan.nombre')}"), ("plan.ubicacion", f"={D('plan.ubicacion')}"),
-             ("plan.tipo", f"={D('plan.tipo')}"), ("plan.objetivo", f"={D('plan.objetivo')}"), ("plan.caso_ppp", f"={D('plan.caso_ppp')}"),
-             ("plan.edad", "=Plan!$B$4"), ("plan.para_crecer", "=Plan!$B$5"), ("plan.version_mostrada", "=Plan!$B$6"),
-             ("plan.esquema", "=Reparto!$C$5"), ("plan.datos_sin_resolver", "=Plan!$B$22"), ("plan.candados_abiertos", "=Plan!$B$23"),
-             ("plan.preguntas_abiertas", "=Plan!$B$24"), ("plan.siguiente_pregunta", "=Plan!$B$25")]
-    for item in VER_FILAS:
-        if item[0] == "§":
-            continue
-        for k in range(3):
-            filas.append((f"v{k + 1}.{item[0]}", f"=IFERROR({V(item[0], k)},\"\")"))
+    filas = resumen_lista(npreg)
     for i, (clave, frm) in enumerate(filas):
         celda(ws, f"A{4 + i}", clave)
         celda(ws, f"B{4 + i}", frm)
@@ -1098,7 +1210,7 @@ def hoja_resumen(wb, npreg):
 def hoja_pruebas(wb, plan):
     ws = wb.create_sheet("Pruebas")
     celda(ws, "A1", "Pruebas de estrés: qué pasa si algo sale peor", F_TITULO)
-    celda(ws, "A2", "El autón cambia una palanca en la columna Prueba del Modelo, lee el resultado de abajo y lo deja escrito en la lista. Después restablece la columna.", F_SUB)
+    celda(ws, "A2", "El plan cambia una palanca en la columna Prueba del Modelo, lee el resultado de abajo y lo deja escrito en la lista. Después restablece la columna.", F_SUB)
     celda(ws, "A4", "Versión que se prueba (1, 2 o 3)", F_ENCABEZADO)
     celda(ws, "B4", "=Plan!$B$6", fmt=ENT, fill=FILL_DATO)
     vivo = [("Banco: saldo máximo (MDP)", "='Flujo prueba'!B41"), ("Respaldo que haría falta (MDP)", "='Flujo prueba'!B43"),
@@ -1109,14 +1221,25 @@ def hoja_pruebas(wb, plan):
     for i, (t, frm) in enumerate(vivo):
         celda(ws, f"A{6 + i}", t)
         celda(ws, f"B{6 + i}", f"=IFERROR({frm[1:]},\"\")", fmt=ENT if "Mes" in t else MDP)
-    cols = ["Escenario", "Qué cambia", "Banco: saldo máximo", "Respaldo que haría falta", "Costo del dinero", "Ganancia real", "Mes de reparto", "Versión", "Fecha", "Quién"]
+    cols = ["Escenario", "Qué cambia", "Banco: saldo máximo", "Respaldo que haría falta", "Costo del dinero", "Ganancia real", "Mes de reparto", "Versión", "Fecha", "Quién", "Huella"]
     for i, t in enumerate(cols):
         celda(ws, f"{L(i + 1)}13", t, F_ENCABEZADO, align=ENVOLVER).border = BORDE
     for i, fila in enumerate((plan or {}).get("pruebas", [])):
         for j, v in enumerate(fila):
             celda(ws, f"{L(j + 1)}{14 + i}", v, fmt=MDP if j in (2, 3, 4, 5) else None, align=ENVOLVER)
-    anchos(ws, {"A": 40, "B": 40, "C": 12, "D": 12, "E": 12, "F": 12, "G": 10, "H": 8, "I": 11, "J": 14})
+    anchos(ws, {"A": 40, "B": 40, "C": 12, "D": 12, "E": 12, "F": 12, "G": 10, "H": 8, "I": 11, "J": 14, "K": 30})
     return ws
+
+
+# Los candados con que nace todo plan (abiertos). Sin candados registrados un árbol no podría florecer nunca.
+CANDADOS_DE_ARRANQUE = [
+    ["tenencia", "Tenencia y quién firma", "Escritura, certificado de libertad de gravamen y la identificación de todos los dueños con su acuerdo para aportar la tierra.", "abierto", "", "", "", "flor", ""],
+    ["uso_suelo", "Uso de suelo", "Constancia de zonificación o licencia de uso de suelo que permita el proyecto (uso, altura y densidad).", "abierto", "", "", "", "flor", ""],
+    ["agua", "Agua y drenaje", "Factibilidad de servicios del organismo operador para el número de unidades del proyecto.", "abierto", "", "", "", "flor", ""],
+    ["vialidad", "Impacto vial y accesos", "Dictamen de impacto vial, o el alineamiento y los accesos autorizados.", "abierto", "", "", "", "flor", ""],
+    ["credito", "Interés del banco", "Carta de interés o propuesta indicativa de un banco con monto, tasa y condiciones de disposición.", "abierto", "", "", "", "flor", ""],
+    ["acuerdo", "Acuerdo con los dueños", "Carta de intención firmada con el esquema de reparto elegido.", "abierto", "", "", "", "flor", ""],
+]
 
 
 def construir(plan=None, catalogo=None):
@@ -1139,30 +1262,38 @@ def construir(plan=None, catalogo=None):
     hoja_tabla(wb, "Candados", "Lo que tiene que estar resuelto antes de presentar el plan a socios. Un candado abierto detiene la flor.",
                ["id", "Candado", "Qué lo cierra (evidencia)", "Estado", "Evidencia", "Responsable", "Fecha", "Detiene", "Nota"],
                {"A": 12, "B": 26, "C": 48, "D": 12, "E": 40, "F": 16, "G": 11, "H": 9, "I": 36},
-               (plan or {}).get("candados", []), {"D": ESTADOS_CANDADO}, n=56)
+               (plan or {}).get("candados") or CANDADOS_DE_ARRANQUE, {"D": ESTADOS_CANDADO}, n=56)
     _, npreg = hoja_preguntas(wb, plan, catalogo)
-    hoja_tabla(wb, "Hallazgos", "Lo que el autón o el equipo encuentran. Un hallazgo no cambia ningún dato hasta que alguien lo acepta.",
+    hoja_tabla(wb, "Hallazgos", "Lo que el plan o el equipo encuentran. Un hallazgo no cambia ningún dato hasta que alguien lo acepta.",
                ["Fecha", "Tema", "Hallazgo", "Fuente", "Confianza", "Mueve", "Estado", "Quién", "Nota"],
                {"A": 11, "B": 18, "C": 60, "D": 40, "E": 10, "F": 18, "G": 12, "H": 14, "I": 30},
                (plan or {}).get("hallazgos", []), {"E": ["alta", "media", "baja"], "G": ESTADOS_HALLAZGO})
-    ws_consejo = hoja_tabla(wb, "Consejo", "Las sesiones del consejo de planes: cada juez vota con su razón. Aprueba con 5 de 7 y sin veto; Alejandro virtual puede vetar por un candado. Cuenta la última sesión.",
-               ["Fecha", "Sesión", "Versión", "Juez", "Voto", "Razón", "Condición para aprobar"],
-               {"A": 11, "B": 12, "C": 9, "D": 26, "E": 10, "F": 60, "G": 50},
-               (plan or {}).get("consejo", []), {"E": VOTOS})
+    ws_consejo = hoja_tabla(wb, "Consejo", "Las sesiones del consejo de planes: votan los siete jueces, cada uno con su razón. Aprueba con 5 de 7 y sin veto; Alejandro virtual puede vetar por un candado. Cada voto lleva la huella de la versión que juzgó y la evidencia que había ese día: si la versión cambia, el voto ya no cuenta; si cambia la evidencia, el plan vuelve a presentarse.",
+               ["Fecha", "Sesión", "Versión", "Juez", "Voto", "Razón", "Condición para aprobar", "Huella", "Evidencia"],
+               {"A": 11, "B": 12, "C": 9, "D": 26, "E": 10, "F": 60, "G": 50, "H": 30, "I": 18},
+               (plan or {}).get("consejo", []), {"E": VOTOS}, n=CONSEJO_N)
     resumen_consejo(ws_consejo)
     hoja_tabla(wb, "Bitácora", "Cada cambio queda aquí: quién, qué, antes y después, de dónde salió.",
                ["Fecha", "Actor", "Acción", "Pestaña", "Clave o celda", "Antes", "Después", "Fuente", "Revisión base", "request_id"],
                {"A": 17, "B": 16, "C": 40, "D": 12, "E": 18, "F": 16, "G": 16, "H": 36, "I": 12, "J": 16},
                (plan or {}).get("bitacora", []), n=2000)
     hoja_pruebas(wb, plan)
+    hoja_tabla(wb, "Rondas", "Cada ronda del plan: de qué versión parte, qué probó, qué propone y por qué. La escribe el plan; nadie la edita a mano.",
+               ["Ronda", "Fecha", "Quién", "Parte de (versión)", "Huella de partida", "Motivo", "Resultado", "Propuesta en (versión)",
+                "Huella de la propuesta", "Qué cambia", "Combinaciones probadas", "Detalle", "request_id"],
+               {"A": 8, "B": 17, "C": 20, "D": 10, "E": 30, "F": 40, "G": 12, "H": 10, "I": 30, "J": 60, "K": 12, "L": 40, "M": 16},
+               (plan or {}).get("rondas", []), {"G": ["propuesta", "sin mejora"]}, n=RONDAS_N)
+    RES_FILA.clear()
+    for i, (clave, _) in enumerate(resumen_lista(npreg)):
+        RES_FILA[clave] = 4 + i
     hoja_plan(wb, plan, npreg)
     hoja_resumen(wb, npreg)
     # orden y colores de pestaña
-    orden = ["Plan", "Versiones", "Reparto", "Datos", "Productos", "Candados", "Preguntas", "Hallazgos", "Consejo",
+    orden = ["Plan", "Versiones", "Reparto", "Datos", "Productos", "Candados", "Preguntas", "Hallazgos", "Consejo", "Rondas",
              "Modelo", "Flujo V1", "Flujo V2", "Flujo V3", "Pruebas", "Flujo prueba", "Bitácora", "Resumen"]
     wb._sheets = [wb[t] for t in orden]
     color = {"Plan": ORO, "Versiones": ORO, "Reparto": ORO, "Datos": VERDE, "Productos": VERDE, "Candados": VERDE,
-             "Preguntas": VERDE, "Hallazgos": VERDE, "Consejo": AZUL, "Modelo": GRIS, "Flujo V1": GRIS, "Flujo V2": GRIS,
+             "Preguntas": VERDE, "Hallazgos": VERDE, "Consejo": AZUL, "Rondas": VERDE, "Modelo": GRIS, "Flujo V1": GRIS, "Flujo V2": GRIS,
              "Flujo V3": GRIS, "Pruebas": GRIS, "Flujo prueba": GRIS, "Bitácora": GRIS, "Resumen": GRIS}
     for t, c in color.items():
         wb[t].sheet_properties.tabColor = c
@@ -1175,6 +1306,22 @@ def rellenar_reparto_en_versiones(wb, plan):
     for clave, kind in (("dueno_recibe", "dueno"), ("dueno_veces", "veces"), ("alianza_recibe", "alianza"), ("inversion_recibe", "inversion")):
         for k in range(3):
             ws[f"{L(3 + k)}{VER_FILA[clave]}"].value = reparto_formula(kind, k)
+
+
+GENERADOR = ["generar.py", "fixture.py", "ciclo.py", "rejilla.py", "regenerar.py", "ejemplo-plan.json", "catalogo-preguntas.json"]
+
+
+def huella_generador():
+    """Huella de lo que produce los accesorios de prueba. Va dentro de cada accesorio: si alguien cambia la
+    plantilla y no los regenera (python3 ppp2/libro/regenerar.py), tests/ppp2-libro.test.cjs lo detecta."""
+    import hashlib
+    import os
+    aqui = os.path.dirname(os.path.abspath(__file__))
+    h = hashlib.sha256()
+    for nombre in GENERADOR:
+        with open(os.path.join(aqui, nombre), "rb") as fh:
+            h.update(nombre.encode("utf-8") + b"\0" + fh.read() + b"\0")
+    return h.hexdigest()
 
 
 def main(argv):

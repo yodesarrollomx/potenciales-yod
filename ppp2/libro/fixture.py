@@ -11,7 +11,7 @@ import sys
 
 import openpyxl
 
-HOJAS = ["Plan", "Versiones", "Reparto", "Datos", "Productos", "Candados", "Preguntas", "Hallazgos", "Consejo",
+HOJAS = ["Plan", "Versiones", "Reparto", "Datos", "Productos", "Candados", "Preguntas", "Hallazgos", "Consejo", "Rondas",
          "Modelo", "Pruebas", "Bitácora", "Resumen", "Flujo V1", "Flujo V2", "Flujo V3"]
 
 
@@ -42,6 +42,8 @@ def main(calc, form, salida):
                     if isinstance(f, str) and f.startswith("="):
                         frms[f"{r},{c}"] = f
         out[t] = {"valores": vals, "formulas": frms}
+    import generar
+    out["_generador"] = generar.huella_generador()
     with open(salida, "w", encoding="utf-8") as fh:
         json.dump(out, fh, ensure_ascii=False, separators=(",", ":"))
     print("ok", salida)
