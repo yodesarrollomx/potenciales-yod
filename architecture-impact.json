@@ -1,20 +1,19 @@
 {
   "model_revision": "2026-11-13.ppp40-semilla.1",
   "proposal_id": "CHG-PPP2-20261112",
-  "summary": "PPP 2 · dos reglas de Dirección del 13-nov-2026 sobre el capital (seguimiento de CHG-PPP2-20261112). 1) El capital no es «disponible»: es lo más que puede soportar el proyecto, 1/3 de las ventas totales, y pasarse sólo da aviso. La plantilla calcula Datos!din.capital como 1/3 del total de Productos (si alguien escribe otra cifra, manda esa); la base lo usa y la ronda no lo rebasa, como ya hacía con el «disponible». Versiones gana al final, después de las comprobaciones, el renglón capital_sobre_tope (cuánto se pasa cada versión; 0 si está dentro) y el Resumen sus tres claves al final, después de las que ya leían los libros vivos: no se mueve ningún renglón. La revisión para fondos y la huella no cambian. La página marca «Pasa del tope» en la tabla de versiones y un aviso en la versión que se ve. 2) Entre opciones que pasan la revisión y aguantan igual los golpes, la ronda prefiere la que usa menos capital antes que la que le deja más al dueño («entre menos se requiera, mejor para el negocio»): se intercambian las reglas 4 y 5 del criterio escrito (servidor, docs y página). El cálculo sigue en el libro; el Portero, los motores del PPP actual y el Apps Script del Portero no cambian. accesos.html y los demás HTML sólo cambian su etiqueta ?v= (versiones.json).",
+  "summary": "Portero (issue 22, reporte real de la Sala del 8-oct): la entrada con Google ya no puede sumar más de 61 s ni mandar dos POST seguidos al mismo servidor. 1) Las peticiones al Portero usan un plazo que sí corta (AbortController), también al leer la respuesta; antes Promise.race dejaba la petición viva en la red. 2) Un POST (acceso-google, acceso-solicitar) que falla ya no se repite contra el mismo original: la petición pudo haber llegado, y eso evitaba sesiones y correos dobles. Sólo un respaldo vivo, que es otro servidor, recibiría un segundo intento; hoy RESPALDO_VIVO sigue en falso. 3) El aviso de Google se verifica una sola vez a la vez: si One Tap y el botón llaman seguidos, la segunda espera a la primera; al terminar, bien o mal, se libera. Las lecturas (GET de canje y activar) conservan su único reintento al original. Sin cambios en el Apps Script, OAuth, roles, tiempos de sesión ni reglas fail-closed. Etiqueta propia 20261113-portero22. Registro: el arreglo es de salud de accesos (CHG-SALUD-ACCESOS-20261011), pero la etiqueta propia nueva también cambia el ?v= de ppp2.html y accesos.html; CHG-PPP2-20261112 es la única propuesta del atlas fijado que cubre todos los archivos tocados. En ppp2.html y accesos.html sólo cambia la etiqueta.",
   "components": [
     "SYS-POTENCIALES",
-    "SYS-PPP2",
-    "GAS-PPP2",
-    "SHEET-PPP2",
-    "SYS-CONTROL"
+    "GAS-PORTERO",
+    "SYS-CONTROL",
+    "SYS-PPP2"
   ],
   "tests": [
-    "node --test tests/ppp2-ronda.test.cjs: 50 en verde. El orden de las reglas 2 a 5 se prueba de nuevo: limpia antes que plazo, plazo antes que capital, capital antes que lo del dueño (una vecina con más capital no gana ni por 22 MDP más para el dueño; una con menos capital gana aunque le deje menos), y lo del dueño a décimas sólo decide con el mismo capital. El margen del libro para dar por cero un faltante se prueba con el mismo capital.",
-    "node --test tests/ppp2-libro.test.cjs: 12 en verde; la prueba nueva comprueba en el libro recalculado por LibreOffice que capital_sobre_tope es el capital de cada versión menos el tope (nunca menos de cero), que el Resumen dice lo mismo y que sus claves van al final del Resumen y después de las comprobaciones en Versiones. Accesorios regenerados con python3 ppp2/libro/regenerar.py: sólo cambian esos renglones y la huella del generador; ninguna cifra del ejemplo cambia.",
-    "node --test tests/ppp2-servidor.test.cjs tests/ppp2-consejo.test.cjs tests/ppp2-cache.test.cjs: en verde.",
-    "node tests/ppp2-browser.cjs: recorrido nuevo: con la V2 pasada 12.5 MDP del tope se ve el aviso y «Pasa del tope» sólo en la V2, la revisión dice lo mismo que el libro y, dentro del tope, no hay aviso.",
-    "node scripts/versiones.cjs --check · verificar-impacto contra el atlas fijado · git diff --check."
+    "node --test tests/portero-red.test.cjs (nuevo, sin red: éxito frío, plazo de 30 s que corta sin segundo POST, 500 con HTML, error de red, rechazo autorizado, credencial revocada, respaldo 404 sin usar, GET con un reintento, dos avisos seguidos de Google)",
+    "node --test tests/access-gates.cjs tests/sheets-offline.cjs",
+    "node tests/access-browser.cjs (Chromium y WebKit móvil en CI)",
+    "node scripts/versiones.cjs --check",
+    "verificar-impacto contra el atlas fijado."
   ],
-  "rollback": "Revertir el merge regresa el orden anterior de la ronda y quita el aviso de la página. El Apps Script se regresa a la versión anterior de su misma implementación (Administrar implementaciones → lápiz → versión anterior). En los libros, los renglones nuevos no estorban: sin ellos el servidor y la página siguen igual; el tope de capital se puede volver a escribir a mano en Datos desde la página."
+  "rollback": "Revertir el merge: vuelve Promise.race, el segundo POST al original tras 1.5 s y el callback sin guardia. No hay nada que regresar en el Apps Script."
 }
