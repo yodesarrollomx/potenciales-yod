@@ -1,7 +1,7 @@
 {
  "esquema": 1,
- "aprobado": "G-20261112-1900",
- "actualizado": "2026-11-12T19:00:50-07:00",
+ "aprobado": "G-20261112-2014",
+ "actualizado": "2026-11-12T20:14:09-07:00",
  "versiones": [
   {
    "id": "G-20261111-2354",
@@ -637,7 +637,7 @@
    "id": "G-20261112-1900",
    "armado": "2026-11-12T19:00:50-07:00",
    "fecha": "12-nov 19:00",
-   "estado": "aprobado",
+   "estado": "anterior",
    "huella": "d458f5f4505c",
    "piezas": 3174,
    "ligas": 10553,
@@ -760,6 +760,48 @@
     "por": "alexpueblag",
     "numero": 96,
     "motivo": "primera prueba en vivo de la App del grafo (DEC-21): el borrador debe abrirlo la App y sus pruebas deben correr solas, sin «Approve workflows to run». Refleja además la pastilla para Dirección en Master Brokers (yodesarrollo-board PR 72)."
+   }
+  },
+  {
+   "id": "G-20261112-2014",
+   "armado": "2026-11-12T20:14:09-07:00",
+   "fecha": "12-nov 20:14",
+   "estado": "aprobado",
+   "huella": "9d367f6fd314",
+   "piezas": 3173,
+   "ligas": 10552,
+   "repos": {
+    "yodesarrollomx/yod-portal": "01d77be",
+    "yodesarrollomx/potenciales-yod": "3a855ba",
+    "yodesarrollomx/yodesarrollo-board": "25de909",
+    "yodesarrollomx/yod-despacho": "d89b151",
+    "yodesarrollomx/board-aurum": "93bf624",
+    "yodesarrollomx/board-flujo-yod": "e9d122f",
+    "yodesarrollomx/real-miramar-board": "9db34a9",
+    "yodesarrollomx/interiores-aurum": "8bcdfc3",
+    "yodesarrollomx/aurum-board": "e3dd428",
+    "yodesarrollomx/sala-edicion": "051785e",
+    "yodesarrollomx/plan-potencial": "9f036c7",
+    "yodesarrollomx/crokiss": "7a7a557",
+    "yodesarrollomx/Co-desarrolladores-Yod": "bdaf46b",
+    "yodesarrollomx/alquimia-urbana": "0c0da90",
+    "yodesarrollomx/aurum-experiencia": "70c63b3",
+    "yodesarrollomx/pintarron": "0979d3f",
+    "yodesarrollomx/prueba-dominio": "715c6c7",
+    "yodesarrollomx/yodesarrollomx.github.io": "a5680f2",
+    "alexpueblag/pizarron-claude-yodbot": "31593a1",
+    "yodesarrollo/amalaya-board": "e3f94e6",
+    "aurumarquitectos/experiencia": "89d29e8",
+    "aurumarquitectos/aurumarquitectos.github.io": "d33f765",
+    "alexpueblag/codesarrolladores-libre": "96d26c5",
+    "alexpueblag/yod-terreno-si": "09f75f4",
+    "alexpueblag/yod-terreno-dormido": "1159ca5"
+   },
+   "nota": "Edición curada de Dirección (12-nov-2026, DEC-19): se quitaron 4 notas escritas a mano que nombraban un sistema de otro cliente (una mejora del plan «Lo que vive fuera del menú» y las menciones en los hallazgos 4, 25 y 31, con sus cuentas corregidas). Sin cambios en los repositorios ni en el atlas.",
+   "pedido": {
+    "por": "Dirección",
+    "numero": null,
+    "motivo": "Quitar las notas que nombraban un sistema de otro cliente (DEC-19)."
    }
   }
  ]
