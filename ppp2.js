@@ -26,7 +26,7 @@
     revision: 'Alguien más cambió el plan mientras lo veías; ya cargué lo más reciente.', valor: 'Ese valor no es válido para este dato.',
     respuesta: 'Escribe la respuesta antes de guardarla.', evidencia: 'Para cerrar un candado escribe la evidencia.',
     pausa: 'El servidor está en mantenimiento: sólo se puede leer.', ocupado: 'El libro está ocupado; intenta en unos segundos.',
-    trabajando: 'Hay un plan corriendo una ronda o unas pruebas y el servidor atiende de uno en uno; tarda unos minutos. Vuelve a intentarlo cuando termine.',
+    trabajando: 'Hay un plan corriendo una ronda, unas pruebas, su consejo o una investigación, y el servidor atiende de uno en uno; tarda unos minutos. Vuelve a intentarlo cuando termine.',
     board: 'Tu acceso no incluye Potenciales.', portero: 'No pude validar tu sesión con el Portero; intenta de nuevo.',
     plan: 'Ese plan no existe o está archivado.', calculado: 'Ese renglón lo calcula el libro; no se captura.',
     prueba: 'Las pruebas no se anotaron: la columna Prueba del libro no volvió a su estado. Quedó en la bitácora.',
@@ -37,13 +37,22 @@
     lectura: 'No pude leer mi libro bajo uno de los golpes (da un error). No cambié nada: hay que revisar el libro.',
     rejilla: 'No hay combinaciones de capital y arranque de obra que probar alrededor de esta versión.',
     calcula: 'La versión de partida todavía no calcula: faltan datos.',
-    modelo: 'A este libro le falta algo que la ronda necesita (las palancas de capital y de arranque de obra, o el paso de capital): hay que ponerlo al día con la plantilla.'
+    modelo: 'A este libro le falta algo que la ronda necesita (las palancas de capital y de arranque de obra, o el paso de capital): hay que ponerlo al día con la plantilla.',
+    sin_clave: 'Mi servidor todavía no tiene la clave de la API de IA. Dirección la pone una sola vez y desde ahí el consejo se convoca con este botón.',
+    ia_clave: 'La API de IA rechazó la clave de mi servidor (vencida, sin saldo o mal copiada). No escribí nada: hay que revisar la clave.',
+    ia: 'La API de IA no contestó bien (o tardó de más). No escribí nada; vuelve a intentarlo en unos minutos.',
+    consejo_incompleto: 'No llegaron los siete votos válidos. No escribí ninguno: una sesión sólo vale completa. Vuelve a intentarlo en unos minutos.',
+    sin_pruebas: 'Antes del consejo me tengo que probar contra los golpes con los números que tengo hoy.',
+    apagado: 'El consejo y la investigación por API están apagados (renglón «consejo» = no en la hoja Config).',
+    busqueda: 'Para investigar en la web necesito la clave de la API de Anthropic en mi servidor.',
+    nada: 'No hay nada que investigar: no tengo candados abiertos ni pendientes del consejo.'
   };
 
   /* El plan es el autón: no hay un agente aparte. Esta página, su libro y sus herramientas SON el plan,
      por eso aquí habla en primera persona. Lo que dice sale de lo que calculó su libro (ciclo.paso). */
   /* Avisos que no se quitan solos: lo que no se arregla repitiendo enseguida se queda a la vista hasta que se toque. */
-  var FIJOS = ['tiempo', 'trabajando', 'cambio', 'lectura', 'sin_lugar', 'modelo', 'rejilla', 'prueba', 'paso', 'pausa'];
+  var FIJOS = ['tiempo', 'trabajando', 'cambio', 'lectura', 'sin_lugar', 'modelo', 'rejilla', 'prueba', 'paso', 'pausa',
+    'sin_clave', 'ia_clave', 'ia', 'consejo_incompleto', 'sin_pruebas', 'apagado', 'busqueda'];
   var CICLO = [['explorar', 'Muevo capital y arranque'], ['probar', 'Me pruebo contra los golpes'], ['consejo', 'Me defiendo ante el consejo'], ['direccion', 'Dirección decide']];
   var estado = { vivero: null, plan: null, planId: '', pestana: 'versiones', version: 0, ocupado: false };
   var raiz = document.getElementById('ppp2');
@@ -463,8 +472,13 @@
           : (c.sesion && !c.evidencia_sesion ? 'La sesión ' + c.sesion + ' del consejo no anotó la evidencia que había ese día, así que no sé contra qué juzgó mi V' + t + '. Me toca presentarla otra vez.'
             : (c.sesion ? 'Desde la sesión ' + c.sesion + ' cambió la evidencia (un candado, un dato confirmado, un hallazgo aceptado o una pregunta respondida). Me toca volver a presentar mi V' + t + ' al consejo.'
               : 'Ya corrí las pruebas de estrés de mi V' + t + ' con los números que tiene hoy. Me toca defenderla ante el consejo de planes.'));
-        nota = c.revision ? 'El consejo se reúne en mi revisión programada (' + c.revision + ') o cuando hablas conmigo en un chat con Claude.'
-          : 'El consejo se reúne cuando hablas conmigo en un chat con Claude: todavía no tengo una revisión programada.';
+        // el consejo corre en mi servidor, por la API de IA: con un botón, o solo en mi latido
+        if (c.ia === 'listo') {
+          nota = (c.consejo_solo ? 'Si nadie lo convoca, lo convoco solo en mi siguiente latido. ' : '') +
+            'Los siete jueces votan por separado con los números de mi libro; tarda cerca de un minuto.';
+          if (puede.editar) botones = '<button class="p2-btn oro" data-accion="consejo"><i class="ti ti-gavel" aria-hidden="true"></i> Convocar al consejo</button>';
+        } else if (c.ia === 'apagado') nota = 'Mi consejo por API está apagado (renglón «consejo» = no en la hoja Config de mi servidor).';
+        else nota = 'Mi consejo se convoca con un botón en cuanto Dirección ponga en mi servidor la clave de la API de IA.';
         break;
       case 'direccion':
         texto = 'El consejo aprobó mi V' + t + ' (' + votosTxt(c) + '). Falta que Dirección decida si queda vigente.';
@@ -474,6 +488,11 @@
         texto = 'El consejo regresó mi V' + t + ' (' + votosTxt(c) + ') y, moviendo capital y arranque de obra, ya no encontré mejora. Lo que falta lo tiene que conseguir alguien: lo pido en «Mis rondas». ' +
           'Cuando cambie la evidencia (un candado, un dato confirmado, un hallazgo aceptado o una pregunta respondida) vuelvo a presentarme.';
         if (estado.pestana !== 'rondas') botones = '<a class="p2-btn" href="#/plan/' + esc(estado.planId) + '/rondas">Ver lo que pido</a>';
+        // lo que se puede avanzar con información pública (normativa, trámites, tasas, precios publicados) lo investigo en la web
+        if (c.ia_busca && puede.editar) {
+          botones = '<button class="p2-btn oro" data-accion="investigar-mundo"><i class="ti ti-world-search" aria-hidden="true"></i> Investigar lo que falta</button> ' + botones;
+          nota = 'Lo que sólo puede entregar una persona (escrituras, cartas firmadas, presupuestos) no lo investigo: lo pido.';
+        }
         break;
       case 'candados':
         var abiertos = Number(r['plan.candados_abiertos']) || 0;
@@ -635,7 +654,11 @@
       estado.ocupado = false;
       if (!r || !r.ok) {
         var e = (r && r.error) || 'red';
-        if (RECHAZOS.indexOf(e) >= 0) { fallo(r); return r; }
+        if (RECHAZOS.indexOf(e) >= 0) {        // la sesión ya no sirve: el aviso de «estoy trabajando» se quita y queda la pantalla de entrar
+          var av = document.getElementById('p2Toast');
+          if (av) av.hidden = true;
+          fallo(r); return r;
+        }
         toast(r && r.recuperado ? 'Una ronda mía había quedado a medias: ya dejé la versión como estaba y no hice tu cambio. Revisa las cifras y vuelve a intentarlo.' : (ERRORES[e] || 'No se pudo guardar.'), !!(r && r.recuperado) || FIJOS.indexOf(e) >= 0);
         if ((e === 'revision' || e === 'sin_lugar' || e === 'paso' || e === 'cambio') && estado.planId) cargarPlan(true);
         return r;
@@ -646,6 +669,13 @@
       if (estado.planId) return cargarPlan(true).then(function () { return r; });
       return r;
     }, function () { estado.ocupado = false; toast('Sin respuesta del servidor; tu cambio puede no haberse guardado. Recarga para revisar.', true); });
+  }
+
+  /* Tras un intento fallido el plan se vuelve a pintar (el botón no se queda «corriendo»), salvo que la sesión
+     ya no sirva: ahí se queda la pantalla de entrar. */
+  function repinta(r) {
+    if (r && RECHAZOS.indexOf(r.error) >= 0) return;
+    if (estado.plan && estado.planId) pintarPlan();
   }
 
   function editarDato(claveDato) {
@@ -709,12 +739,12 @@
       var cuerpo = { tipo: 'ppp2-ronda' }, usar = Number(b.getAttribute('data-usar'));
       if (usar) cuerpo.usar = usar;                 // una persona le presta esa versión al plan
       enviar(cuerpo, 'Ronda lista.', 330000, 'Estoy moviendo capital y arranque de obra: mi libro recalcula cada combinación. Tarda unos minutos; no cierres la página.').then(function (r) {
-        if (!r || !r.ok) { if (estado.plan && estado.planId) pintarPlan(); return; }      // el botón no se queda «corriendo»
+        if (!r || !r.ok) { repinta(r); return; }      // el botón no se queda «corriendo»
         if (r.resultado !== 'propuesta') { toast('Moví capital y arranque de obra y no encontré nada mejor que proponer. Lo anoté en «Mis rondas».'); return; }
         estado.version = r.version;
         return enviar({ tipo: 'ppp2-estres', version: r.version }, 'Propuesta lista y probada: ahora le toca al consejo.', 300000,
           'Ya tengo propuesta en la V' + r.version + '. Ahora la pruebo contra los golpes; tarda cerca de un minuto.')
-          .then(function (r2) { if ((!r2 || !r2.ok) && estado.plan && estado.planId) pintarPlan(); });
+          .then(function (r2) { if (!r2 || !r2.ok) repinta(r2); });
       });
       return;
     }
@@ -725,7 +755,25 @@
       estado.version = t || estado.version;
       b.innerHTML = '<i class="ti ti-loader-2" aria-hidden="true"></i> Probándome…';
       enviar({ tipo: 'ppp2-estres', version: t }, 'Pruebas listas: ahora le toca al consejo.', 300000, 'Me estoy probando contra los golpes; tarda cerca de un minuto. No cierres la página.')
-        .then(function (r) { if ((!r || !r.ok) && estado.plan && estado.planId) pintarPlan(); });
+        .then(function (r) { if (!r || !r.ok) repinta(r); });
+      return;
+    }
+    if (a === 'consejo') {
+      if (estado.ocupado) return;
+      b.disabled = true;
+      b.innerHTML = '<i class="ti ti-loader-2" aria-hidden="true"></i> Votando los siete jueces…';
+      enviar({ tipo: 'ppp2-consejo' }, 'El consejo ya votó.', 300000,
+        'Convoqué a los siete jueces: cada uno revisa por separado los números de mi libro. Tarda cerca de un minuto; no cierres la página.')
+        .then(function (r) { if (!r || !r.ok) repinta(r); });
+      return;
+    }
+    if (a === 'investigar-mundo') {
+      if (estado.ocupado) return;
+      b.disabled = true;
+      b.innerHTML = '<i class="ti ti-loader-2" aria-hidden="true"></i> Investigando…';
+      enviar({ tipo: 'ppp2-investigar', mundo: true }, 'Investigación lista.', 300000,
+        'Estoy investigando en la web lo que se puede avanzar con información pública. Tarda cerca de un minuto; no cierres la página.')
+        .then(function (r) { if (!r || !r.ok) repinta(r); });
       return;
     }
     if (a === 'estres') {
@@ -745,7 +793,9 @@
     if (a === 'nose') { enviar({ tipo: 'ppp2-responder', pregunta: q, estado: 'no se sabe' }, 'Anotado: no se sabe todavía.'); return; }
     if (a === 'investigar') {
       var preg = (estado.plan.preguntas || []).filter(function (x) { return x.id === q; })[0] || {};
-      enviar({ tipo: 'ppp2-investigar', pregunta: q, tema: preg.texto || q, detalle: (document.querySelector('[data-respuesta="' + q + '"]') || {}).value || '' }, 'Quedó pedido.');
+      var busca = !!(estado.plan.ciclo || {}).ia_busca;      // con la clave de la API investigo ahí mismo; sin ella, queda pedido
+      enviar({ tipo: 'ppp2-investigar', pregunta: q, tema: preg.texto || q, detalle: (document.querySelector('[data-respuesta="' + q + '"]') || {}).value || '' }, 'Quedó pedido.',
+        busca ? 300000 : 0, 'Estoy investigando en la web; tarda cerca de un minuto. No cierres la página.');
     }
   });
 

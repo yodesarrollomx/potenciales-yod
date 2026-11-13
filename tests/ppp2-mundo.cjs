@@ -151,9 +151,17 @@ function mundo(opciones) {
     'Bitácora': new Hoja('Bitácora', [['fecha', 'actor', 'accion', 'plan_id', 'detalle', 'request_id', 'resultado', 'nota']])
   });
   const llamadas = [];
+  const iaPedidos = [];          // lo que el servidor le pidió a la API de IA (op.ia contesta; sin op.ia, la API «no está»)
   const cache = new Map();
   const propiedades = new Map();
   let copias = 0;
+  const respuestaIA = (url, params) => {
+    const cuerpo = JSON.parse(params.payload);
+    iaPedidos.push({ url, headers: params.headers || {}, cuerpo, crudo: params.payload });
+    const r = op.ia ? op.ia({ url, headers: params.headers || {}, cuerpo, n: iaPedidos.length }) : { codigo: 503, cuerpo: 'sin API' };
+    if (r === 'truena') throw new Error('Timeout: ' + url);
+    return { getResponseCode: () => r.codigo || 200, getContentText: () => (typeof r.cuerpo === 'string' ? r.cuerpo : JSON.stringify(r.cuerpo)) };
+  };
   const ctx = {
     console,
     SpreadsheetApp: {
@@ -164,7 +172,12 @@ function mundo(opciones) {
     },
     CacheService: { getScriptCache: () => ({ get: (k) => (cache.has(k) ? cache.get(k) : null), put: (k, v) => cache.set(k, v), remove: (k) => cache.delete(k) }) },
     UrlFetchApp: {
-      fetch: (url) => {
+      fetchAll: (pedidos) => {
+        if (op.fetchAllTruena) throw new Error('Exception: Service invoked too many times');
+        return pedidos.map((q) => respuestaIA(q.url, q));
+      },
+      fetch: (url, params) => {
+        if (/^https:\/\/api\.(anthropic|openai)\.com\//.test(url)) return respuestaIA(url, params || {});
         llamadas.push(url);
         const t = decodeURIComponent((/[?&]t=([^&]+)/.exec(url) || [])[1] || '');
         if (op.originalCaido && url.includes('ORIGINAL123')) return { getResponseCode: () => 503, getContentText: () => 'caído' };
@@ -203,7 +216,7 @@ function mundo(opciones) {
   vm.runInContext(CODIGO, ctx, { filename: 'PPP2.gs' });
   const get = (p) => JSON.parse(ctx.doGet({ parameter: p }).contenido);
   const post = (b) => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(b) } }).contenido);
-  return { ctx, libros, vivero, llamadas, propiedades, cache, get, post, libro: libros['libro-ejemplo'] };
+  return { ctx, libros, vivero, llamadas, iaPedidos, propiedades, cache, get, post, libro: libros['libro-ejemplo'] };
 }
 const ADMIN = 'syadmin00000000000000000';
 const EDITOR = 'syeditor0000000000000000';
@@ -354,4 +367,33 @@ function libroReal(nombre) {
   return { caso, aplica, partida, faltan };
 }
 
-module.exports = { mundo, PLAN, ADMIN, EDITOR, LECTOR, filaDe, CODIGO, juguete, jugueteConCiclo, cicloDe, libroReal, REJILLA };
+/* La API de IA de juguete para el consejo: cada juez contesta lo que diga `votos` (por su nombre) o, si no viene,
+   «regresa» con una razón de prueba. Lee el nombre del juez del texto de sistema, como lo arma el servidor. */
+const RAZON_PRUEBA = 'Falta la escritura y la constancia de zonificación del predio; las cifras del libro no bastan.';
+function jueces(votos, otros) {
+  const extra = otros || {};
+  return ({ url, cuerpo, n }) => {
+    const sistema = String(cuerpo.system || cuerpo.instructions || '');
+    const nombre = (/Eres «([^»]+)»/.exec(sistema) || [])[1] || '';
+    let v = (votos || {})[nombre];
+    if (typeof v === 'function') v = v({ url, cuerpo, n });
+    if (v && v.codigo) return v;
+    v = v || { voto: 'regresa', razon: RAZON_PRUEBA, condicion: 'Escritura y constancia de zonificación.' };
+    if (extra.alContestar) extra.alContestar({ nombre, n });
+    if (url.includes('anthropic')) return { codigo: 200, cuerpo: { content: [{ type: 'tool_use', id: 't' + n, name: 'votar', input: v }], stop_reason: 'tool_use' } };
+    return { codigo: 200, cuerpo: { output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify(v) }] }] } };
+  };
+}
+const JUECES = ['Alejandro virtual', 'Dueño de la tierra virtual', 'Inversionista virtual', 'Desarrollador-financiero', 'Arquitecto de norma y cabida', 'Broker de campo', 'Hormozi'];
+/* Un plan al que le toca el consejo: la V2 del ejemplo es la propuesta, ya se probó con sus números y nadie la ha juzgado. */
+function enConsejo(opciones) {
+  const w = mundo(Object.assign({ alFlush: (i, libro) => jugueteConCiclo(libro) }, opciones || {}));
+  jugueteConCiclo(w.libro);
+  const res = w.libro.getSheetByName('Resumen'), lee = (c) => res.v[filaDe(res, c) - 1][1];
+  w.libro.getSheetByName('Pruebas').getRange(14, 1, 1, 11).setValues([['Base de la versión 2', '(sin cambios)', 1, 0, 1, 1, 37, 'V2', '2026-01-15 10:00', 'Pruebas', lee('v2.huella')]]);
+  jugueteConCiclo(w.libro);
+  w.lee = lee;
+  return w;
+}
+
+module.exports = { mundo, PLAN, ADMIN, EDITOR, LECTOR, filaDe, CODIGO, juguete, jugueteConCiclo, cicloDe, libroReal, REJILLA, jueces, JUECES, enConsejo, RAZON_PRUEBA };

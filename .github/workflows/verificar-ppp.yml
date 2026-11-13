@@ -67,7 +67,7 @@ jobs:
           node --test tests/ppp-cierre-cargador.test.cjs
           node --check ppp2.js
           node -e "const fs=require('node:fs'),vm=require('node:vm');new vm.Script(fs.readFileSync('server/ppp2/PPP2.gs','utf8'),{filename:'server/ppp2/PPP2.gs'});"
-          node --test tests/ppp2-servidor.test.cjs tests/ppp2-ronda.test.cjs tests/ppp2-libro.test.cjs
+          node --test tests/ppp2-servidor.test.cjs tests/ppp2-ronda.test.cjs tests/ppp2-libro.test.cjs tests/ppp2-consejo.test.cjs
           git diff --check
       - name: Instalar navegadores
         run: |

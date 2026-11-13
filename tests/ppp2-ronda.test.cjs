@@ -986,9 +986,10 @@ test('la página sólo promete «lo hago solo» si el latido de verdad corre: ac
   assert.equal(pausado.ctx.latido(), 'pausa');
   assert.deepEqual([pausado.leer().ciclo.latido, pausado.leer().ciclo.pausa], ['apagado', true]);
   assert.equal(w.leer().ciclo.pausa, false);
-  // pedir que investigue no promete una revisión que no existe
+  // pedir que investigue no promete una revisión que no existe: sin la clave de la API, dice qué falta para investigar
   const sin = preparar();
-  assert.match(sin.post({ k: EDITOR, tipo: 'ppp2-investigar', plan: PLAN, tema: 'Uso de suelo' }).nota, /Todavía no tengo una revisión programada/);
+  assert.match(sin.post({ k: EDITOR, tipo: 'ppp2-investigar', plan: PLAN, tema: 'Uso de suelo' }).nota, /Lo investigo en cuanto Dirección ponga en mi servidor la clave de la API de Anthropic/);
+  assert.doesNotMatch(sin.post({ k: EDITOR, tipo: 'ppp2-investigar', plan: PLAN, tema: 'Agua' }).nota, /chat con Claude/);
   const con = preparar({ config: [['revision', 'lunes a viernes, tres veces al día']] });
   assert.match(con.post({ k: EDITOR, tipo: 'ppp2-investigar', plan: PLAN, tema: 'Uso de suelo' }).nota, /en mi siguiente revisión \(lunes a viernes, tres veces al día\)/);
 });
