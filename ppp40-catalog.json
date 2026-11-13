@@ -1,0 +1,1283 @@
+{
+  "schema_version": "1.0",
+  "source": {
+    "filename": "PPP_4_0_Plan_Estrategico_20261029.html",
+    "sha256": "5092c829804f3d2ee1a9369de9032bb51b830a5d509e77e37fc06f72d7a46f89",
+    "section": "catalogo",
+    "note": "Catálogo propuesto. Activación, captura, dependencia y resultado son texto documental, no reglas ejecutables ni enlaces de grafo validados."
+  },
+  "modules": [
+    {
+      "id": "M01",
+      "title": "Semilla e intención",
+      "purpose": "Crear y orientar el caso sin exigir datos inexistentes",
+      "questions": [
+        {
+          "id": "M01.Q01",
+          "level": "mínimo",
+          "text": "¿Cómo identificamos este proyecto?",
+          "activation": "Preguntar sólo si falta o está en conflicto Y es necesario para la decisión actual. Si se aporta espontáneamente, registrarlo sin interrogar. Al crear un caso; puede proponerse un nombre editable",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "case.title:texto; case.id:identificador estable generado",
+          "depends_on": "ninguna",
+          "produces": "Caso identificable, independiente de su nombre visual",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M01.Q02",
+          "level": "mínimo",
+          "text": "¿Qué quieres conseguir con este terreno o proyecto?",
+          "activation": "Preguntar sólo si falta o está en conflicto Y es necesario para la decisión actual. Si se aporta espontáneamente, registrarlo sin interrogar. Al crear; omitir si la narración ya lo explica",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "brief.objective:texto; brief.constraints:lista",
+          "depends_on": "case.id",
+          "produces": "Objetivo y límites expresados por el usuario",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M01.Q03",
+          "level": "mínimo",
+          "text": "¿Ya tienes un terreno definido o estás buscando uno?",
+          "activation": "Preguntar sólo si falta o está en conflicto Y es necesario para la decisión actual. Si se aporta espontáneamente, registrarlo sin interrogar. Cuando la narración no identifica un predio",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "land.status:definido/búsqueda/por confirmar",
+          "depends_on": "brief.objective",
+          "produces": "Ruta de terreno identificado o búsqueda sin fingir ubicación",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M01.Q04",
+          "level": "mínimo",
+          "text": "¿Quieres explorar lotificación, construcción, renta, venta o una combinación?",
+          "activation": "Preguntar sólo si falta o está en conflicto Y es necesario para la decisión actual. Si se aporta espontáneamente, registrarlo sin interrogar. Cuando la estrategia no está expresada",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "strategy.options:lista; strategy.selected:opcional",
+          "depends_on": "brief.objective",
+          "produces": "Ramas candidatas; elegir una no elimina las otras",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M01.Q05",
+          "level": "piloto",
+          "text": "¿Qué pesa más en esta decisión: inversión disponible, plazo, ingreso, retorno u otra condición?",
+          "activation": "Cuando hay alternativas que compiten entre sí",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "decision.priorities:orden; constraints:valor+unidad+estado",
+          "depends_on": "brief.objective",
+          "produces": "Criterio explícito para ordenar escenarios",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M01.Q06",
+          "level": "piloto",
+          "text": "¿Qué tipo de plan quieres abrir o prefieres mantenerlo por definir?",
+          "activation": "Al intentar alta o cálculo nativo cuando falta modalidad; no bloquea exploración conceptual",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "family: vertical/mixto, macrolotes, unifamiliar, residencial, patrimonial o pendiente",
+          "depends_on": "Intención de alta/cálculo y capabilities de la versión",
+          "produces": "Modalidad elegida explícitamente o borrador sin tipo",
+          "unknown_allowed": true
+        },
+        {
+          "id": "M01.Q07",
+          "level": "piloto",
+          "text": "Para esta modalidad, ¿cuál es el mínimo físico conocido y su fuente?",
+          "activation": "Antes de alta nativa si falta mínimo; requiere también nombre y ubicación/referencia",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "Macro: frente y fondo m; otras cuatro: superficie m² según contrato de versión",
+          "depends_on": "Modalidad; contrato inspeccionado en f662fd0 exige inFrente e inFondo positivos para Macro",
+          "produces": "Alta elegible o faltante preciso; nunca inventar dimensiones a partir de 5,000m²",
+          "unknown_allowed": true
+        }
+      ]
+    },
+    {
+      "id": "M02",
+      "title": "Predio y geometría",
+      "purpose": "Definir qué superficie y forma se conocen realmente",
+      "questions": [
+        {
+          "id": "M02.Q01",
+          "level": "mínimo",
+          "text": "¿Cuánto mide el terreno y de dónde sale esa superficie?",
+          "activation": "Preguntar sólo si falta o está en conflicto Y es necesario para la decisión actual. Si se aporta espontáneamente, registrarlo sin interrogar. Al crear o detectar una cifra de terreno",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "land.area:decimal m²; land.area_source:referencia",
+          "depends_on": "case.id",
+          "produces": "Área bruta con unidad, fuente y estado",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M02.Q02",
+          "level": "piloto",
+          "text": "¿Dónde está y cuál es el predio exacto?",
+          "activation": "Antes de aplicar referencias locales o vincular documentos",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "land.location:dirección/coordenadas; land.parcel_id:texto opcional",
+          "depends_on": "land.status",
+          "produces": "Ubicación identificada; no inferida por nombre de cliente",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M02.Q03",
+          "level": "piloto",
+          "text": "¿Tienes frente, fondo, colindancias o un polígono medido?",
+          "activation": "Antes de calcular perímetro, accesos, lotes o vialidad",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "land.boundary:polígono; land.dimensions:m; geometry_source:referencia",
+          "depends_on": "Necesidad de calcular geometría; medidas o polígono disponibles aunque el área siga pendiente",
+          "produces": "Geometría utilizable o geometría conceptual rotulada",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M02.Q04",
+          "level": "piloto",
+          "text": "¿Qué construcciones, pendientes, desniveles o elementos existentes deben conservarse?",
+          "activation": "Si hay ocupación o intervención sobre un predio existente",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "existing.assets:lista; existing.footprints:m²; elevations:m",
+          "depends_on": "Información disponible de elementos existentes; no exige polígono para registrar una observación",
+          "produces": "Inventario espacial que limita o condiciona el diseño",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M02.Q05",
+          "level": "piloto",
+          "text": "¿Hay partes fuera del proyecto, afectaciones o superficies que no se pueden intervenir?",
+          "activation": "Antes de distribuir el suelo",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "land.exclusions:polígonos+m²; land.easements:referencias",
+          "depends_on": "land.boundary; M04; M05",
+          "produces": "Área de trabajo trazable sin doble descuento",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        }
+      ]
+    },
+    {
+      "id": "M03",
+      "title": "Tenencia, partes y acuerdo de tierra",
+      "purpose": "Representar quién aporta qué y bajo qué condición",
+      "questions": [
+        {
+          "id": "M03.Q01",
+          "level": "piloto",
+          "text": "¿Quién tiene derechos sobre el predio y quién puede autorizar cambios?",
+          "activation": "Antes de comprometer o publicar una propuesta a nombre de alguien",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "parties.roles:lista; authority.evidence:referencia",
+          "depends_on": "land.parcel_id",
+          "produces": "Roles y autorizaciones por confirmar o documentadas",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M03.Q02",
+          "level": "piloto",
+          "text": "¿El terreno se compra, se aporta, se renta o ya es propio?",
+          "activation": "Antes de calcular flujo y trato del propietario",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "land.deal_type:enum",
+          "depends_on": "parties.roles",
+          "produces": "Modelo de adquisición o uso del suelo",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M03.Q03",
+          "level": "piloto",
+          "text": "¿Qué valor, pago inicial, plazo o condición se está negociando?",
+          "activation": "Si existe compra, aportación o arrendamiento",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "land.valuation:moneda+fecha; land.payment_schedule:importe+fecha",
+          "depends_on": "land.deal_type",
+          "produces": "Condiciones propuestas separadas de condiciones pactadas",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M03.Q04",
+          "level": "completo",
+          "text": "¿Qué ocupantes, contratos, gravámenes o compromisos afectan la disponibilidad?",
+          "activation": "Antes de calendarizar entrega y obra",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "land.obligations:lista; availability.conditions:lista",
+          "depends_on": "land.parcel_id; parties.roles",
+          "produces": "Dependencias de entrega y revisión especializada",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M03.Q05",
+          "level": "piloto",
+          "text": "¿Qué documento acredita cada acuerdo y qué sigue pendiente de formalizar?",
+          "activation": "Al incorporar una negociación o una nueva versión del trato",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "agreements.source:referencia; agreements.status:propuesto/acordado/documentado",
+          "depends_on": "land.deal_type; land.obligations",
+          "produces": "Ficha del acuerdo con procedencia y pendientes",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        }
+      ]
+    },
+    {
+      "id": "M04",
+      "title": "Normativa y permisos",
+      "purpose": "Separar hipótesis de diseño y condición oficial aplicable",
+      "questions": [
+        {
+          "id": "M04.Q01",
+          "level": "piloto",
+          "text": "¿Qué autoridad y regulación corresponden al predio?",
+          "activation": "Cuando existe ubicación identificada",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "rules.jurisdiction:texto; rules.source:referencia+vigencia",
+          "depends_on": "land.location",
+          "produces": "Ámbito normativo a verificar",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M04.Q02",
+          "level": "piloto",
+          "text": "¿Qué usos están permitidos y con qué condiciones?",
+          "activation": "Antes de declarar viable un producto",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "rules.allowed_uses:lista; rules.conditions:lista",
+          "depends_on": "rules.source; strategy.options",
+          "produces": "Compatibilidad por uso; pendiente si falta respaldo",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M04.Q03",
+          "level": "piloto",
+          "text": "¿Qué límites de ocupación, construcción, altura, densidad y retiros aplican?",
+          "activation": "Al dimensionar lotes o edificios",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "rules.COS:ratio/base; rules.CUS:ratio/base; height:m; setbacks:m; density:unidad/base",
+          "depends_on": "rules.source; land.boundary",
+          "produces": "Restricciones tipadas y su base de cálculo",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M04.Q04",
+          "level": "piloto",
+          "text": "¿Qué exigencias de accesos, estacionamiento, accesibilidad y áreas públicas deben cumplirse?",
+          "activation": "Cuando el programa activa esas condiciones",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "rules.access:lista; parking:ratio/base; public_area:m²/%+base",
+          "depends_on": "rules.allowed_uses; M06",
+          "produces": "Condiciones aplicables sin asumir estándares universales",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M04.Q05",
+          "level": "completo",
+          "text": "¿Qué permisos o dictámenes se necesitan, quién los gestiona y cuándo estarían disponibles?",
+          "activation": "Antes de fijar hitos de inversión, venta o construcción",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "permits.items:tipo+responsable+estado+fecha+evidencia",
+          "depends_on": "rules.jurisdiction; M10",
+          "produces": "Ruta de permisos y bloqueos por etapa",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        }
+      ]
+    },
+    {
+      "id": "M05",
+      "title": "Factibilidad, servicios y entorno",
+      "purpose": "Hacer visibles condiciones físicas que cambian el caso",
+      "questions": [
+        {
+          "id": "M05.Q01",
+          "level": "piloto",
+          "text": "¿Hay estudios de suelo, topografía, inundación u otros riesgos del sitio?",
+          "activation": "Antes de tomar como firme una solución física o un costo",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "studies.items:tipo+fecha+fuente; findings:lista",
+          "depends_on": "land.location; land.boundary",
+          "produces": "Riesgos conocidos y estudios faltantes",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M05.Q02",
+          "level": "piloto",
+          "text": "¿Qué disponibilidad y capacidad de agua, drenaje, energía y conexión están acreditadas?",
+          "activation": "Si el proyecto requiere nuevos consumos o capacidades",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "utilities.capacity:unidad por servicio; utilities.status:confirmado/supuesto/pendiente",
+          "depends_on": "M06; land.location",
+          "produces": "Balance de demanda y factibilidad por servicio",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M05.Q03",
+          "level": "piloto",
+          "text": "¿Qué obras de conexión o refuerzo dentro y fuera del predio se requieren?",
+          "activation": "Si un servicio exige intervención adicional",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "utilities.works:concepto+cantidad+unidad+ubicación",
+          "depends_on": "Ubicación y necesidad de servicio; vincular M09/presupuesto sólo cuando existan, sin bloqueo circular",
+          "produces": "Paquetes de infraestructura que alimentan costo y plazo",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M05.Q04",
+          "level": "completo",
+          "text": "¿Hay restricciones ambientales, arbolado, patrimonio o medidas de mitigación?",
+          "activation": "Si las fuentes o ubicación indican posible afectación",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "environment.conditions:lista+evidencia; mitigation.scope:lista",
+          "depends_on": "land.location; studies.items",
+          "produces": "Condiciones y revisión competente; no aprobación automática",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M05.Q05",
+          "level": "completo",
+          "text": "¿Qué acceso operativo, movilidad y servicios cercanos necesita el producto para funcionar?",
+          "activation": "Cuando se define el uso o la operación",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "site.access_requirements:lista; context.evidence:referencias",
+          "depends_on": "M06; M15",
+          "produces": "Dependencias externas de uso y operación",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        }
+      ]
+    },
+    {
+      "id": "M06",
+      "title": "Programa y distribución de usos",
+      "purpose": "Convertir intención en áreas, productos y relaciones",
+      "questions": [
+        {
+          "id": "M06.Q01",
+          "level": "mínimo",
+          "text": "¿Qué componentes tendrá el proyecto: residencial, comercial, servicios, industria u otros?",
+          "activation": "Cuando se abre una estrategia",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "program.components:lista de IDs y usos",
+          "depends_on": "strategy.selected",
+          "produces": "Ramas de programa sin inventar proporciones",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M06.Q02",
+          "level": "piloto",
+          "text": "¿Cuánta superficie o proporción quieres asignar a cada componente, o sigue por definir?",
+          "activation": "Al distribuir el suelo; aceptar por definir",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "program.allocations:m² o % con base explícita; allocation.state",
+          "depends_on": "land.area; land.exclusions",
+          "produces": "Reparto parcial o completo y saldo sin asignar",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M06.Q03",
+          "level": "piloto",
+          "text": "¿Qué se venderá, rentará, conservará o cederá?",
+          "activation": "Al definir ingresos y activos finales",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "program.disposition:enum por componente",
+          "depends_on": "program.components; M03",
+          "produces": "Destino económico y físico de cada área",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M06.Q04",
+          "level": "piloto",
+          "text": "¿Qué áreas comunes, equipamiento, accesos y estacionamientos comparten los componentes?",
+          "activation": "Si hay usos mixtos o elementos compartidos",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "program.shared_assets:ID+área m²+usuarios",
+          "depends_on": "program.components; M04",
+          "produces": "Áreas compartidas sin doble conteo",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M06.Q05",
+          "level": "completo",
+          "text": "¿Qué relaciones deben respetarse entre componentes y qué podría intercambiarse?",
+          "activation": "Cuando se comparan configuraciones",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "program.adjacencies:relaciones; program.fixed_constraints:lista",
+          "depends_on": "program.components; land.boundary",
+          "produces": "Reglas espaciales y límites de redistribución",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        }
+      ]
+    },
+    {
+      "id": "M07",
+      "title": "Lotificación y macrolotes",
+      "purpose": "Abrir sólo cuando hay suelo subdividido o vendible por lote",
+      "questions": [
+        {
+          "id": "M07.Q01",
+          "level": "piloto",
+          "text": "¿Se venderán lotes individuales, macrolotes o ambos?",
+          "activation": "Si strategy incluye lotificación o venta de suelo",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "lots.product_type:enum",
+          "depends_on": "strategy.selected; M06",
+          "produces": "Subramas de producto de suelo",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M07.Q02",
+          "level": "piloto",
+          "text": "¿Qué tamaños, frentes y fondos buscas para cada tipo de lote?",
+          "activation": "Al definir tipologías; contrastar con requisitos aplicables",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "lots.typologies:area m²+front m+depth m",
+          "depends_on": "M02; M04",
+          "produces": "Tipos deseados con estado de factibilidad",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M07.Q03",
+          "level": "completo",
+          "text": "¿Qué lotes necesitan frente comercial, esquina, acceso de servicio u otra condición?",
+          "activation": "Si el producto tiene diferencias espaciales",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "lots.features:tipo+condición; lots.access:referencia",
+          "depends_on": "lots.typologies; M09",
+          "produces": "Reglas de asignación y atributos vendibles",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M07.Q04",
+          "level": "piloto",
+          "text": "¿Qué número y superficie de lotes caben en el trazo comprobado?",
+          "activation": "Salida calculada/comprobada; preguntar al usuario sólo por fuente, trazo o discrepancia cuando falten",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "lots.count:entero; lots.net_area:m²; lots.geometry:referencia",
+          "depends_on": "M02; M06; M09; rules",
+          "produces": "Conteo y área neta comprobables; no división ideal presentada como trazo",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M07.Q05",
+          "level": "piloto",
+          "text": "¿Qué urbanización y servicios se entregan con cada lote y en qué etapa?",
+          "activation": "Antes de fijar costo, precio o fecha de entrega",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "lots.delivery_scope:lista; lots.phase_id:ID; service_level:enum",
+          "depends_on": "M09; M10",
+          "produces": "Producto y obligación de entrega vinculados",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        }
+      ]
+    },
+    {
+      "id": "M08",
+      "title": "Edificación, vertical y reutilización",
+      "purpose": "Representar obra nueva, conservación y transformación",
+      "questions": [
+        {
+          "id": "M08.Q01",
+          "level": "piloto",
+          "text": "¿Qué se construye nuevo, se remodela, se conserva o se demuele?",
+          "activation": "Si el programa incluye edificaciones",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "buildings.scope_by_asset:enum; new/remodel/demolition_area:m²",
+          "depends_on": "existing.assets; M06",
+          "produces": "Áreas diferenciadas para costo, plazo y permisos",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M08.Q02",
+          "level": "piloto",
+          "text": "¿Qué niveles, huellas y superficies por nivel se proponen?",
+          "activation": "Al dimensionar un volumen",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "buildings.levels:entero; footprint:m²; gross_area_by_level:m²",
+          "depends_on": "M02; M04; M06",
+          "produces": "Programa volumétrico y contraste con restricciones",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M08.Q03",
+          "level": "piloto",
+          "text": "¿Qué tipos de unidades, tamaños y cantidades se desean?",
+          "activation": "Cuando se define producto construido",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "units.typologies:ID+net_area m²+count entero",
+          "depends_on": "program.components; buildings.gross_area",
+          "produces": "Inventario de producto; diferencia neto y bruto explícita",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M08.Q04",
+          "level": "piloto",
+          "text": "¿Qué circulaciones, instalaciones, estructura, estacionamiento y áreas comunes necesita el edificio?",
+          "activation": "Antes de convertir área construida en área vendible o rentable",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "buildings.non_saleable_areas:m² por categoría; parking.count:entero",
+          "depends_on": "units.typologies; M04",
+          "produces": "Eficiencia y capacidad comprobables sin porcentajes ocultos",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M08.Q05",
+          "level": "completo",
+          "text": "¿Qué condiciones de accesibilidad, evacuación, operación o especialidad requieren revisión técnica?",
+          "activation": "Si el uso, altura o complejidad lo activa",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "buildings.specialist_checks:lista+responsable+estado",
+          "depends_on": "M04; buildings.levels; M15",
+          "produces": "Pendientes técnicos y límites de la propuesta conceptual",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M08.Q06",
+          "level": "piloto",
+          "text": "En unifamiliar, ¿qué espacios y superficies requiere el programa y se venderá o rentará?",
+          "activation": "Antes de evaluar una ruta unifamiliar si faltan programa/destino; reutilizar M06/M08 si ya resuelto",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "espacios y superficies m²; estrategia venta/renta/pendiente",
+          "depends_on": "Componente unifamiliar y objetivo económico",
+          "produces": "Programa y estrategia; selectores requieren adaptador probado",
+          "unknown_allowed": true
+        }
+      ]
+    },
+    {
+      "id": "M09",
+      "title": "Urbanización y vialidades",
+      "purpose": "Traducir un trazo y sección en superficies, cantidades y obligaciones",
+      "questions": [
+        {
+          "id": "M09.Q01",
+          "level": "piloto",
+          "text": "¿La vialidad será perimetral, interior o conectará con calles existentes?",
+          "activation": "Si hay urbanización o modificación de accesos",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "roads.layout_type:enum; roads.alignment:geometría",
+          "depends_on": "land.boundary; M06; rules.access",
+          "produces": "Trazo propuesto situado en el predio",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M09.Q02",
+          "level": "piloto",
+          "text": "¿Qué elementos debe tener la sección: carriles, estacionamiento, camellón, banquetas, bici o servicios?",
+          "activation": "Al describir una vialidad por voz o texto",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "roads.section.components:tipo+count entero+width m",
+          "depends_on": "roads.layout_type; M04",
+          "produces": "Sección desglosada; anchos propuestos identificados como supuestos",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M09.Q03",
+          "level": "piloto",
+          "text": "¿Qué ancho o condición de cada elemento está definido y cuál quieres que se investigue?",
+          "activation": "Si la sección contiene valores desconocidos o requisitos contradictorios",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "roads.section.component_state; design_evidence:referencia",
+          "depends_on": "roads.section.components; rules",
+          "produces": "Propuesta fundada y sólo las ambigüedades que impiden calcular",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M09.Q04",
+          "level": "piloto",
+          "text": "¿Qué tramos, cruces, esquinas, accesos y obras externas se incluyen?",
+          "activation": "Antes de calcular área y cantidades de urbanización",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "roads.segments:length m+polygon; intersections:polígonos; external_scope:lista",
+          "depends_on": "roads.alignment; roads.section",
+          "produces": "Área de unión sin sumar dos veces cruces o esquinas",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M09.Q05",
+          "level": "piloto",
+          "text": "¿Qué pavimentos, redes, alumbrado, paisaje y mobiliario se entregan y por etapa?",
+          "activation": "Al convertir la urbanización en presupuesto y ejecución",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "urbanization.items:concepto+cantidad+unidad+phase_id",
+          "depends_on": "roads.segments; utilities.works; M10",
+          "produces": "Catálogo de cantidades conectado a costo y calendario",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        }
+      ]
+    },
+    {
+      "id": "M10",
+      "title": "Etapas y calendario",
+      "purpose": "Hacer que fases, cantidades, fechas y efectivo se relacionen",
+      "questions": [
+        {
+          "id": "M10.Q01",
+          "level": "piloto",
+          "text": "¿Cuántas etapas tendrá y cuánto durará cada una?",
+          "activation": "Al detectar instrucciones como tres etapas de doce meses",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "phases.count:entero; phases.duration:meses por fase",
+          "depends_on": "case.id",
+          "produces": "Estructura temporal propuesta conservando la base anterior",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M10.Q02",
+          "level": "piloto",
+          "text": "¿Las etapas van una tras otra, se traslapan o dependen de un hito?",
+          "activation": "Si no queda claro al interpretar las duraciones",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "phases.start_rule:enum; start_date:fecha o condición; overlap:meses",
+          "depends_on": "phases.count; phases.duration",
+          "produces": "Ambigüedad resuelta antes de fijar duración total",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M10.Q03",
+          "level": "piloto",
+          "text": "¿Qué superficies, productos y obras corresponden a cada etapa?",
+          "activation": "Al distribuir alcance entre fases",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "phases.allocations:asset_id+cantidad+unidad",
+          "depends_on": "M06; M07; M08; M09",
+          "produces": "Asignación sin duplicar producto ni dejar costos sin fase",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M10.Q04",
+          "level": "piloto",
+          "text": "¿Qué debe suceder antes de iniciar, vender, entregar u operar cada etapa?",
+          "activation": "Antes de aceptar el calendario como ejecutable",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "milestones.dependencies:IDs; milestone.status; evidence",
+          "depends_on": "M03; M04; M05; phases",
+          "produces": "Dependencias y ruta de hitos con bloqueos visibles",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M10.Q05",
+          "level": "completo",
+          "text": "¿Qué actividades e ingresos deben seguir funcionando durante las obras?",
+          "activation": "Si hay ocupantes, comercio, renta o servicios existentes",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "continuity.requirements:lista; temporary_works:alcance+fechas",
+          "depends_on": "existing.assets; M03; M15",
+          "produces": "Plan de continuidad y reubicación con costos vinculados",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        }
+      ]
+    },
+    {
+      "id": "M11",
+      "title": "Mercado, precios y comercialización",
+      "purpose": "Vincular cada hipótesis comercial con producto, fecha y evidencia",
+      "questions": [
+        {
+          "id": "M11.Q01",
+          "level": "piloto",
+          "text": "¿Quién compraría o rentaría cada producto y qué necesidad concreta resuelve?",
+          "activation": "Cuando existe un componente comercializable",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "market.segments:lista; offer.value:texto",
+          "depends_on": "M06; units/lots.typologies",
+          "produces": "Cliente objetivo y oferta por producto",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M11.Q02",
+          "level": "piloto",
+          "text": "¿Qué comparables o acuerdos respaldan el precio o renta propuestos?",
+          "activation": "Antes de dar como sustentado un ingreso",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "market.comparables:fuente+fecha+ubicación+producto+precio/unidad",
+          "depends_on": "land.location; product definitions",
+          "produces": "Evidencia comparable separada de oferta, cierre o supuesto",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M11.Q03",
+          "level": "piloto",
+          "text": "¿Cuál es el precio o renta y sobre qué superficie, unidad, moneda y fecha se expresa?",
+          "activation": "Al introducir un precio o renta",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "pricing.value:decimal; unit:m²/unidad/mes; currency; basis; date",
+          "depends_on": "net product areas; market evidence",
+          "produces": "Ingreso con base inequívoca y sin mezclar superficies",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M11.Q04",
+          "level": "piloto",
+          "text": "¿A qué ritmo se vendería u ocuparía y qué parte está realmente comprometida?",
+          "activation": "Al calcular calendario de ingresos",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "sales.absorption:unidades/mes; occupancy:%; commitments:estado+evidencia",
+          "depends_on": "product inventory; phases",
+          "produces": "Curva de demanda y compromisos diferenciados",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M11.Q05",
+          "level": "piloto",
+          "text": "¿Cómo y cuándo paga el cliente y qué descuentos, comisiones o cancelaciones se contemplan?",
+          "activation": "Antes de convertir ventas en efectivo disponible",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "sales.payment_schedule:%+base+fecha; fees:%+base; cancellations:hipótesis",
+          "depends_on": "pricing; sales.absorption; phases",
+          "produces": "Cobros netos y obligaciones de entrega por periodo",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        }
+      ]
+    },
+    {
+      "id": "M12",
+      "title": "Presupuesto y cantidades",
+      "purpose": "Construir costos trazables sin ocultar partidas faltantes",
+      "questions": [
+        {
+          "id": "M12.Q01",
+          "level": "piloto",
+          "text": "¿Qué conceptos y cantidades forman el alcance presupuestado?",
+          "activation": "Al activar obra, urbanización, compra o servicios profesionales",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "budget.quantities:concepto+cantidad+unidad+asset_id",
+          "depends_on": "M07; M08; M09; M10",
+          "produces": "Catálogo de cantidades por componente y etapa",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M12.Q02",
+          "level": "piloto",
+          "text": "¿Qué costo unitario o cotización corresponde a cada concepto, con qué moneda y fecha?",
+          "activation": "Cuando hay cantidades que valorar",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "budget.unit_cost:importe/unidad; currency; date; source",
+          "depends_on": "budget.quantities",
+          "produces": "Costos estimados o cotizados con cobertura explícita",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M12.Q03",
+          "level": "piloto",
+          "text": "¿Qué gastos de proyecto, permisos, gestión, comercialización, impuestos y cierre deben incluirse?",
+          "activation": "Antes de presentar costo total",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "budget.indirects:importe o % con base; taxes:criterio validado",
+          "depends_on": "M03; M04; M11; M13",
+          "produces": "Cobertura de costos directos e indirectos, sin inferir tasas",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M12.Q04",
+          "level": "piloto",
+          "text": "¿Qué contingencia, actualización de costos y reservas se quieren probar?",
+          "activation": "Cuando el plazo o incertidumbre lo requieren",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "budget.contingency:%+base; escalation:regla+periodo; reserves:importe",
+          "depends_on": "budget.scope; phases; risk evidence",
+          "produces": "Supuestos explícitos y escenarios; nunca ajustes escondidos",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M12.Q05",
+          "level": "piloto",
+          "text": "¿Cuándo se paga cada concepto y qué anticipos, retenciones o compromisos ya existen?",
+          "activation": "Antes de producir flujo de efectivo",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "budget.payment_schedule:importe+fecha/hito; commitments:referencias",
+          "depends_on": "budget.items; phases",
+          "produces": "Desembolsos por periodo y separación de comprometido/propuesto",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        }
+      ]
+    },
+    {
+      "id": "M13",
+      "title": "Capital y financiamiento",
+      "purpose": "Mostrar disponibilidad real y necesidades antes de comprometer obra",
+      "questions": [
+        {
+          "id": "M13.Q01",
+          "level": "piloto",
+          "text": "¿Cuánto capital hay disponible, de quién y en qué fecha?",
+          "activation": "Antes de afirmar que el plan puede financiarse",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "capital.available:importe+moneda+fecha+fuente+estado",
+          "depends_on": "parties.roles; M10",
+          "produces": "Aportaciones disponibles, prometidas y pendientes separadas",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M13.Q02",
+          "level": "piloto",
+          "text": "¿Qué crédito o financiamiento se está considerando y qué condiciones están documentadas?",
+          "activation": "Si hay deuda o fondeo externo",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "debt.terms:principal+tasas+plazo+comisiones+fuente+estado",
+          "depends_on": "capital.plan; project phases",
+          "produces": "Escenario de financiamiento sin confundir oferta y aprobación",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M13.Q03",
+          "level": "piloto",
+          "text": "¿Qué hitos, garantías o condiciones habilitan cada disposición?",
+          "activation": "Si el fondeo depende de avance, preventa o autorizaciones",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "debt.draw_conditions:lista; draw_schedule:importe+fecha/hito",
+          "depends_on": "debt.terms; milestones; sales commitments",
+          "produces": "Calendario condicionado de recursos",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M13.Q04",
+          "level": "piloto",
+          "text": "¿Cómo se cubren los periodos con falta de efectivo y cuál es el límite de exposición aceptable?",
+          "activation": "Si el flujo proyectado muestra un faltante o no se conoce el fondeo",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "funding.gap_action:opción; exposure.limit:importe+moneda; stop_rule",
+          "depends_on": "cashflow; capital.available; debt.draw_conditions",
+          "produces": "Brecha sin resolver visible y condición para avanzar",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M13.Q05",
+          "level": "completo",
+          "text": "¿Qué ocurre si el crédito, la venta o la aportación se retrasa?",
+          "activation": "Al revisar resistencia del caso",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "funding.stress_cases:variable+retraso/valor+fuente",
+          "depends_on": "M10; M11; M13; M16",
+          "produces": "Escenarios de liquidez vinculados a acciones posibles",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        }
+      ]
+    },
+    {
+      "id": "M14",
+      "title": "Aportaciones y distribución",
+      "purpose": "Evitar ambigüedad sobre porcentajes y recuperación de cada parte",
+      "questions": [
+        {
+          "id": "M14.Q01",
+          "level": "piloto",
+          "text": "¿Qué aporta cada participante: tierra, efectivo, trabajo, derechos u otro activo?",
+          "activation": "Si hay asociación o aportaciones",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "contributions.items:party_id+tipo+valor+unidad+fecha+evidencia",
+          "depends_on": "M03; capital.available",
+          "produces": "Mapa de aportaciones y riesgos por parte",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M14.Q02",
+          "level": "piloto",
+          "text": "¿Sobre qué base se calcula cada participación: ventas cobradas, utilidad, capital u otra?",
+          "activation": "Al incorporar un porcentaje o reparto",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "distribution.base:enum+definición; share:% por parte",
+          "depends_on": "agreements; cashflow definitions",
+          "produces": "Porcentajes con denominador inequívoco",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M14.Q03",
+          "level": "piloto",
+          "text": "¿Qué se paga primero y en qué orden se recupera capital o se distribuye excedente?",
+          "activation": "Antes de calcular pagos a participantes",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "distribution.waterfall:reglas ordenadas; priority:entero",
+          "depends_on": "contributions; debt.terms; agreements",
+          "produces": "Orden de pagos explícito y trazable",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M14.Q04",
+          "level": "piloto",
+          "text": "¿Qué hitos y reservas deben cumplirse antes de repartir?",
+          "activation": "Si la distribución puede comprometer continuidad o deuda",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "distribution.conditions:lista; reserve_rules:importe/regla",
+          "depends_on": "cashflow; phases; debt covenants; budget reserves",
+          "produces": "Pagos condicionados y efectivo retenido",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M14.Q05",
+          "level": "completo",
+          "text": "¿Quién absorbe pérdidas, sobrecostos, atrasos o incumplimientos y qué falta acordar?",
+          "activation": "Antes de declarar cerrado el trato",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "risk.allocation:riesgo+responsable+regla+documento+estado",
+          "depends_on": "M03; M13; agreements",
+          "produces": "Riesgos de cada parte y puntos de negociación pendientes",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        }
+      ]
+    },
+    {
+      "id": "M15",
+      "title": "Operación, renta y salida",
+      "purpose": "Abrir cuando se conserva un activo o hay continuidad operativa",
+      "questions": [
+        {
+          "id": "M15.Q01",
+          "level": "piloto",
+          "text": "¿Qué activos se conservarán y quién los operará?",
+          "activation": "Si algún producto se renta, explota o conserva",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "operations.assets:IDs; operator:party_id/pendiente",
+          "depends_on": "program.disposition; M03",
+          "produces": "Rama de operación separada de venta",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M15.Q02",
+          "level": "piloto",
+          "text": "¿Qué ocupación, contratos, periodos de gracia y rotación se suponen o están pactados?",
+          "activation": "Si hay ingresos recurrentes",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "leases.terms:renta+plazo+gracia+estado; occupancy.curve:% por periodo",
+          "depends_on": "M11; operations.assets",
+          "produces": "Ingreso operativo condicionado por contratos y supuestos",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M15.Q03",
+          "level": "piloto",
+          "text": "¿Qué gastos de operación, mantenimiento, administración y reposición tendrá el activo?",
+          "activation": "Antes de presentar resultado de renta",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "operations.expenses:importe/periodo+base; replacement.plan:fecha+importe",
+          "depends_on": "operations.assets; leases; M12",
+          "produces": "Flujo operativo con reservas y partidas faltantes visibles",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M15.Q04",
+          "level": "completo",
+          "text": "¿Durante cuánto tiempo se conservará y bajo qué opción podría venderse o refinanciarse?",
+          "activation": "Al comparar renta con venta o una salida futura",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "exit.options:tipo+fecha/horizonte+condición",
+          "depends_on": "operations.plan; decision.priorities; debt.terms",
+          "produces": "Escenarios de salida sin garantía de realización",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M15.Q05",
+          "level": "completo",
+          "text": "¿Qué evidencia y costos sustentan el valor de salida y qué pasa si no se realiza?",
+          "activation": "Si la rentabilidad depende de una salida futura",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "exit.valuation:importe+método+fuente+fecha; costs; fallback",
+          "depends_on": "exit.options; market evidence",
+          "produces": "Dependencia de salida y alternativa de continuidad",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M15.Q06",
+          "level": "piloto",
+          "text": "¿Qué inventario de unidades/áreas y ruta de valuación patrimonial se usará?",
+          "activation": "Antes de renta o valuación si falta inventario/método; no preguntar método si no se solicita valor",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "unidades; área rentable m²/unidad; método; cap rate sólo cuando aplique",
+          "depends_on": "Componente patrimonial; decisión solicitada y fórmulas nativas",
+          "produces": "Inventario/ruta explícitos; derivados protegidos",
+          "unknown_allowed": true
+        }
+      ]
+    },
+    {
+      "id": "M16",
+      "title": "Escenarios, sensibilidad y riesgos",
+      "purpose": "Comparar decisiones sin borrar la base ni ocultar incertidumbres",
+      "questions": [
+        {
+          "id": "M16.Q01",
+          "level": "piloto",
+          "text": "¿Qué versión quieres tomar como base de esta comparación?",
+          "activation": "Antes de explorar un cambio material",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "scenario.parent_revision:ID; scenario.label:texto",
+          "depends_on": "case.id; revisions",
+          "produces": "Escenario con genealogía y base recuperable",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M16.Q02",
+          "level": "piloto",
+          "text": "¿Qué decisión cambia en esta alternativa y qué condiciones se conservan?",
+          "activation": "Al crear una rama de escenario",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "scenario.delta:campos antes/después; fixed_constraints:lista",
+          "depends_on": "scenario.parent_revision",
+          "produces": "Cambio atribuible; paquete vinculado si mueve varias variables",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M16.Q03",
+          "level": "completo",
+          "text": "¿Qué rango de la variable se quiere explorar y qué lo respalda?",
+          "activation": "Al pedir sensibilidad o un umbral",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "sensitivity.variable:path; range:valor+unidad; source",
+          "depends_on": "scenario.delta; evidence",
+          "produces": "Pruebas acotadas sin fabricar una viabilidad deseada",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M16.Q04",
+          "level": "piloto",
+          "text": "¿Qué riesgos e incertidumbres podrían cambiar la elección?",
+          "activation": "Al comparar alternativas o aparecer evidencia contradictoria",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "risks.items:causa+impacto+estado+evidencia+responsable",
+          "depends_on": "M04; M05; M11; M12; M13",
+          "produces": "Condiciones críticas separadas de promedio o puntuación",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M16.Q05",
+          "level": "piloto",
+          "text": "¿Qué condición obliga a detener, rediseñar o descartar esta alternativa?",
+          "activation": "Antes de aprobar el siguiente compromiso",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "decision.stop_conditions:reglas+evidencia requerida",
+          "depends_on": "decision.priorities; risk register; cashflow",
+          "produces": "Criterios de continuidad verificables",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M16.Q06",
+          "level": "piloto",
+          "text": "¿Qué escenarios comparar y bajo qué horizonte, moneda, fecha/base y criterios?",
+          "activation": "Antes de comparación económica si esos criterios afectan la lectura y faltan",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "scenario_ids/revisiones; meses/fechas; moneda/base; indicadores/unidades",
+          "depends_on": "Escenarios y decisión; inputs/motor disponibles",
+          "produces": "Comparación coherente con diferencias y faltantes visibles",
+          "unknown_allowed": true
+        }
+      ]
+    },
+    {
+      "id": "M17",
+      "title": "Evidencia, conversaciones y versiones",
+      "purpose": "Mantener un mismo caso con origen, estado y revisión de cada dato",
+      "questions": [
+        {
+          "id": "M17.Q01",
+          "level": "mínimo",
+          "text": "¿Esta nota o transcripción pertenece a este caso y a qué reunión o fecha?",
+          "activation": "Al recibir una nueva fuente sin vínculo inequívoco",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "source.case_id; source.date; source.origin; transcript.segment_time",
+          "depends_on": "case.id; source metadata",
+          "produces": "Fuente vinculada al caso correcto y texto original conservado",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M17.Q02",
+          "level": "piloto",
+          "text": "¿Lo expresado es una instrucción, una opción, un dato, una pregunta o un acuerdo?",
+          "activation": "Si la interpretación cambia una decisión o hay atribución ambigua",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "statement.kind:enum; speaker; evidence_span; certainty_state",
+          "depends_on": "source.segment",
+          "produces": "Propuesta de interpretación; no convertir toda frase en mandato",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M17.Q03",
+          "level": "piloto",
+          "text": "¿La nueva cifra sustituye la anterior, abre un escenario o corrige un error?",
+          "activation": "Si una fuente contradice un valor vigente",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "change.intent:replace/scenario/correct; target_path; base_revision",
+          "depends_on": "current value; source.segment",
+          "produces": "Conflicto resuelto sin sobrescritura silenciosa",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M17.Q04",
+          "level": "piloto",
+          "text": "¿Qué evidencia respalda este dato, qué vigencia tiene y quién debe verificarlo?",
+          "activation": "Cuando un valor condiciona una decisión o pierde vigencia",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "evidence.id; valid_at; expires_or_review_rule; verifier; status",
+          "depends_on": "field.value; source",
+          "produces": "Trazabilidad y pendientes de verificación",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M17.Q05",
+          "level": "completo",
+          "text": "¿Quién puede ver, proponer y aplicar cambios en este caso?",
+          "activation": "Al invitar colaboradores o publicar una vista",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "access.roles; scopes; audience; approval_policy",
+          "depends_on": "parties.roles; case.id",
+          "produces": "Permisos por caso y separación entre vista de cliente y operación",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M17.Q06",
+          "level": "piloto",
+          "text": "¿A qué nodo, tramo, componente o etapa se refiere esta instrucción?",
+          "activation": "Cuando una edición/transcripción tiene varios destinos candidatos y eso impide proponer cambio",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "target_id/ruta; segmento fuente y tiempo si existe; acción",
+          "depends_on": "Fuente vinculada y objetos candidatos",
+          "produces": "Cambio dirigido y trazable o ambigüedad pendiente",
+          "unknown_allowed": true
+        }
+      ]
+    },
+    {
+      "id": "M18",
+      "title": "Decisiones, entregas y ejecución",
+      "purpose": "Conectar el proyecto a acciones verificadas y documentación útil",
+      "questions": [
+        {
+          "id": "M18.Q01",
+          "level": "mínimo",
+          "text": "¿Qué decisión necesitas tomar ahora y qué información te falta para tomarla?",
+          "activation": "Preguntar sólo si falta o está en conflicto Y es necesario para la decisión actual. Si se aporta espontáneamente, registrarlo sin interrogar. Al abrir el caso o cerrar una revisión",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "next_decision.id; required_evidence; blockers",
+          "depends_on": "decision.priorities; current completeness",
+          "produces": "Siguiente paso concreto, ordenado por dependencia e impacto",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M18.Q02",
+          "level": "piloto",
+          "text": "¿Qué formato y audiencia necesita la siguiente entrega?",
+          "activation": "Al pedir resumen, presentación, propuesta o informe",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "deliverable.type; audience; included_sections; revision_id",
+          "depends_on": "case.id; scenario.revision",
+          "produces": "Entrega derivada de una versión identificada y datos permitidos",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M18.Q03",
+          "level": "piloto",
+          "text": "¿Qué cambio entendido y qué consecuencias quieres aplicar a la versión vigente?",
+          "activation": "Antes de guardar una propuesta material de conversación",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "proposal.id; changeset; impact; user_decision",
+          "depends_on": "validated proposal; base_revision",
+          "produces": "Aplicación o ajuste del conjunto visible de cambios",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M18.Q04",
+          "level": "completo",
+          "text": "¿Quién ejecuta cada pendiente, qué evidencia debe entregar y para cuándo?",
+          "activation": "Cuando una revisión produce trabajo fuera del cálculo",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "task.owner; task.due_date; task.acceptance; linked_node_id",
+          "depends_on": "decision blockers; permits; technical reviews",
+          "produces": "Tareas vinculadas a la rama y su criterio de cierre",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        },
+        {
+          "id": "M18.Q05",
+          "level": "piloto",
+          "text": "¿Qué comprobante confirma que el cambio se guardó, se recargó y produjo el resultado esperado?",
+          "activation": "Después de aplicar cambios o declarar una entrega terminada",
+          "requirement": "Relativa a la decisión: se puede posponer, dejando pendiente sólo la salida que lo necesita. Reutilizar respuesta válida y fuente; no volver a preguntar por orden de catálogo.",
+          "capture": "receipt.operation_id; saved_revision; readback_status; timestamp",
+          "depends_on": "proposal.id; persistence operation",
+          "produces": "Estado confirmado; error o pendiente si no hay comprobación",
+          "unknown_allowed": true,
+          "answer_policy_search_metadata": "reutilizar respuesta vigente con fuente; preguntar sólo si falta o contradice un dato necesario para la acción actual."
+        }
+      ]
+    }
+  ]
+}

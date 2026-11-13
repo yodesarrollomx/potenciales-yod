@@ -1,15 +1,20 @@
 {
-  "model_revision": "2026-11-12.ppp2.1",
-  "proposal_id": "CHG-PPP-UI-001",
-  "summary": "Presentar el libro e historial documental enlazados desde notas del caso en los cinco motores. Sólo navegación autorizada existente; sin nuevas APIs, permisos ni fórmulas. (13-nov-2026: actualizado contra main; la etiqueta ?v= del script la fija scripts/versiones.cjs y el registro usa CHG-PPP-UI-001 del atlas fijado.)",
+  "model_revision": "2026-11-13.ppp40-semilla.1",
+  "proposal_id": "CHG-PPP40-SEMILLA-20261029",
+  "summary": "PPP4 incremental: catálogo literal, grafo puro y semilla incompleta versionada dentro del frontend existente. Persistencia propuesta por módulo opt-in en la MISMA implementación GAS y tablas del master. Sin nueva URL, ACL, segundo motor financiero ni datos privados. Seed_id pre-alta es identidad de borrador, no board_case_id; promoción debe preservar vínculo explícito y no se presenta implementada.",
   "components": [
-    "SYS-POTENCIALES"
+    "SYS-POTENCIALES",
+    "GAS-PORTERO",
+    "SHEET-PORTERO",
+    "SHEET-PPP-MODELOS",
+    "SVC-AUTON-CLOUD"
   ],
   "tests": [
-    "Sintaxis JavaScript y cinco inserciones HTML comprobadas en V8.",
-    "Dobles DOM: cambio de caso limpia enlaces anteriores; URLs ajenas rechazadas y texto no se interpreta como HTML.",
-    "CI: node --test tests/ppp-expediente.test.cjs; git diff --check; regresiones de acceso y Arquitectura YOD.",
-    "Pendiente: recorrido autenticado, móvil y escritorio en publicación real; NotebookLM y sincronización Obsidian local no verificadas."
+    "Semilla incompleta preserva null y fuente literal; superficie conocida debe ser positiva. Estado durable requiere recibo y lectura; el grafo distingue cero de ausencia.",
+    "ACL vertical existente, revisión/CAS, repetición/payload mismatch y recuperación por lectura sin segundo POST.",
+    "Catálogo 18 módulos/96 preguntas extraído sin convertir texto en reglas; grafo separa pertenencia y cálculo, rechaza ciclos.",
+    "UI descarta respuesta al cambiar identidad/revisión; propuesta sólo manualmente confirmada; conexión ausente no simula éxito.",
+    "Agente real, promoción a caso, calendario y recorrido online aún requieren integración/QA antes de nivel Básico."
   ],
-  "rollback": "Revertir módulo visual e inclusiones HTML mediante PR; conservar notas, Sheets, archivos, fuentes e historial."
+  "rollback": "Revertir commits de consumidores y desactivar capacidad semilla en la implementación existente. Preservar semillas, casos, recibos e historia; no borrar ni restaurar libros."
 }
