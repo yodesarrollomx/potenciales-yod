@@ -313,10 +313,10 @@ async function foto(page, nombre) {
 
     await caso('cuando ya no mejora, quien edita le pide al plan que investigue lo que falta y el hallazgo llega con su fuente', async () => {
       const URL = 'https://boletinoficial.sonora.gob.mx/ejemplo/programa.pdf';
-      const w = regresada({ ia: ({ n }) => ({ codigo: 200, cuerpo: { stop_reason: 'tool_use', content: [
+      const w = regresada({ ia: ({ n }) => ({ codigo: 200, cuerpo: { stop_reason: 'end_turn', content: [
         { type: 'server_tool_use', id: 's' + n, name: 'web_search', input: { query: 'zonificación' } },
         { type: 'web_search_tool_result', tool_use_id: 's' + n, content: [{ type: 'web_search_result', url: URL, title: 'Programa municipal', encrypted_content: 'x' }] },
-        { type: 'tool_use', id: 'h' + n, name: 'entregar_hallazgos', input: { hallazgos: [{ tema: 'Uso de suelo', hallazgo: 'El programa municipal fija la zonificación; hay que pedir la constancia del predio para comparar la altura.', fuente: URL, confianza: 'media', mueve: 'candado uso_suelo' }] } }] } }) });
+        { type: 'text', text: JSON.stringify({ hallazgos: [{ tema: 'Uso de suelo', hallazgo: 'El programa municipal fija la zonificación; hay que pedir la constancia del predio para comparar la altura.', fuente: URL, confianza: 'media', mueve: 'candado uso_suelo' }] }) }] } }) });
       w.propiedades.set('ANTHROPIC_API_KEY', 'sk-ant-prueba');
       const res = w.libro.getSheetByName('Resumen'), h2 = res.v[filaDe(res, 'v2.huella') - 1][1];
       w.libro.getSheetByName('Rondas').appendRow([1, '2026-01-15 11:00', 'El plan (servidor)', 2, h2, 'El consejo (CP-1) regresó la V2: aprueban 0 de 7', 'sin mejora', '', '', 'Ronda 1 del plan. Probé 15 combinaciones y ninguna es mejor que la que ya defiendo.', 15, '{"candidatos":[]}', '']);
@@ -324,7 +324,7 @@ async function foto(page, nombre) {
       const { page, ctx, posts, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN + '/rondas' });
       await page.getByText('Lo que sólo puede entregar una persona (escrituras, cartas firmadas, presupuestos) no lo investigo: lo pido.').waitFor();
       await page.getByRole('button', { name: /Investigar lo que falta/ }).click();
-      await page.getByText(/Investigué y dejé 1 hallazgo en «Lo que encontré», con su fuente\./).waitFor({ timeout: 15000 });
+      await page.getByText(/Investigué \(1 búsqueda, 1 página\) y dejé 1 hallazgo en «Lo que encontré», con su fuente\./).waitFor({ timeout: 15000 });
       assert.deepEqual([posts[0].tipo, posts[0].mundo], ['ppp2-investigar', true]);
       await page.locator('.p2-seccion', { hasText: 'Lo que encontré' }).getByText(/El programa municipal fija la zonificación/).waitFor({ timeout: 15000 });
       assert.deepEqual(errores, []);
