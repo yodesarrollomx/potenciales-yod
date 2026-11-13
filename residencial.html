@@ -325,12 +325,13 @@
   #dVivienda.drawer.active{max-height:9000px}
   @media(max-width:700px){.viv-switch{grid-template-columns:1fr}.viv-grid{grid-template-columns:1fr}.viv-tipo-head{flex-wrap:wrap}.viv-tipo-head .viv-in{flex:1 1 100%}}
 </style>
-<link rel="stylesheet" href="ppp-intake.css?v=20261113-portero22">
-<script src="ppp-intake.js?v=20261113-portero22"></script>
-<link rel="stylesheet" href="ppp-presentation.css?v=20261113-portero22">
-<script src="ppp-presentation.js?v=20261113-portero22"></script>
-<link rel="stylesheet" href="ppp-stages.css?v=20261113-portero22">
-<script src="ppp-stages.js?v=20261113-portero22"></script>
+<link rel="stylesheet" href="ppp-intake.css?v=20261113-plan-folio">
+<script src="ppp-intake.js?v=20261113-plan-folio"></script>
+<link rel="stylesheet" href="ppp-presentation.css?v=20261113-plan-folio">
+<script src="ppp-presentation.js?v=20261113-plan-folio"></script>
+<script src="ppp-folio.js?v=20261113-plan-folio"></script>
+<link rel="stylesheet" href="ppp-stages.css?v=20261113-plan-folio">
+<script src="ppp-stages.js?v=20261113-plan-folio"></script>
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -1610,6 +1611,7 @@
     const nombre=caso.nombre_caso||'Caso nuevo';
     const h=$('heroNombre');h.innerHTML='';h.append(document.createTextNode(nombre+' '));
     const pill=document.createElement('span');pill.className='estado-pill';pill.id='heroEstado';pill.textContent=caso.estado||'EXPLORACIÓN';h.append(pill);
+    window.YodPPPFolio&&window.YodPPPFolio.caso('residencial',caso.caso_id,h);   // etapa 2 · el terreno y su etapa, leídos del folio (ppp-folio.js)
     txt('heroSub',caso.caso_id?`palabra: ${caso.palabra} · v${caso.version||1}${caso.siguiente_paso?' · siguiente: '+caso.siguiente_paso:''}`:'Mueve los supuestos y guarda el caso con una palabra para volver.');
     txt('casoNombreBar',caso.caso_id?`${nombre} · ${caso.palabra}`:'Caso nuevo (sin guardar)');
     const dot=$('syncDot');dot.className='sync-dot';dot.textContent=modoLocal?'· sin nube':caso.caso_id?'· guardado en Sheet v'+(caso.version||1):'· sin guardar';
@@ -1755,10 +1757,10 @@
   else if(clave){apiGet({recurso:'lista'}).then(r=>{if(r.ok){casosCache=r.casos||[];cfgBoard=r.config||{};$('gate').classList.add('off');drenarCola();procesarOpen()}else{reabrirGate(r.error)}}).catch(()=>{modoSinConexion();toast('Sin conexión: trabajando en modo local')})}
 })();
 </script>
-<script src="modelos.js?v=20261113-portero22"></script>
-<script src="portero.js?v=20261113-portero22"></script>
+<script src="modelos.js?v=20261113-plan-folio"></script>
+<script src="portero.js?v=20261113-plan-folio"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=20261031-fase1-e2"></script>
-<script src="ppp-expediente.js?v=20261113-portero22"></script>
+<script src="ppp-expediente.js?v=20261113-plan-folio"></script>
 </body>
 </html>
 

@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css">
 <link rel="stylesheet" href="https://yodesarrollomx.github.io/yod-portal/os/shell.css?v=20261031-fase1-e2">
-<link rel="stylesheet" href="ppp40-ui.css?v=20261113-portero22">
+<link rel="stylesheet" href="ppp40-ui.css?v=20261113-plan-folio">
 <style>body.ppp40-mode > [hidden]{display:none!important}body.ppp40-mode{background:#171713}#ppp40-root{max-width:1360px;margin:auto}.ppp40-loading{padding:28px;color:#e9e6df}.ppp40-session{display:block;margin:16px auto 40px;padding:10px 16px;background:transparent;color:#e9e6df;border:1px solid #827c6c;border-radius:8px;cursor:pointer}</style>
 <style>
   /* ===== Fintech Editorial (oscuro) · tokens por ROL, convención de los boards YoD ===== */
@@ -306,11 +306,11 @@
 
 #mercadoDocumento[hidden]{display:none}#mercadoDocumento table{width:100%;border-collapse:collapse;font-size:11px}#mercadoDocumento td,#mercadoDocumento th{padding:8px;border-bottom:1px solid var(--linea);text-align:left}#mercadoDocumento h3{font-size:14px}#mercadoDocumento{overflow-wrap:anywhere}#mercadoDocumento button{margin-top:10px}
 </style>
-<link rel="stylesheet" href="ppp-ui.css?v=20261113-portero22">
-<link rel="stylesheet" href="ppp-cadena.css?v=20261113-portero22">
-<link rel="stylesheet" href="ppp-volumes.css?v=20261113-portero22">
-<link rel="stylesheet" href="ppp-stages.css?v=20261113-portero22">
-<link rel="stylesheet" href="ppp-intake.css?v=20261113-portero22">
+<link rel="stylesheet" href="ppp-ui.css?v=20261113-plan-folio">
+<link rel="stylesheet" href="ppp-cadena.css?v=20261113-plan-folio">
+<link rel="stylesheet" href="ppp-volumes.css?v=20261113-plan-folio">
+<link rel="stylesheet" href="ppp-stages.css?v=20261113-plan-folio">
+<link rel="stylesheet" href="ppp-intake.css?v=20261113-plan-folio">
 </head>
 <body>
 <div id="gate"><div class="gate-box">
@@ -548,19 +548,20 @@
 </div></div>
 
 <div id="toast"></div>
-<script src="ppp-ui.js?v=20261113-portero22"></script>
-<script src="ppp-cadena.js?v=20261113-portero22"></script>
-<script src="ppp-case-loader.js?v=20261113-portero22"></script>
-<script src="ppp-volumes.js?v=20261113-portero22"></script>
-<script src="ppp-volumes-native.js?v=20261113-portero22"></script>
-<script src="ppp-stages.js?v=20261113-portero22"></script>
-<script src="ppp-intake.js?v=20261113-portero22"></script>
-<link rel="stylesheet" href="ppp-presentation.css?v=20261113-portero22">
-<script src="ppp-presentation.js?v=20261113-portero22"></script>
-<script src="ppp-version-bridge.js?v=20261113-portero22"></script>
-<script src="ppp40-graph.js?v=20261113-portero22"></script>
-<script src="ppp40-ui.js?v=20261113-portero22"></script>
-<script src="ppp40-bootstrap.js?v=20261113-portero22"></script>
+<script src="ppp-ui.js?v=20261113-plan-folio"></script>
+<script src="ppp-cadena.js?v=20261113-plan-folio"></script>
+<script src="ppp-case-loader.js?v=20261113-plan-folio"></script>
+<script src="ppp-volumes.js?v=20261113-plan-folio"></script>
+<script src="ppp-volumes-native.js?v=20261113-plan-folio"></script>
+<script src="ppp-stages.js?v=20261113-plan-folio"></script>
+<script src="ppp-intake.js?v=20261113-plan-folio"></script>
+<link rel="stylesheet" href="ppp-presentation.css?v=20261113-plan-folio">
+<script src="ppp-presentation.js?v=20261113-plan-folio"></script>
+<script src="ppp-folio.js?v=20261113-plan-folio"></script>
+<script src="ppp-version-bridge.js?v=20261113-plan-folio"></script>
+<script src="ppp40-graph.js?v=20261113-plan-folio"></script>
+<script src="ppp40-ui.js?v=20261113-plan-folio"></script>
+<script src="ppp40-bootstrap.js?v=20261113-plan-folio"></script>
 <script>
 (() => {
   /* ================== CONFIG DE NUBE ================== */
@@ -1303,6 +1304,7 @@
     const nombre=caso.nombre_caso||'Supuestos de referencia';
     $('heroNombre').innerHTML='';$('heroNombre').append(document.createTextNode(nombre));
     const pill=document.createElement('span');pill.className='estado-pill';pill.id='heroEstado';pill.textContent=caso.estado||'EXPLORACIÓN';$('heroNombre').append(pill);
+    window.YodPPPFolio&&window.YodPPPFolio.caso('mixto',caso.caso_id,$('heroNombre'));   // etapa 2 · el terreno y su etapa, leídos del folio (ppp-folio.js)
     txt('heroSub',caso.caso_id?`palabra: ${caso.palabra} · v${caso.version||1}${caso.siguiente_paso?' · siguiente: '+caso.siguiente_paso:''}`:'Mueve los supuestos y guarda el caso con una palabra para volver.');
     txt('casoNombreBar',caso.caso_id?`${nombre} · ${caso.palabra}`:'Supuestos de referencia · sin guardar');
     const dot=$('syncDot');dot.className='sync-dot';dot.textContent=sheetModel?(sheetNeedsRefresh?'Copia de Sheets · conexión por verificar':sheetPending||sheetBusy||sheetFailure?'Sheets · cambios pendientes de confirmar':'Sheets · revisión '+sheetModel.revision.slice(0,8)):legacyStatus();
@@ -1614,9 +1616,9 @@
 })();
 </script>
 <!-- El selector de motores se retiró del PPP vertical por decisión de Dirección. -->
-<script src="portero.js?v=20261113-portero22"></script>
+<script src="portero.js?v=20261113-plan-folio"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=20261031-fase1-e2"></script>
-<script src="ppp-expediente.js?v=20261113-portero22"></script>
+<script src="ppp-expediente.js?v=20261113-plan-folio"></script>
 </body>
 </html>
 

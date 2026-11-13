@@ -1,19 +1,19 @@
 {
-  "model_revision": "2026-11-13.ppp40-semilla.1",
-  "proposal_id": "CHG-PPP2-20261112",
-  "summary": "Portero (issue 22, reporte real de la Sala del 8-oct): la entrada con Google ya no puede sumar más de 61 s ni mandar dos POST seguidos al mismo servidor. 1) Las peticiones al Portero usan un plazo que sí corta (AbortController), también al leer la respuesta; antes Promise.race dejaba la petición viva en la red. 2) Un POST (acceso-google, acceso-solicitar) que falla ya no se repite contra el mismo original: la petición pudo haber llegado, y eso evitaba sesiones y correos dobles. Sólo un respaldo vivo, que es otro servidor, recibiría un segundo intento; hoy RESPALDO_VIVO sigue en falso. 3) El aviso de Google se verifica una sola vez a la vez: si One Tap y el botón llaman seguidos, la segunda espera a la primera; al terminar, bien o mal, se libera. Las lecturas (GET de canje y activar) conservan su único reintento al original. Sin cambios en el Apps Script, OAuth, roles, tiempos de sesión ni reglas fail-closed. Etiqueta propia 20261113-portero22. Registro: el arreglo es de salud de accesos (CHG-SALUD-ACCESOS-20261011), pero la etiqueta propia nueva también cambia el ?v= de ppp2.html y accesos.html; CHG-PPP2-20261112 es la única propuesta del atlas fijado que cubre todos los archivos tocados. En ppp2.html y accesos.html sólo cambia la etiqueta.",
+  "model_revision": "2026-11-13.folio-cartera.2",
+  "proposal_id": "CHG-PLAN-FOLIO-20261113",
+  "summary": "Etapa 2 del análisis tablero por tablero (PLAN-02): cada plan enseña su folio. ppp-folio.js (nuevo) lee UNA vez por página ?recurso=cartera del Portero con la sesión de siempre y, si un terreno del Control Maestro tiene en su columna «plan» este plan (ppp2:<plan> o <motor>:<caso>), pinta junto al nombre «PRJ-… · etapa» (y «en pausa» si aplica). La etapa no se copia al plan. Sin sesión, sin respuesta o sin terreno ligado no pinta nada; si el Portero falla, no insiste en un minuto; una respuesta tardía de otro plan no escribe. PPP 2 (ppp2.js) lo pinta en la cabeza del plan; los cinco motores, en su pintaCaso, con una línea. El reparto ya se enseña en «Versiones y reparto» de PPP 2. Etiqueta propia 20261113-plan-folio (por eso cambia el ?v= de accesos, index y mapa). El atlas fijado pasa a yod-portal 7db15e4 (revisión 2026-11-13.folio-cartera.2), donde existe la propuesta.",
   "components": [
     "SYS-POTENCIALES",
-    "GAS-PORTERO",
-    "SYS-CONTROL",
-    "SYS-PPP2"
+    "SYS-PPP2",
+    "GAS-PPP2",
+    "SYS-CONTROL"
   ],
   "tests": [
-    "node --test tests/portero-red.test.cjs (nuevo, sin red: éxito frío, plazo de 30 s que corta sin segundo POST, 500 con HTML, error de red, rechazo autorizado, credencial revocada, respaldo 404 sin usar, GET con un reintento, dos avisos seguidos de Google)",
-    "node --test tests/access-gates.cjs tests/sheets-offline.cjs",
-    "node tests/access-browser.cjs (Chromium y WebKit móvil en CI)",
+    "node --test tests/ppp-folio.test.cjs (9)",
+    "node --test tests/*.test.cjs (748)",
     "node scripts/versiones.cjs --check",
-    "verificar-impacto contra el atlas fijado."
+    "Recorridos de navegador de verificar-ppp y verificar-acceso (CI)",
+    "verificar-impacto contra el atlas fijado"
   ],
-  "rollback": "Revertir el merge: vuelve Promise.race, el segundo POST al original tras 1.5 s y el callback sin guardia. No hay nada que regresar en el Apps Script."
+  "rollback": "Revertir el PR: los planes vuelven a no enseñar su folio y la etiqueta propia regresa. Nada que regresar en Sheets ni en el Portero."
 }

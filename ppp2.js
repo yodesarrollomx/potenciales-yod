@@ -358,7 +358,7 @@
     raiz.innerHTML =
       '<div class="p2-migas"><a href="#/">Vivero</a><i class="ti ti-chevron-right"></i><span>' + esc(r['plan.nombre'] || '') + '</span></div>' +
       (estado.fresco === false ? refresco({ visto: estado.visto, sinRed: estado.sinRed }) : '') +
-      '<div class="p2-cabeza"><div><h1>' + esc(r['plan.nombre'] || 'Plan') + '</h1><div class="p2-lugar">' + esc(r['plan.ubicacion'] || '') + '</div>' +
+      '<div class="p2-cabeza"><div><h1>' + esc(r['plan.nombre'] || 'Plan') + '</h1><div class="p2-lugar">' + esc(r['plan.ubicacion'] || '') + '<span id="p2Folio"></span></div>' +
       '<div class="p2-crecer">' + edad(r['plan.edad']) + '<span class="p2-tenue"><b>Para crecer falta:</b> ' + esc(r['plan.para_crecer'] || '—') + '</span></div></div>' +
       (p.libro_url ? '<a class="p2-btn suave" href="' + esc(p.libro_url) + '" target="_blank" rel="noopener"><i class="ti ti-table"></i> Abrir el libro</a>' : '') + '</div>' +
       voz() +
@@ -379,6 +379,8 @@
       '<nav class="p2-pestanas" aria-label="Secciones del plan">' +
       pest('versiones', 'Versiones y reparto') + pest('preguntas', 'Preguntas y evidencia') + pest('rondas', 'Mis rondas') + pest('bitacora', 'Bitácora') + '</nav>' +
       '<div id="p2Pestana">' + ({ versiones: pVersiones, preguntas: pPreguntas, rondas: pRondas, bitacora: pBitacora }[estado.pestana] || pVersiones)() + '</div>';
+    // etapa 2 del análisis «tablero por tablero»: el terreno y su etapa se leen del folio (ppp-folio.js), no se copian al plan
+    if (window.YodPPPFolio) window.YodPPPFolio.caso('ppp2', estado.planId, document.getElementById('p2Folio'));
   }
   function clave(t, cifra, sub, clase) {
     return '<div class="p2-clave ' + (clase || '') + '"><div class="p2-sobre">' + esc(t) + '</div><span class="p2-cifra">' + cifra + '</span><span class="p2-tenue p2-chico">' + esc(sub || '') + '</span></div>';
