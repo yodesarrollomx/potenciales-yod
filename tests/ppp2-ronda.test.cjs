@@ -130,7 +130,7 @@ test('cifras reales · la base no pasa y ninguna vecina pasa: no propone nada (a
   assert.deepEqual([r.resultado, r.version, r.lugar], ['sin mejora', 1, 'libre']);
   assert.deepEqual([w.columna(1), w.columna(2), w.columna(3)], antes, 'ninguna versión cambió, fórmulas incluidas');
   assert.deepEqual([w.fichas(1), w.fichas(2), w.fichas(3)], fichas);
-  // el capital disponible que dicen los datos (120) es el tope: no prueba 130 ni 140
+  // el tope de capital que dicen los datos (120): no prueba 130 ni 140
   const det = w.detalle();
   assert.deepEqual(det.candidatos.map((c) => c.p.capital).filter((x, i, a) => a.indexOf(x) === i).sort((a, b) => a - b), [100, 110, 120]);
   assert.equal(det.candidatos.length, 9);
@@ -195,8 +195,8 @@ test('cifras reales · su propia propuesta ya pasa limpia y aguanta: al afinarla
 /* ───────────── el criterio, casos límite con el juguete ───────────── */
 
 test('una mejora de centavos en el faltante con golpes no vale un peso menos para el dueño: se mide en pasos de capital', () => {
-  // el capital disponible es 70: ninguna aguanta todos los golpes. Con las reglas de juguete, a 60 le faltan 10 y a 70 le faltan 5:
-  // los dos caben en el mismo paso (10), así que gana la que le deja más al dueño, que es la de partida.
+  // el tope de capital es 70: ninguna aguanta todos los golpes. Con las reglas de juguete, a 60 le faltan 10 y a 70 le faltan 5:
+  // los dos caben en el mismo paso (10), así que gana la que usa menos capital, que es la de partida.
   const w = preparar();
   w.mod.v[filaDe(w.mod, 'capital') - 1][3] = 70;
   let r = ronda(w);
@@ -677,7 +677,7 @@ const JUSTA = 'Pasa (aportación justa)';
 
 test('aguante · centavos de faltante no deciden: una vecina sólo gana si le quita a la de partida un paso ENTERO de capital', () => {
   // El caso de la auditoría: a la de partida le faltan 10.01 y deja 58 al dueño; a la vecina le faltan 9.99 y deja 55.
-  // Antes ganaba la vecina (caían en «cubos» distintos por dos centavos). Ahora empatan en aguante y decide lo del dueño.
+  // Antes ganaba la vecina (caían en «cubos» distintos por dos centavos). Ahora empatan en aguante y decide el capital.
   const solas = { '60|13': NO, '70|13': NO, '80|12': NO, '80|13': NO };
   let w = conGuion(Object.assign({ '60|12': { rv: JUSTA, d: 58, golpes: { lentas: 10.01 } }, '70|12': { rv: JUSTA, d: 55, golpes: { lentas: 9.99 } } }, solas));
   let r = ronda(w);
@@ -699,10 +699,13 @@ test('aguante · una vecina a la que le falta MÁS que a la de partida nunca le 
   let w = conGuion(Object.assign({ '60|12': { rv: JUSTA, d: 55, golpes: { lentas: 5 } }, '70|12': { rv: JUSTA, d: 70, golpes: { lentas: 5.5 } } }, solas));
   assert.equal(ronda(w).resultado, 'sin mejora', 'le faltan 0.5 MDP más: no se propone, ni por 15 MDP más para el dueño');
   assert.equal(w.detalle().candidatos.find((c) => c.p.capital === 70 && c.p.obra_inicio === 12).pasos, -1);
-  // dentro del margen con que el libro da por cero un faltante (0.01 MDP) cuenta como igual, y entonces sí decide lo del dueño
-  w = conGuion(Object.assign({ '60|12': { rv: JUSTA, d: 55, golpes: { lentas: 5 } }, '70|12': { rv: JUSTA, d: 70, golpes: { lentas: 5.005 } } }, solas));
+  // dentro del margen con que el libro da por cero un faltante (0.01 MDP) cuenta como igual: con el mismo capital decide lo del dueño…
+  w = conGuion(Object.assign({}, solas, { '60|12': { rv: JUSTA, d: 55, m: 37, golpes: { lentas: 5 } }, '60|13': { rv: JUSTA, d: 70, m: 37, golpes: { lentas: 5.005 } }, '70|12': NO }));
   const r = ronda(w);
-  assert.deepEqual([r.resultado, w.palanca('capital', 3)], ['propuesta', 70]);
+  assert.deepEqual([r.resultado, w.palanca('capital', 3), w.palanca('obra_inicio', 3)], ['propuesta', 60, 13]);
+  // …y con más capital no gana, aunque le deje más al dueño: primero va la que usa menos capital (Dirección, 13-nov-2026)
+  w = conGuion(Object.assign({ '60|12': { rv: JUSTA, d: 55, golpes: { lentas: 5 } }, '70|12': { rv: JUSTA, d: 70, golpes: { lentas: 5.005 } } }, solas));
+  assert.equal(ronda(w).resultado, 'sin mejora');
 });
 
 test('aguante · «aguanta» es que con ningún golpe leve le falte dinero, con el margen del libro (0.01 MDP); la que aguanta va primero', () => {
@@ -712,7 +715,7 @@ test('aguante · «aguanta» es que con ningún golpe leve le falte dinero, con 
   let r = ronda(w);
   assert.deepEqual([r.resultado, w.palanca('capital', 3)], ['propuesta', 70]);
   assert.match(String(w.campo('que_cambia', 3)), /Con cada golpe leve por separado no le falta dinero \(a la V2 le faltarían 3\.0 con Obra 5% arriba\)\./);
-  // con 0.02 ya no aguanta: le quita menos de un paso a la de partida y decide lo del dueño
+  // con 0.02 ya no aguanta: le quita menos de un paso a la de partida y decide el capital (la de partida usa menos)
   w = conGuion(Object.assign({ '60|12': { rv: JUSTA, d: 58, golpes: { 'obra+5': 3 } }, '70|12': { rv: JUSTA, d: 55, golpes: { 'obra+5': 0.02 } } }, solas));
   assert.equal(ronda(w).resultado, 'sin mejora');
   // cuenta el PEOR golpe, no el primero ni la suma: 4 + 4 + 4 no es peor que un solo 9
@@ -721,21 +724,26 @@ test('aguante · «aguanta» es que con ningún golpe leve le falte dinero, con 
   assert.deepEqual(w.detalle().candidatos.filter((c) => c.f === 0).map((c) => [c.gs, c.peor]), [[4, 'precio-5'], [9, 'lentas']]);
 });
 
-test('el orden de las reglas 2 a 5: limpia antes que plazo, plazo antes que dinero, dinero (a décimas) antes que capital', () => {
-  const PASA = 'Pasa', resto = { '60|13': NO, '70|13': NO, '80|12': NO, '80|13': NO };
-  const corre = (base, vecina) => { const w = conGuion(Object.assign({ '60|12': base, '70|12': vecina }, resto)); const r = ronda(w); return r.resultado === 'propuesta' ? w.palanca('capital', 3) : 'sin mejora'; };
+test('el orden de las reglas 2 a 5: limpia antes que plazo, plazo antes que capital, capital antes que dinero (a décimas)', () => {
+  const PASA = 'Pasa', resto = { '60|13': NO, '70|13': NO, '80|12': NO, '80|13': NO, '70|12': NO };
+  // la de partida es la 60|12; la vecina va en «donde» (70|12 si no se dice) y todo lo demás no pasa
+  const corre = (base, vecina, donde) => {
+    const w = conGuion(Object.assign({}, resto, { '60|12': base, [donde || '70|12']: vecina }));
+    const r = ronda(w);
+    return r.resultado === 'propuesta' ? w.palanca('capital', 3) + '|' + w.palanca('obra_inicio', 3) : 'sin mejora';
+  };
   // 2 antes que 3: pasar limpio vale más que no alargar el plazo
-  assert.equal(corre({ rv: JUSTA, d: 58, m: 37 }, { rv: PASA, d: 50, m: 40 }), 70);
-  // 3 antes que 4: no alargar el plazo vale más que dejarle más al dueño
-  assert.equal(corre({ rv: JUSTA, d: 58, m: 37 }, { rv: JUSTA, d: 80, m: 38 }), 'sin mejora');
-  assert.equal(corre({ rv: JUSTA, d: 58, m: 37 }, { rv: JUSTA, d: 80, m: 37 }), 70, 'con el mismo plazo, sí');
-  assert.equal(corre({ rv: JUSTA, d: 58, m: 37 }, { rv: JUSTA, d: 80, m: 30 }), 70, 'acortar el plazo no estorba');
-  // 4 a décimas: 4 centésimas más para el dueño no cuentan (gana la que usa menos capital); una décima sí
-  assert.equal(corre({ rv: JUSTA, d: 58, m: 37 }, { rv: JUSTA, d: 58.04, m: 37 }), 'sin mejora');
-  assert.equal(corre({ rv: JUSTA, d: 58, m: 37 }, { rv: JUSTA, d: 58.06, m: 37 }), 70);
-  // 4 antes que 5: una décima menos para el dueño no se cambia por usar menos capital
-  const w = conGuion(Object.assign({ '60|12': { rv: JUSTA, d: 58, m: 37 }, '50|12': { rv: JUSTA, d: 57.9, m: 37 } }, resto, { '70|12': NO }));
-  assert.equal(ronda(w).resultado, 'sin mejora');
+  assert.equal(corre({ rv: JUSTA, d: 58, m: 37 }, { rv: PASA, d: 50, m: 40 }), '70|12');
+  // 3 antes que 4: no alargar el plazo vale más que usar menos capital
+  assert.equal(corre({ rv: JUSTA, d: 58, m: 37 }, { rv: JUSTA, d: 58, m: 38 }, '50|12'), 'sin mejora');
+  assert.equal(corre({ rv: JUSTA, d: 58, m: 37 }, { rv: JUSTA, d: 58, m: 37 }, '50|12'), '50|12', 'con el mismo plazo, sí');
+  assert.equal(corre({ rv: JUSTA, d: 58, m: 37 }, { rv: JUSTA, d: 58, m: 30 }, '50|12'), '50|12', 'acortar el plazo no estorba');
+  // 4 antes que 5: usar menos capital vale más que dejarle más al dueño (Dirección, 13-nov-2026)
+  assert.equal(corre({ rv: JUSTA, d: 58, m: 37 }, { rv: JUSTA, d: 80, m: 37 }), 'sin mejora', 'usa más capital: no, ni por 22 MDP más para el dueño');
+  assert.equal(corre({ rv: JUSTA, d: 58, m: 37 }, { rv: JUSTA, d: 50, m: 37 }, '50|12'), '50|12', 'usa menos capital: sí, aunque le deje menos al dueño');
+  // 5 a décimas, con el mismo capital: 4 centésimas más para el dueño no cuentan; una décima sí
+  assert.equal(corre({ rv: JUSTA, d: 58, m: 37 }, { rv: JUSTA, d: 58.04, m: 37 }, '60|13'), 'sin mejora');
+  assert.equal(corre({ rv: JUSTA, d: 58, m: 37 }, { rv: JUSTA, d: 58.06, m: 37 }, '60|13'), '60|13');
 });
 
 test('la rejilla nunca prueba capital negativo, ni más capital que el disponible', () => {

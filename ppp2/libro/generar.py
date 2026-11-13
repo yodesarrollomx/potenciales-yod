@@ -143,7 +143,8 @@ DATOS = [
     ("cob.saldo_posterior", "Lo firmado después paga el saldo a los", "meses", ENT, True, 2, ""),
     ("§", "Dinero"),
     ("din.tasa_capital", "Rendimiento anual del capital (tasa fija)", "%", PCT, True, 0.15, ""),
-    ("din.capital", "Capital disponible", "MDP", MDP, True, None, "Se usa primero; lo demás es banco o respaldo."),
+    ("din.capital", "Tope de capital: 1/3 de las ventas (aviso)", "MDP", MDP, True, "=TOPE",
+     "Lo más que puede soportar el proyecto. Entre menos capital, mejor; pasarse sólo da aviso. La base lo usa y la ronda no lo rebasa."),
     ("din.tiie", "TIIE de referencia", "%", PCT, True, None, ""),
     ("din.sobretasa", "Sobretasa del banco", "%", PCT, True, 0.045, ""),
     ("din.apertura", "Comisión de apertura del banco", "%", PCT, True, 0.025, ""),
@@ -214,6 +215,10 @@ def hoja_datos(wb, plan):
             valor = obra_derivada()
             estado = estado if d is not None else "derivado"
             fuente = fuente if d is not None else "Derivado de la lámina"
+        if valor == "=TOPE":
+            valor = tope_capital()
+            estado = estado if d is not None else "derivado"
+            fuente = fuente if d is not None else "Regla de Dirección: 1/3 de las ventas totales"
         celda(ws, f"C{r}", valor, fmt=fmt, fill=FILL_DATO)
         celda(ws, f"E{r}", estado, fill=FILL_DATO)
         celda(ws, f"F{r}", fuente, fill=FILL_DATO, align=ENVOLVER)
@@ -232,6 +237,12 @@ def hoja_datos(wb, plan):
 
 def D(clave):
     return f"Datos!$C${DATO_FILA[clave]}"
+
+
+def tope_capital():
+    """Lo más que puede soportar el proyecto en capital: 1/3 de las ventas de los productos (regla de Dirección,
+    13-nov-2026). Pasarse sólo da aviso (Versiones · capital_sobre_tope); no cambia la revisión para fondos."""
+    return f"=IFERROR(ROUND(Productos!$E${PT}/3,2),\"\")"
 
 
 def obra_derivada():
@@ -712,7 +723,11 @@ VER_FILAS = [
     ("ck_flujo", "El flujo cuadra (debe ser 0)", '0.000', "f:B50"),
     ("ck_cobranza", "Se cobra todo lo vendido (cobranza menos ventas; debe ser 0)", MDP, "ck_cob"),
     ("ck_unidades", "Se firman todas las unidades (debe ser 0)", ENT, "ck_uni"),
+    ("§", "AVISOS (se marcan, no cambian la revisión para fondos)"),
+    ("capital_sobre_tope", "Capital por arriba del tope de 1/3 de las ventas (MDP; 0 = dentro)", MDP, "cap_tope"),
 ]
+# Claves de Versiones que llegaron después de los libros vivos: en el Resumen van al final (resumen_lista).
+VER_AL_FINAL = ("capital_sobre_tope",)
 VER_FILA = {}
 
 
@@ -806,6 +821,8 @@ def hoja_versiones(wb, plan):
                 val = f"=IFERROR({fl}!B16-{Pm('ventas')},\"\")"
             elif kind == "ck_uni":
                 val = f"=IFERROR({fl}!B11-Productos!$B${PT},\"\")"
+            elif kind == "cap_tope":
+                val = f"=IFERROR(MAX(0,ROUND({Pm('capital')}-{D('din.capital')},3)),\"\")"
             celda(ws, f"{col}{r}", val, fmt=fmt)
     lista(ws, f"C{VER_FILA['estado']}:E{VER_FILA['estado']}", ESTADOS_VERSION)
     ws.conditional_formatting.add(f"C{VER_FILA['estado']}:E{VER_FILA['estado']}",
@@ -1033,7 +1050,7 @@ def resumen_lista(npreg=None):
              ("plan.esquema", "=Reparto!$C$5"), ("plan.datos_sin_resolver", "=Plan!$B$22"), ("plan.candados_abiertos", "=Plan!$B$23"),
              ("plan.preguntas_abiertas", "=Plan!$B$24"), ("plan.siguiente_pregunta", "=Plan!$B$25")]
     for item in VER_FILAS:
-        if item[0] == "§":
+        if item[0] == "§" or item[0] in VER_AL_FINAL:
             continue
         for k in range(3):
             filas.append((f"v{k + 1}.{item[0]}", f"=IFERROR({V(item[0], k)},\"\")"))
@@ -1045,6 +1062,9 @@ def resumen_lista(npreg=None):
         filas.append((f"v{k + 1}.huella", huella_formula(k)))
     filas += [("plan.probada", "=Plan!$B$30"), ("plan.consejo_aprobada", "=Plan!$B$36"), ("plan.evidencia", "=Plan!$B$44"),
               ("plan.evidencia_sesion", "=Plan!$B$45"), ("plan.paso_capital", "=Plan!$B$46"), ("plan.consejo_sin_leer", "=Plan!$B$47")]
+    for clave in VER_AL_FINAL:
+        for k in range(3):
+            filas.append((f"v{k + 1}.{clave}", f"=IFERROR({V(clave, k)},\"\")"))
     return filas
 
 

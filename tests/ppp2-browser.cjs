@@ -204,6 +204,26 @@ async function foto(page, nombre) {
       await r.ctx.close();
     });
 
+    await caso('el capital que pasa del tope (1/3 de las ventas) sólo se avisa: no cambia la revisión ni pide nada', async () => {
+      const w = mundo();
+      const res = w.libro.getSheetByName('Resumen');
+      res.v[filaDe(res, 'v2.capital_sobre_tope') - 1][1] = 12.5;        // la V2, la que se ve al abrir, se pasa 12.5 MDP
+      const revision = res.v[filaDe(res, 'v2.rv_resultado') - 1][1];
+      const { page, ctx, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN });
+      await page.locator('.p2-recibe').waitFor();
+      await page.getByText(/El capital pasa 12[.,]5 MDP del tope de 1\/3 de las ventas/).waitFor();
+      assert.equal(await page.locator('table.p2-tabla .p2-chip', { hasText: 'Pasa del tope' }).count(), 1, 'sólo la V2 se pasa');
+      assert.equal(await page.locator('table.p2-tabla td', { hasText: revision }).count() > 0, true, 'la revisión para fondos dice lo mismo que el libro');
+      // con el capital dentro del tope no hay aviso
+      res.v[filaDe(res, 'v2.capital_sobre_tope') - 1][1] = 0;
+      await page.reload();
+      await page.waitForFunction(() => window.PPP2 && window.PPP2.estado.fresco === true && !!window.PPP2.estado.plan);
+      await page.locator('.p2-recibe').waitFor();
+      assert.equal(await page.getByText('Pasa del tope').count(), 0);
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
     await caso('quien sólo lee no ve controles de edición', async () => {
       const w = mundo();
       const { page, ctx } = await pagina(navegador, base, w, LECTOR);
