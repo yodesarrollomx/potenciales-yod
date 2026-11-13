@@ -266,7 +266,12 @@ cuando el libro dice `consejo` (se apaga con `Config!consejo_latido = no`).
   hallazgos, las preguntas respondidas, la última sesión del consejo y las rondas recientes. Cada juez
   lo lee por separado, con su oficio y las reglas de siempre (aprueba sólo si hoy firmaría; razones
   con cifras del expediente; nada de cuentas nuevas), y contesta con un objeto fijo: voto, razón y
-  condición. Sólo Alejandro virtual puede vetar.
+  condición. Sólo Alejandro virtual puede vetar. Con Anthropic la herramienta «votar» se **ofrece, no se
+  fuerza** (`tool_choice` «auto»): forzarla («tool» o «any») la rechazan los modelos de esta generación
+  con un 400, y así fue la primera sesión en vivo (12-nov-2026: ningún voto llegó y no se escribió nada).
+  El sistema le pide votar sólo con la herramienta; si contesta el objeto en texto, también cuenta.
+- **Si la API falla,** no se escribe nada y el aviso dice qué contestó, sólo con los códigos HTTP (por
+  ejemplo «La API contestó: 400.»); el texto del proveedor no se guarda ni se enseña.
 - **Cuándo se escribe.** Sólo si el libro dice `consejo`, la versión tiene pruebas con su huella y
   llegan **los siete votos válidos** (a quien no contestó bien se le pregunta una vez más). Antes de
   escribir se vuelve a leer el Resumen: si la versión, la huella o la evidencia cambiaron mientras

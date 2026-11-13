@@ -417,6 +417,8 @@ const RAZON_PRUEBA = 'Falta la escritura y la constancia de zonificación del pr
 function jueces(votos, otros) {
   const extra = otros || {};
   return ({ url, cuerpo, n }) => {
+    // como la API real de esta generación: forzar la herramienta («tool» o «any») es un 400 (visto en vivo el 12-nov-2026)
+    if (cuerpo.tool_choice && ['tool', 'any'].indexOf(cuerpo.tool_choice.type) >= 0) return { codigo: 400, cuerpo: { type: 'error', error: { type: 'invalid_request_error', message: 'tool_choice: type "tool" and "any" are not supported for this model.' } } };
     const sistema = String(cuerpo.system || cuerpo.instructions || '');
     const nombre = (/Eres «([^»]+)»/.exec(sistema) || [])[1] || '';
     let v = (votos || {})[nombre];

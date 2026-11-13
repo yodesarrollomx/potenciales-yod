@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
-const { mundo, ADMIN, EDITOR, LECTOR, PLAN, filaDe, jugueteConCiclo, jueces } = require('./ppp2-mundo.cjs');
+const { mundo, ADMIN, EDITOR, LECTOR, PLAN, filaDe, jugueteConCiclo, jueces, enConsejo } = require('./ppp2-mundo.cjs');
 
 const RAIZ = path.join(__dirname, '..');
 const FOTOS = process.env.PPP_SCREENSHOTS || '';
@@ -715,6 +715,19 @@ async function foto(page, nombre) {
       await fresco(r.page);
       assert.deepEqual(await memorias(r.page), []);
       await r.ctx.close();
+    });
+
+    await caso('si la API de IA rechaza el pedido, el aviso dice qué contestó (sólo el código) y no se escribe nada', async () => {
+      const w = enConsejo({ ia: () => ({ codigo: 400, cuerpo: { type: 'error', error: { type: 'invalid_request_error', message: 'detalle del proveedor' } } }) });
+      w.propiedades.set('ANTHROPIC_API_KEY', 'sk-ant-prueba');
+      const { page, ctx, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN + '/rondas' });
+      await page.getByRole('button', { name: /Convocar al consejo/ }).click();
+      await page.getByText('La API de IA no contestó bien (o tardó de más). No escribí nada; vuelve a intentarlo en unos minutos. (La API contestó: 400.)').waitFor({ timeout: 15000 });
+      assert.doesNotMatch(await page.content(), /detalle del proveedor/, 'el texto del proveedor no llega a la página');
+      assert.equal(w.libro.getSheetByName('Consejo').v.slice(4).filter((f) => f[1]).length, 0);
+      await page.getByRole('button', { name: /^\s*Convocar al consejo\s*$/ }).waitFor();
+      assert.deepEqual(errores, []);
+      await ctx.close();
     });
 
     await caso('la página publicada no lleva datos de planes reales', async () => {

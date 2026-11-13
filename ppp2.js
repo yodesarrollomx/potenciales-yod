@@ -112,6 +112,11 @@
     if (!fijo) toastT = setTimeout(function () { el.hidden = true; }, 4200);
   }
   function configurado() { return !/\/PENDIENTE\//.test(ENDPOINT); }
+  /* Si la API de IA no dio los votos, el servidor dice qué códigos contestó (sólo números). */
+  function codigosAPI(r) {
+    var c = r && Array.isArray(r.codigos) ? r.codigos.filter(function (x) { return typeof x === 'number'; }) : [];
+    return c.length ? ' (La API contestó: ' + c.map(function (x) { return x || 'sin respuesta'; }).join(', ') + '.)' : '';
+  }
 
   /* ───────── lo último que vi (ver la cabecera) ───────── */
   var MEMO = 'yodcg_cache_v1:ppp2:', MEMO_MS = 43200000, MEMO_PLANES = 3;
@@ -776,7 +781,7 @@
           olvidaTodo();
           fallo(r); return r;
         }
-        toast(r && r.recuperado ? 'Una ronda mía había quedado a medias: ya dejé la versión como estaba y no hice tu cambio. Revisa las cifras y vuelve a intentarlo.' : (ERRORES[e] || 'No se pudo guardar.'), !!(r && r.recuperado) || FIJOS.indexOf(e) >= 0);
+        toast(r && r.recuperado ? 'Una ronda mía había quedado a medias: ya dejé la versión como estaba y no hice tu cambio. Revisa las cifras y vuelve a intentarlo.' : (ERRORES[e] || 'No se pudo guardar.') + codigosAPI(r), !!(r && r.recuperado) || FIJOS.indexOf(e) >= 0);
         if ((e === 'revision' || e === 'sin_lugar' || e === 'paso' || e === 'cambio') && estado.planId) cargarPlan(true);
         return r;
       }
