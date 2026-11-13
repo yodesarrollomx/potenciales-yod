@@ -1,7 +1,7 @@
 {
   "model_revision": "2026-11-12.ppp2.1",
-  "proposal_id": "PPP",
-  "summary": "Presentar el libro e historial documental enlazados desde notas del caso en los cinco motores. Sólo navegación autorizada existente; sin nuevas APIs, permisos ni fórmulas.",
+  "proposal_id": "CHG-PPP-UI-001",
+  "summary": "Presentar el libro e historial documental enlazados desde notas del caso en los cinco motores. Sólo navegación autorizada existente; sin nuevas APIs, permisos ni fórmulas. (13-nov-2026: actualizado contra main; la etiqueta ?v= del script la fija scripts/versiones.cjs y el registro usa CHG-PPP-UI-001 del atlas fijado.)",
   "components": [
     "SYS-POTENCIALES"
   ],

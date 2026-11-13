@@ -46,7 +46,7 @@ test('mount is idempotent and all models include one shared script',()=>{
   vm.runInNewContext(script,{document:f.document,MutationObserver:f.MutationObserver});
   for(const filename of ['residencial.html','patrimonial.html','macrolotes.html','mixto.html','unifamiliar.html']) {
     const html=fs.readFileSync(path.join(__dirname,'..',filename),'utf8');
-    assert.equal((html.match(/src="ppp-expediente\.js\?v=20261009-1"/g)||[]).length,1);
+    assert.equal((html.match(/src="ppp-expediente\.js\?v=[^"]+"/g)||[]).length,1);   // la etiqueta ?v= la fija scripts/versiones.cjs
     assert.ok(html.includes('id="segLog"'));
   }
 });
