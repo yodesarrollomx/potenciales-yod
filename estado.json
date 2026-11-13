@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-13T02:42:50.150Z",
+ "generado": "2026-11-13T02:50:58.639Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -18,7 +18,7 @@
     "repo:yodesarrollomx/potenciales-yod"
    ],
    "desde": "2026-11-13T02:10:58Z",
-   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/86ebaa84bcbc8e9b4463ec639a527b897cbf8d87",
+   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/cdc1a4c7f1e81c1059ee6fbe1558d62d4aa8704f",
    "msg": "potenciales-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
@@ -54,18 +54,6 @@
    "desde": "2026-11-13T02:09:14Z",
    "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/43350095002",
    "msg": "Falló el flujo «Sala · Cada hora» de sala-edicion, trabajo «chinches / puente», paso 5 «Chinches del Sheet → issues, y cerradas → CUMPLIDO»"
-  },
-  {
-   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-consejo.yml",
-   "tipo": "flujo",
-   "nodos": [
-    "sala-edicion::github_workflows_sala_consejo",
-    "repo:yodesarrollomx/sala-edicion",
-    "SYS-SALA"
-   ],
-   "desde": "2026-11-12T21:22:40Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/43336508250",
-   "msg": "Falló el flujo «Roast Room · paquete» de sala-edicion, trabajo «consejo», paso 7 «Estación de salida»"
   },
   {
    "clave": "chinche:yodesarrollomx/sala-edicion#393",
