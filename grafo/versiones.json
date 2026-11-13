@@ -1,7 +1,7 @@
 {
  "esquema": 1,
- "aprobado": "G-20261112-1823",
- "actualizado": "2026-11-12T18:23:14-07:00",
+ "aprobado": "G-20261112-1900",
+ "actualizado": "2026-11-12T19:00:50-07:00",
  "versiones": [
   {
    "id": "G-20261111-2354",
@@ -465,7 +465,7 @@
    "id": "G-20261112-1823",
    "armado": "2026-11-12T18:23:14-07:00",
    "fecha": "12-nov 18:23",
-   "estado": "aprobado",
+   "estado": "anterior",
    "huella": "574fbb173df3",
    "piezas": 3173,
    "ligas": 10552,
@@ -631,6 +631,135 @@
     "por": "alexpueblag",
     "numero": 93,
     "motivo": "reflejar lo fusionado el 12-nov por la tarde: vista previa segura (PR 89), sólo repositorios públicos, Accesos paciente, vigilante y DEC-21 (PR 91), la pastilla de las presentaciones (yodesarrollo-board PR 71), la prueba del Despacho (yod-portal PR 356) y la Sala (sala-edicion PR"
+   }
+  },
+  {
+   "id": "G-20261112-1900",
+   "armado": "2026-11-12T19:00:50-07:00",
+   "fecha": "12-nov 19:00",
+   "estado": "aprobado",
+   "huella": "d458f5f4505c",
+   "piezas": 3174,
+   "ligas": 10553,
+   "repos": {
+    "yodesarrollomx/yod-portal": "01d77be",
+    "yodesarrollomx/potenciales-yod": "3a855ba",
+    "yodesarrollomx/yodesarrollo-board": "25de909",
+    "yodesarrollomx/yod-despacho": "d89b151",
+    "yodesarrollomx/board-aurum": "93bf624",
+    "yodesarrollomx/board-flujo-yod": "e9d122f",
+    "yodesarrollomx/real-miramar-board": "9db34a9",
+    "yodesarrollomx/interiores-aurum": "8bcdfc3",
+    "yodesarrollomx/aurum-board": "e3dd428",
+    "yodesarrollomx/sala-edicion": "051785e",
+    "yodesarrollomx/plan-potencial": "9f036c7",
+    "yodesarrollomx/crokiss": "7a7a557",
+    "yodesarrollomx/Co-desarrolladores-Yod": "bdaf46b",
+    "yodesarrollomx/alquimia-urbana": "0c0da90",
+    "yodesarrollomx/aurum-experiencia": "70c63b3",
+    "yodesarrollomx/pintarron": "0979d3f",
+    "yodesarrollomx/prueba-dominio": "715c6c7",
+    "yodesarrollomx/yodesarrollomx.github.io": "a5680f2",
+    "alexpueblag/pizarron-claude-yodbot": "31593a1",
+    "yodesarrollo/amalaya-board": "e3f94e6",
+    "aurumarquitectos/experiencia": "89d29e8",
+    "aurumarquitectos/aurumarquitectos.github.io": "d33f765",
+    "alexpueblag/codesarrolladores-libre": "96d26c5",
+    "alexpueblag/yod-terreno-si": "09f75f4",
+    "alexpueblag/yod-terreno-dormido": "1159ca5"
+   },
+   "cambios": {
+    "piezas_mas": {
+     "llave": 1
+    },
+    "piezas_menos": {},
+    "piezas_cambiadas": 3,
+    "ligas_mas": 1,
+    "ligas_menos": 0,
+    "piezas": 3174,
+    "ligas": 10553,
+    "ppp": {},
+    "primer_ppp": false,
+    "repos": [
+     {
+      "repo": "yodesarrollomx/yodesarrollo-board",
+      "de": "3848603",
+      "a": "25de909",
+      "nuevos": 0,
+      "quitados": 0,
+      "cambiados": 2
+     }
+    ],
+    "atlas": {
+     "componentes_nuevos": [],
+     "componentes_fuera": [],
+     "conexiones_mas": 0,
+     "conexiones_menos": 0,
+     "estados": [],
+     "propuestas": [],
+     "revision": "2026-11-12.panorama-refresco.1"
+    },
+    "sin_clon": [],
+    "sin_respuesta": 0,
+    "sin_campo": [],
+    "notas": []
+   },
+   "ia": {
+    "titulo": "Refresco menor del grafo: una pieza nueva, tres ajustadas y una conexión más",
+    "resumen": "El grafo rehecho es casi idéntico al aprobado. Se añadió una pieza de tipo «llave», cambiaron tres piezas existentes y apareció una conexión nueva. El grafo suma ahora 3,174 piezas y 10,553 conexiones. No se quitó nada, el atlas no tuvo movimientos y no hay cambios en los PPP. En el tablero sólo se modificaron el aviso que acompaña al grafo en las presentaciones y su prueba automática. Las tres audiencias (cliente o inversionista, dueño del terreno, departamentos, lotes o casas) siguen igual y no desapareció ningún campo.",
+    "presentaciones": "Las tres audiencias siguen disponibles y no desapareció ningún campo, así que las presentaciones que leen el grafo deberían funcionar igual. Sólo cambió el aviso del grafo, y conviene verlo una vez en pantalla.",
+    "recomendacion": "aprobar",
+    "cambios": [
+     {
+      "que": "Se añadió una pieza nueva de tipo «llave».",
+      "donde": "Grafo general",
+      "importa": "Es el único alta del refresco. Los datos no dicen a qué corresponde, así que conviene confirmar que es esperada."
+     },
+     {
+      "que": "Tres piezas existentes cambiaron.",
+      "donde": "Grafo general",
+      "importa": "Son ajustes sobre piezas que ya estaban. No se indica cuáles son ni qué cambió en ellas."
+     },
+     {
+      "que": "Se añadió una conexión nueva entre piezas y no se quitó ninguna.",
+      "donde": "Grafo general",
+      "importa": "El grafo crece sin perder relaciones previas, lo cual es coherente con una sola pieza nueva."
+     },
+     {
+      "que": "Se modificó el aviso del grafo para presentaciones.",
+      "donde": "Tablero, módulo de presentación",
+      "importa": "Es el único código de presentación que cambió. Los datos no precisan qué dice o cómo se muestra ahora el aviso."
+     },
+     {
+      "que": "Se ajustó la prueba automática que verifica el grafo en las presentaciones.",
+      "donde": "Tablero, pruebas",
+      "importa": "La prueba se actualizó junto con el aviso, lo que indica que el cambio está cubierto por una verificación."
+     },
+     {
+      "que": "Sin cambios en el atlas ni en los PPP.",
+      "donde": "Atlas y PPP",
+      "importa": "No hay componentes nuevos o fuera, ni estados, ni propuestas, ni movimientos de PPP. La estructura general se mantiene."
+     }
+    ],
+    "riesgos": [
+     "Los datos no identifican las tres piezas cambiadas ni la pieza «llave» nueva, así que no se puede confirmar a qué parte del negocio afectan.",
+     "No se describe qué cambió en el aviso del grafo, por lo que no se sabe si altera lo que ven las audiencias.",
+     "El riesgo general es bajo: no hay bajas, no desaparecen campos y el cambio es pequeño frente a las 3,174 piezas del grafo."
+    ]
+   },
+   "ia_informe": {
+    "pedidos": [
+     "claude"
+    ],
+    "gano": "claude:claude-sonnet-5-5",
+    "fallos": {},
+    "segundos": 11.6,
+    "reintentos": []
+   },
+   "pedido": {
+    "por": "alexpueblag",
+    "numero": 96,
+    "motivo": "primera prueba en vivo de la App del grafo (DEC-21): el borrador debe abrirlo la App y sus pruebas deben correr solas, sin «Approve workflows to run». Refleja además la pastilla para Dirección en Master Brokers (yodesarrollo-board PR 72)."
    }
   }
  ]

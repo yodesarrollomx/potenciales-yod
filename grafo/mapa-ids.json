@@ -39,7 +39,7 @@
     "repo:yodesarrollomx/yodesarrollo-board",
     "SYS-INVERSION"
    ],
-   "commit": "3848603628",
+   "commit": "25de909389",
    "flujos": {
     ".github/workflows/offer-review.yml": "yodesarrollo-board::github_workflows_offer_review",
     ".github/workflows/broker-journey.yml": "yodesarrollo-board::github_workflows_broker_journey",
@@ -307,5 +307,5 @@
    "flujos": {}
   }
  },
- "armado": "2026-11-12T18:23:14-07:00"
+ "armado": "2026-11-12T19:00:50-07:00"
 }
