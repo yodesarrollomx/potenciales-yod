@@ -62,6 +62,11 @@
   .u-meta{font-size:10.5px;color:var(--muted);margin-top:4px}
   .u-visitas{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--suave);background:rgba(255,255,255,.03);border:1px solid var(--linea);border-radius:9px;padding:7px 9px;margin-top:7px;white-space:pre-wrap;word-break:break-word}
   .u-acciones{margin-left:auto;display:flex;gap:6px}
+  .u-proy{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px;font-size:11px}
+  .u-proy label{font-weight:800;color:var(--suave)}
+  .u-proy input{background:rgba(35,29,20,.05);border:1px solid var(--lineaf);border-radius:9px;padding:6px 9px;color:var(--text);font:inherit;font-size:11.5px;min-width:0;flex:1 1 220px;max-width:420px}
+  .u-proy small{flex-basis:100%;color:var(--muted);font-size:10.5px}
+  .u-proy small.err{color:var(--red)}
   .leyenda{font-size:11px;color:var(--suave);line-height:1.9}
   .leyenda b{color:var(--goldc);font-size:13px}
   .msg{font-size:11.5px;font-weight:700;color:var(--goldc);min-height:16px;margin-top:8px}
@@ -155,6 +160,8 @@
 
   <section class="card">
     <h2>👥 Usuarios <span id="uCnt" style="color:var(--muted)"></span></h2>
+    <p style="font-size:12px;color:var(--muted);margin:-2px 0 12px"><b>Proyectos</b> = qué terrenos de la cartera ve cada quien. En blanco: si tiene algún tablero del equipo ve toda la cartera; si es externo (sólo Interiores, Inversión, Miramar u Obra), ninguno. Para un broker, inversionista o constructor escribe sus folios <b>PRJ-…</b> separados por coma; <b>*</b> = todos. Dirección siempre ve todo.</p>
+    <datalist id="foliosCartera"></datalist>
     <div id="lista"><p class="u-meta">Cargando…</p></div>
   </section>
 
@@ -336,6 +343,27 @@
   (function(){const pv=()=>{const b=document.getElementById('aBoards'),r=document.getElementById('aRol'),o=document.getElementById('aVera');
       if(b&&o) o.textContent=b.value.trim()?'Esta persona verá: '+vera(b.value,r?r.value:'vista'):'';};
     document.addEventListener('input',e=>{if(e.target&&(e.target.id==='aBoards'))pv()});document.addEventListener('change',e=>{if(e.target&&e.target.id==='aRol')pv()});})();
+  // Cartera del folio (Portero ?recurso=cartera): nombres para el campo «Proyectos». Mismas reglas que Cartera.gs.
+  let CARTERA_FOLIOS={},foliosDe='';
+  function proyVera(v){
+    const t=String(v||'').toUpperCase().split(/[,|;\s]+/).filter(Boolean);
+    if(!t.length)return {txt:'En blanco: si tiene algún tablero del equipo ve toda la cartera; si es externo, ninguno.'};
+    if(t.indexOf('*')>-1)return t.length===1?{txt:'Verá toda la cartera.'}:{err:'El * va solo (significa todos).'};
+    const malos=t.filter(x=>!/^PRJ-[A-Z0-9-]{2,40}$/.test(x));
+    if(malos.length)return {err:'Folio mal escrito: '+malos.join(', ')+'. Usa PRJ-… separados por coma.'};
+    const hay=Object.keys(CARTERA_FOLIOS).length,faltan=hay?t.filter(x=>!CARTERA_FOLIOS[x]):[];
+    return {txt:'Verá: '+t.map(x=>CARTERA_FOLIOS[x]||x).join(' · ')+(faltan.length?' — no están en la cartera: '+faltan.join(', '):'')};
+  }
+  async function cargarFolios(s){
+    if(foliosDe===s.token)return;foliosDe=s.token;
+    try{
+      const j=JSON.parse(await leer('cartera',s));
+      if(!vigente(s,true)||!j||!j.ok||!Array.isArray(j.proyectos)){foliosDe='';return}
+      CARTERA_FOLIOS={};j.proyectos.forEach(p=>{if(p&&p.folio&&p.admision!=='baja')CARTERA_FOLIOS[p.folio]=p.nombre||p.folio});
+      const dl=$('foliosCartera');if(dl)dl.innerHTML=Object.keys(CARTERA_FOLIOS).map(f=>'<option value="'+esc(f)+'">'+esc(CARTERA_FOLIOS[f])+'</option>').join('');
+      document.querySelectorAll('#lista input.proy').forEach(x=>x.dispatchEvent(new Event('input')));
+    }catch(_){foliosDe=''}
+  }
   function renderMatriz(usuarios,s){
     const tb=$('matriz');
     tb.innerHTML='<thead><tr><th>Usuario</th>'+CODES.map(c=>'<th class="'+(c[0]==='*'?'todo':'')+'" title="'+esc(c[1])+'">'+esc(c[1])+'</th>').join('')+'</tr></thead><tbody>'+
@@ -388,7 +416,7 @@
       if(!r.ok){limpiarVista(r.error==='admin'?'Necesitas sesión de administrador para ver esto.':'Error: '+(r.error||'sesión no validada'));return}
       $('uCnt').textContent='· '+r.usuarios.length;
       renderMatriz(r.usuarios,s);
-      cont.innerHTML=r.usuarios.map(u=>`
+      cont.innerHTML=r.usuarios.map((u,i)=>`
         <div class="usuario">
           <div class="u-top">
             <span class="u-nombre">${esc(u.nombre||u.correo)}</span>
@@ -397,7 +425,8 @@
             ${u.rol==='admin'?'<span class="badge admin">admin</span>':''}
             <span class="u-acciones">${u.estado==='activo'?`<button class="btn mini" data-rol="${esc(u.correo)}" data-cur="${esc(u.rol||'vista')}" data-nom="${esc(u.nombre||'')}" data-boards="${esc(boardsDe(u))}">${u.rol==='admin'?'↓ Colaborador':'↑ Dirección'}</button><button class="btn mini" data-liga="${esc(u.correo)}">🔗 Liga directa</button><button class="btn rojo mini" data-rev="${esc(u.correo)}">Revocar</button>`:`<button class="btn mini" data-rea="${esc(u.correo)}" data-nom="${esc(u.nombre||'')}" data-rolrea="${esc(u.rol||'vista')}" data-boardsrea="${esc(boardsDe(u))}">Reactivar</button>`}</span>
           </div>
-          <div class="u-meta">boards: ${esc(u.boards)} · sesiones vivas: ${u.sesiones_vivas} · visitas registradas: ${u.visitas_n}${u.ts_alta?' · alta: '+esc(String(u.ts_alta).slice(0,10)):''}</div>
+          <div class="u-meta">boards: ${esc(u.boards)} · proyectos: ${esc(u.rol==='admin'?'todos (Dirección)':(u.proyectos||'según su perfil'))} · sesiones vivas: ${u.sesiones_vivas} · visitas registradas: ${u.visitas_n}${u.ts_alta?' · alta: '+esc(String(u.ts_alta).slice(0,10)):''}</div>
+          ${u.estado==='activo'&&u.rol!=='admin'?`<div class="u-proy"><label for="proy-${i}">Proyectos</label><input id="proy-${i}" class="proy" list="foliosCartera" autocomplete="off" spellcheck="false" value="${esc(u.proyectos||'')}" placeholder="en blanco: según su perfil"><button class="btn mini" data-proyg="${esc(u.correo)}" data-nom="${esc(u.nombre||'')}" data-rolp="${esc(u.rol||'vista')}" data-boardsp="${esc(boardsDe(u))}">Guardar</button><small class="proy-vera"></small></div>`:''}
           ${u.ultimas&&u.ultimas.length?`<div class="u-visitas">${u.ultimas.map(esc).join('\n')}</div>`:''}
         </div>`).join('')||'<p class="u-meta">Sin usuarios aún.</p>';
       cont.querySelectorAll('[data-rol]').forEach(b=>b.onclick=async()=>{
@@ -429,6 +458,25 @@
         if(!vigente(s,true))return;
         if(!confirm('¿Revocar acceso y matar sesiones de '+b.dataset.rev+'?'))return;
         b.disabled=true;try{const r=await post({tipo:'acceso-revocar',correo:b.dataset.rev},s);if(!vigente(s,true))return;if(r.ok){toast('Acceso revocado')}else{toast('No se pudo revocar: '+(r.error||''),'err')}cargar()}catch(e){if(!vigente(s,true))return;b.disabled=false;toast('No se pudo revocar: '+e.message,'err')}
+      });
+      // Puertas por proyecto (13-nov-2026): la columna «proyectos» de ACCESOS, validada por el Portero (Cartera.gs).
+      // La cartera se lee sólo al tocar un campo, para no sumar una lectura a cada carga de la lista.
+      cont.querySelectorAll('input.proy').forEach(inp=>{
+        const pv=()=>{const o=proyVera(inp.value),sm=inp.parentNode&&inp.parentNode.querySelector('.proy-vera');if(sm){sm.textContent=o.err||o.txt;sm.className='proy-vera'+(o.err?' err':'')}};
+        inp.addEventListener('input',pv);inp.addEventListener('focus',()=>cargarFolios(s));pv();
+      });
+      cont.querySelectorAll('[data-proyg]').forEach(b=>b.onclick=async()=>{
+        if(!vigente(s,true))return;
+        const inp=b.parentNode&&b.parentNode.querySelector('input.proy'),v=inp?String(inp.value||'').trim():'',o=proyVera(v);
+        if(o.err){toast(o.err,'err');return}
+        b.disabled=true;const t0=b.textContent;b.textContent='…';
+        try{
+          // acceso-alta es UPSERT: van juntos nombre, rol y tableros tal como están en pantalla, más los proyectos.
+          const r=await post({tipo:'acceso-alta',correo:b.dataset.proyg,nombre:b.dataset.nom,rol:b.dataset.rolp,boards:b.dataset.boardsp,proyectos:v},s);
+          if(!vigente(s,true))return;
+          if(r.ok&&typeof r.proyectos==='string'){toast('✓ Proyectos guardados'+(r.proyectos?' → '+r.proyectos:' (en blanco: según su perfil)'));cargar()}
+          else{b.disabled=false;b.textContent=t0;toast(r.ok?'El Portero todavía no guarda proyectos (falta su versión nueva)':r.error==='proyectos'?'Folio mal escrito: usa PRJ-… separados por coma':'No se pudo: '+(r.error||''),'err')}
+        }catch(e){if(!vigente(s,true))return;b.disabled=false;b.textContent=t0;toast('No se pudo guardar: '+e.message,'err')}
       });
       cont.querySelectorAll('[data-rea]').forEach(b=>b.onclick=async()=>{
         if(!vigente(s,true))return;

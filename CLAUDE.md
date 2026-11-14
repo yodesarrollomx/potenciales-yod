@@ -47,7 +47,7 @@ Dos cosas en un mismo repo:
 Google Sheet "YOD - POTENCIALES"  (el ID vive en Script Properties, llave SHEET_ID)
   · 1 hoja por tipo: VERTICAL · MACROLOTES · UNIFAMILIAR · RESIDENCIAL · PATRIMONIAL  (1 fila = 1 caso)
   · CONFIG (clave del board, google_client_id) · HISTORIAL · FLUJO · MAPA
-  · ACCESOS (correo·nombre·boards·rol·estado·vence) · SESIONES (token·correo·expira·revocada) · LIGAS · BITACORA
+  · ACCESOS (correo·nombre·boards·rol·estado·vence·notas·ts_alta·proyectos) · SESIONES (token·correo·expira·revocada) · LIGAS · BITACORA
         │
         ▼   Apps Script — UN SOLO /exec, scriptId 115k1wTxnEdPaPyAVqDo9-N2mAhS5d50eoQT9W83nxrXe99EfPhwpC_dw
    ORIGINAL:  https://script.google.com/macros/s/AKfycbwlDDCWWzOWYZsUpBU9uqsQ7aenQ469PF6s6FkNlBFS1_cJSU5njG9oQmuyELy5zlqzFg/exec
@@ -70,8 +70,19 @@ Google Sheet "YOD - POTENCIALES"  (el ID vive en Script Properties, llave SHEET_
 
 > ⚠ **El repo es ESPEJO: lo que corre es lo pegado en el editor de Apps Script.** `gas/Code.gs` ni
 > siquiera se sube al repo público (`.gitignore`). Un cambio local no existe hasta que se pega/pushea
-> al editor **y** se actualiza la implementación existente. Antes de tocar el .gs, pide el Code.gs
-> vivo del editor ([[backend-vivo-no-es-el-repo]]).
+> al editor **y** se actualiza la implementación existente. Antes de tocar el .gs, lee el código
+> vivo ([[backend-vivo-no-es-el-repo]]): desde el 13-nov-2026 ya no se le pide a Alejandro, se exporta
+> por Drive y se publica desde su Chrome con el método de yod-portal `docs/agentes/publicar-apps-script.md`
+> (Buzón: Guías G37, regla 27).
+
+> **13-nov-2026 · vive la 111**, sobre la misma implementación `…zlqzFg`. La **110** suma la cartera
+> del folio (`Cartera.gs` y `?recurso=cartera`, sólo lectura) y la **111** las puertas por proyecto:
+> ACCESOS gana la columna `proyectos` (folios PRJ en CSV; `*` = todos; en blanco, el equipo ve todo y
+> un externo —sin ningún tablero interno— no ve ninguno), Accesos la escribe con `acceso-alta`
+> (validada en `Cartera.gs`: un folio mal escrito no se guarda) y `accesos-lista` la devuelve. Las
+> publicó Claude desde el Chrome de Dirección. Lo guardado en el editor trae además `HermesAccess.gs`
+> y su línea de ruta, de otro agente y sin visto bueno para publicarse: se quitó la línea para ambas
+> versiones (el archivo viaja inerte) y sigue en el editor tal cual.
 
 > **9-sep-2026 · sincronizado y desplegado.** La copia local `gas/Code.gs` estaba
 > **23 líneas atrás** del backend real: le faltaban los dos arreglos del 4-sep
@@ -164,8 +175,9 @@ vuelve el bug de "el permiso se pone y se quita solo" ([[accesos-matriz-borraba-
   libro "YOD - POTENCIALES" cuyo ID vive en Script Properties? No pude leer Script Properties.
 - ¿El respaldo (`AKfycbyrhq…`) está en la cuenta personal de Gmail y sigue siendo el correcto ahora
   que Workspace ya se pagó? Responde `portero:"respaldo"`, pero no sé de qué cuenta cuelga.
-- ¿`gas/Code.gs` local es idéntico al pegado en el editor? El repo es espejo y no hay forma de
-  saberlo desde aquí — pregunta: "¿me pasas el Code.gs del editor antes de que lo toque?"
+- ¿`gas/Code.gs` local es idéntico al pegado en el editor? Ya se puede saber sin preguntar: el
+  proyecto se exporta por Drive (`application/vnd.google-apps.script+json`) y se compara archivo por
+  archivo (método G37). La copia local no se ha resincronizado desde el 9-sep.
 - ¿`AL` (Alquimia) sigue siendo un código de permiso vivo? Aparece en el comentario de `Code.gs:459`
   pero no en la matriz de `accesos.html:208`.
 
