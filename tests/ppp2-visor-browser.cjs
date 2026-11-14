@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
-const { mundo, PLAN, filaDe } = require('./ppp2-mundo.cjs');
+const { mundo, PLAN, filaDe, EDITOR, LECTOR } = require('./ppp2-mundo.cjs');
 
 const RAIZ = path.join(__dirname, '..');
 const FOTOS = process.env.PPP_SCREENSHOTS || '';
@@ -33,8 +33,13 @@ async function pagina(navegador, base, w, opciones) {
   const pedidos = [], otros = [];
   await ctx.route('**/*', async (route) => {
     const req = route.request(), url = req.url();
-    if (url.startsWith(base)) return route.continue();
+    if (url.startsWith(base)) return /\/portero\.js/.test(url) ? route.fulfill({ status: 200, contentType: 'text/javascript', body: '' }) : route.continue();
     if (url.startsWith(ENDPOINT)) {
+      if (req.method() === 'POST' && op.sesion) {          // la ficha del plan (con sesión) sí escribe: sus ligas
+        const b = JSON.parse(req.postData() || '{}');
+        otros.push(b.tipo);
+        return route.fulfill({ status: 200, contentType: 'application/json', body: w.ctx.doPost({ postData: { contents: JSON.stringify(b) } }).contenido });
+      }
       if (req.method() !== 'GET') { otros.push(req.method()); return route.abort(); }
       const p = Object.fromEntries(new URL(url).searchParams);
       pedidos.push(p);
@@ -42,11 +47,11 @@ async function pagina(navegador, base, w, opciones) {
     }
     return route.fulfill({ status: 200, contentType: /\.css(\?|$)|fonts\.googleapis/.test(url) ? 'text/css' : 'text/javascript', body: '' });
   });
-  await ctx.addInitScript(([ep]) => { window.PPP2_ENDPOINT = ep; window.PPP2_VISOR_MS = 250; }, [ENDPOINT]);
+  await ctx.addInitScript(([ep, sesion]) => { window.PPP2_ENDPOINT = ep; window.PPP2_VISOR_MS = 250; if (sesion) localStorage.setItem('pyod_clave_v1', sesion); }, [ENDPOINT, op.sesion || '']);
   const page = await ctx.newPage();
   const errores = [];
   page.on('pageerror', (e) => errores.push(e.message));
-  await page.goto(base + '/visor.html' + (op.direccion === undefined ? '#l=' + LIGA : op.direccion));
+  await page.goto(base + (op.pagina || '/visor.html' + (op.direccion === undefined ? '#l=' + LIGA : op.direccion)));
   return { ctx, page, pedidos, otros, errores };
 }
 
@@ -182,6 +187,103 @@ async function pagina(navegador, base, w, opciones) {
       if (FOTOS) await page.screenshot({ path: path.join(FOTOS, 'ppp2-visor-1280.png') });
       assert.deepEqual(errores, []);
       await ctx.close();
+    });
+
+    await caso('en la ficha del plan (con sesión) están los mismos cuadros, de la versión escogida, con su pop-up', async () => {
+      const w = mundo(), { ctx, page, pedidos, otros, errores } = await pagina(navegador, base, w, { ancha: true, sesion: LECTOR, pagina: '/ppp2.html#/plan/' + PLAN });
+      await page.locator('#p2Cuadros .vz-card').first().waitFor();
+      assert.equal(await page.locator('#p2Cuadros .vz-card').count(), 7);
+      assert.match(await page.locator('.p2-cuadros-cab').innerText(), /V2/);
+      assert.match(await page.locator('#p2Cuadros').innerText(), /\$500\.0/);
+      assert.equal(await page.locator('[data-accion="compartir"]').count(), 0, 'quien sólo lee no da ligas');
+      const cabe = await page.evaluate(() => { const m = document.querySelector('.vz-inc-marco').getBoundingClientRect(), c = [...document.querySelectorAll('#p2Cuadros .vz-card')].map((x) => x.getBoundingClientRect()); return c.every((r) => r.left >= m.left - 1 && r.right <= m.right + 1) && new Set(c.map((r) => Math.round(r.top))).size === 2; });
+      assert.ok(cabe, 'en pantalla ancha: dos renglones de cuadros, dentro de la ficha');
+      await page.locator('#p2Cuadros [data-card="dinero"]').click();
+      await page.locator('#vzModal').waitFor({ state: 'visible' });
+      assert.match(await page.locator('#vzModal').innerText(), /Libro · Flujo V2/);
+      await page.keyboard.press('Escape');
+      await page.locator('#vzModal').waitFor({ state: 'hidden' });
+      await page.locator('.p2-vbtn[data-v="1"]').click();
+      await page.locator('.p2-cuadros-cab', { hasText: 'V1' }).waitFor();
+      await page.locator('#p2Cuadros .vz-card').first().waitFor();
+      await page.locator('#p2Cuadros [data-card="reparto"]').click();
+      assert.match(await page.locator('#vzModal').innerText(), /Libro · Resumen · v1\./, 'los cuadros siguen a la versión escogida');
+      await page.keyboard.press('Escape');
+      assert.ok(pedidos.some((p) => p.recurso === 'ppp2-visor' && p.k === LECTOR && p.v === '1' && !p.liga));
+      assert.deepEqual(otros, []);
+      assert.deepEqual(errores, []);
+      if (FOTOS) await page.screenshot({ path: path.join(FOTOS, 'ppp2-ficha-cuadros.png'), fullPage: true });
+      await ctx.close();
+    });
+
+    await caso('quien puede editar da la liga desde el plan, la liga abre el visor y apagarla lo cierra', async () => {
+      const w = mundo(), { ctx, page, otros, errores } = await pagina(navegador, base, w, { sesion: EDITOR, pagina: '/ppp2.html#/plan/' + PLAN });
+      await page.locator('#p2Cuadros .vz-card').first().waitFor();
+      await page.locator('[data-accion="compartir"]').click();
+      await page.getByText('Este plan todavía no tiene ligas.').waitFor();
+      await page.locator('form[data-form="liga"] input[name="para"]').fill('Grupo de prueba');
+      await page.locator('form[data-form="liga"] select[name="versiones"]').selectOption('todas');
+      await page.locator('form[data-form="liga"] button.verde').click();
+      const campo = page.locator('#p2LigaNueva');
+      await campo.waitFor();
+      const url = await campo.inputValue();
+      assert.match(url, /\/visor\.html#l=[a-f0-9]{40}$/);
+      const h = w.vivero.getSheetByName('Ligas');
+      assert.deepEqual(h.v[1].slice(1, 6), [PLAN, 'Grupo de prueba', 'activa', '', 'todas']);
+      assert.match(await page.locator('.p2-ligas').innerText(), /Grupo de prueba[\s\S]*sin abrir todavía/);
+      assert.deepEqual(otros, ['ppp2-liga']);
+      const visor = await ctx.newPage();
+      await visor.goto(url);
+      await visor.locator('.vz-card').first().waitFor();
+      assert.equal(await visor.locator('.vz-card').count(), 7);
+      assert.ok(await visor.locator('.vz-chip').count() >= 2, 'la liga se dio con todas las versiones');
+      await page.locator('[data-accion="cerrar"]').first().click();
+      await page.locator('[data-accion="compartir"]').click();
+      await page.locator('[data-accion="liga-estado"][data-op="apagar"]').click();
+      await page.locator('.p2-liga.apagada').waitFor();
+      await visor.getByText('Esta liga ya no está activa').waitFor({ timeout: 5000 });
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
+    await caso('desde el PPP de siempre: la portada lista los planes con libro y un caso que ya tiene su plan abre su ficha', async () => {
+      const w = mundo(), hp = w.vivero.getSheetByName('Planes');
+      hp.v[1][hp.v[0].indexOf('caso_ppp')] = 'casodeprueba01';
+      hp.appendRow(['p2otroplan01', 'Otro Ejemplo', 'libro-plantilla', 'activo', '2026-01-15', 'Pruebas', '', 'ppp2-libro-v1', '']);
+      w.cache.delete('planes');
+      const sin = await pagina(navegador, base, w, { pagina: '/tests/fixtures/libro/index.html' });
+      await sin.page.waitForTimeout(400);
+      assert.equal(sin.pedidos.length, 0, 'sin sesión no pregunta nada');
+      assert.equal(await sin.page.locator('[data-libro]').count(), 0);
+      await sin.ctx.close();
+      const { ctx, page, pedidos, otros, errores } = await pagina(navegador, base, w, { sesion: LECTOR, pagina: '/tests/fixtures/libro/index.html' });
+      const ligado = page.locator('a.lt-item[data-libro="' + PLAN + '"]');
+      await ligado.waitFor();
+      assert.equal(await ligado.getAttribute('href'), 'ppp2.html#/plan/' + PLAN, 'el caso que ya tiene su plan abre la ficha');
+      assert.match(await ligado.innerText(), /Caso con plan[\s\S]*V2 propuesta[\s\S]*plan con libro/);
+      assert.equal(await page.locator('a.lt-item[href="mixto.html?open=casosinplan0002"]').count(), 1, 'el caso sin plan sigue abriendo su motor');
+      assert.deepEqual(await page.locator('.lt-libros a.lt-item').evaluateAll((a) => a.map((x) => x.getAttribute('href'))), ['ppp2.html#/plan/p2otroplan01'], 'el plan sin caso sale en «Planes con libro»; el ligado no se repite');
+      await page.evaluate(() => { const l = document.getElementById('listaTodos'); l.innerHTML = l.innerHTML.replace(/ data-libro="[^"]*"/g, '').replace(/ppp2\.html#\/plan\/[a-z0-9]+" class/g, '" class'); l.querySelector('.lt-libros').remove(); const a = l.querySelector('a.lt-item'); a.setAttribute('href', 'mixto.html?open=casodeprueba01'); a.querySelector('.yod-libro-chip').remove(); });
+      await page.locator('.lt-libros a.lt-item').waitFor();           // la lista se repintó: lo del libro se repone solo
+      assert.equal(await page.locator('a.lt-item[data-libro="' + PLAN + '"]').getAttribute('href'), 'ppp2.html#/plan/' + PLAN);
+      assert.equal(pedidos.filter((p) => p.recurso === 'ppp2-vivero').length, 1, 'una sola pregunta por página');
+      assert.deepEqual(otros, []);
+      assert.deepEqual(errores, []);
+      await ctx.close();
+      const motor = await pagina(navegador, base, w, { sesion: LECTOR, pagina: '/tests/fixtures/libro/mixto.html?open=casodeprueba01' });
+      await motor.page.locator('#yodLibroAviso').waitFor();
+      assert.match(await motor.page.locator('#yodLibroAviso').innerText(), /ya tiene su plan completo/);
+      await motor.page.waitForURL('**/ppp2.html#/plan/' + PLAN, { timeout: 5000 });
+      await motor.ctx.close();
+      const clasico = await pagina(navegador, base, w, { sesion: LECTOR, pagina: '/tests/fixtures/libro/mixto.html?open=casodeprueba01&clasico=1' });
+      await clasico.page.locator('#yodLibroAviso a').waitFor();
+      await clasico.page.waitForTimeout(1800);
+      assert.match(clasico.page.url(), /mixto\.html\?open=casodeprueba01&clasico=1$/, 'pidiendo el motor, se queda en el motor');
+      await clasico.ctx.close();
+      const otro = await pagina(navegador, base, w, { sesion: LECTOR, pagina: '/tests/fixtures/libro/mixto.html?open=casosinplan0002' });
+      await otro.page.waitForTimeout(500);
+      assert.equal(await otro.page.locator('#yodLibroAviso').count(), 0, 'un caso sin plan no avisa nada');
+      await otro.ctx.close();
     });
   } finally {
     await navegador.close();

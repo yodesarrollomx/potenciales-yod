@@ -5,6 +5,10 @@
  * del terreno): `?recurso=ppp2-visor&liga=…`. La liga vive en la hoja `Ligas` del vivero; se apaga
  * cambiando su estado y deja de abrir en un minuto.
  *
+ * Los mismos siete cuadros son la portada de la ficha del plan para quien SÍ tiene sesión
+ * (`?recurso=ppp2-visor&k=…&plan=…`): ahí se ve cualquier versión viva y, quien puede editar, da y
+ * apaga las ligas del plan (`ppp2-liga`, por POST).
+ *
  * Reglas:
  *  - Sólo lee. Nada de lo que hay aquí escribe en un libro; lo único que escribe es un renglón en la
  *    hoja `Aperturas` del vivero cada vez que alguien abre la página (si la hoja existe).
@@ -38,6 +42,8 @@ var VISOR = {
   },
   /* Las series que dicen hasta qué mes hay movimiento (las de saldo siguen llenas hasta el mes 60). */
   MOVIMIENTO: ['firmas', 'cobranza', 'egresos', 'interes', 'cap_aporta', 'disposicion', 'respaldo', 'pago_banco', 'pago_respaldo', 'pago_capital'],
+  LIGAS_CAB: ['liga', 'plan_id', 'para', 'estado', 'vence', 'versiones', 'etiquetas', 'creada', 'nota'],
+  APERTURAS_CAB: ['fecha', 'liga', 'para', 'plan_id', 'equipo'],
   DATOS: ['terreno.m2', 'tierra.valor', 'lamina.m2_construidos', 'lamina.m2_vendibles', 'cob.enganche', 'din.tasa_capital', 'din.tiie',
     'din.sobretasa', 'din.apertura', 'din.caja_pct', 'din.preventa_minima', 'costo.comision']
 };
@@ -78,6 +84,76 @@ function versionesVisor_(r, regla) {
   else lista = regla.split(/[,;| ]+/).map(Number).filter(function (k, i, a) { return vivas.indexOf(k) >= 0 && a.indexOf(k) === i; });
   if (!lista.length) lista = [mostrada];
   return { mostrada: mostrada, lista: lista };
+}
+
+/* Las ligas de un plan, para quien las administra desde la ficha: leídas de la hoja (no de la caché), con
+   cuántas veces se abrió cada una. La liga completa sólo viaja a quien puede editar. */
+function ligasDe_(planId) {
+  var h = vivero_().getSheetByName('Ligas'), out = [];
+  if (!h || h.getLastRow() < 2) return out;
+  var vals = h.getDataRange().getValues(), cab = vals[0].map(low_), col = function (n) { return cab.indexOf(n); };
+  var veces = {}, ultima = {}, ha = vivero_().getSheetByName('Aperturas');
+  if (ha && ha.getLastRow() > 1) {
+    var n = ha.getLastRow() - 1, desde = Math.max(2, n + 2 - 3000);
+    ha.getRange(desde, 1, n + 2 - desde, 2).getValues().forEach(function (f) {
+      var k = String(f[1]); veces[k] = (veces[k] || 0) + 1; ultima[k] = limpio_(f[0]);
+    });
+  }
+  for (var i = 1; i < vals.length; i++) {
+    var f = vals[i].map(limpio_), t = String(f[col('liga')] || ''), ids = String(f[col('plan_id')] || '').split(/[,;| ]+/);
+    if (!t || ids.indexOf(planId) < 0) continue;
+    var corta = t.slice(0, 6) + '…';
+    out.push({ liga: t, para: txt_(f[col('para')], 80), estado: low_(f[col('estado')]), vence: f[col('vence')] || '', versiones: String(f[col('versiones')] == null ? '' : f[col('versiones')]),
+      planes: ids.filter(function (x) { return x; }).length, creada: f[col('creada')] || '', aperturas: veces[corta] || 0, ultima: ultima[corta] || '' });
+  }
+  return out;
+}
+function hojaVisor_(nombre, cabecera) {
+  var ss = vivero_(), h = ss.getSheetByName(nombre);
+  if (!h) { h = ss.insertSheet(nombre); h.appendRow(cabecera); }
+  else if (h.getLastRow() < 1) h.appendRow(cabecera);
+  return h;
+}
+/* Dar o apagar una liga desde la ficha del plan (quien puede editar). No toca ningún libro: sólo la hoja
+   `Ligas` del vivero. Varios planes en la misma liga = varios terrenos que se escogen en la pantalla. */
+function liga_(s, b, rid) {
+  if (!puede_(s, 'editar')) return { ok: false, error: 'permiso' };
+  var p = planPorId_(b.plan);
+  if (!p) return { ok: false, error: 'plan' };
+  var op = String(b.op || ''), h, cache = CacheService.getScriptCache();
+  if (op === 'crear') {
+    var regla = low_(b.versiones).replace(/\s+/g, '');
+    if (regla && regla !== 'todas' && !/^[123](,[123]){0,2}$/.test(regla)) return { ok: false, error: 'versiones' };
+    var ids = [p.plan_id], etiquetas = [txt_(b.etiqueta, 40)];
+    var otros = Array.isArray(b.planes) ? b.planes.slice(0, 5) : [];
+    for (var i = 0; i < otros.length; i++) {
+      var o = planPorId_(otros[i] && otros[i].plan);
+      if (!o) return { ok: false, error: 'plan' };
+      if (ids.indexOf(o.plan_id) < 0) { ids.push(o.plan_id); etiquetas.push(txt_(otros[i].etiqueta, 40)); }
+    }
+    var vence = /^\d{4}-\d{2}-\d{2}$/.test(String(b.vence || '')) ? String(b.vence) : '';
+    var liga = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '').slice(0, 40);
+    h = hojaVisor_('Ligas', VISOR.LIGAS_CAB);            // las hojas nacen con la primera liga
+    hojaVisor_('Aperturas', VISOR.APERTURAS_CAB);
+    h.appendRow(fila_([liga, ids.join(','), txt_(b.para, 80), 'activa', vence, regla, ids.length > 1 ? etiquetas.join('|') : '', hoyISO_(), txt_(b.nota, 200)]));
+    cache.remove('ligas');
+    bitacoraVivero_(s, 'liga-crear', p.plan_id, 'para ' + (txt_(b.para, 80) || '—') + ' · ' + liga.slice(0, 6) + '…' + (ids.length > 1 ? ' · ' + ids.length + ' planes' : ''), rid);
+    return { ok: true, liga: liga, ligas: ligasDe_(p.plan_id) };
+  }
+  if (op === 'apagar' || op === 'activar') {
+    h = vivero_().getSheetByName('Ligas');
+    if (!h || h.getLastRow() < 2) return { ok: false, error: 'liga' };
+    var vals = h.getDataRange().getValues(), cab = vals[0].map(low_), cl = cab.indexOf('liga'), cp = cab.indexOf('plan_id'), ce = cab.indexOf('estado');
+    for (var j = 1; j < vals.length; j++) {
+      if (String(vals[j][cl]) !== String(b.liga || '') || String(vals[j][cp]).split(/[,;| ]+/).indexOf(p.plan_id) < 0) continue;
+      h.getRange(j + 1, ce + 1).setValue(op === 'apagar' ? 'apagada' : 'activa');
+      cache.remove('ligas');
+      bitacoraVivero_(s, 'liga-' + op, p.plan_id, String(b.liga).slice(0, 6) + '…', rid);
+      return { ok: true, ligas: ligasDe_(p.plan_id) };
+    }
+    return { ok: false, error: 'liga' };
+  }
+  return { ok: false, error: 'op' };
 }
 
 /* ───────────────────────── lectura ───────────────────────── */
@@ -196,19 +272,27 @@ function llaveVisor_(p) {
 
 /* ───────────────────────── entrada ───────────────────────── */
 function visor_get_(q) {
-  var l = ligaViva_(q.liga);
-  if (!l) return { ok: false, error: 'liga' };
-  var etiquetas = String(l.etiquetas || '').split('|').map(function (s) { return txt_(s, 40); });
-  var planes = [];
-  String(l.plan_id || '').split(/[,;| ]+/).forEach(function (id, i) {
-    var p = id ? planPorId_(id, true) : null;
-    if (p) planes.push({ p: p, etiqueta: etiquetas[i] || '' });
-  });
+  var l = null, s = null, planes = [];
+  if (String(q.liga || '') || !String(q.k || '')) {
+    l = ligaViva_(q.liga);
+    if (!l) return { ok: false, error: 'liga' };
+    var etiquetas = String(l.etiquetas || '').split('|').map(function (x) { return txt_(x, 40); });
+    String(l.plan_id || '').split(/[,;| ]+/).forEach(function (id, i) {
+      var pl = id ? planPorId_(id, true) : null;
+      if (pl) planes.push({ p: pl, etiqueta: etiquetas[i] || '' });
+    });
+  } else {                                   // la ficha del plan: con la sesión del Portero, sin liga
+    s = canje_(q.k);
+    if (!s.ok) return { ok: false, error: s.error };
+    var uno = planPorId_(q.plan, true);
+    if (uno) planes.push({ p: uno, etiqueta: '' });
+    l = { plan_id: uno ? uno.plan_id : '', etiquetas: '', versiones: 'todas', sesion: true };
+  }
   if (!planes.length) return { ok: false, error: 'plan' };
   var sel = planes.filter(function (x) { return x.p.plan_id === String(q.plan || ''); })[0] || planes[0];
   var p = sel.p, pedida = Number(q.v) || 0, regla = String(l.versiones == null ? '' : l.versiones);
   var llave = llaveVisor_(p);
-  var firma = llave ? 'vz_' + hash_([VISOR.CACHE, llave, p.plan_id, pedida, regla, String(l.plan_id), String(l.etiquetas || '')].join('|')) : '';
+  var firma = llave ? 'vz_' + hash_([VISOR.CACHE, llave, p.plan_id, pedida, regla, String(l.plan_id), String(l.etiquetas || ''), l.sesion ? 's' : 'l'].join('|')) : '';
   if (firma && String(q.si || '') === firma) return { ok: true, igual: true, llave: firma };
   var base = null;
   if (firma) { var hit = cacheLee_(firma); if (hit) { try { base = JSON.parse(hit); } catch (e) { base = null; } } }
@@ -223,6 +307,10 @@ function visor_get_(q) {
     a_medias: !!d.estado && d.trabajo === base.version
   };
   Object.keys(base).forEach(function (c) { out[c] = base[c]; });
-  if (String(q.abre || '') === '1') { out.marcas = marcas_(config_()); apertura_(l, p, q.eq); }
+  if (s) {
+    out.puede = { compartir: puede_(s, 'editar') };
+    if (out.puede.compartir && String(q.ligas || '') === '1') out.ligas = ligasDe_(p.plan_id);
+    if (String(q.abre || '') === '1') out.marcas = marcas_(config_());
+  } else if (String(q.abre || '') === '1') { out.marcas = marcas_(config_()); apertura_(l, p, q.eq); }
   return out;
 }

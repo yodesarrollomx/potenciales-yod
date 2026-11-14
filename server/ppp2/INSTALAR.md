@@ -90,12 +90,13 @@ pasar por el Portero y **sin escribir en ningún libro**.
 1. En el editor del proyecto: «+» junto a Archivos → Secuencia de comandos → nombre `Visor` → pegar
    `Visor.gs`. En `Código.gs` va el `PPP2.gs` de este repo (trae la ruta `ppp2-visor` en `doGet`).
    Guardar y publicar **Versión nueva** sobre la implementación de siempre.
-2. En la hoja del vivero, una pestaña **`Ligas`** con estos encabezados en la fila 1:
-   `liga | plan_id | para | estado | vence | versiones | etiquetas | creada | nota`.
-3. Opcional, para saber quién abre: una pestaña **`Aperturas`** con
-   `fecha | liga | para | plan_id | equipo`. Sin ella no se anota nada.
+2. Las pestañas **`Ligas`** (`liga | plan_id | para | estado | vence | versiones | etiquetas | creada |
+   nota`) y **`Aperturas`** (`fecha | liga | para | plan_id | equipo`) las crea el servidor la primera
+   vez que alguien da una liga desde un plan. Sin `Aperturas` no se anota quién abre.
 
-**Dar una liga** (un renglón en `Ligas`):
+**Dar una liga:** en la ficha del plan, **Compartir visor** (quien puede editar): para quién es, qué
+versiones ve y, si hace falta, otros planes en la misma liga. Ahí mismo se copia, se ve cuántas veces
+se abrió y se apaga. También se puede a mano, con un renglón en `Ligas`:
 
 | columna | qué va |
 |---|---|
@@ -110,6 +111,11 @@ pasar por el Portero y **sin escribir en ningún libro**.
 
 La dirección que se comparte es `https://yodesarrollomx.github.io/potenciales-yod/visor.html#l=` seguida
 de la liga. **Quien la tenga ve el plan**: si se reenvió de más, se apaga ese renglón y se da otra.
+
+**Un plan y su caso del PPP de siempre.** Para que un caso guardado del PPP abra la ficha de su plan,
+en la hoja `Planes` del vivero se pone, en la columna `caso_ppp` del renglón del plan, el identificador
+del caso (`caso_id` de su hoja en el libro del PPP). Tarda hasta dos minutos en notarse. Los planes sin
+caso salen en la portada del PPP en el grupo «Planes con libro».
 
 **Las marcas del pie** (renglones opcionales de `Config`):
 

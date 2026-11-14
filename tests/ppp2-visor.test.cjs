@@ -3,7 +3,7 @@
    Mismo mundo de dobles que el servidor (tests/ppp2-mundo.cjs); el plan es INVENTADO. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { mundo, PLAN, filaDe } = require('./ppp2-mundo.cjs');
+const { mundo, PLAN, filaDe, EDITOR, LECTOR } = require('./ppp2-mundo.cjs');
 
 const LIGA = 'liga0000000000000000000000000001';
 const renglon = (cambios) => Object.values(Object.assign({ liga: LIGA, plan_id: PLAN, para: 'Grupo de prueba', estado: 'activa', vence: '', versiones: '', etiquetas: '', creada: '2026-01-01', nota: '' }, cambios || {}));
@@ -133,4 +133,72 @@ test('si algo truena adentro, a la liga sólo se le dice que falló', () => {
   w.cache.delete('planes');
   const r = pide(w);
   assert.deepEqual(r, { ok: false, error: 'interno' });
+});
+
+test('con sesión del Portero, la ficha del plan ve los mismos cuadros de cualquier versión viva; sin sesión válida, no', () => {
+  const w = mundo();
+  const r = w.get({ recurso: 'ppp2-visor', k: LECTOR, plan: PLAN });
+  assert.equal(r.ok, true);
+  assert.equal(r.version, 2, 'abre en la versión que el libro muestra');
+  assert.ok(r.versiones.length >= 2, 'con sesión se escoge entre las versiones vivas');
+  assert.equal(r.v.ventas, 500);
+  assert.deepEqual(r.puede, { compartir: false });
+  assert.equal(r.ligas, undefined);
+  assert.equal(w.get({ recurso: 'ppp2-visor', k: LECTOR, plan: PLAN, v: '1' }).version, 1);
+  assert.deepEqual(w.get({ recurso: 'ppp2-visor', k: LECTOR, plan: PLAN, si: r.llave }), { ok: true, igual: true, llave: r.llave });
+  assert.equal(w.get({ recurso: 'ppp2-visor', k: 'llave-que-no-existe-0000', plan: PLAN }).ok, false);
+  assert.equal(w.get({ recurso: 'ppp2-visor', k: LECTOR, plan: 'p2noexiste01' }).error, 'plan');
+  const e = w.get({ recurso: 'ppp2-visor', k: EDITOR, plan: PLAN, ligas: '1' });
+  assert.deepEqual(e.puede, { compartir: true });
+  assert.deepEqual(e.ligas, [], 'quien puede editar ve las ligas del plan');
+  for (const c of ['propuesta_por', 'aprobada_por', 'libro_url', 'libro_id']) assert.ok(!(c in r) && !(c in r.v), c);
+});
+
+test('quien puede editar da una liga desde el plan: abre el visor, cuenta sus aperturas y apagarla lo cierra', () => {
+  const w = mundo();
+  const antes = JSON.stringify(Object.values(w.libro.hojas).map((h) => h.v));
+  assert.equal(w.post({ tipo: 'ppp2-liga', k: LECTOR, plan: PLAN, op: 'crear' }).error, 'permiso');
+  assert.equal(w.post({ tipo: 'ppp2-liga', k: EDITOR, plan: PLAN, op: 'crear', versiones: 'todas las que quiera' }).error, 'versiones');
+  assert.equal(w.post({ tipo: 'ppp2-liga', k: EDITOR, plan: PLAN, op: 'apagar', liga: 'ninguna' }).error, 'liga');
+  assert.ok(!w.vivero.getSheetByName('Ligas'), 'un intento rechazado no crea nada');
+  const r = w.post({ tipo: 'ppp2-liga', k: EDITOR, plan: PLAN, op: 'crear', para: 'Grupo de la alianza', versiones: 'todas', request_id: 'liga-1' });
+  assert.equal(r.ok, true);
+  assert.match(r.liga, /^[a-f0-9]{40}$/);
+  assert.equal(r.plan, undefined, 'dar una liga no vuelve a leer el plan');
+  const h = w.vivero.getSheetByName('Ligas');
+  assert.deepEqual(h.v[0], ['liga', 'plan_id', 'para', 'estado', 'vence', 'versiones', 'etiquetas', 'creada', 'nota']);
+  assert.deepEqual(h.v[1].slice(0, 6), [r.liga, PLAN, 'Grupo de la alianza', 'activa', '', 'todas']);
+  assert.deepEqual(w.vivero.getSheetByName('Aperturas').v[0], ['fecha', 'liga', 'para', 'plan_id', 'equipo']);
+  assert.deepEqual(r.ligas.map((x) => [x.liga, x.para, x.estado, x.versiones, x.aperturas]), [[r.liga, 'Grupo de la alianza', 'activa', 'todas', 0]]);
+  const v = w.get({ recurso: 'ppp2-visor', liga: r.liga, abre: '1', eq: 'iPhone' });
+  assert.equal(v.ok, true);
+  assert.ok(v.versiones.length >= 2);
+  assert.equal(v.puede, undefined, 'la liga no trae permisos ni ligas');
+  assert.equal(w.get({ recurso: 'ppp2-visor', k: EDITOR, plan: PLAN, ligas: '1' }).ligas[0].aperturas, 1);
+  const bit = w.vivero.getSheetByName('Bitácora').v;
+  assert.equal(bit[bit.length - 1][2], 'liga-crear');
+  assert.doesNotMatch(JSON.stringify(bit), new RegExp(r.liga), 'la liga completa no se copia a la bitácora');
+  assert.equal(w.post({ tipo: 'ppp2-liga', k: EDITOR, plan: PLAN, op: 'apagar', liga: 'otra' }).error, 'liga');
+  const off = w.post({ tipo: 'ppp2-liga', k: EDITOR, plan: PLAN, op: 'apagar', liga: r.liga });
+  assert.equal(off.ligas[0].estado, 'apagada');
+  assert.equal(w.get({ recurso: 'ppp2-visor', liga: r.liga }).error, 'liga', 'apagada, deja de abrir');
+  assert.equal(w.post({ tipo: 'ppp2-liga', k: EDITOR, plan: PLAN, op: 'activar', liga: r.liga }).ligas[0].estado, 'activa');
+  assert.equal(w.get({ recurso: 'ppp2-visor', liga: r.liga }).ok, true);
+  assert.equal(JSON.stringify(Object.values(w.libro.hojas).map((x) => x.v)), antes, 'las ligas no tocan el libro');
+});
+
+test('una liga puede llevar varios planes con su etiqueta, y el vivero dice a qué caso del PPP corresponde cada plan', () => {
+  const w = mundo();
+  const planes = w.vivero.getSheetByName('Planes');
+  planes.v[1][planes.v[0].indexOf('caso_ppp')] = 'casodeprueba01';
+  planes.appendRow(['p2otroplan01', 'Otro Ejemplo', 'libro-plantilla', 'activo', '2026-01-15', 'Pruebas', '', 'ppp2-libro-v1', '']);
+  w.cache.delete('planes');
+  const r = w.post({ tipo: 'ppp2-liga', k: EDITOR, plan: PLAN, op: 'crear', etiqueta: 'Terreno chico', planes: [{ plan: 'p2otroplan01', etiqueta: 'Terreno grande' }] });
+  assert.equal(r.ok, true);
+  assert.equal(r.ligas[0].planes, 2);
+  assert.deepEqual(w.get({ recurso: 'ppp2-visor', liga: r.liga }).menu.planes, [{ id: PLAN, etiqueta: 'Terreno chico' }, { id: 'p2otroplan01', etiqueta: 'Terreno grande' }]);
+  assert.equal(w.post({ tipo: 'ppp2-liga', k: EDITOR, plan: PLAN, op: 'crear', planes: [{ plan: 'p2noexiste01' }] }).error, 'plan');
+  const viv = w.get({ recurso: 'ppp2-vivero', k: LECTOR });
+  assert.equal(viv.planes.find((x) => x.plan_id === PLAN).caso, 'casodeprueba01');
+  assert.equal(viv.planes.find((x) => x.plan_id === 'p2otroplan01').caso, '');
 });

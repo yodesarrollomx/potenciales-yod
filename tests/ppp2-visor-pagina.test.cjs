@@ -131,12 +131,13 @@ test('lo que escribe una persona en el libro no se vuelve marcado en la página'
 });
 
 test('la página publicada no lleva datos de planes reales y apunta al mismo servidor que PPP 2', () => {
-  for (const f of ['visor.html', 'visor.js', 'visor.css', 'server/ppp2/Visor.gs', 'tests/ppp2-visor-pagina.test.cjs', 'tests/ppp2-visor-browser.cjs']) {
+  for (const f of ['visor.html', 'visor.js', 'visor.css', 'ppp-libro.js', 'tests/fixtures/libro/index.html', 'tests/fixtures/libro/mixto.html', 'server/ppp2/Visor.gs', 'tests/ppp2-visor-pagina.test.cjs', 'tests/ppp2-visor-browser.cjs']) {
     const t = fs.readFileSync(path.join(RAIZ, f), 'utf8').replace(/assert\.doesNotMatch\([^\n]*\n/g, '').replace(/const PROHIBIDO = [^\n]*\n/g, '');
     assert.doesNotMatch(t, /Mor[eé]o|Avermont|Morelos|Puebla Arquitectos|@aurumarquitectos/i, f);
   }
   const ep = /var ENDPOINT = window\.PPP2_ENDPOINT \|\| '([^']+)'/.exec(fs.readFileSync(path.join(RAIZ, 'ppp2.js'), 'utf8'))[1];
   assert.equal(visor.ENDPOINT, ep);
+  assert.ok(fs.readFileSync(path.join(RAIZ, 'ppp-libro.js'), 'utf8').includes("'" + ep + "'"), 'ppp-libro.js pregunta al mismo servidor');
   const html = fs.readFileSync(path.join(RAIZ, 'visor.html'), 'utf8');
   assert.match(html, /<meta name="robots" content="noindex,nofollow,noarchive">/);
   assert.match(html, /<meta name="referrer" content="no-referrer">/);

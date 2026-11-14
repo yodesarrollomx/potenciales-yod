@@ -721,14 +721,159 @@
       }).join('');
   }
 
-  var api = { pinta: pinta, cuadros: cuadros, detalleHtml: detalleHtml, PRUEBAS: PRUEBAS, estadoPrueba: estadoPrueba, ENDPOINT: ENDPOINT };
+  function soloCuadros(cs) { return '<main class="vz-grid">' + cs.map(tarjeta).join('') + '</main>'; }
+
+  /* ───────────────────────── los cuadros, vivos en una página ─────────────────────────
+     Pone los cuadros en `caja` y les da su pop-up (dentro de la misma página) y su leyenda. Lo usan la
+     página del visor (la pantalla completa, a escala del teléfono) y la ficha del plan (sólo la rejilla,
+     `incrustado`). No pide nada a la red: quien lo monta le entrega lo que el servidor leyó del libro. */
+  function monta(caja, op) {
+    op = op || {};
+    var doc = caja.ownerDocument, win = doc.defaultView, modal = doc.getElementById('vzModal'), burbuja = doc.getElementById('vzTip'), hoja;
+    var act = [], firmas = {};
+    if (!modal) {
+      modal = doc.createElement('div'); modal.id = 'vzModal'; modal.className = 'vz-modal'; modal.hidden = true;
+      modal.innerHTML = '<div class="vz-m-caja" role="dialog" aria-modal="true" aria-label="Detalle del cuadro"></div>';
+      doc.body.appendChild(modal);
+    }
+    if (!burbuja) { burbuja = doc.createElement('div'); burbuja.id = 'vzTip'; burbuja.className = 'vz-tip'; burbuja.setAttribute('role', 'tooltip'); burbuja.hidden = true; doc.body.appendChild(burbuja); }
+    hoja = modal.firstElementChild;
+    caja.classList.add(op.incrustado ? 'vz-inc' : 'vz');
+    /* cuál cuadro está abierto lo sabe el pop-up, no quien lo montó: la ficha vuelve a montar los cuadros cada vez que se repinta */
+    var abierto = function () { return modal.getAttribute('data-abierto') || ''; };
+
+    /* La pantalla mide 440 de ancho: se escala al ancho del teléfono y, si por poco no cabe a lo alto, se
+       encoge hasta 10 % más para que quepa sin deslizar; en una pantalla grande se centra y cabe a lo alto.
+       Incrustada en la ficha, la rejilla llena el ancho que le den: dos columnas, o cuatro si hay lugar. */
+    function ajusta() {
+      var marco = caja.parentNode, alto, s;
+      if (op.incrustado) {
+        var ancho = marco.clientWidth || 440, cuatro = ancho >= 720, base = cuatro ? 840 : 416;
+        caja.classList.toggle('vz-4', cuatro);
+        s = Math.min(cuatro ? 1.45 : 1.7, ancho / base);
+        caja.style.width = base + 'px';
+        caja.style.transform = 'scale(' + s + ')';
+        marco.style.height = (Math.max(1, caja.offsetHeight) * s) + 'px';
+        return;
+      }
+      var W = doc.documentElement.clientWidth || win.innerWidth, H = win.innerHeight;
+      alto = Math.max(1, caja.offsetHeight); s = W / 440;
+      if (W > 700) s = Math.max(0.6, Math.min(1.7, s, (H - 12) / alto));
+      else if (alto * s > H) s = Math.max(H / alto, 0.9 * s);
+      caja.style.transform = 'scale(' + s + ')';
+      marco.style.width = (440 * s) + 'px';
+      marco.style.height = (alto * s) + 'px';
+      marco.style.marginTop = W > 700 ? Math.max(0, (H - alto * s) / 2) + 'px' : '0';
+    }
+    function mensaje(titulo, texto) {
+      cierra();
+      act = []; firmas = {};
+      caja.innerHTML = '<div class="vz-msg"><h1>' + esc(titulo) + '</h1><p>' + esc(texto) + '</p></div>';
+      ajusta();
+    }
+    /* marca: los cuadros que cambiaron respecto a lo que había pintado se resaltan (un cambio del libro). */
+    function muestra(d, marcas, marca) {
+      var cs = cuadros(d), antes = firmas, ahora = {};
+      act = cs;
+      caja.innerHTML = op.incrustado ? soloCuadros(cs) : pinta(d, marcas).html;
+      cs.forEach(function (c) { ahora[c.id] = c.svg; });
+      if (marca) Array.prototype.forEach.call(caja.querySelectorAll('.vz-card'), function (el) {
+        var id = el.getAttribute('data-card');
+        if (antes[id] && antes[id] !== ahora[id]) el.classList.add('vz-cambio');
+      });
+      firmas = ahora;
+      ajusta();
+      if (abierto()) abre(abierto(), true);
+    }
+    function olvida() { firmas = {}; }
+    /* pop-up de un cuadro: dentro de la misma página; atrás, la × o tocar fuera lo cierran */
+    function abre(id, repinta) {
+      var c = act.filter(function (x) { return x.id === id; })[0];
+      if (!c) { if (repinta) cierra(); return; }
+      var top = repinta ? hoja.scrollTop : 0;
+      hoja.innerHTML = detalleHtml(c);
+      hoja.setAttribute('aria-label', c.titulo);
+      quitaBurbuja();
+      if (repinta) { hoja.scrollTop = top; return; }
+      modal.setAttribute('data-abierto', id);
+      modal.hidden = false;
+      hoja.scrollTop = 0;
+      doc.documentElement.classList.add('vz-con-modal');
+      try { win.history.pushState({ vz: id }, ''); } catch (e) { }
+    }
+    function cierra(desdeHistoria) {
+      if (!abierto()) return;
+      modal.removeAttribute('data-abierto');
+      modal.hidden = true;
+      doc.documentElement.classList.remove('vz-con-modal');
+      quitaBurbuja();
+      if (!desdeHistoria) { try { if (win.history.state && win.history.state.vz) win.history.back(); } catch (e) { } }
+    }
+    function quitaBurbuja() {
+      burbuja.hidden = true;
+      var sel = doc.querySelector('.vz-sel');
+      if (sel) sel.classList.remove('vz-sel');
+    }
+    function ponBurbuja(el, x, y) {
+      var t;
+      try { t = JSON.parse(el.getAttribute('data-t')); } catch (e) { return; }
+      quitaBurbuja();
+      el.classList.add('vz-sel');
+      burbuja.innerHTML = '<b>' + esc(t.t) + '</b>' + (t.f || []).map(function (f) { return '<div><span>' + esc(f[0]) + '</span><span>' + esc(f[1]) + '</span></div>'; }).join('') + (t.o ? '<small>' + esc(t.o) + '</small>' : '');
+      burbuja.hidden = false;
+      var w = burbuja.offsetWidth, h = burbuja.offsetHeight, W = doc.documentElement.clientWidth || win.innerWidth, H = win.innerHeight;
+      burbuja.style.left = clamp(x - w / 2, 8, Math.max(8, W - w - 8)) + 'px';
+      burbuja.style.top = (y - h - 14 > 8 ? y - h - 14 : Math.min(Math.max(8, H - h - 8), y + 18)) + 'px';
+    }
+    var cerca = function (e, sel) { return e.target && e.target.closest ? e.target.closest(sel) : null; };
+    caja.addEventListener('click', function (e) {
+      var chip = cerca(e, '.vz-chip'), card = cerca(e, '.vz-card');
+      if (chip) {
+        Array.prototype.forEach.call(chip.parentNode.children, function (c) { c.classList.toggle('vz-on', c === chip); });
+        if (op.alEscoger) op.alEscoger(chip.getAttribute('data-plan') ? { plan: chip.getAttribute('data-plan') } : { v: Number(chip.getAttribute('data-v')) || 0 });
+      } else if (card) abre(card.getAttribute('data-card'));
+    });
+    caja.addEventListener('keydown', function (e) {
+      var card = cerca(e, '.vz-card');
+      if (card && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); abre(card.getAttribute('data-card')); }
+    });
+    /* El pop-up y la leyenda son uno por página: sus oyentes se ponen una sola vez y hablan con quien esté abierto. */
+    if (!modal._vz) {
+      modal._vz = { cierra: cierra, pon: ponBurbuja, quita: quitaBurbuja, ajusta: ajusta };
+      win.addEventListener('resize', function () { modal._vz.ajusta(); });
+      modal.addEventListener('click', function (e) {
+        var t = cerca(e, '.vz-t');
+        if (e.target === modal || cerca(e, '.vz-x')) { modal._vz.cierra(); return; }
+        if (t) modal._vz.pon(t, e.clientX, e.clientY); else modal._vz.quita();
+      });
+      /* con ratón, la leyenda sale al pasar por encima (también sobre los cuadros de la pantalla) */
+      doc.addEventListener('pointermove', function (e) {
+        if (e.pointerType !== 'mouse') return;
+        var t = cerca(e, '.vz-t');
+        if (t) modal._vz.pon(t, e.clientX, e.clientY); else if (!burbuja.hidden) modal._vz.quita();
+      });
+      /* en el pop-up, con el dedo: deslizar de lado recorre la figura */
+      hoja.addEventListener('pointermove', function (e) {
+        if (e.pointerType === 'mouse' || !e.isPrimary) return;
+        var el = doc.elementFromPoint(e.clientX, e.clientY), t = el && el.closest ? el.closest('.vz-m-fig .vz-t') : null;
+        if (t) modal._vz.pon(t, e.clientX, e.clientY);
+      });
+      hoja.addEventListener('scroll', function () { modal._vz.quita(); });
+      doc.addEventListener('keydown', function (e) { if (e.key === 'Escape') modal._vz.cierra(); });
+      win.addEventListener('popstate', function () { modal._vz.cierra(true); });
+    } else modal._vz = { cierra: cierra, pon: ponBurbuja, quita: quitaBurbuja, ajusta: ajusta };
+    if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(ajusta);
+    return { muestra: muestra, mensaje: mensaje, cierra: cierra, ajusta: ajusta, olvida: olvida };
+  }
+
+  var api = { pinta: pinta, cuadros: cuadros, soloCuadros: soloCuadros, detalleHtml: detalleHtml, monta: monta, fechaCorta: fechaCorta, PRUEBAS: PRUEBAS, estadoPrueba: estadoPrueba, ENDPOINT: ENDPOINT };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; }
   root.VisorPPP = api;
-  if (!root.document || root.VISOR_SIN_ARRANQUE) return;
+  if (!root.document || !root.document.getElementById || !root.document.getElementById('vz')) return;   // sólo la página del visor sigue de aquí
 
-  /* ───────────────────────── en la página ───────────────────────── */
-  var doc = root.document, caja, modal, hoja, burbuja;
-  var estado = { liga: '', plan: '', v: 0, llave: '', datos: null, marcas: null, cuadros: [], abierto: '', firmas: {}, fallas: 0, reloj: 0, turno: 0, quieto: 0, enVuelo: false };
+  /* ───────────────────────── la página del visor: por liga, en vivo ───────────────────────── */
+  var doc = root.document, lienzo;
+  var estado = { liga: '', plan: '', v: 0, llave: '', marcas: null, fallas: 0, reloj: 0, turno: 0, quieto: 0, enVuelo: false };
   function $(id) { return doc.getElementById(id); }
   function ligaDeLaDireccion() {
     var m = /[#&?]l=([A-Za-z0-9_-]{24,80})(?:&|$)/.exec(root.location.hash || '') || /[?&]l=([A-Za-z0-9_-]{24,80})(?:&|$)/.exec(root.location.search || '');
@@ -744,21 +889,6 @@
     return root.fetch(ENDPOINT + q, { credentials: 'omit', redirect: 'follow', referrerPolicy: 'no-referrer', signal: ctl ? ctl.signal : undefined })
       .then(function (r) { return r.json(); }).then(function (j) { clearTimeout(t); return j; }, function (e) { clearTimeout(t); throw e; });
   }
-  function mensaje(titulo, texto) {
-    caja.innerHTML = '<div class="vz-msg"><h1>' + esc(titulo) + '</h1><p>' + esc(texto) + '</p></div>';
-    ajusta();
-  }
-  /* La pantalla mide 440 de ancho: se escala al ancho del teléfono y, si por poco no cabe a lo alto, se
-     encoge hasta 10 % más para que quepa sin deslizar. En una pantalla grande se centra y cabe a lo alto. */
-  function ajusta() {
-    var W = doc.documentElement.clientWidth || root.innerWidth, H = root.innerHeight, alto = Math.max(1, caja.offsetHeight), s = W / 440;
-    if (W > 700) s = Math.max(0.6, Math.min(1.7, s, (H - 12) / alto));
-    else if (alto * s > H) s = Math.max(H / alto, 0.9 * s);
-    caja.style.transform = 'scale(' + s + ')';
-    caja.parentNode.style.width = (440 * s) + 'px';
-    caja.parentNode.style.height = (alto * s) + 'px';
-    caja.parentNode.style.marginTop = W > 700 ? Math.max(0, (H - alto * s) / 2) + 'px' : '0';
-  }
   function vivo(clase, texto) {
     var el = $('vzVivo');
     if (!el) return;
@@ -766,22 +896,13 @@
     if (texto) el.lastChild.textContent = texto;
   }
   function seApago() {
-    estado.liga = ''; clearTimeout(estado.reloj); cierra();
-    mensaje('Esta liga ya no está activa', 'Pide una nueva a quien te la compartió.');
+    estado.liga = ''; clearTimeout(estado.reloj);
+    lienzo.mensaje('Esta liga ya no está activa', 'Pide una nueva a quien te la compartió.');
   }
   function muestra(d, primera) {
-    var p = pinta(d, estado.marcas), antes = estado.firmas, ahora = {};
-    estado.datos = d; estado.cuadros = p.cuadros; estado.llave = d.llave || '';
-    caja.innerHTML = p.html;
-    p.cuadros.forEach(function (c) { ahora[c.id] = c.svg; });
-    if (!primera) Array.prototype.forEach.call(caja.querySelectorAll('.vz-card'), function (el) {
-      var id = el.getAttribute('data-card');
-      if (antes[id] && antes[id] !== ahora[id]) el.classList.add('vz-cambio');
-    });
-    estado.firmas = ahora;
+    estado.llave = d.llave || '';
+    lienzo.muestra(d, estado.marcas, !primera);
     doc.title = ((d.plan && d.plan.nombre) || 'Plan de Potencial') + ' · en vivo';
-    ajusta();
-    if (estado.abierto) abre(estado.abierto, true);
   }
   function carga(primera) {
     var turno = ++estado.turno;
@@ -789,7 +910,7 @@
       if (turno !== estado.turno) return;
       if (!j || !j.ok) {
         if (j && (j.error === 'liga' || j.error === 'plan')) seApago();
-        else if (primera) mensaje('No pude abrir el plan', 'Vuelve a intentar en un momento.');
+        else if (primera) lienzo.mensaje('No pude abrir el plan', 'Vuelve a intentar en un momento.');
         else vivo('vz-off', 'No pude abrirlo · reintentando');
         return;
       }
@@ -817,90 +938,21 @@
     if (!estado.liga) return;
     estado.reloj = setTimeout(function () { late(); programa(); }, estado.quieto > 600000 / CADA_MS ? 15000 : CADA_MS);
   }
-
-  /* pop-up de un cuadro: dentro de la misma página; atrás, la × o tocar fuera lo cierran */
-  function abre(id, repinta) {
-    var c = estado.cuadros.filter(function (x) { return x.id === id; })[0];
-    if (!c) return;
-    var top = repinta ? hoja.scrollTop : 0;
-    hoja.innerHTML = detalleHtml(c);
-    hoja.setAttribute('aria-label', c.titulo);
-    quitaBurbuja();
-    if (repinta) { hoja.scrollTop = top; return; }
-    estado.abierto = id;
-    modal.hidden = false;
-    hoja.scrollTop = 0;
-    doc.documentElement.classList.add('vz-con-modal');
-    try { root.history.pushState({ vz: id }, ''); } catch (e) { }
-  }
-  function cierra(desdeHistoria) {
-    if (!estado.abierto) return;
-    estado.abierto = '';
-    modal.hidden = true;
-    doc.documentElement.classList.remove('vz-con-modal');
-    quitaBurbuja();
-    if (!desdeHistoria) { try { if (root.history.state && root.history.state.vz) root.history.back(); } catch (e) { } }
-  }
-  function quitaBurbuja() {
-    if (!burbuja) return;
-    burbuja.hidden = true;
-    var sel = doc.querySelector('.vz-sel');
-    if (sel) sel.classList.remove('vz-sel');
-  }
-  function ponBurbuja(el, x, y) {
-    var t;
-    try { t = JSON.parse(el.getAttribute('data-t')); } catch (e) { return; }
-    quitaBurbuja();
-    el.classList.add('vz-sel');
-    burbuja.innerHTML = '<b>' + esc(t.t) + '</b>' + (t.f || []).map(function (f) { return '<div><span>' + esc(f[0]) + '</span><span>' + esc(f[1]) + '</span></div>'; }).join('') + (t.o ? '<small>' + esc(t.o) + '</small>' : '');
-    burbuja.hidden = false;
-    var w = burbuja.offsetWidth, h = burbuja.offsetHeight, W = doc.documentElement.clientWidth || root.innerWidth, H = root.innerHeight;
-    burbuja.style.left = clamp(x - w / 2, 8, Math.max(8, W - w - 8)) + 'px';
-    burbuja.style.top = (y - h - 14 > 8 ? y - h - 14 : Math.min(Math.max(8, H - h - 8), y + 18)) + 'px';
-  }
   function arranca() {
-    caja = $('vz'); modal = $('vzModal'); hoja = modal.firstElementChild; burbuja = $('vzTip');
+    lienzo = monta($('vz'), {
+      alEscoger: function (x) {
+        if (x.plan) { estado.plan = x.plan; estado.v = 0; } else estado.v = x.v;
+        estado.llave = ''; lienzo.olvida(); vivo('vz-nuevo', 'Abriendo…');
+        carga(false).catch(function () { vivo('vz-off', 'Sin conexión · reintentando'); });
+      }
+    });
     estado.liga = ligaDeLaDireccion();
-    root.addEventListener('resize', ajusta);
-    if (!estado.liga) { mensaje('Falta la liga', 'Abre el visor desde la liga completa que te compartieron.'); return; }
-    mensaje('Abriendo el plan…', 'Leyendo el libro.');
-    carga(true).catch(function () { mensaje('No pude abrir el plan', 'Revisa tu conexión y vuelve a intentar.'); });
+    if (!estado.liga) { lienzo.mensaje('Falta la liga', 'Abre el visor desde la liga completa que te compartieron.'); return; }
+    lienzo.mensaje('Abriendo el plan…', 'Leyendo el libro.');
+    carga(true).catch(function () { lienzo.mensaje('No pude abrir el plan', 'Revisa tu conexión y vuelve a intentar.'); });
     programa();
-    if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(ajusta);
     doc.addEventListener('visibilitychange', function () { if (!doc.hidden) { estado.quieto = 0; late(); programa(); } });
     doc.addEventListener('pointerdown', function () { estado.quieto = 0; }, true);
-    caja.addEventListener('click', function (e) {
-      var chip = e.target.closest ? e.target.closest('.vz-chip') : null, card = e.target.closest ? e.target.closest('.vz-card') : null;
-      if (chip) {
-        if (chip.getAttribute('data-plan')) { estado.plan = chip.getAttribute('data-plan'); estado.v = 0; } else estado.v = Number(chip.getAttribute('data-v')) || 0;
-        Array.prototype.forEach.call(chip.parentNode.children, function (c) { c.classList.toggle('vz-on', c === chip); });
-        estado.llave = ''; estado.firmas = {}; vivo('vz-nuevo', 'Abriendo…');
-        carga(false).catch(function () { vivo('vz-off', 'Sin conexión · reintentando'); });
-      } else if (card) abre(card.getAttribute('data-card'));
-    });
-    caja.addEventListener('keydown', function (e) {
-      var card = e.target.closest ? e.target.closest('.vz-card') : null;
-      if (card && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); abre(card.getAttribute('data-card')); }
-    });
-    modal.addEventListener('click', function (e) {
-      var t = e.target.closest ? e.target.closest('.vz-t') : null;
-      if (e.target === modal || (e.target.closest && e.target.closest('.vz-x'))) { cierra(); return; }
-      if (t) ponBurbuja(t, e.clientX, e.clientY); else quitaBurbuja();
-    });
-    /* con ratón, la leyenda sale al pasar por encima (también en la pantalla principal) */
-    doc.addEventListener('pointermove', function (e) {
-      if (e.pointerType !== 'mouse') return;
-      var t = e.target.closest ? e.target.closest('.vz-t') : null;
-      if (t) ponBurbuja(t, e.clientX, e.clientY); else if (!burbuja.hidden) quitaBurbuja();
-    });
-    hoja.addEventListener('pointermove', function (e) {
-      if (e.pointerType === 'mouse' || !e.isPrimary) return;
-      var el = doc.elementFromPoint(e.clientX, e.clientY), t = el && el.closest ? el.closest('.vz-m-fig .vz-t') : null;
-      if (t) ponBurbuja(t, e.clientX, e.clientY);
-    });
-    hoja.addEventListener('scroll', quitaBurbuja);
-    doc.addEventListener('keydown', function (e) { if (e.key === 'Escape') cierra(); });
-    root.addEventListener('popstate', function () { cierra(true); });
   }
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', arranca); else arranca();
 })(typeof window !== 'undefined' ? window : globalThis);

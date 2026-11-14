@@ -1,16 +1,24 @@
 /* Visor en vivo del Plan de Potencial (PPP 2). La pantalla se dibuja a 440 px de ancho y visor.js la
    escala al ancho del teléfono; el detalle de cada cuadro (pop-up) y la leyenda van a tamaño real. */
 :root { --crema: #f6f3ed; --papel: #fffdf9; --tinta: #231d14; --cuerpo: #4a4336; --mudo: #6e675a; --linea: #e1dacb; --oro: #7d5f1e; --verde: #2b5b39; --rojo: #7f2f26; }
-* { box-sizing: border-box; }
-html, body { margin: 0; background: var(--crema); color: var(--tinta); -webkit-text-size-adjust: 100%; }
-body { font-family: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; min-height: 100vh; min-height: 100dvh; display: flex; justify-content: center; align-items: flex-start; overflow-x: hidden; }
+/* La página del visor (visor.html lleva la clase en <html>); incrustados en otra página, los cuadros no tocan su fondo ni su cuerpo. */
+html.vz-pagina, html.vz-pagina body { margin: 0; background: var(--crema); color: var(--tinta); -webkit-text-size-adjust: 100%; }
+html.vz-pagina body { font-family: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; min-height: 100vh; min-height: 100dvh; display: flex; justify-content: center; align-items: flex-start; overflow-x: hidden; }
 html.vz-con-modal, html.vz-con-modal body { overflow: hidden; }
-[hidden] { display: none !important; }
+.vz, .vz *, .vz-inc, .vz-inc *, .vz-modal, .vz-modal *, .vz-tip, .vz-tip * { box-sizing: border-box; }
+.vz [hidden], .vz-modal[hidden], .vz-tip[hidden] { display: none !important; }
 
 .vz-marco { position: relative; flex: none; width: 440px; }
 .vz { position: absolute; left: 0; top: 0; width: 440px; padding: 14px 12px 10px; transform-origin: 0 0; }
-.vz svg { display: block; overflow: visible; }
-.vz svg text, .vz-m-fig svg text { font-family: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+.vz svg, .vz-inc svg { display: block; overflow: visible; }
+.vz svg text, .vz-inc svg text, .vz-m-fig svg text { font-family: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+/* los mismos cuadros dentro de la ficha del plan: sólo la rejilla, a lo ancho que haya (dos o cuatro columnas) */
+.vz-inc-marco { position: relative; width: 100%; overflow: hidden; }
+.vz-inc { position: absolute; left: 0; top: 0; width: 416px; transform-origin: 0 0; font-family: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--tinta); }
+.vz-inc.vz-4 .vz-grid { grid-template-columns: repeat(4, 1fr); }
+.vz-inc.vz-4 .vz-card.vz-doble { grid-column: span 2; }
+.vz-inc .vz-msg { min-height: 120px; padding: 24px 12px; }
+.vz-inc .vz-msg h1 { font-size: 18px; }
 
 /* encabezado */
 .vz-top { height: 42px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 8px; }
@@ -55,6 +63,8 @@ html.vz-con-modal, html.vz-con-modal body { overflow: hidden; }
 .vz-msg p { font-size: 13px; color: var(--mudo); margin: 0; }
 
 /* pop-up de un cuadro */
+.vz-modal, .vz-tip { font-family: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+.vz-modal { color: var(--tinta); }
 .vz-modal { position: fixed; inset: 0; z-index: 20; display: flex; align-items: flex-end; justify-content: center; background: rgba(35, 29, 20, .52); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); animation: vzVela .18s ease-out; }
 .vz-m-caja { width: 100%; max-width: 600px; max-height: 92vh; max-height: 92dvh; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; background: var(--papel); border-radius: 18px 18px 0 0; padding: 0 16px calc(22px + env(safe-area-inset-bottom, 0px)); animation: vzSube .22s ease-out; }
 .vz-m-head { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0 9px; background: var(--papel); border-bottom: 1px solid var(--linea); }

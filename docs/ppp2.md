@@ -400,6 +400,43 @@ hecha para caber en la pantalla de un teléfono y se ve igual en todos los plane
   de la liga en un chat es genérica.
 - Instalación, alta de ligas y marcas: `server/ppp2/INSTALAR.md`, «El visor en vivo».
 
+### Los mismos cuadros, en la ficha del plan
+
+La ficha del plan (`ppp2.html#/plan/<id>`, con sesión del Portero) lleva arriba, bajo el selector de
+versiones, **los mismos siete cuadros** de la versión escogida, con su pop-up y sus leyendas. Los dibuja
+el mismo `visor.js` (`VisorPPP.monta(…, { incrustado: true })`: sólo la rejilla, dos columnas en el
+teléfono y cuatro en pantalla ancha) con el mismo recurso del servidor, pedido con la sesión
+(`?recurso=ppp2-visor&k=…&plan=…&v=…`): ahí se ve cualquier versión viva. Así lo que se discute adentro
+y lo que ve el grupo por la liga es el mismo dibujo, de las mismas celdas.
+
+**Compartir visor** (quien puede editar): desde ese mismo lugar se da la liga —para quién es, si ve sólo
+la versión que el plan muestra o todas, y si lleva otros planes (varios terrenos)—, se copia, se ve
+cuántas veces se abrió y se apaga o se vuelve a encender. Es `POST tipo=ppp2-liga` (`op` = `crear`,
+`apagar` o `activar`): escribe sólo en la hoja `Ligas` del vivero (la crea, con `Aperturas`, la primera
+vez), deja renglón en la bitácora del vivero sin copiar la liga completa y **no toca ningún libro**.
+
+## Un solo PPP: los planes con libro se abren desde el PPP de siempre (14-nov-2026)
+
+Dirección pidió unificar: el PPP de siempre es la entrada y lo que nació aquí como «PPP 2» pasa a ser
+**la ficha de los planes que tienen su modelo completo en un libro**. No se borra nada del PPP de
+siempre ni se vuelven a teclear cifras en sus motores (darían otros números): el libro aprobado de cada
+plan es su modelo, como ya lo es en los casos nativos del PPP.
+
+- **El registro de planes dice a qué caso corresponde cada plan**: columna `caso_ppp` de la hoja
+  `Planes` del vivero, con el identificador del caso del PPP (o `mixto:<caso_id>`, si se quiere fijar
+  el motor). `ppp2-vivero` la entrega como `caso`.
+- **`ppp-libro.js`** (lo cargan la portada y `mixto.html`; una sola pregunta por página, con la sesión
+  de siempre, de sólo lectura):
+  - en la portada, el renglón de un caso que ya tiene su plan abre la ficha y lo dice («plan con
+    libro», con su versión y lo que recibe el dueño); los planes que no tienen caso salen en el grupo
+    «Planes con libro»;
+  - un motor abierto por su liga (`?open=<caso>`) en un caso que ya tiene su plan avisa y lleva a la
+    ficha; con `&clasico=1`, o si el caso se escogió dentro del motor, sólo avisa.
+- Sin sesión, sin respuesta o sin planes, `ppp-libro.js` no pinta nada: el PPP de siempre queda igual.
+- Lo que sigue (no está hecho): quitar «PPP 2» del menú de YOD OS cuando la portada ya sea la entrada
+  de todos, y llevar a la ficha las piezas del PPP de siempre que un plan con libro todavía no tiene
+  (presentaciones, mapa, programa arquitectónico).
+
 ## Invariantes
 
 - El PPP actual (motores, Portero, `recurso=lista|caso`) no cambia.
@@ -418,9 +455,11 @@ hecha para caber en la pantalla de un teléfono y se ve igual en todos los plane
   `ppp2-cache`: lo que ya se leyó del libro, con un Drive cuya última modificación cambia con el
   contenido y una caché que, como la real, no acepta más de 100 KB por valor)
 - `node tests/ppp2-browser.cjs` (`PPP2_SOLO=texto` corre sólo los recorridos cuyo nombre lo lleva)
-- El visor: `node --test tests/ppp2-visor.test.cjs tests/ppp2-visor-pagina.test.cjs` (la liga y lo que
-  entrega el servidor; la página contra eso mismo: cifras, leyendas, límites de la revisión) y
-  `node tests/ppp2-visor-browser.cjs` (abrir, tocar, cerrar, cambio en vivo, liga apagada).
+- El visor y la unificación: `node --test tests/ppp2-visor.test.cjs tests/ppp2-visor-pagina.test.cjs`
+  (la liga, la ficha con sesión, dar y apagar ligas, lo que entrega el servidor; la página contra eso
+  mismo: cifras, leyendas, límites de la revisión) y `node tests/ppp2-visor-browser.cjs` (abrir, tocar,
+  cerrar, cambio en vivo, liga apagada, los cuadros en la ficha, compartir desde el plan, y la portada y
+  un motor del PPP de siempre con planes con libro, sobre `tests/fixtures/libro/`).
 - Tres accesorios salen de una hoja de cálculo de verdad (LibreOffice) con el plan inventado, y se
   regeneran juntos con `python3 ppp2/libro/regenerar.py`:
   - `ppp2-libro-ejemplo.json`: el libro de ejemplo recalculado;
