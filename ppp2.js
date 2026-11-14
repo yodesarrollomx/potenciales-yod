@@ -350,7 +350,7 @@
     if (enTrabajo) aviso = '<div class="p2-aviso">' + chip('En trabajo', 'ambar') + '<span>Estas cifras están a medias: ' + (ciclo.en_ronda ? 'estoy corriendo una ronda en esta versión' : 'una ronda se interrumpió en esta versión') + '. No se puede aprobar hasta que quede como estaba.</span></div>';
     else if (v.estado === 'propuesta') aviso = '<div class="p2-aviso">' + chip('Propuesta', 'azul') + '<span>Falta que Dirección la apruebe para que quede vigente.</span>' +
       (puede.aprobar ? '<button class="p2-btn verde" data-accion="aprobar" data-v="' + estado.version + '"><i class="ti ti-check"></i> Aprobar esta versión</button>' : '') + '</div>';
-    else if (v.estado === 'vigente') aviso = '<div class="p2-aviso">' + chip('Vigente', 'verde') + '<span>Aprobada por ' + esc(v.aprobada_por || '—') + (v.fecha_aprobacion ? ' el ' + esc(v.fecha_aprobacion) : '') + '.</span></div>';
+    else if (v.estado === 'vigente') aviso = '<div class="p2-aviso">' + chip('Vigente', 'verde') + '<span>Aprobada por ' + esc(v.aprobada_por || '—') + (v.fecha_aprobacion ? ' el ' + esc(fechaLibro(v.fecha_aprobacion)) : '') + '.</span></div>';
     else if (puede.aprobar && v.estado !== 'descartada') aviso = '<div class="p2-aviso">' + chip(v.estado || '', claseEstado(v.estado)) +
       '<button class="p2-btn" data-accion="aprobar" data-v="' + estado.version + '"><i class="ti ti-check"></i> Volver vigente esta versión</button></div>';
     aviso += avisoTope(v);
@@ -411,10 +411,19 @@
       if (cambio) lienzo.muestra(d, null, !!memo);
     }).catch(function () { if (turno === cuadros.turno && !memo && document.body.contains(el)) lienzo.mensaje('No pude dibujar los cuadros', 'Las cifras del plan siguen abajo.'); });
   }
+  /* Una fecha del libro puede llegar como número de fecha de la hoja (días desde 1899-12-30): se enseña como fecha. */
+  function fechaLibro(x) {
+    if (typeof x !== 'number' || !(x > 20000 && x < 80000)) return x;
+    var f = new Date(Math.round((x - 25569) * 86400000)), MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    return f.getUTCDate() + '-' + MES[f.getUTCMonth()] + '-' + f.getUTCFullYear();
+  }
   function ligaUrl(liga) { return new URL('visor.html', location.href).href.replace(/[?#].*$/, '') + '#l=' + liga; }
   function dialogoCompartir(nueva) {
     var lista = cuadros.ligas && cuadros.ligas.plan === estado.planId ? cuadros.ligas.lista : null;
     var otros = ((estado.vivero || estado.viveroCopia || {}).planes || []).filter(function (x) { return x.plan_id !== estado.planId && !x.error; });
+    var previo = document.querySelector('#p2Dialogo form[data-form="liga"]');
+    var escrito = previo && !nueva ? { para: previo.para.value, versiones: previo.versiones.value,
+      otros: Array.prototype.map.call(previo.querySelectorAll('input[name="otro"]:checked'), function (x) { return x.value; }) } : null;
     var renglon = function (l) {
       var viva = l.estado === 'activa';
       return '<li class="p2-liga' + (viva ? '' : ' apagada') + '"><div><b>' + esc(l.para || 'Sin nombre') + '</b> ' + chip(viva ? 'Activa' : 'Apagada', viva ? 'verde' : 'gris') +
@@ -434,6 +443,12 @@
         return '<label class="p2-check"><input type="checkbox" name="otro" value="' + esc(x.plan_id) + '"> ' + esc(x.nombre || x.plan_id) + '</label>';
       }).join('') + '</fieldset>' : '') +
       '<div class="p2-acciones"><button type="button" class="p2-btn suave" data-accion="cerrar">Cerrar</button><button class="p2-btn verde"><i class="ti ti-link"></i> Crear liga</button></div></form>');
+    if (escrito) {
+      var f = document.querySelector('#p2Dialogo form[data-form="liga"]');
+      f.para.value = escrito.para; f.versiones.value = escrito.versiones;
+      Array.prototype.forEach.call(f.querySelectorAll('input[name="otro"]'), function (x) { x.checked = escrito.otros.indexOf(x.value) >= 0; });
+      if (escrito.para) { f.para.focus(); f.para.setSelectionRange(escrito.para.length, escrito.para.length); }
+    }
     if (!estado.vivero && !estado.viveroCopia && !dialogoCompartir.pidio) {     // los otros planes, por si la liga lleva varios terrenos
       dialogoCompartir.pidio = true;
       leer('ppp2-vivero').then(function (r) { if (r && r.ok) { estado.viveroCopia = r; if (document.getElementById('p2Dialogo') && document.querySelector('form[data-form="liga"]')) dialogoCompartir(nueva); } }).catch(function () { });
