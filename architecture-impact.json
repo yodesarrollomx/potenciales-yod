@@ -1,20 +1,19 @@
 {
-  "model_revision": "2026-11-13.folio-cartera.1",
-  "proposal_id": "CHG-FOLIO-CARTERA-20261113",
-  "summary": "Puertas por proyecto, mínimas (etapa 1 del análisis tablero por tablero): en Accesos cada persona activa que no es Dirección gana el campo «Proyectos» (folios PRJ separados por coma; * = todos; en blanco, según su perfil) con vista previa de lo que verá y un botón Guardar que manda acceso-alta con nombre, rol y tableros tal como están más «proyectos». La cartera para los nombres se lee sólo al tocar el campo. El Portero ya lo acepta (versión 111, publicada por Claude): valida el campo, lo escribe en la columna «proyectos» de ACCESOS y accesos-lista lo devuelve; en blanco el equipo ve toda la cartera y un externo no ve ninguna. CLAUDE.md registra las versiones 110/111 y el método para publicar Apps Script. El atlas fijado pasa a yod-portal 66dc402 (revisión 2026-11-13.folio-cartera.1), donde existe la propuesta.",
+  "model_revision": "2026-11-13.folio-cartera.2",
+  "proposal_id": "CHG-PLAN-FOLIO-20261113",
+  "summary": "Etapa 2 del análisis tablero por tablero (PLAN-02): cada plan enseña su folio. ppp-folio.js (nuevo) lee UNA vez por página ?recurso=cartera del Portero con la sesión de siempre y, si un terreno del Control Maestro tiene en su columna «plan» este plan (ppp2:<plan> o <motor>:<caso>), pinta junto al nombre «PRJ-… · etapa» (y «en pausa» si aplica). La etapa no se copia al plan. Sin sesión, sin respuesta o sin terreno ligado no pinta nada; si el Portero falla, no insiste en un minuto; una respuesta tardía de otro plan no escribe. PPP 2 (ppp2.js) lo pinta en la cabeza del plan; los cinco motores lo pintan en la tarjeta «Caso de trabajo» de arriba (bajo el nombre) y junto a la píldora de estado, con una línea en su pintaCaso. El reparto ya se enseña en «Versiones y reparto» de PPP 2. Etiqueta propia 20261113-plan-folio (por eso cambia el ?v= de accesos, index y mapa). El atlas fijado pasa a yod-portal 7db15e4 (revisión 2026-11-13.folio-cartera.2), donde existe la propuesta.",
   "components": [
     "SYS-POTENCIALES",
-    "SYS-CONTROL",
-    "GAS-PORTERO",
-    "SHEET-PORTERO"
+    "SYS-PPP2",
+    "GAS-PPP2",
+    "SYS-CONTROL"
   ],
   "tests": [
-    "node --test tests/accesos-admin-session.test.cjs (39, sin cambios: la cartera no suma lecturas al cargar la lista)",
-    "node --test tests/*.test.cjs (739)",
-    "Pruebas privadas del Portero: Cartera.gs 23 comprobaciones (externo en blanco no ve nada, folio mal escrito no se guarda) y acceso-alta/accesos-lista 13 comprobaciones",
-    "En vivo, versión 111: accesos-lista trae «proyectos» en los 12 usuarios; cartera de Dirección 19 proyectos; clave falsa → clave",
-    "node tests/access-browser.cjs · salud-accesos-browser · grafo-accesos-browser (CI)",
+    "node --test tests/ppp-folio.test.cjs (9)",
+    "node --test tests/*.test.cjs (748)",
+    "node scripts/versiones.cjs --check",
+    "Recorridos de navegador de verificar-ppp y verificar-acceso (CI)",
     "verificar-impacto contra el atlas fijado"
   ],
-  "rollback": "Revertir el PR (Accesos vuelve a no mostrar el campo). En el Portero, Gestionar implementaciones → Editar → versión 110 (sin escritura de proyectos; la cartera en blanco vuelve a ser «todos»)."
+  "rollback": "Revertir el PR: los planes vuelven a no enseñar su folio y la etiqueta propia regresa. Nada que regresar en Sheets ni en el Portero."
 }
