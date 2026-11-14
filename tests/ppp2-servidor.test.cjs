@@ -259,6 +259,22 @@ test('sembrar copia la plantilla, escribe la identidad y lo anota en el vivero',
   const datos = libro.getSheetByName('Datos');
   assert.equal(datos.v[filaDe(datos, 'plan.nombre') - 1][2], 'Lote de prueba');
   assert.equal(datos.v[filaDe(datos, 'terreno.m2') - 1][2], 1200);
+  // cada cosa en su columna: C valor, D unidad (de la plantilla), E estado, F fuente, G fecha, H quién, I pregunta
+  const enc = datos.v[filaDe(datos, 'clave') - 1];
+  const col = (n) => enc.indexOf(n);
+  assert.deepEqual([col('Valor'), col('Unidad'), col('Estado'), col('Fuente'), col('Fecha'), col('Quién'), col('Pregunta')], [2, 3, 4, 5, 6, 7, 8]);
+  for (const clave of ['plan.nombre', 'plan.ubicacion', 'plan.objetivo']) {
+    const f = datos.v[filaDe(datos, clave) - 1];
+    assert.equal(f[4], 'confirmado', clave + ': estado');
+    assert.equal(f[5], 'Sembrado en PPP 2', clave + ': fuente');
+    assert.match(String(f[6]), /^\d{4}-\d{2}-\d{2}$/, clave + ': fecha');
+    assert.notEqual(f[3], 'confirmado', clave + ': la unidad no se pisa');
+  }
+  const ft = datos.v[filaDe(datos, 'terreno.m2') - 1];
+  assert.equal(ft[4], 'por confirmar');
+  assert.equal(ft[5], 'Dicho al sembrar');
+  assert.equal(ft[8], 'M02.Q01');
+  assert.notEqual(ft[3], 'por confirmar', 'la unidad del terreno no se pisa');
   assert.equal(w.post({ k: LECTOR, tipo: 'ppp2-sembrar', nombre: 'No' }).error, 'permiso');
 });
 

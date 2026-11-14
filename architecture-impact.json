@@ -1,19 +1,18 @@
 {
   "model_revision": "2026-11-13.folio-cartera.2",
-  "proposal_id": "CHG-PLAN-FOLIO-20261113",
-  "summary": "Etapa 2 del análisis tablero por tablero (PLAN-02): cada plan enseña su folio. ppp-folio.js (nuevo) lee UNA vez por página ?recurso=cartera del Portero con la sesión de siempre y, si un terreno del Control Maestro tiene en su columna «plan» este plan (ppp2:<plan> o <motor>:<caso>), pinta junto al nombre «PRJ-… · etapa» (y «en pausa» si aplica). La etapa no se copia al plan. Sin sesión, sin respuesta o sin terreno ligado no pinta nada; si el Portero falla, no insiste en un minuto; una respuesta tardía de otro plan no escribe. PPP 2 (ppp2.js) lo pinta en la cabeza del plan; los cinco motores lo pintan en la tarjeta «Caso de trabajo» de arriba (bajo el nombre) y junto a la píldora de estado, con una línea en su pintaCaso. El reparto ya se enseña en «Versiones y reparto» de PPP 2. Etiqueta propia 20261113-plan-folio (por eso cambia el ?v= de accesos, index y mapa). El atlas fijado pasa a yod-portal 7db15e4 (revisión 2026-11-13.folio-cartera.2), donde existe la propuesta.",
+  "proposal_id": "CHG-PPP2-20261112",
+  "summary": "PPP 2 · arreglo del servidor al sembrar un plan (seguimiento de CHG-PPP2-20261112). sembrar_ escribía la identidad y la superficie del terreno una columna a la izquierda en la pestaña Datos: el estado caía en Unidad, la fuente en Estado, la fecha en Fuente y quién en Fecha. Ahora escribe el valor en C y estado, fuente, fecha y quién de E a H (y la pregunta del terreno en I), igual que dato_; la unidad de la plantilla no se toca. Sólo cambia server/ppp2/PPP2.gs y su prueba. No cambian la página, la plantilla del libro, el Portero ni los motores del PPP actual. Requiere publicar una versión nueva del servidor PPP 2 sobre la misma implementación.",
   "components": [
     "SYS-POTENCIALES",
     "SYS-PPP2",
     "GAS-PPP2",
-    "SYS-CONTROL"
+    "SHEET-PPP2"
   ],
   "tests": [
-    "node --test tests/ppp-folio.test.cjs (9)",
+    "node --test tests/ppp2-servidor.test.cjs (26; la prueba de sembrar falla sin el arreglo)",
     "node --test tests/*.test.cjs (748)",
     "node scripts/versiones.cjs --check",
-    "Recorridos de navegador de verificar-ppp y verificar-acceso (CI)",
     "verificar-impacto contra el atlas fijado"
   ],
-  "rollback": "Revertir el PR: los planes vuelven a no enseñar su folio y la etiqueta propia regresa. Nada que regresar en Sheets ni en el Portero."
+  "rollback": "Revertir el PR y publicar la versión anterior del servidor PPP 2: sembrar vuelve a escribir recorrido. Los libros ya sembrados no cambian con el arreglo; se corrigen a mano."
 }
