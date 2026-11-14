@@ -1,7 +1,7 @@
 {
   "model_revision": "2026-11-13.folio-cartera.2",
   "proposal_id": "CHG-PPP2-20261112",
-  "summary": "PPP 2 · arreglo del servidor al sembrar un plan (seguimiento de CHG-PPP2-20261112). sembrar_ escribía la identidad y la superficie del terreno una columna a la izquierda en la pestaña Datos: el estado caía en Unidad, la fuente en Estado, la fecha en Fuente y quién en Fecha. Ahora escribe el valor en C y estado, fuente, fecha y quién de E a H (y la pregunta del terreno en I), igual que dato_; la unidad de la plantilla no se toca. Sólo cambia server/ppp2/PPP2.gs y su prueba. No cambian la página, la plantilla del libro, el Portero ni los motores del PPP actual. Requiere publicar una versión nueva del servidor PPP 2 sobre la misma implementación.",
+  "summary": "PPP 2 · visor en vivo (seguimiento de CHG-PPP2-20261112). Una liga de sólo lectura para quien no tiene sesión del Portero: visor.html pinta un plan en una pantalla de ocho espacios (terreno, producto, tiempo, costo y ganancia, dinero, reparto doble, riesgo y estado), abre cada cuadro en la misma página con el desglose de sus cifras y la pestaña del libro de donde salen, y se repinta sola cuando el libro cambia. Servidor: archivo nuevo server/ppp2/Visor.gs en el mismo proyecto de Apps Script y la ruta GET ppp2-visor en doGet de PPP2.gs; valida la liga contra la hoja Ligas del vivero, entrega sólo lo que el libro ya calculó de la versión que el libro muestra (Resumen, Productos, Datos, flujo mensual, Reparto, Candados, Pruebas con la huella vigente), contesta «igual» sin abrir el libro si no cambió y anota cada apertura en la hoja Aperturas. No pasa por el Portero, no escribe en ningún libro, no entrega nombres de personas, preguntas, hallazgos, consejo, bitácora ni identificadores de libros, y no calcula finanzas: la página sólo acomoda cifras para dibujar y los límites de la revisión que dibuja son los de la plantilla del libro (prueba que lo vigila). Versiones y varios planes en una liga sólo si el renglón de la liga los trae. Página sin nombres de planes ni de marcas (el pie de marcas sale de Config). No cambian ppp2.html, ppp2.js, la plantilla del libro, el Portero ni los motores del PPP actual. Requiere agregar Visor.gs al proyecto del servidor PPP 2, publicar una versión nueva sobre la misma implementación y crear las hojas Ligas y Aperturas en el vivero.",
   "components": [
     "SYS-POTENCIALES",
     "SYS-PPP2",
@@ -9,10 +9,12 @@
     "SHEET-PPP2"
   ],
   "tests": [
-    "node --test tests/ppp2-servidor.test.cjs (26; la prueba de sembrar falla sin el arreglo)",
-    "node --test tests/*.test.cjs (748)",
+    "node --test tests/ppp2-visor.test.cjs (9: la liga, lo que entrega y lo que no, «igual», versiones, varios planes, aperturas, sólo lectura)",
+    "node --test tests/ppp2-visor-pagina.test.cjs (7: cifras del libro, leyendas con su origen, selectores, límites de la revisión contra la plantilla, planes raros, texto escapado, sin datos reales)",
+    "node tests/ppp2-visor-browser.cjs (6 recorridos: abrir, tocar y cerrar cada cuadro, cambio en vivo, versiones, liga apagada, pantalla grande)",
+    "node --test tests/*.test.cjs y node tests/ppp2-browser.cjs",
     "node scripts/versiones.cjs --check",
     "verificar-impacto contra el atlas fijado"
   ],
-  "rollback": "Revertir el PR y publicar la versión anterior del servidor PPP 2: sembrar vuelve a escribir recorrido. Los libros ya sembrados no cambian con el arreglo; se corrigen a mano."
+  "rollback": "Revertir el PR (la página deja de existir en Pages) y publicar la versión anterior del servidor PPP 2: la ruta ppp2-visor vuelve a contestar «recurso». Para cerrar el visor sin tocar código basta apagar los renglones de la hoja Ligas. Ningún libro cambia: el visor no escribe en ellos."
 }

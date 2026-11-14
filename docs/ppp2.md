@@ -345,6 +345,61 @@ red; en el teléfono, de 26 a 35 s. Desde el 12-nov-2026:
   vive bajo el prefijo del cargador (`yodcg_cache_v1:ppp2:`), así que su purga también la limpia.
   `?cargador=legacy` (o `localStorage.yodcg_legacy = '1'`) la apaga.
 
+## El visor en vivo: una liga de sólo lectura (14-nov-2026)
+
+Para quien no tiene sesión del Portero (el grupo de la alianza, el dueño del terreno): **una liga, una
+pantalla**. `visor.html#l=<liga>` pinta el plan en ocho espacios iguales —Reparto ocupa dos— con sus
+siete temas: terreno, producto, tiempo, costo y ganancia, dinero, reparto, y riesgo y estado. Está
+hecha para caber en la pantalla de un teléfono y se ve igual en todos los planes.
+
+- **De dónde sale cada cifra.** Todo viene del libro del plan, de la versión que el libro dice que se
+  muestra (`plan.version_mostrada`: la vigente y, si no hay, la propuesta). El servidor lo entrega con
+  `?recurso=ppp2-visor&liga=…` (`server/ppp2/Visor.gs`): las claves `v{n}.…` del `Resumen`, `Productos`,
+  unas cuantas claves de `Datos`, los renglones mensuales de «Flujo V{n}», el esquema elegido de
+  `Reparto`, `Candados` y las `Pruebas` que llevan la huella de esa versión. **Aquí no hay motor
+  financiero**: ni el servidor ni la página calculan resultados.
+- **Lo único que la página hace con las cifras es acomodarlas para dibujar**, y está escrito en
+  `visor.js`: partes de un total (un producto entre el vendible, la tierra entre las ventas, lo
+  vendible entre lo construido, cada costo por cada $100 de ventas), sumas por trimestre de los
+  renglones mensuales, sumas de renglones del flujo que se enseñan juntos (lo que se le paga al banco
+  = pago + interés + apertura; el terreno = tierra + su cierre), el costo del dinero menos el
+  rendimiento del capital, ventas menos costo total, unidades entre meses de venta, lo que recibe el
+  capital entre lo que puso, y la distancia de cada prueba a su límite.
+- **Los límites de la revisión para fondos** que dibujan los anillos de «Riesgo y estado» son los de
+  la plantilla del libro (`revision_formula` en `ppp2/libro/generar.py`); `tests/ppp2-visor-pagina.test.cjs`
+  falla si dejan de coincidir. Que una versión pase o no lo dice el libro (`v{n}.rv_resultado`), no la
+  página. El otro extremo de cada rango es sólo la escala del dibujo.
+- **Tocar un cuadro lo abre en la misma página** (no es otra página ni otra dirección): la figura en
+  grande y, debajo, el desglose de sus cifras con la pestaña y la clave del libro de donde sale cada
+  una. Tocar una figura o una cifra —o pasar el cursor— saca su leyenda: qué hay detrás (las ventas
+  por producto, lo que entra de clientes por enganches, pagos y saldos, el saldo de cada mes…) y de
+  dónde sale. «Atrás», la × o tocar fuera regresan a la pantalla.
+- **En vivo.** Con la página a la vista pregunta cada 5 segundos «¿cambió?» (cada 15 si lleva diez
+  minutos sin cambios ni toques) mandando la llave de lo que ya tiene; el servidor contesta `igual`
+  sin abrir el libro. La llave es la del plan («Abrir rápido», arriba): cambia en cuanto el libro
+  cambia, lo escriba el servidor o una persona en la hoja, y se comparte dos segundos entre todos los
+  que miran para no consultar Drive por cada teléfono. Cuando cambia, la página se repinta sola y
+  marca el cuadro que cambió. Lo que tarda en verse un cambio hecho a mano en la hoja es lo que tarde
+  Drive en anotar la modificación más esos segundos.
+- **Las ligas viven en la hoja `Ligas` del vivero** (no en el repo ni en la página): una liga es un
+  texto largo al azar, de 24 a 80 letras, números, guion o guion bajo. `estado` = `activa` la deja
+  abrir; cualquier otro valor la apaga en un minuto. `vence` (fecha) es opcional. Quien tiene la liga
+  ve el plan: la pantalla lo dice al pie.
+- **Los selectores sólo aparecen si la liga los trae.** `versiones` en blanco: sólo la versión que el
+  libro muestra; `todas`: las que calculan y no están descartadas; `1,2`: esas. Varios `plan_id`
+  separados por coma (y sus `etiquetas` separadas por `|`) ponen en la misma liga varios planes —varios
+  terrenos del mismo predio, por ejemplo— y la pantalla deja escoger entre ellos. Sin eso, el visor se
+  ve siempre igual.
+- **Lo que no sale del vivero por una liga:** nombres de personas, preguntas, hallazgos, votos del
+  consejo, rondas, palancas, la bitácora (sólo la fecha y el texto del último cambio) ni el
+  identificador o la dirección del libro. El visor **sólo lee**: lo único que escribe es un renglón por
+  apertura en la hoja `Aperturas` del vivero (fecha, las primeras letras de la liga, para quién es, el
+  plan y el tipo de equipo), si esa hoja existe.
+- **El pie de marcas** sale de `Config` (`visor_marcas` y, para los logos, `visor_logos`): la página
+  no lleva nombres ni logos de nadie. La página tampoco lleva el nombre de ningún plan: la vista previa
+  de la liga en un chat es genérica.
+- Instalación, alta de ligas y marcas: `server/ppp2/INSTALAR.md`, «El visor en vivo».
+
 ## Invariantes
 
 - El PPP actual (motores, Portero, `recurso=lista|caso`) no cambia.
@@ -363,6 +418,9 @@ red; en el teléfono, de 26 a 35 s. Desde el 12-nov-2026:
   `ppp2-cache`: lo que ya se leyó del libro, con un Drive cuya última modificación cambia con el
   contenido y una caché que, como la real, no acepta más de 100 KB por valor)
 - `node tests/ppp2-browser.cjs` (`PPP2_SOLO=texto` corre sólo los recorridos cuyo nombre lo lleva)
+- El visor: `node --test tests/ppp2-visor.test.cjs tests/ppp2-visor-pagina.test.cjs` (la liga y lo que
+  entrega el servidor; la página contra eso mismo: cifras, leyendas, límites de la revisión) y
+  `node tests/ppp2-visor-browser.cjs` (abrir, tocar, cerrar, cambio en vivo, liga apagada).
 - Tres accesorios salen de una hoja de cálculo de verdad (LibreOffice) con el plan inventado, y se
   regeneran juntos con `python3 ppp2/libro/regenerar.py`:
   - `ppp2-libro-ejemplo.json`: el libro de ejemplo recalculado;

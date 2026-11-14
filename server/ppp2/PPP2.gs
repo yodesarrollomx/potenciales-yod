@@ -443,6 +443,9 @@ function doGet(e) {
   try {
     var r = String(p.recurso || '');
     if (r === 'ppp2-meta') return out_({ ok: true, pong: true, servicio: 'ppp2', schema: PPP2.SCHEMA });
+    if (r === 'ppp2-visor') {                               // sólo lectura, por liga (Visor.gs): no pasa por el Portero
+      try { return out_(visor_get_(p)); } catch (x) { return out_({ ok: false, error: 'interno' }); }   // a una liga no se le cuenta por qué falló
+    }
     var s = canje_(p.k);
     if (!s.ok) return out_({ ok: false, error: s.error });
     if (r === 'ppp2-vivero') return out_(vivero_get_(s));
