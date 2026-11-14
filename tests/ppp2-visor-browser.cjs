@@ -223,6 +223,9 @@ async function pagina(navegador, base, w, opciones) {
       await page.getByText('Este plan todavía no tiene ligas.').waitFor();
       await page.locator('form[data-form="liga"] input[name="para"]').fill('Grupo de prueba');
       await page.locator('form[data-form="liga"] select[name="versiones"]').selectOption('todas');
+      await page.evaluate(() => document.querySelector('[data-accion="compartir"]').click());   // el diálogo se vuelve a pintar (como cuando llega la lista de planes)…
+      assert.equal(await page.locator('form[data-form="liga"] input[name="para"]').inputValue(), 'Grupo de prueba', '…y lo ya escrito se conserva');
+      assert.equal(await page.locator('form[data-form="liga"] select[name="versiones"]').inputValue(), 'todas');
       await page.locator('form[data-form="liga"] button.verde').click();
       const campo = page.locator('#p2LigaNueva');
       await campo.waitFor();

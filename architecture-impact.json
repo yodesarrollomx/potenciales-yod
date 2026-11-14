@@ -1,7 +1,7 @@
 {
   "model_revision": "2026-11-13.folio-cartera.2",
   "proposal_id": "CHG-PPP2-20261112",
-  "summary": "PPP 2 · visor en vivo y un solo PPP (seguimiento de CHG-PPP2-20261112). (1) Visor: una liga de sólo lectura para quien no tiene sesión del Portero; visor.html pinta un plan en una pantalla de ocho espacios (terreno, producto, tiempo, costo y ganancia, dinero, reparto doble, riesgo y estado), abre cada cuadro en la misma página con el desglose de sus cifras y la pestaña del libro de donde salen, y se repinta sola cuando el libro cambia. Servidor: archivo nuevo server/ppp2/Visor.gs en el mismo proyecto de Apps Script, ruta GET ppp2-visor y tipo POST ppp2-liga en PPP2.gs. La ruta entrega sólo lo que el libro ya calculó (Resumen, Productos, Datos, flujo mensual, Reparto, Candados, Pruebas con la huella vigente), contesta «igual» sin abrir el libro si no cambió, anota cada apertura por liga y no entrega nombres de personas, preguntas, hallazgos, consejo, bitácora ni identificadores de libros. No calcula finanzas: la página sólo acomoda cifras para dibujar y los límites de la revisión que dibuja son los de la plantilla del libro (prueba que lo vigila). (2) La ficha del plan (ppp2.html) lleva arriba esos mismos siete cuadros de la versión escogida (mismo visor.js y mismo recurso, pedido con la sesión) y «Compartir visor»: quien puede editar da, apaga y enciende ligas (sólo escribe la hoja Ligas del vivero, que crea la primera vez; ningún libro). (3) Un solo PPP, por orden de Dirección: el PPP de siempre es la entrada y la ficha es la de los planes con libro. ppp-libro.js (portada y mixto.html, sólo lectura, una pregunta a ppp2-vivero por página) lista los planes con libro en la portada y, si un caso guardado ya tiene su plan (columna caso_ppp del registro de planes), lo abre en su ficha; un motor abierto por su liga en ese caso lleva a la ficha. No cambian los motores, sus cálculos, el Portero ni la plantilla del libro; sin sesión o sin planes la portada queda igual. Requiere agregar Visor.gs al proyecto del servidor PPP 2 y publicar una versión nueva sobre la misma implementación. La etiqueta de caché de los archivos de este repo sube para todas las páginas (también accesos.html, por eso se declara SYS-CONTROL): sólo cambia el ?v= de sus recursos.",
+  "summary": "PPP 2 · ajustes a la ficha del plan tras la unificación (seguimiento de CHG-PPP2-20261112). (1) La fecha en que se aprobó la versión vigente llega del libro como número de fecha de la hoja y la ficha la enseñaba tal cual: ahora se enseña como fecha. (2) El diálogo «Compartir visor» se volvía a pintar al llegar la lista de planes y borraba lo que la persona ya había escrito: ahora lo conserva. Sólo cambia ppp2.js y su recorrido de navegador; sube la etiqueta de caché de los archivos de este repo para todas las páginas (también accesos.html, por eso se declara SYS-CONTROL): sólo cambia el ?v= de sus recursos. No cambian el servidor, los libros, el visor, los motores ni el Portero.",
   "components": [
     "SYS-POTENCIALES",
     "SYS-PPP2",
@@ -10,13 +10,11 @@
     "SYS-CONTROL"
   ],
   "tests": [
-    "node --test tests/ppp2-visor.test.cjs (12: la liga, la ficha con sesión, dar y apagar ligas, varios planes, «igual», aperturas, sólo lectura del libro)",
-    "node --test tests/ppp2-visor-pagina.test.cjs (7: cifras del libro, leyendas con su origen, selectores, límites de la revisión contra la plantilla, planes raros, texto escapado, sin datos reales)",
-    "node tests/ppp2-visor-browser.cjs (9 recorridos: abrir, tocar y cerrar cada cuadro, cambio en vivo, versiones, liga apagada, pantalla grande, cuadros en la ficha, compartir desde el plan, portada y motor del PPP con planes con libro)",
-    "node tests/ppp2-browser.cjs y los demás recorridos de verificar-ppp.yml (portada, mixto, cargador)",
+    "node tests/ppp2-visor-browser.cjs (9 recorridos; el de compartir comprueba que lo escrito se conserva)",
+    "node tests/ppp2-browser.cjs",
     "node --test tests/*.test.cjs",
     "node scripts/versiones.cjs --check",
     "verificar-impacto contra el atlas fijado"
   ],
-  "rollback": "Revertir el PR (el visor y ppp-libro.js dejan de existir en Pages: la portada y los motores quedan como antes y la ficha pierde los cuadros) y publicar la versión anterior del servidor PPP 2: ppp2-visor vuelve a contestar «recurso» y ppp2-liga «tipo». Para cerrar el visor sin tocar código basta apagar los renglones de la hoja Ligas; para que un caso vuelva a abrir su motor, vaciar su celda caso_ppp en el registro de planes. Ningún libro cambia: nada de esto escribe en ellos."
+  "rollback": "Revertir el PR: la ficha vuelve a enseñar el número de fecha y el diálogo vuelve a borrar lo escrito al repintarse. No hay nada que revertir en el servidor ni en los libros."
 }
