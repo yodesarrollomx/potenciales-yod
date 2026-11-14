@@ -9,7 +9,8 @@ const crypto = require('node:crypto');
 const zlib = require('node:zlib');
 
 const RAIZ = path.join(__dirname, '..');
-const CODIGO = fs.readFileSync(path.join(RAIZ, 'server/ppp2/PPP2.gs'), 'utf8');
+/* El proyecto de Apps Script tiene dos archivos y comparten ámbito, como aquí. */
+const CODIGO = ['server/ppp2/PPP2.gs', 'server/ppp2/Visor.gs'].map((f) => fs.readFileSync(path.join(RAIZ, f), 'utf8')).join('\n');
 const ACCESORIO = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/ppp2-libro-ejemplo.json'), 'utf8'));
 
 /* ── dobles de hoja ── */
@@ -167,6 +168,8 @@ function mundo(opciones) {
     ].concat(op.config || [])),
     'Bitácora': new Hoja('Bitácora', [['fecha', 'actor', 'accion', 'plan_id', 'detalle', 'request_id', 'resultado', 'nota']])
   });
+  if (op.ligas) vivero.hojas.Ligas = new Hoja('Ligas', [['liga', 'plan_id', 'para', 'estado', 'vence', 'versiones', 'etiquetas', 'creada', 'nota']].concat(op.ligas));
+  if (op.aperturas) vivero.hojas.Aperturas = new Hoja('Aperturas', [['fecha', 'liga', 'para', 'plan_id', 'equipo']]);
   const llamadas = [];
   const revocados = new Set();   // sesiones que el Portero dejó de aceptar a media prueba
   const iaPedidos = [];          // lo que el servidor le pidió a la API de IA (op.ia contesta; sin op.ia, la API «no está»)

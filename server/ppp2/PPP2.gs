@@ -300,7 +300,7 @@ function calienta_(desde) {
 function tarjeta_(p) {
   var r = null;
   try { var clave = llavePlan_(p), hit = clave ? cacheLee_(clave) : null; if (hit) r = JSON.parse(hit).resumen || null; } catch (e) { r = null; }   // si ya se leyó su libro y no cambió
-  if (!r) { try { r = resumen_(libro_(p)); } catch (e) { return { plan_id: p.plan_id, nombre: p.nombre, error: 'libro' }; } }
+  if (!r) { try { r = resumen_(libro_(p)); } catch (e) { return { plan_id: p.plan_id, nombre: p.nombre, caso: txt_(p.caso_ppp, 80), error: 'libro' }; } }
   var v = Number(r['plan.version_mostrada']) || 1, pre = 'v' + v + '.';
   // Si una ronda está escribiendo (o se quedó a medias) en la versión que se muestra, sus cifras son de una
   // combinación de prueba: no se enseñan como «lo que recibe el dueño».
@@ -308,7 +308,7 @@ function tarjeta_(p) {
   try { var dj = JSON.parse(PropertiesService.getScriptProperties().getProperty(diarioClave_(p.plan_id)) || 'null'); medias = !!dj && Number(dj.ks) === v; } catch (e) { medias = false; }
   var cifra = function (clave) { return medias ? null : r[pre + clave]; };
   return {
-    plan_id: p.plan_id, nombre: r['plan.nombre'] || p.nombre, ubicacion: r['plan.ubicacion'] || '',
+    plan_id: p.plan_id, nombre: r['plan.nombre'] || p.nombre, ubicacion: r['plan.ubicacion'] || '', caso: txt_(p.caso_ppp, 80), tipo: r['plan.tipo'] || '',
     edad: r['plan.edad'] || '', para_crecer: r['plan.para_crecer'] || '', a_medias: medias,
     version: v, version_nombre: r[pre + 'nombre'] || '', version_estado: r[pre + 'estado'] || '',
     dueno_aporta: r[pre + 'dueno_aporta'], dueno_recibe: cifra('dueno_recibe'), dueno_veces: cifra('dueno_veces'),
@@ -443,6 +443,9 @@ function doGet(e) {
   try {
     var r = String(p.recurso || '');
     if (r === 'ppp2-meta') return out_({ ok: true, pong: true, servicio: 'ppp2', schema: PPP2.SCHEMA });
+    if (r === 'ppp2-visor') {                               // sólo lectura, por liga (Visor.gs): no pasa por el Portero
+      try { return out_(visor_get_(p)); } catch (x) { return out_({ ok: false, error: 'interno' }); }   // a una liga no se le cuenta por qué falló
+    }
     var s = canje_(p.k);
     if (!s.ok) return out_({ ok: false, error: s.error });
     if (r === 'ppp2-vivero') return out_(vivero_get_(s));
@@ -478,7 +481,7 @@ function doPost(e) {
 /* La respuesta de una escritura trae el plan ya leído (y lo deja en la caché): la página lo pinta sin volver a
    pedirlo. Se lee fuera del candado, y sólo si sobra tiempo; si algo falla, la página lo pide como antes. */
 function conPlan_(s, b, res, t0) {
-  if (!res || !res.ok || !b || !b.plan || String(b.tipo) === 'ppp2-sembrar' || Date.now() - t0 > PPP2.CON_PLAN_MS) return res;
+  if (!res || !res.ok || !b || !b.plan || String(b.tipo) === 'ppp2-sembrar' || String(b.tipo) === 'ppp2-liga' || Date.now() - t0 > PPP2.CON_PLAN_MS) return res;
   try { var pl = plan_get_(s, b.plan, true); if (pl && pl.ok) res.plan = pl; } catch (x) { }
   return res;
 }
@@ -486,6 +489,7 @@ function conPlan_(s, b, res, t0) {
 function accion_(s, b, rid) {
   var tipo = String(b.tipo || '');
   if (tipo === 'ppp2-sembrar') return sembrar_(s, b, rid);
+  if (tipo === 'ppp2-liga') return liga_(s, b, rid);              // ligas del visor (Visor.gs): sólo la hoja Ligas del vivero, ningún libro
   var p = planPorId_(b.plan);
   if (!p) return { ok: false, error: 'plan' };
   var libro = libro_(p), rev = revision_(libro);

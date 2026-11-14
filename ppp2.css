@@ -157,3 +157,18 @@ details.p2-modulo summary{cursor:pointer;font-weight:600;padding:6px 0;display:f
   .p2-tabla.tarjetas td::before{content:attr(data-et);font-weight:600;color:var(--p2-tenue);text-align:left}
   .p2-lista li{flex-direction:column}
 }
+
+/* el plan en siete cuadros (visor.js) y las ligas del visor */
+.p2-cuadros { margin: 14px 0 18px; }
+.p2-cuadros-cab { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.p2-ligas { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 8px; }
+.p2-liga { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 9px 11px; border: 1px solid var(--p2-linea, #e1dacb); border-radius: 10px; }
+.p2-liga.apagada { opacity: .62; }
+.p2-liga > div:first-child { display: grid; gap: 2px; min-width: 0; }
+.p2-liga-botones { display: flex; gap: 6px; flex-wrap: wrap; }
+.p2-liga-nueva { display: grid; gap: 6px; margin: 10px 0; padding: 10px 12px; border-radius: 10px; background: rgba(57, 116, 75, .09); }
+.p2-liga-nueva input { width: 100%; font: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--p2-linea, #e1dacb); border-radius: 8px; background: #fff; color: inherit; }
+.p2-otros { border: 1px solid var(--p2-linea, #e1dacb); border-radius: 10px; padding: 8px 11px; display: grid; gap: 4px; }
+.p2-otros legend { font-size: 12px; padding: 0 4px; }
+.p2-check { display: flex !important; align-items: center; gap: 7px; font-weight: 400; }
+.p2-check input { width: auto; }

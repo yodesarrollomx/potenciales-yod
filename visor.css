@@ -1,0 +1,101 @@
+/* Visor en vivo del Plan de Potencial (PPP 2). La pantalla se dibuja a 440 px de ancho y visor.js la
+   escala al ancho del teléfono; el detalle de cada cuadro (pop-up) y la leyenda van a tamaño real. */
+:root { --crema: #f6f3ed; --papel: #fffdf9; --tinta: #231d14; --cuerpo: #4a4336; --mudo: #6e675a; --linea: #e1dacb; --oro: #7d5f1e; --verde: #2b5b39; --rojo: #7f2f26; }
+/* La página del visor (visor.html lleva la clase en <html>); incrustados en otra página, los cuadros no tocan su fondo ni su cuerpo. */
+html.vz-pagina, html.vz-pagina body { margin: 0; background: var(--crema); color: var(--tinta); -webkit-text-size-adjust: 100%; }
+html.vz-pagina body { font-family: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; min-height: 100vh; min-height: 100dvh; display: flex; justify-content: center; align-items: flex-start; overflow-x: hidden; }
+html.vz-con-modal, html.vz-con-modal body { overflow: hidden; }
+.vz, .vz *, .vz-inc, .vz-inc *, .vz-modal, .vz-modal *, .vz-tip, .vz-tip * { box-sizing: border-box; }
+.vz [hidden], .vz-modal[hidden], .vz-tip[hidden] { display: none !important; }
+
+.vz-marco { position: relative; flex: none; width: 440px; }
+.vz { position: absolute; left: 0; top: 0; width: 440px; padding: 14px 12px 10px; transform-origin: 0 0; }
+.vz svg, .vz-inc svg { display: block; overflow: visible; }
+.vz svg text, .vz-inc svg text, .vz-m-fig svg text { font-family: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+/* los mismos cuadros dentro de la ficha del plan: sólo la rejilla, a lo ancho que haya (dos o cuatro columnas) */
+.vz-inc-marco { position: relative; width: 100%; overflow: hidden; }
+.vz-inc { position: absolute; left: 0; top: 0; width: 416px; transform-origin: 0 0; font-family: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--tinta); }
+.vz-inc.vz-4 .vz-grid { grid-template-columns: repeat(4, 1fr); }
+.vz-inc.vz-4 .vz-card.vz-doble { grid-column: span 2; }
+.vz-inc .vz-msg { min-height: 120px; padding: 24px 12px; }
+.vz-inc .vz-msg h1 { font-size: 18px; }
+
+/* encabezado */
+.vz-top { height: 42px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 8px; }
+.vz-l1 { display: flex; justify-content: space-between; align-items: center; }
+.vz-marca { font-size: 8.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--oro); }
+.vz-vivo { display: inline-flex; align-items: center; gap: 4px; font-size: 8px; font-weight: 600; color: var(--verde); background: #e4efe1; border-radius: 99px; padding: 2px 7px 2px 6px; white-space: nowrap; }
+.vz-vivo i { width: 5px; height: 5px; border-radius: 50%; background: #39744b; animation: vzLate 2.2s ease-in-out infinite; }
+.vz-vivo.vz-nuevo { color: var(--oro); background: #f3e9cf; }
+.vz-vivo.vz-nuevo i { background: #9a7b3f; }
+.vz-vivo.vz-off { color: var(--rojo); background: #f3dfda; }
+.vz-vivo.vz-off i { background: #a94438; animation: none; }
+.vz-l2 { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.vz-l2 h1 { font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 25px; line-height: 1.05; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vz-ver { font-size: 9px; color: var(--mudo); white-space: nowrap; }
+
+/* selectores: sólo salen si la liga trae más de un terreno o más de una versión */
+.vz-chips { display: flex; gap: 5px; overflow-x: auto; margin: 0 0 7px; padding-bottom: 1px; scrollbar-width: none; }
+.vz-chips::-webkit-scrollbar { display: none; }
+.vz-chip { flex: none; font: 600 9px 'Instrument Sans', system-ui, sans-serif; color: var(--cuerpo); background: var(--papel); border: 1px solid var(--linea); border-radius: 99px; padding: 4px 9px; cursor: pointer; }
+.vz-chip.vz-on { color: #fffdf9; background: var(--tinta); border-color: var(--tinta); }
+.vz-aviso { font-size: 9px; color: var(--oro); background: #f3e9cf; border-radius: 6px; padding: 4px 8px; margin: 0 0 7px; }
+
+/* los ocho espacios */
+.vz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.vz-card { background: var(--papel); border: 1px solid var(--linea); border-radius: 10px; padding: 7px 9px 8px; cursor: pointer; outline: 0 solid rgba(154, 123, 63, 0); transition: border-color .15s, box-shadow .15s; -webkit-tap-highlight-color: transparent; }
+.vz-card.vz-doble { grid-column: 1 / -1; }
+.vz-card:hover, .vz-card:focus-visible { border-color: #c9b98f; box-shadow: 0 2px 10px rgba(35, 29, 20, .07); }
+.vz-card:active { border-color: #9a7b3f; }
+.vz-card.vz-cambio { animation: vzCambio 4s ease-out; }
+.vz-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; height: 15px; margin-bottom: 3px; white-space: nowrap; }
+.vz-tit { font-size: 8.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--oro); }
+.vz-sub { font-size: 8px; color: var(--mudo); overflow: hidden; text-overflow: ellipsis; }
+.vz-t { cursor: pointer; }
+
+/* pie */
+.vz-marcas { display: flex; justify-content: center; align-items: center; gap: 26px; height: 22px; margin-top: 9px; }
+.vz-marcas img { max-height: 20px; max-width: 108px; width: auto; height: auto; object-fit: contain; }
+.vz-marcas span { font-family: 'Instrument Serif', Georgia, serif; font-size: 14px; color: var(--cuerpo); white-space: nowrap; }
+.vz-pie { display: flex; justify-content: center; align-items: center; gap: 4px; height: 16px; margin-top: 5px; font-size: 7.5px; color: var(--mudo); }
+.vz-msg { min-height: 300px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px 20px; }
+.vz-msg h1 { font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 27px; margin: 0 0 8px; }
+.vz-msg p { font-size: 13px; color: var(--mudo); margin: 0; }
+
+/* pop-up de un cuadro */
+.vz-modal, .vz-tip { font-family: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+.vz-modal { color: var(--tinta); }
+.vz-modal { position: fixed; inset: 0; z-index: 20; display: flex; align-items: flex-end; justify-content: center; background: rgba(35, 29, 20, .52); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); animation: vzVela .18s ease-out; }
+.vz-m-caja { width: 100%; max-width: 600px; max-height: 92vh; max-height: 92dvh; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; background: var(--papel); border-radius: 18px 18px 0 0; padding: 0 16px calc(22px + env(safe-area-inset-bottom, 0px)); animation: vzSube .22s ease-out; }
+.vz-m-head { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0 9px; background: var(--papel); border-bottom: 1px solid var(--linea); }
+.vz-m-head .vz-tit { display: block; font-size: 12px; }
+.vz-m-head .vz-sub { display: block; font-size: 11.5px; margin-top: 2px; white-space: normal; }
+.vz-x { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--linea); background: var(--crema); color: var(--tinta); font: 400 22px/1 system-ui, sans-serif; cursor: pointer; }
+.vz-m-fig { padding: 14px 0 2px; }
+.vz-svg-g { width: 100%; height: auto; overflow: visible; touch-action: pan-y; -webkit-user-select: none; user-select: none; }
+.vz-m-fig .vz-t.vz-sel { filter: brightness(.88) saturate(1.25); }
+.vz-m-pista { font-size: 11.5px; color: var(--mudo); margin: 8px 0 2px; }
+.vz-m-caja h3 { font-size: 10.5px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase; color: var(--oro); margin: 18px 0 2px; }
+.vz-m-caja dl { margin: 0; }
+.vz-m-caja dl > div { display: grid; grid-template-columns: 1fr auto; gap: 1px 14px; padding: 8px 0; border-bottom: 1px solid #f0ebe0; }
+.vz-m-caja dt { font-size: 13.5px; color: var(--tinta); }
+.vz-m-caja dd { margin: 0; font-size: 13.5px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vz-m-caja small { grid-column: 1 / -1; font-size: 10.5px; color: var(--mudo); }
+@media (min-width: 700px) {
+  .vz-modal { align-items: center; }
+  .vz-m-caja { border-radius: 18px; max-height: 90vh; padding-bottom: 22px; }
+}
+
+/* leyenda: qué hay detrás de una figura y de dónde sale */
+.vz-tip { position: fixed; z-index: 30; left: 8px; top: 8px; max-width: min(300px, calc(100vw - 16px)); padding: 9px 11px 8px; border-radius: 10px; background: #231d14; color: #fffdf9; font-size: 12px; line-height: 1.3; box-shadow: 0 10px 28px rgba(0, 0, 0, .28); pointer-events: none; }
+.vz-tip b { display: block; font-size: 12.5px; margin-bottom: 4px; }
+.vz-tip div { display: flex; justify-content: space-between; gap: 16px; padding: 1.5px 0; color: #e9e3d6; }
+.vz-tip div span:last-child { color: #fffdf9; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.vz-tip div span:last-child:empty { display: none; }
+.vz-tip small { display: block; margin-top: 5px; padding-top: 4px; border-top: 1px solid rgba(255, 253, 249, .16); font-size: 10px; color: #d9c79a; }
+
+@keyframes vzLate { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@keyframes vzCambio { 0% { outline: 3px solid rgba(154, 123, 63, .85); background: #fbf3dc; } 100% { outline: 3px solid rgba(154, 123, 63, 0); background: var(--papel); } }
+@keyframes vzSube { from { transform: translateY(26px); opacity: .5; } to { transform: none; opacity: 1; } }
+@keyframes vzVela { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .vz-vivo i, .vz-card.vz-cambio, .vz-m-caja, .vz-modal { animation: none; } }

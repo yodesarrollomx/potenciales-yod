@@ -363,6 +363,10 @@
       (p.libro_url ? '<a class="p2-btn suave" href="' + esc(p.libro_url) + '" target="_blank" rel="noopener"><i class="ti ti-table"></i> Abrir el libro</a>' : '') + '</div>' +
       voz() +
       '<div class="p2-versiones" role="group" aria-label="Versiones">' + vers + '</div>' +
+      '<section class="p2-cuadros" aria-label="El plan en siete cuadros"><div class="p2-cuadros-cab"><div><div class="p2-sobre">El plan en siete cuadros · V' + estado.version + '</div>' +
+      '<span class="p2-tenue p2-chico">Toca un cuadro para ver su desglose y de dónde sale cada cifra.</span></div>' +
+      (puede.editar ? '<button class="p2-btn suave" data-accion="compartir"><i class="ti ti-share-2"></i> Compartir visor</button>' : '') + '</div>' +
+      '<div class="vz-inc-marco"><div id="p2Cuadros"></div></div></section>' +
       '<section class="p2-heroe" aria-label="Lo que recibe el dueño">' +
       '<div class="p2-recibe"><div class="p2-sobre">Lo que recibe el dueño · V' + estado.version + '</div>' +
       (num(v.dueno_recibe) === null ? '<p class="p2-cifra">—</p><p class="p2-frase">Esta versión todavía no calcula: faltan datos.</p>' :
@@ -381,6 +385,76 @@
       '<div id="p2Pestana">' + ({ versiones: pVersiones, preguntas: pPreguntas, rondas: pRondas, bitacora: pBitacora }[estado.pestana] || pVersiones)() + '</div>';
     // etapa 2 del análisis «tablero por tablero»: el terreno y su etapa se leen del folio (ppp-folio.js), no se copian al plan
     if (window.YodPPPFolio) window.YodPPPFolio.caso('ppp2', estado.planId, document.getElementById('p2Folio'));
+    pintarCuadros();
+  }
+
+  /* ───────── el plan en siete cuadros (los mismos del visor) y sus ligas ─────────
+     visor.js los dibuja con lo que el servidor leyó del libro (`ppp2-visor`, con la sesión): aquí sólo se piden y
+     se montan. Con lo último que se pidió de esta versión se pinta al instante; si el libro cambió, se repinta. */
+  var cuadros = { memo: null, turno: 0, ligas: null };
+  function pintarCuadros() {
+    var el = document.getElementById('p2Cuadros'), V = window.VisorPPP;
+    if (!el || !V || !V.monta) return;
+    var plan = estado.planId, v = estado.version, turno = ++cuadros.turno, lienzo = V.monta(el, { incrustado: true });
+    var memo = cuadros.memo && cuadros.memo.plan === plan && cuadros.memo.v === v ? cuadros.memo : null;
+    if (memo) lienzo.muestra(memo.d); else lienzo.mensaje('Dibujando el plan…', 'Leyendo el libro.');
+    var extra = { plan: plan, v: v };
+    if ((estado.plan.puede || {}).editar) extra.ligas = '1';
+    if (memo && !extra.ligas) extra.si = memo.d.llave;
+    leer('ppp2-visor', extra).then(function (d) {
+      if (turno !== cuadros.turno || !document.body.contains(el)) return;
+      if (d && d.ok && d.igual) return;
+      if (!d || !d.ok) { if (!memo) lienzo.mensaje('No pude dibujar los cuadros', 'Las cifras del plan siguen abajo.'); return; }
+      if (d.ligas) cuadros.ligas = { plan: plan, lista: d.ligas };
+      var cambio = !memo || memo.d.llave !== d.llave;
+      cuadros.memo = { plan: plan, v: v, d: d };
+      if (cambio) lienzo.muestra(d, null, !!memo);
+    }).catch(function () { if (turno === cuadros.turno && !memo && document.body.contains(el)) lienzo.mensaje('No pude dibujar los cuadros', 'Las cifras del plan siguen abajo.'); });
+  }
+  function ligaUrl(liga) { return new URL('visor.html', location.href).href.replace(/[?#].*$/, '') + '#l=' + liga; }
+  function dialogoCompartir(nueva) {
+    var lista = cuadros.ligas && cuadros.ligas.plan === estado.planId ? cuadros.ligas.lista : null;
+    var otros = ((estado.vivero || estado.viveroCopia || {}).planes || []).filter(function (x) { return x.plan_id !== estado.planId && !x.error; });
+    var renglon = function (l) {
+      var viva = l.estado === 'activa';
+      return '<li class="p2-liga' + (viva ? '' : ' apagada') + '"><div><b>' + esc(l.para || 'Sin nombre') + '</b> ' + chip(viva ? 'Activa' : 'Apagada', viva ? 'verde' : 'gris') +
+        '<span class="p2-tenue p2-chico">' + (l.versiones ? 'versiones: ' + esc(l.versiones) : 'sólo la versión que el plan muestra') + (l.planes > 1 ? ' · ' + l.planes + ' planes' : '') +
+        ' · ' + (l.aperturas ? 'abierta ' + l.aperturas + (l.aperturas === 1 ? ' vez' : ' veces') + (l.ultima ? ' (la última, ' + esc(l.ultima) + ')' : '') : 'sin abrir todavía') + '</span></div>' +
+        '<div class="p2-liga-botones">' + (viva ? '<button type="button" class="p2-btn suave" data-accion="liga-copiar" data-liga="' + esc(l.liga) + '"><i class="ti ti-copy"></i> Copiar liga</button>' : '') +
+        '<button type="button" class="p2-btn suave" data-accion="liga-estado" data-op="' + (viva ? 'apagar' : 'activar') + '" data-liga="' + esc(l.liga) + '">' + (viva ? 'Apagar' : 'Encender') + '</button></div></li>';
+    };
+    abrirDialogo('<h2>Compartir el visor</h2>' +
+      '<p class="p2-tenue">Una liga de sólo lectura para quien no tiene cuenta: ve este plan en una pantalla, con los mismos siete cuadros, y se actualiza sola cuando el libro cambia. <b>Quien tenga la liga ve el plan</b>: si se reenvió de más, apágala y da otra.</p>' +
+      (nueva ? '<div class="p2-liga-nueva"><div class="p2-sobre">Liga nueva</div><input id="p2LigaNueva" readonly value="' + esc(ligaUrl(nueva)) + '">' +
+        '<button type="button" class="p2-btn verde" data-accion="liga-copiar" data-liga="' + esc(nueva) + '"><i class="ti ti-copy"></i> Copiar liga</button></div>' : '') +
+      (lista === null ? '<p class="p2-tenue">Buscando las ligas de este plan…</p>' : (lista.length ? '<ul class="p2-ligas">' + lista.map(renglon).join('') + '</ul>' : '<p class="p2-tenue">Este plan todavía no tiene ligas.</p>')) +
+      '<form class="p2-form" data-form="liga"><label>Para quién es<input name="para" required maxlength="80" placeholder="Grupo de la alianza"></label>' +
+      '<label>Qué versiones ve<select name="versiones"><option value="">Sólo la que el plan muestra (la vigente)</option><option value="todas">Todas las versiones, para escoger</option></select></label>' +
+      (otros.length ? '<fieldset class="p2-otros"><legend>Otros planes en la misma liga (varios terrenos)</legend>' + otros.map(function (x) {
+        return '<label class="p2-check"><input type="checkbox" name="otro" value="' + esc(x.plan_id) + '"> ' + esc(x.nombre || x.plan_id) + '</label>';
+      }).join('') + '</fieldset>' : '') +
+      '<div class="p2-acciones"><button type="button" class="p2-btn suave" data-accion="cerrar">Cerrar</button><button class="p2-btn verde"><i class="ti ti-link"></i> Crear liga</button></div></form>');
+    if (!estado.vivero && !estado.viveroCopia && !dialogoCompartir.pidio) {     // los otros planes, por si la liga lleva varios terrenos
+      dialogoCompartir.pidio = true;
+      leer('ppp2-vivero').then(function (r) { if (r && r.ok) { estado.viveroCopia = r; if (document.getElementById('p2Dialogo') && document.querySelector('form[data-form="liga"]')) dialogoCompartir(nueva); } }).catch(function () { });
+    }
+  }
+  function ligaAccion(cuerpo, alTerminar) {
+    if (estado.ocupado) return;
+    estado.ocupado = true;
+    var plan = estado.planId;
+    cuerpo.tipo = 'ppp2-liga'; cuerpo.plan = plan;
+    escribir(cuerpo).then(function (r) {
+      estado.ocupado = false;
+      if (!r || !r.ok) { toast(r && r.error === 'permiso' ? 'No tienes permiso para dar ligas de este plan.' : 'No pude guardar la liga. Vuelve a intentarlo.'); return; }
+      cuadros.ligas = { plan: plan, lista: r.ligas || [] };
+      if (plan === estado.planId) alTerminar(r);
+    }).catch(function () { estado.ocupado = false; toast('No tengo conexión con mi servidor: no se guardó la liga.'); });
+  }
+  function copiarLiga(liga) {
+    var url = ligaUrl(liga), listo = function () { toast('Liga copiada. Pégala en el grupo.'); };
+    var aMano = function () { var c = document.getElementById('p2LigaNueva'); if (c) { c.value = url; c.focus(); c.select(); } else window.prompt('Copia la liga:', url); };
+    try { navigator.clipboard.writeText(url).then(listo, aMano); } catch (e) { aMano(); }
   }
   function clave(t, cifra, sub, clase) {
     return '<div class="p2-clave ' + (clase || '') + '"><div class="p2-sobre">' + esc(t) + '</div><span class="p2-cifra">' + cifra + '</span><span class="p2-tenue p2-chico">' + esc(sub || '') + '</span></div>';
@@ -861,6 +935,9 @@
       return;
     }
     if (a === 'cerrar') { cerrarDialogo(); return; }
+    if (a === 'compartir') { dialogoCompartir(); return; }
+    if (a === 'liga-copiar') { copiarLiga(b.getAttribute('data-liga')); return; }
+    if (a === 'liga-estado') { ligaAccion({ op: b.getAttribute('data-op'), liga: b.getAttribute('data-liga') }, function () { dialogoCompartir(); }); return; }
     if (a === 'sembrar') { dialogoSembrar(); return; }
     if (a === 'version') { estado.version = Number(b.getAttribute('data-v')); pintarPlan(); return; }
     var v = Number(b.getAttribute('data-v'));
@@ -967,6 +1044,11 @@
       var unidad = f.getAttribute('data-unidad'), crudo = d.get('valor'), valor = crudo;
       if (['MDP', '%', 'm²', 'meses', 'mes'].indexOf(unidad) >= 0) { valor = aNumero(crudo, unidad); if (valor === null) valor = ''; if (isNaN(valor)) { toast('Escribe un número.'); return; } }
       enviar({ tipo: 'ppp2-dato', clave: f.getAttribute('data-clave'), valor: valor, estado: d.get('estado'), fuente: d.get('fuente') });
+      return;
+    }
+    if (tipo === 'liga') {
+      var planes = d.getAll('otro').map(function (id) { return { plan: id }; });
+      ligaAccion({ op: 'crear', para: d.get('para'), versiones: d.get('versiones'), planes: planes }, function (r) { dialogoCompartir(r.liga); toast('Liga creada.'); });
       return;
     }
     if (tipo === 'candado') { enviar({ tipo: 'ppp2-candado', id: f.getAttribute('data-id'), estado: d.get('estado'), evidencia: d.get('evidencia') }); return; }

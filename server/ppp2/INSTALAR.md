@@ -41,7 +41,8 @@ permiso (`PT`), los roles que aprueban (`admin`) y los que editan (`admin,editor
 
 ## Actualizar el código (siempre así)
 
-1. Pegar el `PPP2.gs` nuevo en el editor y guardar.
+1. Pegar el `PPP2.gs` nuevo en el editor y guardar. El proyecto tiene **dos archivos**: `Código.gs`
+   (= `PPP2.gs`) y `Visor.gs` (= `Visor.gs`, el visor en vivo); si cambió alguno, se pega ése.
 2. **Implementar → Administrar implementaciones → lápiz → Versión: Nueva versión → Implementar.**
 3. **Nunca** «Nueva implementación» otra vez: cambiaría la URL `/exec` y la página dejaría de
    encontrar al servidor.
@@ -77,6 +78,58 @@ Lo que conviene saber:
 - **Con `pausa` = `sí`** el servidor no escribe nada, tampoco para dejar como estaba una versión que
   una ronda interrumpida dejó a medias: la página avisa que está a medias hasta que se quite la pausa.
 - Lo que hizo queda en la `Bitácora` del vivero y en la del libro.
+
+## El visor en vivo (ligas de sólo lectura)
+
+`visor.html#l=<liga>` enseña un plan en una pantalla a quien no tiene sesión del Portero (ver
+`docs/ppp2.md`, «El visor en vivo»). El servidor lo atiende con `?recurso=ppp2-visor&liga=…`, sin
+pasar por el Portero y **sin escribir en ningún libro**.
+
+**Una sola vez:**
+
+1. En el editor del proyecto: «+» junto a Archivos → Secuencia de comandos → nombre `Visor` → pegar
+   `Visor.gs`. En `Código.gs` va el `PPP2.gs` de este repo (trae la ruta `ppp2-visor` en `doGet`).
+   Guardar y publicar **Versión nueva** sobre la implementación de siempre.
+2. Las pestañas **`Ligas`** (`liga | plan_id | para | estado | vence | versiones | etiquetas | creada |
+   nota`) y **`Aperturas`** (`fecha | liga | para | plan_id | equipo`) las crea el servidor la primera
+   vez que alguien da una liga desde un plan. Sin `Aperturas` no se anota quién abre.
+
+**Dar una liga:** en la ficha del plan, **Compartir visor** (quien puede editar): para quién es, qué
+versiones ve y, si hace falta, otros planes en la misma liga. Ahí mismo se copia, se ve cuántas veces
+se abrió y se apaga. También se puede a mano, con un renglón en `Ligas`:
+
+| columna | qué va |
+|---|---|
+| `liga` | un texto largo al azar: de 24 a 80 letras, números, `-` o `_`. Es la llave: no se reutiliza ni se acorta |
+| `plan_id` | el `plan_id` del plan en la pestaña `Planes`. Varios separados por coma = varios planes (terrenos) en la misma liga |
+| `para` | a quién se le dio (sólo para saberlo: sale en `Aperturas`) |
+| `estado` | `activa` para que abra. Cualquier otra cosa (`apagada`) la cierra en un minuto |
+| `vence` | opcional: fecha `aaaa-mm-dd`; ese día todavía abre, al siguiente ya no |
+| `versiones` | en blanco: sólo la versión que el libro muestra. `todas`, o una lista como `1,2`, deja escoger |
+| `etiquetas` | con varios planes, el nombre de cada uno en la pantalla, separados por `|` (en el mismo orden) |
+| `creada`, `nota` | libres |
+
+La dirección que se comparte es `https://yodesarrollomx.github.io/potenciales-yod/visor.html#l=` seguida
+de la liga. **Quien la tenga ve el plan**: si se reenvió de más, se apaga ese renglón y se da otra.
+
+**Un plan y su caso del PPP de siempre.** Para que un caso guardado del PPP abra la ficha de su plan,
+en la hoja `Planes` del vivero se pone, en la columna `caso_ppp` del renglón del plan, el identificador
+del caso (`caso_id` de su hoja en el libro del PPP). Tarda hasta dos minutos en notarse. Los planes sin
+caso salen en la portada del PPP en el grupo «Planes con libro».
+
+**Las marcas del pie** (renglones opcionales de `Config`):
+
+| clave | valor | qué hace |
+|---|---|---|
+| `visor_marcas` | nombres separados por `|` (hasta cuatro) | pinta esos nombres al pie del visor |
+| `visor_logos` | el id en Drive de la imagen de cada marca, en el mismo orden, separados por `|` | pinta el logo en vez del nombre |
+
+Cada logo: PNG, JPG, WebP o SVG de hasta 60 KB, en el Drive de la cuenta que ejecuta el servidor (no
+hace falta compartirlo con nadie: el servidor lo lee y lo manda dentro de la respuesta). Un cambio de
+logo tarda hasta seis horas en verse; de nombres, dos minutos.
+
+Con `pausa` = `sí` el visor sigue abriendo (sólo lee). Para cerrarlo todo de golpe: apagar los
+renglones de `Ligas`.
 
 ## La clave de la API (el consejo y la investigación)
 
@@ -160,7 +213,7 @@ servidor sólo en lectura sin tocar código: `Config!pausa = sí`.
 
 ## Pruebas
 
-`node --test tests/ppp2-servidor.test.cjs tests/ppp2-ronda.test.cjs tests/ppp2-consejo.test.cjs` corre
+`node --test tests/ppp2-servidor.test.cjs tests/ppp2-ronda.test.cjs tests/ppp2-consejo.test.cjs tests/ppp2-visor.test.cjs` corre
 el servidor real con dobles de Apps Script (y una API de IA de juguete), un libro inventado (`tests/fixtures/ppp2-libro-ejemplo.json`) y las cifras reales que
 ese libro da para cada combinación de una ronda (`tests/fixtures/ppp2-rejilla.json`). No hagas POST al
 `/exec` de producción para «probar»: escribe en libros reales.
