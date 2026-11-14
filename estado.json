@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-14T00:54:21.405Z",
+ "generado": "2026-11-14T01:03:49.859Z",
  "errores": [
   {
    "clave": "flujo:yodesarrollomx/yod-portal:.github/workflows/conocimiento-browser.yml",
@@ -21,7 +21,7 @@
     "repo:yodesarrollomx/yod-portal"
    ],
    "desde": "2026-11-13T02:09:31Z",
-   "url": "https://github.com/yodesarrollomx/yod-portal/commit/70568d981ad31ad211401faffe5cd0c5346a59ba",
+   "url": "https://github.com/yodesarrollomx/yod-portal/commit/c6e3b33ec50f3c6eb8374716b67825d84a6da85d",
    "msg": "yod-portal cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
@@ -31,7 +31,7 @@
     "repo:yodesarrollomx/potenciales-yod"
    ],
    "desde": "2026-11-13T02:10:58Z",
-   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/50234b6e266a56f0b47f953bddabcd01c801007a",
+   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/aef7ddf9ea81838bf43df089c40532ebec4332b0",
    "msg": "potenciales-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
