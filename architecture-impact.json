@@ -3,6 +3,7 @@
   "proposal_id": "CHG-PPP2-20261112",
   "summary": "PPP 2 · arreglo del servidor al sembrar un plan (seguimiento de CHG-PPP2-20261112). sembrar_ escribía la identidad y la superficie del terreno una columna a la izquierda en la pestaña Datos: el estado caía en Unidad, la fuente en Estado, la fecha en Fuente y quién en Fecha. Ahora escribe el valor en C y estado, fuente, fecha y quién de E a H (y la pregunta del terreno en I), igual que dato_; la unidad de la plantilla no se toca. Sólo cambia server/ppp2/PPP2.gs y su prueba. No cambian la página, la plantilla del libro, el Portero ni los motores del PPP actual. Requiere publicar una versión nueva del servidor PPP 2 sobre la misma implementación.",
   "components": [
+    "SYS-POTENCIALES",
     "SYS-PPP2",
     "GAS-PPP2"
   ],
