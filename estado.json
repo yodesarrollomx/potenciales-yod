@@ -1,19 +1,6 @@
 {
- "generado": "2026-11-14T01:04:36.180Z",
+ "generado": "2026-11-14T01:13:07.231Z",
  "errores": [
-  {
-   "clave": "flujo:yodesarrollomx/yod-portal:.github/workflows/conocimiento-browser.yml",
-   "tipo": "flujo",
-   "nodos": [
-    "yod-portal::github_workflows_conocimiento_browser",
-    "repo:yodesarrollomx/yod-portal",
-    "SYS-CONTROL",
-    "SYS-YOD-OS"
-   ],
-   "desde": "2026-11-14T00:41:50Z",
-   "url": "https://github.com/yodesarrollomx/yod-portal/actions/runs/43535916824",
-   "msg": "Falló el flujo «Conocimiento del Despacho» de yod-portal, trabajo «navegador», paso 12 «Voz, permisos y cierre»"
-  },
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
    "tipo": "cambio",
