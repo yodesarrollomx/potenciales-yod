@@ -1686,11 +1686,17 @@ function sembrar_(s, b, rid) {
   Object.keys(poner).forEach(function (clave) {
     if (!poner[clave]) return;
     var f = filaPorClave_(h, clave);
-    if (f) h.getRange(f, 3, 1, 6).setValues([fila_([poner[clave], 'confirmado', b.fuente ? txt_(b.fuente, 300) : 'Sembrado en PPP 2', hoyISO_(), actor_(s), ''])]);
+    if (!f) return;
+    // valor en C; la unidad (D) es de la plantilla; estado, fuente, fecha y quién van de E a H, como en dato_
+    h.getRange(f, 3).setValue(seguro_(poner[clave]));
+    h.getRange(f, 5, 1, 4).setValues([fila_(['confirmado', b.fuente ? txt_(b.fuente, 300) : 'Sembrado en PPP 2', hoyISO_(), actor_(s)])]);
   });
   if (typeof m2 === 'number' && m2 > 0) {
     var fm = filaPorClave_(h, 'terreno.m2');
-    if (fm) h.getRange(fm, 3, 1, 6).setValues([fila_([m2, 'por confirmar', b.fuente ? txt_(b.fuente, 300) : 'Dicho al sembrar', hoyISO_(), actor_(s), 'M02.Q01'])]);
+    if (fm) {
+      h.getRange(fm, 3).setValue(m2);
+      h.getRange(fm, 5, 1, 5).setValues([fila_(['por confirmar', b.fuente ? txt_(b.fuente, 300) : 'Dicho al sembrar', hoyISO_(), actor_(s), 'M02.Q01'])]);
+    }
   }
   var pq = libro.getSheetByName('Preguntas');
   ['M01.Q01', 'M01.Q02'].forEach(function (q) {
