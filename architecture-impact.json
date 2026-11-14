@@ -5,7 +5,8 @@
   "components": [
     "SYS-POTENCIALES",
     "SYS-PPP2",
-    "GAS-PPP2"
+    "GAS-PPP2",
+    "SHEET-PPP2"
   ],
   "tests": [
     "node --test tests/ppp2-servidor.test.cjs (26; la prueba de sembrar falla sin el arreglo)",
