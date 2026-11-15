@@ -596,6 +596,11 @@ var PESTANAS = {
   GOOGLE: 'application/vnd.google-apps.',
   A_PDF: ['application/vnd.google-apps.document', 'application/vnd.google-apps.spreadsheet', 'application/vnd.google-apps.presentation', 'application/vnd.google-apps.drawing'],
   IMAGEN: /^image\/(png|jpeg|gif|webp)$/,
+  /* Lo que ppp2-archivo entrega con su tipo: lo que un navegador no ejecuta (PDF, imagen, audio, video, Office,
+     OpenDocument, zip). Lo demás —HTML, SVG, XML, scripts o un tipo desconocido— sale como
+     application/octet-stream: así la página nunca lo abre como página dentro de su propio origen, donde vive la
+     sesión del Portero. Los bytes son los mismos; en la lista, `tipo` sigue siendo el original. */
+  PASIVO: /^(application\/pdf|image\/(png|jpeg|gif|webp|bmp|tiff|heic|heif)|video\/[a-z0-9.+-]+|audio\/[a-z0-9.+-]+|application\/(zip|x-zip-compressed|rtf|msword|vnd\.ms-[a-z0-9.+-]+|vnd\.openxmlformats-officedocument\.[a-z0-9.+-]+|vnd\.oasis\.opendocument\.[a-z0-9.+-]+|vnd\.google-earth\.kmz))$/,
   GRUPOS: ['Presentaciones', 'Propuestas', 'Modelos financieros', 'Terreno y polígonos', 'Reuniones y minutas', 'Estudios y oficios', 'Otros'],
   /* Cómo se acomoda un archivo: por la primera de sus carpetas (de arriba abajo) cuyo nombre lleva una de estas
      raíces y, si ninguna, por su propio nombre; lo demás va a Otros. Sin mayúsculas ni acentos y sin importar el
@@ -833,7 +838,8 @@ function recorre_(raices, aud, fuera) {
     try {
       var fs = x.c.getFiles();
       while (fs.hasNext()) {
-        if (o.length >= PESTANAS.LISTA_MAX) { inc = true; break; }
+        // el tiempo se cuida también dentro de una carpeta: una sola con cientos de archivos no se come el pedido
+        if (o.length >= PESTANAS.LISTA_MAX || Date.now() - t0 > PESTANAS.LISTA_MS) { inc = true; break; }
         var f = fs.next(), id = String(f.getId()), tipo = String(f.getMimeType() || '');
         if (hay_(a, id) || hay_(fuera, id) || tipo === PESTANAS.ATAJO || tipo === PESTANAS.CARPETA || f.isTrashed()) continue;
         a[id] = { n: txt_(f.getName(), 200), t: tipo, f: fechaArchivo_(f), z: tipo.indexOf(PESTANAS.GOOGLE) === 0 ? null : (Number(f.getSize()) || 0), r: x.ruta };
@@ -969,11 +975,13 @@ function leeHistorial_(g, h) {
   var equipo = g.aud === 'equipo', proys = proyectosPlan_(h, g.p.plan_id), ids = proys.map(function (x) { return x.id; });
   var fuera = excluidos_(g.cfg), idx = indice_(raices_(proys), g.aud, fuera), tope = topeFuturo_(), dias = {}, generales = {}, pendientes = [];
   var dia = function (f) { return dias[f] || (dias[f] = { fecha: f, items: [], chat: 0 }); };
-  var libro = ids.length ? libroHist_(h) : null;
+  var libro = ids.length ? libroHist_(h) : null, privados = {};
   var ev = tablaHist_(libro, 'Eventos');
   if (ev) ev.filas.forEach(function (f) {
+    // un evento solo_direccion no sale, y tampoco los pendientes que nacieron de él (por su evento_id)
+    if (soloDireccion_(ev.col(f, 'visibilidad'))) { partes_(ev.col(f, 'evento_id')).forEach(function (x) { privados[x] = 1; }); return; }
     var fecha = ev.fecha(f, 'fecha');
-    if (!fecha || fecha > tope || soloDireccion_(ev.col(f, 'visibilidad')) || delGrupo_(ev.col(f, 'proyectos'), ids) !== 'plan') return;
+    if (!fecha || fecha > tope || delGrupo_(ev.col(f, 'proyectos'), ids) !== 'plan') return;
     var tipo = tipoEvento_(ev.col(f, 'tipo'));
     if (!equipo && (!siPestana_(ev.col(f, 'para_externos')) || tipo === 'whatsapp' || tipo === 'pendiente')) return;
     var resumen = ev.col(f, 'resumen'), dec = equipo ? ev.col(f, 'decisiones') : '', url = equipo ? urlSegura_(ev.col(f, 'fuente_url')) : '';
@@ -994,6 +1002,7 @@ function leeHistorial_(g, h) {
   if (pe) pe.filas.forEach(function (f) {
     var est = normaliza_(pe.col(f, 'estado')), tarea = txt_(pe.col(f, 'tarea') || pe.col(f, 'pendiente'), 500);
     if (!tarea || est === 'hecho' || est === 'hecha' || soloDireccion_(pe.col(f, 'visibilidad')) || delGrupo_(pe.col(f, 'proyectos'), ids) !== 'plan') return;
+    if (partes_(pe.col(f, 'evento_id')).some(function (x) { return hay_(privados, x); })) return;
     pendientes.push({ tarea: tarea, responsable: txt_(pe.col(f, 'responsable'), 80), compromiso: pe.fecha(f, 'fecha_compromiso') || pe.fecha(f, 'compromiso'), estado: txt_(pe.col(f, 'estado'), 40) });
   });
   var vs = versionesHist_(g);
@@ -1005,7 +1014,12 @@ function leeHistorial_(g, h) {
   pendientes = enOrden_(pendientes, function (x) { return x.compromiso ? x.compromiso : '9999-99-99'; }).slice(0, PESTANAS.PENDIENTES_MAX);
   return { proyectos: proys.map(function (x) { return { id: x.id, nombre: x.nombre }; }), dias: lista, pendientes: pendientes, versiones: vs.lista };
 }
-function tipoEvento_(v) { var k = clave_(v); return hay_(PESTANAS.TIPOS, k) ? PESTANAS.TIPOS[k] : (/^reunion/.test(k) ? 'reunion' : 'documento'); }
+function tipoEvento_(v) {
+  var k = clave_(v);
+  if (hay_(PESTANAS.TIPOS, k)) return PESTANAS.TIPOS[k];
+  if (/whats/.test(k)) return 'whatsapp';            // «WhatsApp grupo», «aviso_whatsapp»…: escrito como sea, un externo nunca lo ve
+  return /^reunion/.test(k) ? 'reunion' : 'documento';
+}
 
 /* ── entradas ── */
 function historial_get_(q) {
@@ -1047,8 +1061,9 @@ function chat_get_(q) {
 function archivos_get_(q) {
   var g = puertaPestana_(q);
   if (!g.ok) return g;
-  var idx = indice_(raices_(proyectosPlan_(historial_(g.cfg), g.p.plan_id)), g.aud, excluidos_(g.cfg)), grupos = {}, out = [];
+  var fuera = excluidos_(g.cfg), idx = indice_(raices_(proyectosPlan_(historial_(g.cfg), g.p.plan_id)), g.aud, fuera), grupos = {}, out = [];
   idx.o.forEach(function (id) {
+    if (hay_(fuera, id)) return;                     // la lista guardada pudo armarse antes de que ese libro se registrara
     var x = idx.a[id], n = grupoArchivo_(x);
     (grupos[n] = grupos[n] || []).push({ id: id, nombre: x.n, fecha: x.f, tipo: x.t, tamano: x.z, vista: vistaArchivo_(x.t, x.z) });
   });
@@ -1087,7 +1102,7 @@ function archivo_get_(q) {
   if (parte >= partes) return { ok: false, error: 'plan' };
   bytes = partes === 1 ? f.getBlob().getBytes() : trozoDrive_(id, parte * PESTANAS.PARTE_B, Math.min(z, (parte + 1) * PESTANAS.PARTE_B));
   if (!bytes) return { ok: false, error: 'interno' };
-  return { ok: true, nombre: nombre, tipo: tipo || 'application/octet-stream', partes: partes, parte: parte, datos: Utilities.base64Encode(bytes) };
+  return { ok: true, nombre: nombre, tipo: PESTANAS.PASIVO.test(tipo) ? tipo : 'application/octet-stream', partes: partes, parte: parte, datos: Utilities.base64Encode(bytes) };
 }
 function pestana_get_(r, q) {
   if (r === 'ppp2-historial') return historial_get_(q);

@@ -473,8 +473,12 @@ test('sólo lee: ninguna hoja cambia, nada se anota en Aperturas y a Drive sólo
   // el código de las pestañas no tiene con qué cambiar permisos de Drive ni mover o crear archivos
   const visor = fs.readFileSync(path.join(__dirname, '..', 'server/ppp2/Visor.gs'), 'utf8');
   const pestanas = visor.slice(visor.indexOf('pestañas del visor: historial y archivos'));
-  for (const no of ['setSharing', 'addViewer', 'addEditor', 'addCommenter', 'setOwner', 'removeViewer', 'removeEditor', 'Permissions', 'setTrashed', 'moveTo', 'createFile', 'makeCopy', 'setContent', 'appendRow', 'setValue', "method: 'post'", 'ANYONE'])
+  for (const no of ['setSharing', 'addViewer', 'addEditor', 'addCommenter', 'setOwner', 'removeViewer', 'removeEditor', 'removeCommenter', 'Permissions', 'setTrashed', 'moveTo', 'createFile', 'createFolder', 'createShortcut',
+    'makeCopy', 'setContent', 'setName', 'setDescription', 'setStarred', 'setShareableByEditors', 'addFile', 'addFolder', 'removeFile', 'removeFolder', 'appendRow', 'setValue', 'setFormula', 'insertSheet', 'deleteRow',
+    'payload', "method: 'post'", 'ANYONE'])
     assert.ok(!pestanas.includes(no), no);
+  assert.doesNotMatch(pestanas, /\bDrive\.(Files|Permissions|Drives)\b/, 'ni el servicio avanzado de Drive');
+  assert.deepEqual(pestanas.match(/method:\s*'[a-z]+'/gi), ["method: 'get'"], 'a la API de Drive sólo se le pide leer');
 });
 
 test('si algo truena adentro, a la liga sólo se le dice que falló', () => {
@@ -498,4 +502,124 @@ test('lo que ya existía responde igual: ppp2-visor no cambia con la hoja de his
   assert.deepEqual(w.vivero.getSheetByName('Ligas').v[1].slice(0, 7), [r.liga, PLAN, '', 'Grupo de prueba', 'activa', '', 'todas']);
   assert.equal(w.get({ recurso: 'ppp2-visor', liga: r.liga }).ok, true);
   assert.equal(conPestanas().get({ recurso: 'ppp2-historial', liga: LIGA_EQ.replace('1', '2') }).error, 'liga');
+});
+
+/* ── revisión independiente: huecos encontrados y los intentos de romper la cadena de carpetas ── */
+const idsDe = (r) => r.grupos.flatMap((g) => g.archivos.map((a) => a.id));
+
+test('un libro de plan que se registra después de armada la lista deja de salir en ella en ese momento', () => {
+  const w = conPestanas();
+  const nuevo = 'libro-de-un-plan-nuevo-0000001';
+  w.drive.archivos[nuevo] = { nombre: 'Libro recién registrado', tipo: 'application/vnd.google-apps.spreadsheet', padres: [D.proyecto] };
+  assert.ok(idsDe(pide(w, 'ppp2-archivos', LIGA_EQ)).includes(nuevo), 'antes de registrarse es un archivo más del expediente');
+  w.vivero.getSheetByName('Planes').appendRow(['p2nuevo00001', 'Nuevo', nuevo, 'activo', '2026-01-15', 'Pruebas', '', 'ppp2-libro-v1', '']);
+  w.cache.delete('planes');
+  const vistas = w.driveVistas.length;
+  const r = pide(w, 'ppp2-archivos', LIGA_EQ);
+  assert.equal(w.driveVistas.length, vistas, 'la lista sale de la caché…');
+  assert.ok(!JSON.stringify(r).includes(nuevo) && !JSON.stringify(r).includes('Libro recién registrado'), '…pero ya sin su id ni su nombre');
+  assert.deepEqual(fotoDe(w, LIGA_EQ, nuevo), { ok: false, error: 'plan' });
+});
+
+test('el tiempo de la lista se cuida también dentro de una carpeta con cientos de archivos', () => {
+  const w = conPestanas();
+  w.ctx.PESTANAS.LISTA_MS = 40;                                          // 40 ms en vez de 20 s, para no esperar
+  for (let i = 0; i < 300; i++) {
+    const a = { tipo: 'application/pdf', padres: [D.proyecto], tamano: 10 };
+    Object.defineProperty(a, 'nombre', { get: () => { const t = Date.now(); while (Date.now() - t < 2) { /* Drive lento */ } return 'Relleno ' + i + '.pdf'; } });
+    w.drive.archivos['archivo-de-relleno-' + String(i).padStart(12, '0')] = a;
+  }
+  const r = pide(w, 'ppp2-archivos', LIGA_EQ);
+  assert.equal(r.incompleta, true);
+  assert.ok(idsDe(r).filter((id) => id.startsWith('archivo-de-relleno-')).length < 100, 'se cortó a media carpeta, no al terminarla');
+});
+
+test('un pendiente que nació de un evento solo_direccion no sale, aunque el pendiente diga compartido o nada', () => {
+  const h = historial();
+  h.Pendientes = h.Pendientes.concat([
+    ['PD-7', 'EV-3', '2026-11-10', 'Persona Uno', 'Tarea de la junta reservada', '', 'abierto', 'proyecto-ejemplo', 'compartido'],
+    ['PD-8', 'EV-3', '2026-11-10', 'Persona Uno', 'Otra tarea reservada', '', 'abierto', 'proyecto-ejemplo', '']]);
+  const w = conPestanas({ mundo: { historial: h } });
+  const r = pide(w, 'ppp2-historial', LIGA_EQ);
+  assert.doesNotMatch(JSON.stringify(r), /reservada/);
+  assert.deepEqual(r.pendientes.map((p) => p.tarea), ['Revisar el banco', 'Conseguir la escritura', 'Confirmar el uso de suelo'], 'los de eventos compartidos siguen saliendo');
+});
+
+test('un evento de WhatsApp con el tipo escrito de otro modo tampoco lo ve un externo', () => {
+  const h = historial();
+  h.Eventos = h.Eventos.concat([
+    ev({ evento_id: 'EV-W1', fecha: '2026-11-09', hora: '10:00', tipo: 'WhatsApp grupo', titulo: 'Aviso del grupo', para_externos: 'sí' }),
+    ev({ evento_id: 'EV-W2', fecha: '2026-11-09', hora: '11:00', tipo: 'aviso_whatsapp', titulo: 'Otro aviso', para_externos: 'sí' })]);
+  const w = conPestanas({ mundo: { historial: h } });
+  const dia = pide(w, 'ppp2-historial', LIGA_EQ).dias.find((d) => d.fecha === '2026-11-09');
+  assert.deepEqual(dia.items.map((i) => [i.titulo, i.tipo]), [['Aviso del grupo', 'whatsapp'], ['Otro aviso', 'whatsapp']]);
+  assert.ok(!pide(w, 'ppp2-historial', LIGA_EX).dias.some((d) => d.fecha === '2026-11-09'));
+});
+
+test('lo que un navegador ejecuta (HTML, SVG, XML, scripts) sale como application/octet-stream; PDF, imagen, video y Office, con su tipo', () => {
+  const w = conPestanas();
+  const activos = {
+    'archivo-pagina-html-0000000001': ['pagina.html', 'text/html', '<script>alert(1)</script>'],
+    'archivo-dibujo-svg-00000000001': ['dibujo.svg', 'image/svg+xml', '<svg onload="alert(1)"/>'],
+    'archivo-datos-xml-000000000001': ['datos.xml', 'application/xml', '<?xml version="1.0"?><x/>'],
+    'archivo-codigo-js-00000000001': ['codigo.js', 'text/javascript', 'alert(1)'],
+    'archivo-tipo-desconocido-00001': ['raro.bin', 'application/x-raro', 'x']
+  };
+  for (const [id, [nombre, tipo, contenido]] of Object.entries(activos)) w.drive.archivos[id] = { nombre, tipo, padres: [D.proyecto], contenido };
+  for (const [id, [nombre, tipo, contenido]] of Object.entries(activos)) {
+    const r = fotoDe(w, LIGA_EQ, id);
+    assert.deepEqual([r.ok, r.nombre, r.tipo, Buffer.from(r.datos, 'base64').toString('utf8')], [true, nombre, 'application/octet-stream', contenido], tipo);
+  }
+  const html = pide(w, 'ppp2-archivos', LIGA_EQ).grupos.flatMap((g) => g.archivos).find((a) => a.id === 'archivo-pagina-html-0000000001');
+  assert.deepEqual([html.tipo, html.vista], ['text/html', 'descarga'], 'en la lista, el tipo original (para el ícono) y nunca vista dentro de la página');
+  for (const [id, tipo] of [[D.pdfComp, 'application/pdf'], [D.imagen, 'image/jpeg'], [D.hoja, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'], [D.pptx, PPTX], [D.plano, 'application/vnd.google-earth.kmz']])
+    assert.equal(fotoDe(w, LIGA_EQ, id).tipo, tipo, tipo);
+  assert.equal(fotoDe(w, LIGA_EX, D.mediano).tipo, 'video/mp4');
+});
+
+test('intentos de romper la cadena: ciclos, «Para compartir» en la papelera, acentos, varios padres y una carpeta que no es carpeta', () => {
+  const CICLO_A = 'carpeta-ciclo-a-00000000000001', CICLO_B = 'carpeta-ciclo-b-00000000000001';
+  // un ciclo de carpetas fuera del expediente: el recorrido termina y no entrega
+  const w = conPestanas();
+  w.drive.carpetas[CICLO_A] = { nombre: 'A', padres: [CICLO_B] };
+  w.drive.carpetas[CICLO_B] = { nombre: 'B', padres: [CICLO_A] };
+  w.drive.archivos['archivo-en-el-ciclo-0000000001'] = { nombre: 'Ciclo.pdf', tipo: 'application/pdf', padres: [CICLO_A], contenido: 'x' };
+  for (const l of [LIGA_EQ, LIGA_EX]) assert.deepEqual(fotoDe(w, l, 'archivo-en-el-ciclo-0000000001'), { ok: false, error: 'plan' });
+  // un ciclo que pasa por la carpeta del proyecto: el equipo lo abre, el externo no (no pasa por «Para compartir»)
+  const c = conPestanas();
+  c.drive.carpetas[D.proyecto].padres = [D.raiz, D.sub];
+  assert.equal(fotoDe(c, LIGA_EQ, D.hoja).ok, true);
+  assert.deepEqual(fotoDe(c, LIGA_EX, D.hoja), { ok: false, error: 'plan' });
+  assert.equal(pide(c, 'ppp2-archivos', LIGA_EQ).ok, true);
+  // «Para compartir» en la papelera: ni se lista ni se entrega
+  const p = conPestanas();
+  p.drive.carpetas[D.compartir].papelera = true;
+  assert.deepEqual(pide(p, 'ppp2-archivos', LIGA_EX).grupos, []);
+  assert.deepEqual(fotoDe(p, LIGA_EX, D.pdfComp), { ok: false, error: 'plan' });
+  // mayúsculas y acentos dan igual
+  const a = conPestanas();
+  a.drive.carpetas[D.compartir].nombre = 'PÁRA  COMPARTÍR';
+  assert.equal(fotoDe(a, LIGA_EX, D.pdfComp).ok, true);
+  // varios padres (los de antes de 2020): basta una cadena real que pase por «Para compartir»; si ninguna pasa, no
+  const m = conPestanas();
+  m.drive.archivos[D.ajeno].padres = [D.ajena, D.compartir];
+  m.drive.archivos[D.docInt].padres = [D.presentaciones, D.ajena];
+  assert.equal(fotoDe(m, LIGA_EX, D.ajeno).ok, true);
+  assert.deepEqual(fotoDe(m, LIGA_EX, D.docInt), { ok: false, error: 'plan' });
+  assert.equal(fotoDe(m, LIGA_EQ, D.docInt).ok, true);
+  // la `carpeta` de un proyecto que en realidad es un archivo: no hay nada que listar ni entregar
+  const h = historial();
+  h.Proyectos = [PROY_CAB, proy('proyecto-ejemplo', 'Proyecto Ejemplo', PLAN, D.pdfComp)];
+  const f = conPestanas({ mundo: { historial: h } });
+  assert.deepEqual(pide(f, 'ppp2-archivos', LIGA_EQ), { ok: true, grupos: [] });
+  for (const id of [D.pdfComp, D.hoja]) assert.deepEqual(fotoDe(f, LIGA_EQ, id), { ok: false, error: 'plan' });
+});
+
+test('con liga y sesión a la vez manda la audiencia de la liga; `audiencia` se lee sin mayúsculas ni espacios y lo dudoso es externo', () => {
+  const w = conPestanas({ masLigas: [liga({ liga: 'ligaequipoconespacios000000001', audiencia: ' Equipo ' }), liga({ liga: 'ligaaudienciadudosa0000000001', audiencia: 'equipo, externo' })] });
+  assert.deepEqual(w.get({ recurso: 'ppp2-chat', liga: LIGA_EX, k: LECTOR, plan: PLAN, dia: '2026-11-10' }), { ok: false, error: 'plan' });
+  assert.equal(w.get({ recurso: 'ppp2-historial', liga: LIGA_EX, k: LECTOR }).audiencia, 'externo');
+  assert.deepEqual(fotoDe(w, LIGA_EX, D.docInt), { ok: false, error: 'plan' }, 'una sesión junto a una liga externa no abre lo interno');
+  assert.equal(pide(w, 'ppp2-historial', 'ligaequipoconespacios000000001').audiencia, 'equipo');
+  assert.equal(pide(w, 'ppp2-historial', 'ligaaudienciadudosa0000000001').audiencia, 'externo');
 });
