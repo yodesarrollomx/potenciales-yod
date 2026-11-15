@@ -117,6 +117,16 @@ en la hoja `Planes` del vivero se pone, en la columna `caso_ppp` del renglón de
 del caso (`caso_id` de su hoja en el libro del PPP). Tarda hasta dos minutos en notarse. Los planes sin
 caso salen en la portada del PPP en el grupo «Planes con libro».
 
+**Fotos de casos del PPP de siempre** (renglón de `Config`, una sola vez): clave `potenciales_id`,
+valor = el id del libro «YOD - POTENCIALES» (el de su dirección, entre `/d/` y `/edit`). Ese libro lleva
+la pestaña `PPP_VISOR` (ver `docs/ppp2.md`, «Fotos de casos del PPP de siempre»; para que Dirección
+pueda escoger «la buena» desde el visor debe traer las columnas `elegida`, `elegida_por`,
+`elegida_fecha` y `orden`), y la cuenta que ejecuta
+el servidor debe poder abrirlo. Sin el renglón o sin la pestaña, una liga `ppp:…` responde «sin plan» y
+lo demás sigue igual. En `Ligas`, el `plan_id` de una foto es `ppp:<caso_id>` o
+`ppp:<caso_id>:<escenario_id>`; puede ir en la misma liga que planes con libro. Un cambio en `Config`
+tarda hasta dos minutos en notarse; una foto nueva, unos segundos.
+
 **Las marcas del pie** (renglones opcionales de `Config`):
 
 | clave | valor | qué hace |

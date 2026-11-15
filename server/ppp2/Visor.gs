@@ -20,6 +20,9 @@
  *    texto del último cambio.
  *  - Lo leído se guarda con la misma llave que el plan (cambia en cuanto el libro cambia), así que
  *    preguntar «¿cambió?» cada pocos segundos no vuelve a leer el libro.
+ *  - Una liga (o la ficha) también puede pedir la FOTO de un caso del PPP de siempre: `ppp:<caso_id>` o
+ *    `ppp:<caso_id>:<escenario_id>` (pestaña PPP_VISOR, ver «fotos del PPP 1»). Se sirve su visor_json tal
+ *    cual; la llave es su huella_entradas + calculado. Dirección escoge cuál versión es «la buena» (ppp2-elige).
  */
 var VISOR = {
   ESQUEMA: 'ppp2-visor-v1',
@@ -45,7 +48,15 @@ var VISOR = {
   LIGAS_CAB: ['liga', 'plan_id', 'para', 'estado', 'vence', 'versiones', 'etiquetas', 'creada', 'nota'],
   APERTURAS_CAB: ['fecha', 'liga', 'para', 'plan_id', 'equipo'],
   DATOS: ['terreno.m2', 'tierra.valor', 'lamina.m2_construidos', 'lamina.m2_vendibles', 'cob.enganche', 'din.tasa_capital', 'din.tiie',
-    'din.sobretasa', 'din.apertura', 'din.caja_pct', 'din.preventa_minima', 'costo.comision']
+    'din.sobretasa', 'din.apertura', 'din.caja_pct', 'din.preventa_minima', 'costo.comision'],
+  /* Fotos de casos del PPP de siempre (PPP 1): pestaña PPP_VISOR de otro libro, cuyo id llega por el renglón
+     `potenciales_id` de Config. Se sirven tal cual; aquí no se calcula nada ni se abren libros del PPP 1. */
+  FOTO_RE: /^ppp:([A-Za-z0-9_-]{3,64})(?::([A-Za-z0-9_-]{1,40}))?$/,
+  FOTO_HOJA: 'PPP_VISOR',
+  FOTO_MAX: 50000,           // caracteres de visor_json (lo más que cabe en una celda de Sheets)
+  FOTO_SIRVE: 'lista',       // estado de un renglón que se sirve; `propuesta` no
+  /* Lo que arma el servidor alrededor de los cuadros: una foto no lo puede traer ni pisar. */
+  FOTO_RESERVADAS: ['ok', 'error', 'igual', 'llave', 'leido', 'menu', 'a_medias', 'puede', 'ligas', 'marcas', 'esquema']
 };
 
 /* ───────────────────────── ligas ───────────────────────── */
@@ -270,6 +281,128 @@ function llaveVisor_(p) {
   return llave;
 }
 
+/* ───────────────────────── fotos del PPP 1 ─────────────────────────
+   Un renglón de PPP_VISOR por (caso, versión). `estado` = `lista` se sirve; `propuesta` nunca. `ppp:<caso_id>`
+   sirve la versión `elegida` del caso (la escoge Dirección, ppp2-elige); si ninguna lo está, la de mayor `orden`
+   entre las listas. `ppp:<caso_id>:<escenario_id>` sirve esa versión fija. Sin el renglón `potenciales_id`, sin
+   la pestaña o sin acceso, no hay fotos: el visor responde como «sin plan». */
+function esFoto_(id) { return String(id || '').indexOf('ppp:') === 0; }
+function hojaFotos_() {
+  var id = String(config_().potenciales_id || '').trim();
+  if (!/^[A-Za-z0-9_-]{20,80}$/.test(id)) return null;
+  try { return SpreadsheetApp.openById(id).getSheetByName(VISOR.FOTO_HOJA); } catch (e) { return null; }
+}
+function siNo_(v) { return ['sí', 'si', 'x', '1', 'true', 'yes'].indexOf(low_(v)) >= 0; }
+function fotoDe_(cab, f) {
+  var c = function (n) { var i = cab.indexOf(n), x = i < 0 ? '' : limpio_(f[i]); return String(x == null ? '' : x).trim(); };
+  return { caso: c('caso_id'), esc: c('escenario_id'), nombre: txt_(c('escenario_nombre'), 80), estado: low_(c('estado')),
+    huella: c('huella_entradas'), calc: c('calculado'), orden: Number(c('orden')) || 0, elegida: siNo_(c('elegida')) };
+}
+function mismaFoto_(a, b) { return ['caso', 'esc', 'estado', 'huella', 'calc', 'orden'].every(function (k) { return a[k] === b[k]; }); }
+/* Lee la pestaña sin visor_json cuando va al final (así nace): [cabecera, renglones]. */
+function filasFotos_(h) {
+  var ancho = h.getLastColumn(), cab = h.getRange(1, 1, 1, ancho).getValues()[0].map(low_), cj = cab.indexOf('visor_json'), hasta = ancho;
+  if (cj >= 0 && cab.slice(cj + 1).every(function (x) { return !x; })) hasta = cj;
+  return { cab: cab, filas: hasta > 0 && h.getLastRow() > 1 ? h.getRange(2, 1, h.getLastRow() - 1, hasta).getValues() : [] };
+}
+/* El índice de fotos servibles (sin visor_json ni nombres de personas), compartido unos segundos como la llave
+   del plan. ppp2-elige lo borra al escribir. */
+function fotos_() {
+  var cache = CacheService.getScriptCache(), hit = null;
+  try { hit = cache.get('vf'); } catch (e) { }
+  if (hit) { try { return JSON.parse(hit); } catch (e) { } }
+  var out = [], h = hojaFotos_();
+  if (h && h.getLastRow() > 1) {
+    var t = filasFotos_(h);
+    t.filas.forEach(function (f) { var m = fotoDe_(t.cab, f); if (m.caso && m.esc && m.estado === VISOR.FOTO_SIRVE) out.push(m); });
+  }
+  try { cache.put('vf', JSON.stringify(out), VISOR.LLAVE_S); } catch (e) { }
+  return out;
+}
+/* Las versiones servibles de un caso, por `orden`, y cuál es «la buena» (la que sirve `ppp:<caso>`). */
+function versionesFoto_(caso) {
+  var lista = fotos_().filter(function (f) { return f.caso === caso; }), buena = null;
+  lista.forEach(function (f) { if (f.elegida) buena = f; });                 // si hubiera dos marcadas, la de más abajo
+  if (!buena) lista.forEach(function (f) { if (!buena || f.orden >= buena.orden) buena = f; });
+  var vistas = {}, unicas = [];
+  for (var i = lista.length - 1; i >= 0; i--) if (!vistas[lista[i].esc]) { vistas[lista[i].esc] = 1; unicas.unshift(lista[i]); }
+  unicas.sort(function (a, b) { return a.orden - b.orden; });
+  return { lista: unicas, buena: buena };
+}
+function fotoPlan_(id) {
+  id = String(id || '').trim();
+  var m = VISOR.FOTO_RE.exec(id);
+  if (!m) return null;
+  var vs = versionesFoto_(m[1]), f = m[2] ? vs.lista.filter(function (x) { return x.esc === m[2]; })[0] : vs.buena;
+  return f ? { plan_id: id, caso: m[1], nombre: f.nombre || m[1], foto: f, buena: vs.buena ? vs.buena.esc : '' } : null;
+}
+/* La llave de una foto: su huella_entradas + calculado, qué versión es y cuál es la buena del caso (así cambia
+   cuando Dirección cambia la elegida, también para quien mira una versión fija). */
+function llaveFoto_(p) { var f = p.foto; return f.huella || f.calc ? 'pf_' + hash_([f.caso, f.esc, f.estado, f.orden, f.huella, f.calc, p.buena].join('|')) : ''; }
+/* El visor_json de la foto, tal cual (forma ppp2-visor-v1, más `origen` si lo trae). null = como si no hubiera. */
+function leeFoto_(f) {
+  var h = hojaFotos_();
+  if (!h || h.getLastRow() < 2) return null;
+  var vals = h.getDataRange().getValues(), cab = vals[0].map(low_), cj = cab.indexOf('visor_json'), crudo = null;
+  if (cj < 0) return null;
+  for (var i = vals.length - 1; i >= 1 && crudo === null; i--) if (mismaFoto_(fotoDe_(cab, vals[i]), f)) crudo = vals[i][cj];
+  if (typeof crudo !== 'string' || !crudo || crudo.length > VISOR.FOTO_MAX) return null;
+  var o;
+  try { o = JSON.parse(crudo); } catch (e) { return null; }
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
+  var base = {};
+  Object.keys(o).forEach(function (c) { if (VISOR.FOTO_RESERVADAS.indexOf(c) < 0) base[c] = o[c]; });
+  if (base.v && typeof base.v === 'object') { delete base.v.propuesta_por; delete base.v.aprobada_por; }   // nombres de personas: no salen
+  return base;
+}
+/* Dirección escoge «la buena» de un caso del PPP 1 (POST tipo=ppp2-elige; doPost ya pone candado, pausa e
+   idempotencia por request_id). Sólo mueve `elegida` en PPP_VISOR y anota quién y cuándo; no toca ningún libro.
+   Los planes con libro no se eligen aquí: su versión mostrada es la vigente, y cambiarla es aprobar. */
+function elige_(s, b, rid) {
+  if (!puede_(s, 'aprobar')) return { ok: false, error: 'permiso' };
+  var m = VISOR.FOTO_RE.exec(String(b.plan || '').trim());
+  if (!m) return { ok: false, error: 'plan' };
+  var v = String(b.v == null ? '' : b.v).trim();
+  if (!/^[A-Za-z0-9_-]{1,40}$/.test(v)) return { ok: false, error: 'version' };
+  var h = hojaFotos_();
+  if (!h || h.getLastRow() < 2) return { ok: false, error: 'plan' };
+  var t = filasFotos_(h), ce = t.cab.indexOf('elegida'), cp = t.cab.indexOf('elegida_por'), cf = t.cab.indexOf('elegida_fecha');
+  if (ce < 0 || cp < 0 || cf < 0) return { ok: false, error: 'hoja' };
+  var delCaso = [], destino = -1, hayPropuesta = false;
+  t.filas.forEach(function (f, i) {
+    var x = fotoDe_(t.cab, f);
+    if (x.caso !== m[1]) return;
+    delCaso.push(i);
+    if (x.esc === v && x.estado === VISOR.FOTO_SIRVE) destino = i;          // si se repite, la de más abajo
+    else if (x.esc === v) hayPropuesta = true;
+  });
+  if (!delCaso.length) return { ok: false, error: 'plan' };
+  if (destino < 0) return { ok: false, error: hayPropuesta ? 'propuesta' : 'version' };
+  var antes = '';
+  delCaso.forEach(function (i) {
+    var marcada = siNo_(t.filas[i][ce]);
+    if (marcada && i !== destino) { antes = String(fotoDe_(t.cab, t.filas[i]).esc); h.getRange(i + 2, ce + 1).setValue(''); }
+  });
+  h.getRange(destino + 2, ce + 1).setValue('sí');
+  h.getRange(destino + 2, cp + 1).setValue(seguro_(actor_(s)));
+  h.getRange(destino + 2, cf + 1).setValue(ahora_());
+  SpreadsheetApp.flush();
+  try { CacheService.getScriptCache().remove('vf'); } catch (e) { }
+  bitacoraVivero_(s, 'visor-elige', 'ppp:' + m[1], 'versión ' + v + (antes ? ' (antes ' + antes + ')' : ''), rid);
+  var p = fotoPlan_('ppp:' + m[1]), llave = p ? llaveFoto_(p) : '';
+  return { ok: true, llave: llave ? firmaVisor_(llave, p.plan_id, 0, '', { plan_id: p.plan_id, etiquetas: '', sesion: true }) : '' };
+}
+/* Para quien aprueba: todas las versiones servibles del caso y cuál es la buena (sólo planes-foto). */
+function eligeDe_(p) {
+  var vs = versionesFoto_(p.caso);
+  return { versiones: vs.lista.map(function (f) { return { v: f.esc, nombre: f.nombre || f.esc, buena: !!vs.buena && f.esc === vs.buena.esc }; }) };
+}
+/* La llave que ve la página: la del plan o la foto, más lo que la liga deja ver. */
+function firmaVisor_(llave, planId, pedida, regla, l) {
+  return 'vz_' + hash_([VISOR.CACHE, llave, planId, pedida, regla, String(l.plan_id), String(l.etiquetas || ''), l.sesion ? 's' : 'l'].join('|'));
+}
+function planVisor_(id) { return esFoto_(id) ? fotoPlan_(id) : planPorId_(id, true); }
+
 /* ───────────────────────── entrada ───────────────────────── */
 function visor_get_(q) {
   var l = null, s = null, planes = [];
@@ -278,29 +411,30 @@ function visor_get_(q) {
     if (!l) return { ok: false, error: 'liga' };
     var etiquetas = String(l.etiquetas || '').split('|').map(function (x) { return txt_(x, 40); });
     String(l.plan_id || '').split(/[,;| ]+/).forEach(function (id, i) {
-      var pl = id ? planPorId_(id, true) : null;
+      var pl = id ? planVisor_(id) : null;
       if (pl) planes.push({ p: pl, etiqueta: etiquetas[i] || '' });
     });
   } else {                                   // la ficha del plan: con la sesión del Portero, sin liga
     s = canje_(q.k);
     if (!s.ok) return { ok: false, error: s.error };
-    var uno = planPorId_(q.plan, true);
+    var uno = planVisor_(q.plan);
     if (uno) planes.push({ p: uno, etiqueta: '' });
     l = { plan_id: uno ? uno.plan_id : '', etiquetas: '', versiones: 'todas', sesion: true };
   }
   if (!planes.length) return { ok: false, error: 'plan' };
   var sel = planes.filter(function (x) { return x.p.plan_id === String(q.plan || ''); })[0] || planes[0];
-  var p = sel.p, pedida = Number(q.v) || 0, regla = String(l.versiones == null ? '' : l.versiones);
-  var llave = llaveVisor_(p);
-  var firma = llave ? 'vz_' + hash_([VISOR.CACHE, llave, p.plan_id, pedida, regla, String(l.plan_id), String(l.etiquetas || ''), l.sesion ? 's' : 'l'].join('|')) : '';
+  var p = sel.p, foto = p.foto || null, pedida = foto ? 0 : (Number(q.v) || 0), regla = foto ? '' : String(l.versiones == null ? '' : l.versiones);
+  var llave = foto ? llaveFoto_(p) : llaveVisor_(p);     // de una foto: su huella_entradas + calculado
+  var firma = llave ? firmaVisor_(llave, p.plan_id, pedida, regla, l) : '';
   if (firma && String(q.si || '') === firma) return { ok: true, igual: true, llave: firma };
   var base = null;
   if (firma) { var hit = cacheLee_(firma); if (hit) { try { base = JSON.parse(hit); } catch (e) { base = null; } } }
   if (!base) {
-    base = leeVisor_(p, libro_(p), pedida, regla);
+    base = foto ? leeFoto_(foto) : leeVisor_(p, libro_(p), pedida, regla);
+    if (!base) return { ok: false, error: 'plan' };
     if (firma) cacheGuarda_(firma, JSON.stringify(base), PPP2.PLAN_S);
   }
-  var d = diario_(p.plan_id);
+  var d = foto ? { estado: '' } : diario_(p.plan_id);
   var out = {
     ok: true, esquema: VISOR.ESQUEMA, llave: firma, leido: ahora_(),
     menu: { plan: p.plan_id, planes: planes.map(function (x) { return { id: x.p.plan_id, etiqueta: x.etiqueta || txt_(x.p.nombre, 40) }; }) },
@@ -308,9 +442,15 @@ function visor_get_(q) {
   };
   Object.keys(base).forEach(function (c) { out[c] = base[c]; });
   if (s) {
-    out.puede = { compartir: puede_(s, 'editar') };
+    out.puede = { compartir: !foto && puede_(s, 'editar') };   // las ligas de una foto se dan en la hoja Ligas
     if (out.puede.compartir && String(q.ligas || '') === '1') out.ligas = ligasDe_(p.plan_id);
     if (String(q.abre || '') === '1') out.marcas = marcas_(config_());
   } else if (String(q.abre || '') === '1') { out.marcas = marcas_(config_()); apertura_(l, p, q.eq); }
+  // Dirección (quien puede aprobar) ve además las versiones del caso para escoger la buena; por liga, sólo si
+  // trae su sesión en `k`. Una sesión que no vale aquí no estorba: el campo no sale y lo demás queda igual.
+  if (foto && String(q.k || '')) {
+    var sd = s || canje_(q.k);
+    if (sd && sd.ok && puede_(sd, 'aprobar')) out.elige = eligeDe_(p);
+  }
   return out;
 }
