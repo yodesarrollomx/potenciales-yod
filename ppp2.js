@@ -85,13 +85,12 @@
     if (n === null || n <= 0) return '—';
     return n + ' meses <span class="p2-tenue">(' + fmt(n / 12, 1) + ' años)</span>';
   }
+  /* Las unidades que son cifras (las de la plantilla v2 incluidas: programa, norma, costo por partes y ritmo de ventas). */
+  var NUMERICAS = ['MDP', '%', 'm²', 'meses', 'mes', '1/0', 'unidades', 'm', 'veces', 'niveles', 'cajones', 'por vivienda', 'm² por cajón', '$/m²', 'unidades por mes'];
   function valorDato(d) {
     var n = num(d.valor);
-    if (d.unidad === 'MDP') return mdp(d.valor);
-    if (d.unidad === '%') return pct(d.valor);
-    if (d.unidad === 'm²') return n === null ? esc(d.valor || '—') : fmt(n, n % 1 ? 2 : 0) + ' m²';
-    if (d.unidad === 'mes' || d.unidad === 'meses') return n === null ? esc(d.valor || '—') : (d.unidad === 'mes' ? 'mes ' + n : n + ' meses');
-    return esc(d.valor || '—');
+    if (n === null || NUMERICAS.indexOf(d.unidad) < 0) return esc(d.valor === null || d.valor === undefined || d.valor === '' ? '—' : d.valor);
+    return cifra(d.unidad, n);
   }
   function claseEstado(e) {
     return { confirmado: 'verde', respondida: 'verde', cerrado: 'verde', vigente: 'verde', aceptado: 'verde', aprueba: 'verde',
@@ -379,7 +378,9 @@
     else if (puede.aprobar && v.estado !== 'descartada') html = chip(v.estado || '', claseEstado(v.estado)) +
       '<button class="p2-btn" data-accion="aprobar" data-v="' + estado.version + '"><i class="ti ti-check"></i> Volver vigente esta versión</button>';
     else if (v.estado) html = chip(v.estado, claseEstado(v.estado));
-    return (html ? '<div class="p2-estado-v">' + html + '</div>' : '') + avisoTope(v);
+    var norma = num(v.norma_alertas) > 0 ? '<div class="p2-aviso p2-norma">' + chip('Norma', 'rojo') + '<span>' + esc(v.norma_texto || (v.norma_alertas + ' reglas de la norma no se cumplen.')) +
+      ' <button type="button" class="p2-enlace" data-accion="abrir-cuadro" data-c="terreno">Ver en el cuadro Terreno</button></span></div>' : '';
+    return (html ? '<div class="p2-estado-v">' + html + '</div>' : '') + norma + avisoTope(v);
   }
   /* El expediente: lo que respalda a los cuadros. Cerrado por omisión; una sección se abre al pedirla y se cierra al volver a tocarla. */
   function expediente() {
@@ -428,13 +429,24 @@
   function corta(t, n) { t = String(t || ''); return t.length > n ? t.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : t; }
   function cifra(unidad, v) {
     if (num(v) === null) return v === '' || v === null || v === undefined ? '—' : esc(v);
-    if (unidad === '%') return pct(v);
-    if (unidad === 'MDP') return mdp(v);
-    if (unidad === 'mes') return 'mes ' + fmt(v, 0);
-    if (unidad === 'meses') return fmt(v, 0) + ' meses';
-    if (unidad === 'm²') return fmt(v, 0) + ' m²';
-    if (unidad === '1/0') return v ? 'sí' : 'no';
-    return fmt(v, 2);
+    switch (unidad) {
+      case '%': return pct(v);
+      case 'MDP': return mdp(v);
+      case 'mes': return 'mes ' + fmt(v, 0);
+      case 'meses': return fmt(v, 0) + ' meses';
+      case 'm²': return fmt(v, v % 1 ? 2 : 0) + ' m²';
+      case 'm': return fmt(v, v % 1 ? 1 : 0) + ' m';
+      case '1/0': return v ? 'sí' : 'no';
+      case 'veces': return fmt(v, 2) + ' veces';
+      case 'niveles': return fmt(v, 0) + (v === 1 ? ' nivel' : ' niveles');
+      case 'cajones': return fmt(v, 0) + (v === 1 ? ' cajón' : ' cajones');
+      case 'por vivienda': return fmt(v, 2) + ' por vivienda';
+      case 'm² por cajón': return fmt(v, 0) + ' m² por cajón';
+      case '$/m²': return '$' + fmt(v, 0) + ' por m²';
+      case 'unidades por mes': return fmt(v, v % 1 ? 1 : 0) + ' por mes';
+      case 'unidades': return fmt(v, 0) + ' unidades';
+      default: return fmt(v, v % 1 ? 2 : 0);
+    }
   }
   function enFicha() { return !!(estado.planId && estado.plan && document.getElementById('p2Cuadros')); }
   function vigilaHoja() {
@@ -508,7 +520,7 @@
     if (e.tipo === 'productos') {
       return (p.productos || []).filter(function (x) { return x.nombre; }).map(function (x) {
         return renglon(x.nombre, (num(x.unidades) === null ? '—' : fmt(x.unidades, 0)) + ' u · ' + (num(x.m2) === null ? '—' : fmt(x.m2, 0)) + ' m²',
-          (num(x.precio_m2) === null ? '' : '$' + fmt(x.precio_m2, 0) + ' por m² · ') + 'ventas ' + mdp(x.ventas) + (x.estado ? ' · ' + esc(x.estado) : ''),
+          (x.uso ? esc(x.uso) + ' · ' : '') + (num(x.precio_m2) === null ? '' : '$' + fmt(x.precio_m2, 0) + ' por m² · ') + 'ventas ' + mdp(x.ventas) + (x.estado ? ' · ' + esc(x.estado) : ''),
           editar ? 'producto:' + x.fila : '', x.nombre);
       });
     }
@@ -553,7 +565,7 @@
   function ligadoA(e, comoDato) {
     var p = e.pasa_por || [], m = e.mueve || [], r = e.revision || [];
     if (comoDato && e.dato_otros) { p = e.dato_pasa_por || p; m = e.dato_mueve || m; }
-    var clave = ['Ventas', 'Costo sin tierra', 'Fin de obra', 'Capital', 'Banco (saldo máximo)', 'Dinero que faltaría', 'Ganancia real', 'Lo que recibe el dueño', 'Mes de reparto', 'Edad del plan'];
+    var clave = ['Lo que cumple de la norma', 'Ventas', 'Costo sin tierra', 'Fin de obra', 'Capital', 'Banco (saldo máximo)', 'Dinero que faltaría', 'Ganancia real', 'Lo que recibe el dueño', 'Mes de reparto', 'Edad del plan'];
     var top = m.filter(function (x) { return clave.indexOf(x) >= 0; }).slice(0, 6);
     if (!p.length && !top.length && !r.length) return '<p class="p2-chico p2-tenue">Se enseña en el cuadro; ninguna otra cifra del plan depende de este dato.</p>';
     return (p.length ? '<p><b>Pasa por</b> ' + esc(p.slice(0, 4).join(' · ')) + (p.length > 4 ? ' <span class="p2-tenue">y ' + (p.length - 4) + ' cálculos más</span>' : '') + '</p>' : '') +
@@ -568,10 +580,12 @@
     if (/^producto:/.test(ident)) { dialogoProducto(Number(ident.slice(9))); return; }
     if (ident === 'reparto:esquema') { dialogoEsquema(); return; }
     if (!e) return;
+    // el programa de una versión cambia lo que se construye y su costo; lo que se vende sale de los productos
+    if (e.palanca === 'niveles' || e.palanca === 'desplante') e = Object.assign({}, e, { nota: 'Cambia la construcción y su costo en esta versión. Lo que se vende sale de los productos: si cambia lo que cabe, ajústalos. ' + (e.nota || '') });
     lapiz.e = e; lapiz.id = ident;
     var pa = e.tipo === 'palanca' ? palancaDe(e.palanca) : null, d = e.dato ? datoDe(e.dato) : null;
     var unidad = pa ? pa.unidad : (d ? d.unidad : e.unidad), hoy = pa ? pa.v[k - 1] : (d ? d.valor : null);
-    var esNumero = ['MDP', '%', 'm²', 'meses', 'mes', '1/0', 'unidades'].indexOf(unidad) >= 0;
+    var esNumero = NUMERICAS.indexOf(unidad) >= 0;
     var mostrado = unidad === '%' && num(hoy) !== null ? Math.round(hoy * 10000) / 100 : (hoy == null ? '' : hoy);
     var vigente = ver(k).estado === 'vigente', bloqueada = vigente && !puede.aprobar;
     var opciones = '';
@@ -626,7 +640,7 @@
   function valorLapiz(f) {
     var e = lapiz.e, pa = e.tipo === 'palanca' ? palancaDe(e.palanca) : null, d = e.dato ? datoDe(e.dato) : null;
     var unidad = pa ? pa.unidad : (d ? d.unidad : e.unidad), crudo = f.valor.value;
-    if (['MDP', '%', 'm²', 'meses', 'mes', '1/0', 'unidades'].indexOf(unidad) < 0) return { ok: true, valor: crudo };
+    if (NUMERICAS.indexOf(unidad) < 0) return { ok: true, valor: crudo };
     var n = aNumero(crudo, unidad);
     if (n === null || isNaN(n)) return { ok: false };
     return { ok: true, valor: n };
@@ -635,9 +649,12 @@
     ['ventas', 'Ventas', 'MDP', 1], ['obra', 'Obra directa', 'MDP', -1], ['costo_con_tierra', 'Costo con tierra', 'MDP', -1],
     ['ganancia', 'Ganancia real', 'MDP', 1], ['banco_max', 'Banco, saldo máximo', 'MDP', -1], ['respaldo', 'Dinero que faltaría', 'MDP', -1],
     ['costo_dinero', 'Costo del dinero', 'MDP', -1], ['aportacion', 'Tierra y capital entre costo', '%', 1],
-    ['preventa_inicio', 'Preventa al arrancar la obra', '%', 1], ['fin_obra', 'Fin de obra', 'mes', -1], ['mes_reparto', 'Mes de reparto', 'mes', -1]
+    ['preventa_inicio', 'Preventa al arrancar la obra', '%', 1], ['fin_obra', 'Fin de obra', 'mes', -1], ['mes_reparto', 'Mes de reparto', 'mes', -1],
+    ['construidos', 'Construcción sobre el terreno', 'm²', 0], ['cus_usado', 'Intensidad (veces el terreno)', 'veces', 0], ['cos_usado', 'Ocupación del terreno', '%', 0],
+    ['cajones_pide', 'Cajones que pide la norma', 'cajones', 0]
   ];
   function diferente(u, a, b) {
+    if (a === undefined || b === undefined) return false;          // un libro de la plantilla v1 no trae el programa ni la norma
     if (num(a) === null || num(b) === null) return a !== b;
     return Math.abs(a - b) >= (u === 'MDP' ? 0.05 : (u === '%' ? 0.0005 : 0.5));
   }
@@ -649,6 +666,10 @@
     if (falta !== null && falta >= 0.01) out.push(['mal', 'Faltaría dinero: ' + mdp(falta) + ' de respaldo. La revisión para fondos pide que sea cero.']);
     else if (faltaba !== null && faltaba >= 0.01) out.push(['bien', 'Ya no faltaría dinero.']);
     if (num(despues.ganancia) !== null && despues.ganancia < 0) out.push(['mal', 'La ganancia real queda negativa.']);
+    // la norma: el libro dice qué deja de cumplir (sólo en libros de la plantilla v2)
+    var na = num(antes.alertas_norma), nb = num(despues.alertas_norma);
+    if (nb !== null && nb > 0) out.push(['mal', (na !== null && na > 0 && antes.norma_texto === despues.norma_texto ? 'Sigue sin cumplir la norma: ' : 'Con esta cifra no cumple la norma: ') + (despues.norma_texto || nb + ' reglas.')]);
+    else if (nb === 0 && na !== null && na > 0) out.push(['bien', 'Con esta cifra ya cumple la norma.']);
     [['aportacion', 'rv_aportacion', 'Tierra y capital entre costo'], ['preventa_inicio', 'rv_preventa', 'La preventa al arrancar la obra']].forEach(function (x) {
       var pr = P[x[1]], a = num(antes[x[0]]), b = num(despues[x[0]]);
       if (!pr || !V.estadoPrueba || b === null) return;
@@ -671,7 +692,7 @@
     }
     var a = r.antes || {}, b = r.despues || {}, cambian = FILAS_LAPIZ.filter(function (f) { return diferente(f[2], a[f[0]], b[f[0]]); });
     var filas = cambian.map(function (f) {
-      var mejor = num(a[f[0]]) !== null && num(b[f[0]]) !== null ? (b[f[0]] - a[f[0]]) * f[3] > 0 : null;
+      var mejor = f[3] && num(a[f[0]]) !== null && num(b[f[0]]) !== null ? (b[f[0]] - a[f[0]]) * f[3] > 0 : null;
       return '<tr><td>' + esc(f[1]) + '</td><td class="n">' + cifra(f[2], a[f[0]]) + '</td><td class="n"><b>' + cifra(f[2], b[f[0]]) + '</b></td>' +
         '<td class="n ' + (mejor === null ? '' : (mejor ? 'sube' : 'baja')) + '">' + (mejor === null ? '' : (mejor ? '▲' : '▼')) + '</td></tr>';
     }).join('');
@@ -785,7 +806,7 @@
   function dialogoProducto(i) {
     var x = (estado.plan.productos || [])[i - 1];
     if (!x) return;
-    lapiz.previo = { fila: i, campos: { unidades: x.unidades, m2: x.m2, precio_m2: x.precio_m2, estado: x.estado || '', fuente: x.fuente || '' } };
+    lapiz.previo = { fila: i, campos: { unidades: x.unidades, m2: x.m2, precio_m2: x.precio_m2, estado: x.estado || '', fuente: x.fuente || '', uso: x.uso || '' } };
     var R = entrada('productos');
     abrirDialogo('<div class="p2-sobre">Producto · todas las versiones</div><h2>' + esc(x.nombre) + '</h2>' +
       (R ? '<div class="p2-ligado"><div class="p2-sobre">Está ligado a</div>' + ligadoA(R) + '</div>' : '') +
@@ -793,6 +814,8 @@
       '<label>Unidades<input name="unidades" inputmode="decimal" value="' + esc(x.unidades == null ? '' : x.unidades) + '"></label>' +
       '<label>m² vendibles<input name="m2" inputmode="decimal" value="' + esc(x.m2 == null ? '' : x.m2) + '"></label>' +
       '<label>Precio por m² (pesos)<input name="precio_m2" inputmode="decimal" value="' + esc(x.precio_m2 == null ? '' : x.precio_m2) + '"></label>' +
+      '<label>Uso <span class="p2-tenue">(cuenta para los cajones que pide la norma)</span><select name="uso"><option value="">sin decir</option>' +
+        ['vivienda', 'comercio', 'oficina', 'otro'].map(function (u) { return '<option' + (u === x.uso ? ' selected' : '') + '>' + u + '</option>'; }).join('') + '</select></label>' +
       '<label>Estado<select name="estado">' + ['confirmado', 'supuesto', 'por confirmar', 'en conflicto', 'derivado', 'falta'].map(function (e) { return '<option' + (e === x.estado ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></label>' +
       '<label>De dónde sale<textarea name="fuente" rows="2">' + esc(x.fuente || '') + '</textarea></label>' +
       '<p class="p2-chico p2-tenue">Los productos no tienen columna de prueba: al guardar cambian las ventas de todas las versiones, y lo puedes deshacer enseguida.</p>' +
@@ -884,6 +907,7 @@
       ['En cuántos meses', function (x) { return num(x.dueno_meses) === null ? '—' : esc(x.dueno_meses); }, 'n'], ['Ganancia real', function (x) { return mdp(x.ganancia); }, 'n'],
       ['Dinero ajeno máximo', function (x) { return mdp(x.max_ajeno); }, 'n'], ['Capital', function (x) { return mdp(x.capital) + avisoTope(x, true); }, 'n'],
       ['Banco, saldo máximo', function (x) { return mdp(x.banco_max); }, 'n'], ['Respaldo que faltaría', function (x) { return mdp(x.respaldo); }, 'n'],
+      ['La norma', function (x) { var n = num(x.norma_alertas); return n === null ? '<span class="p2-tenue">—</span>' : (n > 0 ? chip(n + (n === 1 ? ' regla' : ' reglas') + ' sin cumplir', 'rojo') : chip('cumple', 'verde')); }],
       ['Costo del dinero', function (x) { return mdp(x.costo_dinero); }, 'n'], ['Obra', function (x) { return 'mes ' + esc(x.obra_inicio || '—') + ' a ' + esc(x.fin_obra || '—'); }, 'n'],
       ['Saldos desde el mes', function (x) { return esc(x.mes_saldos || '—'); }, 'n'], ['Revisión para fondos', function (x) { return esc(x.rv_resultado || '—'); }]
     ];
@@ -1284,7 +1308,7 @@
   function editarDato(claveDato) {
     var d = (estado.plan.datos || []).filter(function (x) { return x.clave === claveDato; })[0];
     if (!d) return;
-    var esNumero = ['MDP', '%', 'm²', 'meses', 'mes'].indexOf(d.unidad) >= 0;
+    var esNumero = NUMERICAS.indexOf(d.unidad) >= 0;
     var mostrado = d.unidad === '%' && num(d.valor) !== null ? Math.round(d.valor * 10000) / 100 : d.valor;
     abrirDialogo('<h2>' + esc(d.concepto) + '</h2><form class="p2-form" data-form="dato" data-clave="' + esc(d.clave) + '" data-unidad="' + esc(d.unidad) + '">' +
       '<label>Valor ' + (d.unidad && d.unidad !== 'texto' ? '(' + esc(d.unidad === '%' ? '% · escribe 30 para 30%' : d.unidad) + ')' : '') +
@@ -1316,6 +1340,7 @@
     if (!b || !raiz.contains(b) && !b.closest('.p2-dialogo') && !b.closest('#vzModal')) return;
     var a = b.getAttribute('data-accion');
     if (a === 'lapiz') { abrirLapiz(b.getAttribute('data-e')); return; }
+    if (a === 'abrir-cuadro') { var cu = document.querySelector('#p2Cuadros .vz-card[data-card="' + b.getAttribute('data-c') + '"]'); if (cu) cu.click(); return; }
     if (a === 'lapiz-probar') { probarLapiz(b); return; }
     if (a === 'ir') {
       var adonde = b.getAttribute('data-a');
@@ -1446,7 +1471,7 @@
     }
     if (tipo === 'dato') {
       var unidad = f.getAttribute('data-unidad'), crudo = d.get('valor'), valor = crudo;
-      if (['MDP', '%', 'm²', 'meses', 'mes'].indexOf(unidad) >= 0) { valor = aNumero(crudo, unidad); if (valor === null) valor = ''; if (isNaN(valor)) { toast('Escribe un número.'); return; } }
+      if (NUMERICAS.indexOf(unidad) >= 0) { valor = aNumero(crudo, unidad); if (valor === null) valor = ''; if (isNaN(valor)) { toast('Escribe un número.'); return; } }
       enviar({ tipo: 'ppp2-dato', clave: f.getAttribute('data-clave'), valor: valor, estado: d.get('estado'), fuente: d.get('fuente') });
       return;
     }
@@ -1467,6 +1492,7 @@
       });
       if (mal) { toast('Escribe números positivos.'); return; }
       if (d.get('estado') !== previo.estado) campos.estado = d.get('estado');
+      if (d.get('uso') !== null && String(d.get('uso')) !== String(previo.uso || '')) campos.uso = d.get('uso');
       if (String(d.get('fuente') || '') !== String(previo.fuente || '')) campos.fuente = d.get('fuente');
       if (!Object.keys(campos).length) { cerrarDialogo(); return; }
       var atras = {};

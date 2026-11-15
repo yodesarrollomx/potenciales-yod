@@ -44,7 +44,7 @@ test('sin banco no hay pruebas de banco; con banco y preventa suficiente la vers
 });
 
 test('el resumen que lee el servidor trae edad, versión mostrada y lo que recibe el dueño', () => {
-  assert.equal(resumen('esquema'), 'ppp2-libro-v1');
+  assert.equal(resumen('esquema'), 'ppp2-libro-v2');
   assert.equal(resumen('plan.edad'), 'plántula');
   assert.equal(resumen('plan.version_mostrada'), 2);
   assert.ok(resumen('v2.dueno_recibe') > resumen('v2.dueno_aporta'));
@@ -66,7 +66,8 @@ test('el tope de capital (1/3 de las ventas) sólo avisa: cuánto se pasa cada v
   }
   // las claves nuevas del Resumen van al final, después de las que ya leían los libros vivos
   const claves = L.Resumen.valores.map((f) => String(f[0]).trim()).filter(Boolean);
-  assert.deepEqual(claves.slice(claves.indexOf('plan.consejo_sin_leer') + 1), ['v1.capital_sobre_tope', 'v2.capital_sobre_tope', 'v3.capital_sobre_tope']);
+  const alFinal = ['capital_sobre_tope', 'norma_alertas', 'norma_texto', 'niveles', 'construidos', 'cos_usado', 'cus_usado', 'cajones', 'cajones_pide'];
+  assert.deepEqual(claves.slice(claves.indexOf('plan.consejo_sin_leer') + 1), [].concat(...alFinal.map((c) => [1, 2, 3].map((k) => 'v' + k + '.' + c))));
   // y en Versiones va después de las comprobaciones: no mueve ningún renglón que ya existía
   const filas = L.Versiones.valores.map((f) => String(f[0]).trim());
   assert.ok(filas.indexOf('capital_sobre_tope') > filas.indexOf('ck_unidades'));

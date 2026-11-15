@@ -205,3 +205,5 @@ details.p2-modulo summary{cursor:pointer;font-weight:600;padding:6px 0;display:f
 .p2-deshacer span { flex: 1 1 200px; min-width: 0; }
 .p2-deshacer .p2-btn { display: inline-flex; border: 1px solid rgba(255,255,255,.4); background: transparent; color: #fff; border-radius: 999px; padding: 6px 14px; font: inherit; cursor: pointer; }
 .p2-deshacer .p2-x { border: 0; background: none; color: #fff; font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.p2-cuadros .p2-norma { border: 1px solid #e3bdb7; background: var(--p2-rojo-claro); border-radius: 12px; padding: 9px 12px; margin-top: 8px; color: #6d2a22; }
+.p2-cuadros .p2-norma span { flex: 1 1 260px; min-width: 0; }

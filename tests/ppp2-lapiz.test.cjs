@@ -56,8 +56,9 @@ test('un dato que también leen otras cuentas del libro no se prueba por su pala
   // la comisión de los datos también entra a la obra directa que sale de la lámina (=OBRA): probarla sólo por su
   // palanca daría otras cifras que guardarla; el servidor lo dice y no escribe nada.
   // (el accesorio sólo guarda las fórmulas del Modelo y de Pruebas: la de la obra directa se pone como la escribe la plantilla)
-  const datos = w.libro.getSheetByName('Datos'), C = (k) => 'Datos!$C$' + filaDe(datos, k);
-  datos.getRange(filaDe(datos, 'costo.obra_directa'), 3).setFormula('=IFERROR((' + C('lamina.costo_total') + '-' + C('tierra.valor') + '-' + C('costo.comision') + '*' + C('lamina.ventas') +
+  const datos = w.libro.getSheetByName('Datos'), C = (k) => { const f = filaDe(datos, k); assert.ok(f > 0, k); return 'Datos!$C$' + f; };
+  // (como la obra directa que la plantilla v1 sacaba de la lámina: la leen la tierra, la comisión, el cierre y los porcentajes)
+  datos.getRange(filaDe(datos, 'costo.obra_directa'), 3).setFormula('=IFERROR((410-' + C('tierra.valor') + '-' + C('costo.comision') + '*500' +
     '-' + C('costo.cierre') + '*' + C('tierra.valor') + ')/(1+' + C('costo.indirectos') + '+' + C('costo.imprevistos') + '),"")');
   const mod = w.libro.getSheetByName('Modelo'), antes = JSON.stringify(pruebaDe(mod));
   const r = w.post({ k: EDITOR, tipo: 'ppp2-simular', plan: PLAN, version: 1, cambios: [{ clave: 'costo.comision', valor: 0.05 }] });
@@ -72,11 +73,21 @@ test('un dato que también leen otras cuentas del libro no se prueba por su pala
   // la palanca sola (sólo en la versión) sí se prueba
   const p = w.post({ k: EDITOR, tipo: 'ppp2-simular', plan: PLAN, version: 1, cambios: [{ clave: 'comision', valor: 0.05 }] });
   assert.equal(p.ok, true, JSON.stringify(p));
+  // en la plantilla v2, la construcción de cada versión lee los niveles y la huella de los datos, y la obra por partes del
+  // programa base lee el costo por m²: esos datos tampoco se prueban por su palanca (sí sus palancas, sólo en la versión)
+  ['prog.niveles', 'prog.desplante', 'costo.m2_obra'].forEach((clave) => {
+    const x = w.post({ k: EDITOR, tipo: 'ppp2-simular', plan: PLAN, version: 2, cambios: [{ clave, valor: 1 }] });
+    assert.equal(x.motivo, 'otros', clave + ' ' + JSON.stringify(x));
+  });
+  assert.equal(w.post({ k: EDITOR, tipo: 'ppp2-simular', plan: PLAN, version: 2, cambios: [{ clave: 'niveles', valor: 6 }] }).ok, true);
   // y el catálogo lo sabe, para que la página no ofrezca la prueba
   const R = require('vm').runInNewContext(fs.readFileSync(path.join(RAIZ, 'ppp2-relaciones.js'), 'utf8') + ';window.PPP2_RELACIONES', { window: {} });
-  ['comision', 'tierra', 'indirectos', 'imprevistos', 'cierre'].forEach((k) => assert.equal(R.entradas['palanca:' + k].dato_otros, true, k));
+  // (plantilla v2: la obra directa sale del costo por partes, así que lo que la alimenta —el programa y el costo por m²—
+  // también la mueve si se guarda en los datos; la comisión y los indirectos ya no entran a la obra directa)
+  ['niveles', 'desplante', 'cajones', 'cajones_sotano', 'm2_cajon', 'costo_m2', 'costo_m2_sotano', 'costo_m2_superficie', 'urbanizacion']
+    .forEach((k) => assert.equal(R.entradas['palanca:' + k].dato_otros, true, k));
   // el capital de los datos también lo lee el aviso del tope (Versiones), que el lápiz no enseña: sí se prueba
-  ['tasa_capital', 'capital'].forEach((k) => assert.equal(R.entradas['palanca:' + k].dato_otros, undefined, k));
+  ['tasa_capital', 'capital', 'comision', 'indirectos'].forEach((k) => assert.equal(R.entradas['palanca:' + k].dato_otros, undefined, k));
   assert.equal(w.post({ k: EDITOR, tipo: 'ppp2-simular', plan: PLAN, version: 1, cambios: [{ clave: 'din.capital', valor: 100 }] }).ok, true);
 });
 

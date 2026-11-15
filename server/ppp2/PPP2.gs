@@ -339,9 +339,9 @@ function leePlan_(p, libro) {
   var datos = tabla_(libro, 'Datos', 5, 11).filter(function (f) { return /^[a-z]+\.[a-z0-9_]+$/.test(String(f[0])); }).map(function (f) {
     return { clave: f[0], concepto: f[1], valor: f[2], unidad: f[3], estado: f[4], fuente: f[5], fecha: f[6], quien: f[7], pregunta: f[8], nota: f[9], requerido: f[10] === 'sí' };
   });
-  var productos = libro.getSheetByName('Productos').getRange(5, 1, 6, 9).getValues().map(function (f, i) {
+  var productos = libro.getSheetByName('Productos').getRange(5, 1, 6, 10).getValues().map(function (f, i) {
     f = f.map(limpio_);
-    return { fila: i + 1, nombre: f[0], unidades: f[1], m2: f[2], precio_m2: f[3], ventas: f[4], precio_unidad: f[5], durante_obra: f[6], estado: f[7], fuente: f[8] };
+    return { fila: i + 1, nombre: f[0], unidades: f[1], m2: f[2], precio_m2: f[3], ventas: f[4], precio_unidad: f[5], durante_obra: f[6], estado: f[7], fuente: f[8], uso: f[9] || '' };
   });
   var palancas = tabla_(libro, 'Modelo', 7, 12).filter(function (f) { return /^[a-z][a-z0-9_]*$/.test(String(f[0])); }).map(function (f) {
     return { clave: f[0], concepto: f[1], unidad: f[2], base: f[3], v: [f[4], f[5], f[6]], cambia: [f[9] === 'cambia', f[10] === 'cambia', f[11] === 'cambia'], calculado: f[3] === '' || f[3] === null };
@@ -533,7 +533,10 @@ function accion_(s, b, rid) {
 }
 
 /* ───────────────────────── escrituras ───────────────────────── */
-var UNIDADES_NUM = { 'MDP': 1, '%': 1, 'm²': 1, 'meses': 1, 'mes': 1, '1/0': 1, 'unidades': 1 };
+var UNIDADES_NUM = { 'MDP': 1, '%': 1, 'm²': 1, 'meses': 1, 'mes': 1, '1/0': 1, 'unidades': 1,
+  // plantilla v2: programa, norma, costo por partes y ritmo de ventas
+  'm': 1, 'veces': 1, 'niveles': 1, 'cajones': 1, 'por vivienda': 1, 'm² por cajón': 1, '$/m²': 1, 'unidades por mes': 1 };
+var USOS_PRODUCTO = ['vivienda', 'comercio', 'oficina', 'otro'];
 
 function numero_(v, unidad) {
   if (v === '' || v === null || v === undefined) return '';
@@ -596,13 +599,14 @@ function producto_(s, libro, b, rev, rid) {
   if (!(i >= 1 && i <= 6 && Math.round(i) === i)) return { ok: false, error: 'fila' };
   var h = libro.getSheetByName('Productos'), r = 4 + i, c = b.campos || {};
   var antes = h.getRange(r, 1, 1, 9).getValues()[0];
-  var mapa = { nombre: [1, 'txt'], unidades: [2, 'unidades'], m2: [3, 'm²'], precio_m2: [4, 'num'], durante_obra: [7, '%'], estado: [8, 'estado'], fuente: [9, 'txt'] };
+  var mapa = { nombre: [1, 'txt'], unidades: [2, 'unidades'], m2: [3, 'm²'], precio_m2: [4, 'num'], durante_obra: [7, '%'], estado: [8, 'estado'], fuente: [9, 'txt'], uso: [10, 'uso'] };
   var cambios = [];
   for (var k in c) {
     if (!mapa[k]) return { ok: false, error: 'campo' };
     var col = mapa[k][0], tipo = mapa[k][1], v;
     if (tipo === 'txt') v = txt_(c[k], k === 'nombre' ? 80 : 500);
     else if (tipo === 'estado') { v = low_(c[k]); if (v && ESTADOS.dato.indexOf(v) < 0) return { ok: false, error: 'estado' }; }
+    else if (tipo === 'uso') { v = low_(c[k]); if (v && USOS_PRODUCTO.indexOf(v) < 0) return { ok: false, error: 'valor' }; }
     else { v = numero_(c[k], tipo === 'num' ? 'MDP-libre' : tipo); if (v === null || (typeof v === 'number' && v < 0)) return { ok: false, error: 'valor' }; }
     cambios.push([col, v]);
   }
@@ -874,7 +878,9 @@ function sanarPrueba_(mod) {
    de prueba, el libro calcula y el servidor lee. */
 var LAPIZ = {
   MAX: 4,                                                     // cifras de prueba por ensayo
-  MODELO: ['ventas', 'costo_con_tierra', 'obra', 'fin_obra', 'aportacion', 'preventa_inicio'],   // renglones calculados del Modelo, columna Prueba
+  // renglones calculados del Modelo, columna Prueba (los del programa y la norma sólo existen en la plantilla v2)
+  MODELO: ['ventas', 'costo_con_tierra', 'obra', 'fin_obra', 'aportacion', 'preventa_inicio',
+    'construidos', 'cajones_pide', 'cajones_faltan', 'cos_usado', 'cus_usado', 'alertas_norma', 'norma_texto'],
   PRUEBAS: ['banco_max', 'respaldo', 'costo_dinero', 'ganancia', 'mes_reparto']                    // Pruebas!B6:B10, en ese orden
 };
 /* ¿Alguna otra fórmula de las hojas que alimentan lo que el lápiz lee (Datos, Modelo, Productos, Reparto) lee ese dato,
@@ -917,7 +923,10 @@ function espejos_(libro, mod) {
 }
 function leeLapiz_(mod, pru, filas) {
   var o = {};
-  LAPIZ.MODELO.forEach(function (k) { o[k] = filas[k] ? r3_(limpio_(mod.getRange(filas[k], 8).getValue())) : null; });
+  LAPIZ.MODELO.forEach(function (k) {
+    var v = filas[k] ? limpio_(mod.getRange(filas[k], 8).getValue()) : null;
+    o[k] = typeof v === 'number' ? r3_(v) : (v === null || v === undefined ? null : txt_(v, 500));
+  });
   var b = pru.getRange(6, 2, LAPIZ.PRUEBAS.length, 1).getValues();
   LAPIZ.PRUEBAS.forEach(function (k, i) { o[k] = r3_(limpio_(b[i][0])); });
   return o;
@@ -1873,7 +1882,10 @@ function sembrar_(s, b, rid) {
     if (f) pq.getRange(f, 7, 1, 5).setValues([fila_(['respondida', q === 'M01.Q01' ? nombre : txt_(b.objetivo, 500), 'Al sembrar', actor_(s), hoyISO_()])]);
   });
   bitacora_(libro, s, 'Sembró el plan desde la plantilla', 'todas', id, '', nombre, 'PPP 2', 0, rid);
-  vivero_().getSheetByName('Planes').appendRow(fila_([id, nombre, copia.getId(), 'activo', hoyISO_(), actor_(s), txt_(b.caso_ppp, 40), cfg.esquema_libro || PPP2.LIBRO, '']));
+  // el esquema lo dice la propia plantilla (Resumen · esquema): así un plan sembrado de la v2 queda anotado como v2
+  var res = libro.getSheetByName('Resumen'), fe = res ? filaPorClave_(res, 'esquema') : 0;
+  var esquema = fe ? txt_(res.getRange(fe, 2).getValue(), 40) : '';
+  vivero_().getSheetByName('Planes').appendRow(fila_([id, nombre, copia.getId(), 'activo', hoyISO_(), actor_(s), txt_(b.caso_ppp, 40), esquema || cfg.esquema_libro || PPP2.LIBRO, '']));
   bitacoraVivero_(s, 'sembrar', id, nombre, rid, 'ok');
   CacheService.getScriptCache().remove('vivero');
   CacheService.getScriptCache().remove('planes');      // el plan nuevo se abre enseguida

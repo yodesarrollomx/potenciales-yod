@@ -46,6 +46,7 @@ MUEVE = [
     ("costo_dinero", "Costo del dinero"), ("ganancia", "Ganancia real"), ("margen", "Margen"),
     ("dueno_recibe", "Lo que recibe el dueño"), ("dueno_meses", "Cuándo recibe lo último"),
     ("alianza_recibe", "Lo que recibe la alianza"), ("mes_reparto", "Mes de reparto"), ("rv_resultado", "Revisión para fondos"),
+    ("norma_alertas", "Lo que cumple de la norma"),
 ]
 REVISION = [
     ("rv_linea_ventas", "línea del banco entre ventas"), ("rv_linea_costo", "línea del banco entre costo"),
@@ -56,13 +57,17 @@ REVISION = [
 
 # Del visor hacia atrás: qué se edita en cada uno de los siete cuadros, en el orden en que se lee.
 CUADROS = {
-    "terreno": ["dato:terreno.m2", "palanca:tierra", "dato:lamina.m2_construidos"],
-    "producto": ["productos", "palanca:ajuste_precio", "palanca:comision"],
+    "terreno": ["dato:terreno.m2", "dato:terreno.frente", "palanca:tierra", "dato:lamina.m2_construidos", "palanca:niveles",
+                "palanca:desplante", "palanca:cajones", "palanca:cajones_sotano", "palanca:m2_cajon", "dato:norma.zona",
+                "palanca:norma_cos", "palanca:norma_cus", "palanca:norma_niveles", "palanca:cajon_vivienda", "palanca:cajon_visitas",
+                "palanca:m2_cajon_comercio", "palanca:m2_cajon_oficina"],
+    "producto": ["productos", "dato:lamina.m2_vendibles", "palanca:ajuste_precio", "palanca:comision", "dato:cal.ritmo"],
     "tiempo": ["palanca:predesarrollo", "palanca:ventas_inicio", "palanca:ventas_meses", "palanca:obra_inicio",
                "palanca:obra_duracion", "palanca:campana", "palanca:individualizar", "palanca:meses_saldos",
-               "palanca:saldo_posterior"],
-    "costo": ["dato:costo.obra_directa", "dato:lamina.costo_total", "dato:lamina.ventas", "palanca:ajuste_obra", "palanca:indirectos", "palanca:imprevistos",
-              "palanca:cierre", "palanca:ind_predesarrollo"],
+               "palanca:saldo_posterior", "dato:din.preventa_minima"],
+    "costo": ["dato:costo.obra_directa", "palanca:costo_m2", "palanca:costo_m2_sotano", "palanca:costo_m2_superficie",
+              "palanca:urbanizacion", "palanca:ajuste_obra", "palanca:indirectos", "palanca:imprevistos", "palanca:cierre",
+              "palanca:ind_predesarrollo"],
     "dinero": ["palanca:capital", "palanca:tasa_capital", "palanca:enganche"]
               + ["palanca:durante_obra_%d" % (i + 1) for i in range(G.NP)]
               + ["palanca:usa_banco", "palanca:tiie", "palanca:sobretasa", "palanca:apertura", "palanca:banco_pct_obra",
@@ -77,6 +82,13 @@ NOTAS = {
     "ajuste_obra": "Sube o baja el costo de obra directa en esta versión.",
     "usa_banco": "1 = esta versión usa crédito del banco; 0 = se hace sin banco.",
     "devolver_con_obra": "1 = el capital espera a que termine la obra para salir; 0 = sale en cuanto sobra dinero.",
+}
+# Lo que el visor enseña aunque ninguna fórmula del libro lo lea.
+SE_VE = {
+    "din.preventa_minima": "El cuadro Tiempo lo enseña como el mínimo de preventa; la revisión para fondos pide 35%.",
+    "terreno.frente": "Se enseña con el terreno; ninguna cifra del plan depende de él.",
+    "lamina.m2_vendibles": "Sale de la suma de los productos; el cuadro Producto lo enseña.",
+    "norma.zona": "Cómo se llama la zona en el plan de desarrollo urbano; las reglas van en los renglones de la norma.",
 }
 EXTRAS = {
     "productos": {"tipo": "productos", "concepto": "Productos: unidades, m² y precio", "unidad": "",
@@ -227,7 +239,7 @@ def construir():
         if r["mueve"] in ([], ["Edad del plan"]) and k not in en_cuadro:
             sobran.append({"clave": k, "concepto": d[1], "motivo": "sólo cuenta para la edad del plan" if r["mueve"] else "ninguna fórmula lo lee"})
             continue
-        e = {"tipo": "dato", "dato": k, "concepto": d[1], "unidad": d[2], "nota": d[6] or ""}
+        e = {"tipo": "dato", "dato": k, "concepto": d[1], "unidad": d[2], "nota": SE_VE.get(k) or d[6] or ""}
         if not r["mueve"]:
             e["solo_se_ve"] = True          # el visor lo enseña, pero ninguna cifra del plan depende de él
         e.update(r)
