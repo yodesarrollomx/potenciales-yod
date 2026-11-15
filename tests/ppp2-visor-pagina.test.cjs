@@ -27,8 +27,11 @@ test('pinta los siete cuadros con las cifras del libro, sin inventar ninguna', (
   assert.doesNotMatch(p.html, /NaN|undefined|Infinity|\[object/);
   assert.match(t, /Proyecto Ejemplo/);
   assert.match(t, new RegExp('V' + d.version + ' ' + d.v.estado));
-  for (const x of [d.v.ventas, d.v.dueno_aporta, d.v.dueno_recibe, d.v.alianza_recibe, d.v.capital, d.v.max_ajeno, d.v.ganancia, d.flujo.total.cobranza, d.flujo.total.egresos, d.flujo.total.disposicion])
+  for (const x of [d.v.ventas, d.v.dueno_aporta, d.v.dueno_recibe, d.v.alianza_recibe, d.v.capital, d.v.max_ajeno, d.v.ganancia])
     assert.ok(t.includes(mdp(x)), 'falta ' + mdp(x));
+  // los totales de lo que entra y sale van en la hoja de «Dinero» (figura grande y desglose), no en el cuadro chico
+  const dinero = texto(visor.detalleHtml(p.cuadros.find((c) => c.id === 'dinero')));
+  for (const x of [d.flujo.total.cobranza, d.flujo.total.egresos, d.flujo.total.disposicion]) assert.ok(dinero.includes(mdp(x)), 'falta en Dinero ' + mdp(x));
   for (const prod of d.productos) assert.ok(t.includes(mdp(prod.ventas)), prod.nombre);
   assert.ok(t.includes('×' + d.v.dueno_veces.toFixed(2)));
   assert.ok(t.includes('mes ' + d.v.mes_reparto));
@@ -117,6 +120,64 @@ test('aguanta planes raros: sin banco, con pérdida, sin productos, a medio capt
   assert.match(tp, /Pérdida después del costo del dinero −\$12\.5/);
   assert.match(tp, /falta \$9\.3/);
   assert.match(texto(visor.pinta(vacio, null).html), /Aún no hay/);
+});
+
+/* Planes del PPP de siempre: misma forma de datos, pero con huecos y su propio «origen». */
+const conHuecos = () => {
+  const d = copia(datos());
+  d.origen = 'PPP · motor vertical · caso de prueba';
+  for (const p of visor.PRUEBAS) delete d.v[p.k];
+  delete d.v.rv_resultado;
+  Object.assign(d, { candados: [], pruebas: [], pruebas_viejas: 0, reparto: null });
+  d.plan.edad = ''; d.plan.candados_abiertos = null; d.plan.paso_texto = '';
+  for (const c of ['firmas', 'respaldo', 'pago_respaldo', 'saldo_respaldo', 'disposicion', 'pago_banco', 'interes', 'apertura', 'saldo_banco']) { delete d.flujo.filas[c]; delete d.flujo.total[c]; }
+  for (const k of ['dueno_aporta', 'dueno_recibe', 'dueno_veces', 'dueno_meses', 'alianza_recibe', 'capital', 'rend_capital', 'max_ajeno']) delete d.v[k];
+  return d;
+};
+const visible = (c) => texto('<svg>' + c.svg + '</svg>');
+
+test('con «origen», cada leyenda dice ese origen y ninguna nombra el libro; sin él, todo sigue igual', () => {
+  const d = conHuecos(), p = visor.pinta(d, null), ls = leyendas(p.html).concat(...p.cuadros.map((c) => leyendas(visor.detalleHtml(c))));
+  assert.ok(ls.length > 20);
+  for (const l of ls) assert.equal(l.o, d.origen, l.t);
+  const todo = p.html + p.cuadros.map(visor.detalleHtml).join('');
+  assert.doesNotMatch(todo, /Libro · /, 'nada dice «Libro»');
+  assert.match(texto(todo), /PPP · motor vertical · caso de prueba/);
+  const sin = visor.pinta(datos(), null);
+  assert.ok(leyendas(sin.html).every((l) => /^Libro · /.test(l.o)), 'sin origen, el rótulo del libro de siempre');
+});
+
+test('Riesgo y estado sin revisión para fondos, sin candados ni etapa: un estado digno, no anillos vacíos', () => {
+  const d = conHuecos(), c = visor.pinta(d, null).cuadros.find((x) => x.id === 'riesgo');
+  assert.match(visible(c), /Sin revisión para fondos/);
+  assert.doesNotMatch(c.svg, /<path d="M[^"]+ A/, 'no hay anillos');
+  assert.doesNotMatch(visible(c), /no aplica|—|Etapa|candado/);
+  assert.match(texto(visor.detalleHtml(c)), /Sin revisión para fondos/);
+  const conEtapa = conHuecos(); conEtapa.plan.edad = 'semilla'; conEtapa.plan.candados_abiertos = 2;
+  const ce = visor.pinta(conEtapa, null).cuadros.find((x) => x.id === 'riesgo');
+  assert.match(visible(ce), /Sin revisión para fondos[\s\S]*Etapa semilla 1\/5 · 2 candados abiertos/, 'lo que sí hay del estado se dice');
+});
+
+test('una serie o clave que no llegó cae en un estado vacío limpio: sin ceros inventados, guiones sueltos ni NaN', () => {
+  const d = conHuecos(), p = visor.pinta(d, null);
+  assert.doesNotMatch(p.html, /NaN|undefined|Infinity|\[object/);
+  for (const c of p.cuadros) {
+    assert.doesNotMatch(visible(c), /—|NaN|\$0\.0\b/, c.id + ': ' + visible(c));
+    assert.doesNotMatch(visor.detalleHtml(c), /NaN|undefined|Infinity/, c.id);
+  }
+  const por = Object.fromEntries(p.cuadros.map((c) => [c.id, visible(c)]));
+  assert.match(por.reparto, /Aún no hay reparto calculado/);
+  assert.match(por.tiempo, /Ventas sin dato/, 'sin firmas por mes, la fila de ventas lo dice');
+  assert.doesNotMatch(por.dinero, /banco|respaldo|Dinero ajeno/, 'sin banco, respaldo ni dinero ajeno no se nombran');
+  // sin flujo mensual en absoluto
+  const sinFlujo = conHuecos(); sinFlujo.flujo = { meses: 0, filas: {}, total: {} };
+  const q = Object.fromEntries(visor.pinta(sinFlujo, null).cuadros.map((c) => [c.id, visible(c)]));
+  assert.match(q.tiempo, /Aún no hay calendario calculado/);
+  assert.match(q.dinero, /Aún no hay flujo calculado/);
+  for (const k of Object.keys(q)) assert.doesNotMatch(q[k], /—|NaN/, k);
+  // sin terreno, construcción, vendible ni tierra
+  const sinTerreno = conHuecos(); sinTerreno.datos = {}; sinTerreno.productos = []; delete sinTerreno.v.tierra;
+  assert.match(visible(visor.pinta(sinTerreno, null).cuadros.find((c) => c.id === 'terreno')), /Aún no hay terreno capturado/);
 });
 
 test('lo que escribe una persona en el libro no se vuelve marcado en la página', () => {

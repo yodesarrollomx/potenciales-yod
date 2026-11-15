@@ -398,6 +398,34 @@ hecha para caber en la pantalla de un teléfono y se ve igual en todos los plane
 - **El pie de marcas** sale de `Config` (`visor_marcas` y, para los logos, `visor_logos`): la página
   no lleva nombres ni logos de nadie. La página tampoco lleva el nombre de ningún plan: la vista previa
   de la liga en un chat es genérica.
+- **Cómo se ve y se usa** (15-nov-2026). La pantalla se dibuja a 424 px de ancho y se escala al
+  teléfono; si por poco no cabe a lo alto (la barra de Safari), se encoge hasta 10 % más. En pantalla
+  ancha y apaisada (escritorio, tableta acostada) los cuadros van en cuatro columnas, dos renglones, y
+  caben a lo alto; en una tableta parada, en dos columnas centradas. El texto más chico de los cuadros pasó de
+  unos 5 px reales a unos 6.3 en un teléfono de 430 px: «Dinero» y «Riesgo y estado» llevan en el cuadro
+  chico sólo la figura y lo esencial (la clave de colores, la holgura corta de cada prueba) y su versión
+  completa —la columna de totales, los extremos de cada escala, el siguiente paso— va en la hoja. Las
+  cifras van en millones de pesos y lo dice el pie una sola vez. Los colores de texto y de relleno con
+  texto encima pasan AA.
+- **Estados.** Mientras llega el plan se ve un esqueleto que viene en el propio HTML (las tipografías ya
+  no detienen la primera pintura); «Se actualizó» marca el cuadro que cambió y la pastilla vuelve a «En
+  vivo» a los pocos segundos; sin red la pastilla lo dice («Sin conexión · reintentando», también con el
+  evento `offline` del navegador) y vuelve sola; liga apagada, falta de liga y falla al abrir tienen su
+  pantalla (la falla, con «Volver a intentar»). Los cambios de estado se anuncian una vez a los lectores
+  de pantalla (`#vzAviso`); el resto de la pantalla no es región viva.
+- **La hoja del detalle** sube desde abajo con su asa: se cierra con la ×, Esc, el botón «atrás», tocando
+  fuera o bajándola con el dedo desde el encabezado. El foco entra a la hoja (a la ×, de 44 px), no sale
+  de ella con Tab y regresa al cuadro al cerrar. Si hay una leyenda abierta, el primer Esc la quita.
+- **Leyendas.** En la hoja, un toque que cae a menos de 22 px de una figura la toma (objetivo de 44 px);
+  la leyenda se pone arriba del dedo, con aire, para que la mano no la tape. Con `prefers-reduced-motion`
+  no hay animaciones.
+- **Planes con huecos y su propio origen.** El visor también puede pintar planes que no vienen de un
+  libro (el PPP de siempre) con la misma forma de datos. Si lo que llega trae `origen` (texto, en la
+  raíz), todas las leyendas «de dónde sale» dicen ese texto en lugar de la pestaña del libro. Sin ninguna
+  prueba `rv_*`, «Riesgo y estado» dice «Sin revisión para fondos» (y lo que sí haya de etapa, candados y
+  pruebas de estrés) en lugar de anillos vacíos. Una serie o clave que no llegó (firmas por mes, reparto,
+  flujo mensual, respaldo, banco, terreno) deja su cuadro en «Aún no hay…» o su renglón en «sin dato»:
+  nunca un cero inventado, un guion suelto ni NaN. El servidor no cambia por esto.
 - Instalación, alta de ligas y marcas: `server/ppp2/INSTALAR.md`, «El visor en vivo».
 
 ### Los mismos cuadros, en la ficha del plan
@@ -510,8 +538,8 @@ plan es su modelo, como ya lo es en los casos nativos del PPP.
 - `node tests/ppp2-browser.cjs` (`PPP2_SOLO=texto` corre sólo los recorridos cuyo nombre lo lleva)
 - El visor y la unificación: `node --test tests/ppp2-visor.test.cjs tests/ppp2-visor-pagina.test.cjs`
   (la liga, la ficha con sesión, dar y apagar ligas, lo que entrega el servidor; la página contra eso
-  mismo: cifras, leyendas, límites de la revisión) y `node tests/ppp2-visor-browser.cjs` (abrir, tocar,
-  cerrar, cambio en vivo, liga apagada, los cuadros en la ficha, compartir desde el plan, y la portada y
+  mismo: cifras, leyendas, límites de la revisión, planes con huecos y con `origen`) y `node tests/ppp2-visor-browser.cjs` (abrir, tocar,
+  cerrar, la hoja —foco, Esc, bajarla con el dedo—, cuatro columnas en pantalla ancha, cambio en vivo, liga apagada, los cuadros en la ficha, compartir desde el plan, y la portada y
   un motor del PPP de siempre con planes con libro, sobre `tests/fixtures/libro/`).
 - Tres accesorios salen de una hoja de cálculo de verdad (LibreOffice) con el plan inventado, y se
   regeneran juntos con `python3 ppp2/libro/regenerar.py`:

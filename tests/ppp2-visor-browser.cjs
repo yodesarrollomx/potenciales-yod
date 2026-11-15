@@ -122,6 +122,44 @@ async function pagina(navegador, base, w, opciones) {
       await ctx.close();
     });
 
+    await caso('la hoja del detalle: el foco entra y regresa al cuadro, Esc cierra la leyenda y luego la hoja, y bajarla con el dedo la cierra', async () => {
+      const w = conLiga(), { ctx, page, errores } = await pagina(navegador, base, w);
+      await page.locator('.vz-card').first().waitFor();
+      assert.equal(await page.locator('#vzEsq').count(), 0, 'el esqueleto se va en cuanto llega el plan');
+      assert.equal(await page.locator('#vz[aria-busy]').count(), 0);
+      await page.locator('[data-card="tiempo"]').click();
+      await page.locator('#vzModal').waitFor({ state: 'visible' });
+      assert.equal(await page.evaluate(() => document.activeElement.classList.contains('vz-x')), true, 'el foco entra a la hoja');
+      assert.equal(await page.locator('#vzModal [role="dialog"][aria-labelledby="vzMTit"] #vzMTit').textContent(), 'Tiempo');
+      const caja = await page.locator('#vzModal .vz-x').boundingBox();
+      assert.ok(caja.width >= 44 && caja.height >= 44, 'la × mide 44 px o más');
+      await page.locator('#vzModal .vz-m-fig .vz-t').first().click();
+      await page.locator('#vzTip').waitFor({ state: 'visible' });
+      await page.keyboard.press('Escape');
+      await page.locator('#vzTip').waitFor({ state: 'hidden' });
+      assert.equal(await page.locator('#vzModal').isVisible(), true, 'el primer Esc sólo quita la leyenda');
+      await page.keyboard.press('Escape');
+      await page.locator('#vzModal').waitFor({ state: 'hidden' });
+      assert.equal(await page.evaluate(() => document.activeElement.getAttribute('data-card')), 'tiempo', 'el foco regresa al cuadro');
+      await page.locator('[data-card="costo"]').click();
+      await page.locator('#vzModal').waitFor({ state: 'visible' });
+      await page.waitForTimeout(400);
+      const h = await page.locator('#vzModal .vz-m-head').boundingBox();
+      await page.mouse.move(h.x + 40, h.y + 20); await page.mouse.down();
+      for (let i = 1; i <= 8; i++) await page.mouse.move(h.x + 40, h.y + 20 + i * 22);
+      await page.mouse.up();
+      await page.locator('#vzModal').waitFor({ state: 'hidden' });
+      await page.locator('[data-card="costo"]').click();
+      await page.locator('#vzModal').waitFor({ state: 'visible' });
+      await page.waitForTimeout(400);                         // que termine de subir
+      const h2 = await page.locator('#vzModal .vz-m-head').boundingBox();
+      await page.mouse.move(h2.x + 40, h2.y + 20); await page.mouse.down(); await page.mouse.move(h2.x + 40, h2.y + 34); await page.mouse.up();
+      await page.waitForTimeout(250);
+      assert.equal(await page.locator('#vzModal').isVisible(), true, 'un jalón corto no la cierra');
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
     await caso('si el libro cambia, la página lo pinta sola y marca el cuadro que cambió, también con el detalle abierto', async () => {
       const w = conLiga(), { ctx, page, errores } = await pagina(navegador, base, w);
       await page.locator('.vz-card').first().waitFor();
@@ -130,7 +168,7 @@ async function pagina(navegador, base, w, opciones) {
       res.v[filaDe(res, 'v2.tierra') - 1][1] = 41.5;         // alguien cambió el libro
       w.cache.delete('vk_' + PLAN);
       await page.locator('#vzModal').getByText('$41.5').first().waitFor({ timeout: 5000 });
-      assert.match(await page.locator('#vzVivo').innerText(), /Actualizado/);
+      assert.match(await page.locator('#vzVivo').innerText(), /Se actualizó/);
       assert.equal(await page.locator('#vzModal').isVisible(), true, 'el detalle abierto se queda abierto');
       assert.ok(await page.locator('[data-card="terreno"].vz-cambio').count() === 1, 'el cuadro que cambió se marca');
       assert.equal(await page.locator('[data-card="tiempo"].vz-cambio').count(), 0, 'el que no cambió, no');
@@ -181,6 +219,8 @@ async function pagina(navegador, base, w, opciones) {
       const m = await page.evaluate(() => { const r = document.querySelector('.vz-marco').getBoundingClientRect(); return { abajo: r.bottom, alto: innerHeight, izq: r.left, der: innerWidth - r.right }; });
       assert.ok(m.abajo <= m.alto + 1, 'cabe a lo alto sin deslizar');
       assert.ok(Math.abs(m.izq - m.der) < 2, 'queda centrado');
+      const filas = await page.evaluate(() => new Set([...document.querySelectorAll('.vz-card')].map((c) => Math.round(c.getBoundingClientRect().top))).size);
+      assert.equal(filas, 2, 'en pantalla ancha, cuatro columnas: dos renglones');
       await page.locator('[data-card="producto"] .vz-t').first().hover();
       await page.locator('#vzTip').waitFor({ state: 'visible' });
       assert.match(await page.locator('#vzTip').innerText(), /Libro · Productos/);
