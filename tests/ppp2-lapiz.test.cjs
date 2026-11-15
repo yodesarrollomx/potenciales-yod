@@ -145,3 +145,36 @@ test('filaDe sigue sirviendo para el Modelo del accesorio', () => {
   const w = mundo();
   assert.ok(filaDe(w.libro.getSheetByName('Modelo'), 'comision') > 6);
 });
+
+/* ── deshacer un dato que el libro calculaba ── */
+test('reemplazar un dato que el libro calculaba guarda su fórmula, y «restaurar» la regresa tal cual', () => {
+  const w = mundo({ idioma: 'puntoycoma' });
+  const datos = w.libro.getSheetByName('Datos'), f = filaDe(datos, 'din.capital');
+  // como en la plantilla: el tope de capital lo calcula el libro (1/3 de las ventas), con «;» porque el libro usa coma decimal
+  const formula = '=IFERROR(ROUND(Productos!$E$11/3;2);"")';
+  datos.getRange(f, 3).setFormula(formula);
+  assert.deepEqual(Object.keys(datos.roto), []);
+  const r = w.post({ k: EDITOR, tipo: 'ppp2-dato', plan: PLAN, clave: 'din.capital', valor: 99, estado: 'supuesto', fuente: 'Prueba' });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.guardo_formula, true);
+  assert.equal(datos.f[f + ',3'], undefined, 'ya es una cifra');
+  assert.equal(datos.v[f - 1][2], 99);
+  assert.equal(String(datos.v[f - 1][11]).replace(/^'/, ''), formula, 'la fórmula quedó guardada como texto en la columna L');
+  const r2 = w.post({ k: EDITOR, tipo: 'ppp2-dato', plan: PLAN, clave: 'din.capital', restaurar: true, estado: 'derivado', fuente: 'Regla de Dirección' });
+  assert.equal(r2.ok, true, JSON.stringify(r2));
+  assert.equal(datos.f[f + ',3'], formula, 'regresa la misma fórmula, con «;»');
+  assert.equal(datos.v[f - 1][11], '', 'y la columna L queda vacía');
+  assert.equal(datos.v[f - 1][4], 'derivado');
+  const bit = w.libro.getSheetByName('Bitácora');
+  assert.match(String(bit.v[bit.getLastRow() - 1][2]), /Regresó un dato a su fórmula/);
+  assert.equal(w.post({ k: EDITOR, tipo: 'ppp2-dato', plan: PLAN, clave: 'din.capital', restaurar: true }).error, 'restaurar', 'sin fórmula guardada no hay qué regresar');
+});
+
+test('una cifra encima de otra cifra no guarda nada en la columna L', () => {
+  const w = mundo();
+  const datos = w.libro.getSheetByName('Datos'), f = filaDe(datos, 'din.tiie');
+  const r = w.post({ k: EDITOR, tipo: 'ppp2-dato', plan: PLAN, clave: 'din.tiie', valor: 0.08 });
+  assert.equal(r.ok, true);
+  assert.equal(r.guardo_formula, false);
+  assert.equal((datos.v[f - 1] || [])[11] || '', '');
+});

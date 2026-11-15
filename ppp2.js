@@ -38,6 +38,7 @@
     plan: 'Ese plan no existe o está archivado.', calculado: 'Ese renglón lo calcula el libro; no se captura.',
     prueba: 'Las pruebas no se anotaron: la columna Prueba del libro no volvió a su estado. Quedó en la bitácora.',
     sin_prueba: 'Este dato no tiene columna de prueba en el libro: guárdalo y, si no te convence, deshazlo.',
+    restaurar: 'No encontré la fórmula que tenía este dato: hay que revisarlo en el libro (pestaña Datos).',
     paso: 'El libro dice que ahora no toca mover capital ni arranque de obra; recarga para ver el siguiente paso.',
     sin_lugar: 'No tengo una versión donde escribir mi propuesta: la base y la vigente no las toco, ni el trabajo de una persona si nadie me lo presta.',
     tiempo: 'Mi libro va lento y no alcancé a probar todas las combinaciones. No cambié nada y guardé lo que llevo: vuelve a pedirme la ronda para continuar.',
@@ -720,7 +721,10 @@
     }
     var despuesTxt = cifra(unidad, v.valor);
     enviar(cuerpo, 'Guardado: el libro recalculó.').then(function (r) {
-      if (r && r.ok && deshacer) ofrecerDeshacer(nombre + ': ' + antesTxt.replace(/<[^>]+>/g, '') + ' → ' + String(despuesTxt).replace(/<[^>]+>/g, ''), deshacer);
+      if (!r || !r.ok || !deshacer) return;
+      // si el libro calculaba ese dato, deshacer le regresa su fórmula (la guardó el servidor), no una cifra fija
+      if (r.guardo_formula && cuerpo.tipo === 'ppp2-dato') deshacer = { tipo: 'ppp2-dato', clave: cuerpo.clave, restaurar: true, estado: deshacer.estado, fuente: deshacer.fuente };
+      ofrecerDeshacer(nombre + ': ' + antesTxt.replace(/<[^>]+>/g, '') + ' → ' + String(despuesTxt).replace(/<[^>]+>/g, ''), deshacer);
     });
   }
   /* Después de guardar, un momento para deshacer: regresa exactamente lo que había (o la cifra de los datos). */

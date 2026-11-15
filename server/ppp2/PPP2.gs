@@ -541,21 +541,45 @@ function numero_(v, unidad) {
   return n;
 }
 
+/* Un dato que el libro calculaba (una fórmula en Datos!C) y que alguien reemplaza por una cifra: su fórmula se
+   guarda como texto en la columna L del mismo renglón, para que «deshacer» la regrese tal cual (restaurar: true).
+   La fórmula sale del propio libro, nunca de quien llama; se escribe con setFormula de lo que ya había, así no
+   depende del idioma del libro (con coma decimal, Sheets separa con «;»). */
+var DATO_FORMULA_COL = 12;
 function dato_(s, libro, b, rev, rid) {
   if (!puede_(s, 'editar')) return { ok: false, error: 'permiso' };
   var h = libro.getSheetByName('Datos'), clave = txt_(b.clave, 60), fila = filaPorClave_(h, clave);
   if (!fila || !/^[a-z]+\.[a-z0-9_]+$/.test(clave)) return { ok: false, error: 'clave' };
   var unidad = String(h.getRange(fila, 4).getValue());
   var antes = h.getRange(fila, 3, 1, 6).getValues()[0];
-  var valor = UNIDADES_NUM[unidad] ? numero_(b.valor, unidad) : txt_(b.valor, 500);
-  if (valor === null) return { ok: false, error: 'valor' };
   var estado = b.estado != null ? low_(b.estado) : String(antes[2] || '');
   if (estado && ESTADOS.dato.indexOf(estado) < 0) return { ok: false, error: 'estado' };
   var fuente = b.fuente != null ? txt_(b.fuente, 500) : String(antes[3] || '');
-  if (b.valor !== undefined) h.getRange(fila, 3).setValue(seguro_(valor));
+  var celda = h.getRange(fila, 3), guardada = h.getRange(fila, DATO_FORMULA_COL), guardo = false, despues;
+  if (b.restaurar === true) {
+    var frm = String(guardada.getValue() || '').replace(/^'/, '');
+    if (frm.charAt(0) !== '=') return { ok: false, error: 'restaurar' };
+    celda.setFormula(frm);
+    guardada.setValue('');
+    despues = '(vuelve a calcularse)';
+  } else {
+    var valor = UNIDADES_NUM[unidad] ? numero_(b.valor, unidad) : txt_(b.valor, 500);
+    if (valor === null) return { ok: false, error: 'valor' };
+    if (b.valor !== undefined) {
+      var previa = celda.getFormula();
+      if (previa) {
+        columnas_(h, DATO_FORMULA_COL);
+        if (!String(h.getRange(4, DATO_FORMULA_COL).getValue() || '')) h.getRange(4, DATO_FORMULA_COL).setValue('Fórmula anterior (la usa «deshacer»)');
+        guardada.setValue("'" + previa);
+        guardo = true;
+      }
+      celda.setValue(seguro_(valor));
+    }
+    despues = b.valor !== undefined ? valor : antes[0];
+  }
   h.getRange(fila, 5, 1, 4).setValues([fila_([estado, fuente, hoyISO_(), actor_(s)])]);
-  bitacora_(libro, s, 'Cambió un dato', 'Datos', clave, antes[0] + ' · ' + antes[2], (b.valor !== undefined ? valor : antes[0]) + ' · ' + estado, fuente, rev, rid);
-  return { ok: true, hecho: 'dato', clave: clave };
+  bitacora_(libro, s, b.restaurar === true ? 'Regresó un dato a su fórmula' : 'Cambió un dato', 'Datos', clave, antes[0] + ' · ' + antes[2], despues + ' · ' + estado, fuente, rev, rid);
+  return { ok: true, hecho: 'dato', clave: clave, guardo_formula: guardo };
 }
 
 function producto_(s, libro, b, rev, rid) {
