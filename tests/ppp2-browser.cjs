@@ -80,6 +80,12 @@ function regresada(opciones) {
   return w;
 }
 
+/* Lo que recibe el dueño en la versión que se ve: lo dice su botón (la carátula ya no repite el número en un bloque aparte). */
+async function duenoVisto(page) {
+  const t = await page.locator('.p2-vbtn[aria-pressed="true"] span').innerText();
+  const m = /dueño ([\d.,]+) MDP/.exec(t);
+  return m ? m[1] + 'MDP' : '';
+}
 async function sinDesborde(page, donde) {
   const d = await page.evaluate(() => ({ ancho: document.documentElement.scrollWidth, vista: window.innerWidth }));
   assert.ok(d.ancho <= d.vista + 1, donde + ': la página se desborda a lo ancho (' + d.ancho + ' > ' + d.vista + ')');
@@ -152,15 +158,18 @@ async function foto(page, nombre) {
       await page.getByRole('button', { name: /Sembrar un plan/ }).waitFor();
       await foto(page, 'ppp2-vivero');
       await tarjeta.click();
-      await page.locator('.p2-recibe .p2-cifra').waitFor();
-      assert.equal((await page.locator('.p2-recibe .p2-cifra').innerText()).replace(/\s+/g, ''), esperado + 'MDP');
+      await page.locator('.p2-vbtn[aria-pressed="true"]').waitFor();
+      assert.equal(await duenoVisto(page), esperado + 'MDP');
       assert.equal(await page.locator('.p2-vbtn').count(), 3);
-      assert.ok(await page.locator('.p2-grafica svg path').count() >= 2, 'dibuja la gráfica del dinero');
+      await page.locator('#p2Cuadros .vz-card').first().waitFor();
+      assert.equal(await page.locator('#p2Cuadros .vz-card').count(), 7, 'la carátula son los siete cuadros del visor');
+      assert.equal(await page.locator('.p2-heroe, .p2-claves, .p2-grafica').count(), 0, 'sin bloques que repiten lo que dicen los cuadros');
+      assert.equal(await page.locator('#p2Pestana').count(), 0, 'el expediente empieza cerrado');
       await foto(page, 'ppp2-plan');
       await page.locator('.p2-vbtn[data-v="1"]').click();
       const v1 = JSON.parse(w.ctx.doGet({ parameter: { recurso: 'ppp2-plan', plan: PLAN, k: EDITOR } }).contenido).versiones[0];
       const esperadoV1 = v1.dueno_recibe.toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-      assert.equal((await page.locator('.p2-recibe .p2-cifra').innerText()).replace(/\s+/g, ''), esperadoV1 + 'MDP');
+      assert.equal(await duenoVisto(page), esperadoV1 + 'MDP');
       assert.deepEqual(errores, []);
       await ctx.close();
     });
@@ -191,7 +200,7 @@ async function foto(page, nombre) {
     await caso('sólo Dirección ve «Aprobar» y al aprobar queda vigente con su nombre', async () => {
       const w = mundo();
       let r = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN });
-      await r.page.locator('.p2-recibe').waitFor();
+      await r.page.locator('.p2-estado-v').waitFor();
       assert.equal(await r.page.locator('[data-accion="aprobar"]').count(), 0);
       await r.ctx.close();
       r = await pagina(navegador, base, w, ADMIN, { hash: '#/plan/' + PLAN });
@@ -210,16 +219,196 @@ async function foto(page, nombre) {
       res.v[filaDe(res, 'v2.capital_sobre_tope') - 1][1] = 12.5;        // la V2, la que se ve al abrir, se pasa 12.5 MDP
       const revision = res.v[filaDe(res, 'v2.rv_resultado') - 1][1];
       const { page, ctx, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN });
-      await page.locator('.p2-recibe').waitFor();
+      await page.locator('.p2-estado-v').waitFor();
       await page.getByText(/El capital pasa 12[.,]5 MDP del tope de 1\/3 de las ventas/).waitFor();
+      await page.locator('.p2-pestanas a', { hasText: 'Versiones y reparto' }).click();
+      await page.locator('table.p2-tabla').first().waitFor();
       assert.equal(await page.locator('table.p2-tabla .p2-chip', { hasText: 'Pasa del tope' }).count(), 1, 'sólo la V2 se pasa');
       assert.equal(await page.locator('table.p2-tabla td', { hasText: revision }).count() > 0, true, 'la revisión para fondos dice lo mismo que el libro');
       // con el capital dentro del tope no hay aviso
       res.v[filaDe(res, 'v2.capital_sobre_tope') - 1][1] = 0;
       await page.reload();
       await page.waitForFunction(() => window.PPP2 && window.PPP2.estado.fresco === true && !!window.PPP2.estado.plan);
-      await page.locator('.p2-recibe').waitFor();
+      await page.locator('table.p2-tabla').first().waitFor();
       assert.equal(await page.getByText('Pasa del tope').count(), 0);
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
+    await caso('el lápiz: el cuadro dice qué lo mueve; quien edita prueba otra cifra sin guardar, la guarda en su versión y la deshace', async () => {
+      const w = mundo();
+      const { page, ctx, posts, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN });
+      const costo = page.locator('#p2Cuadros .vz-card[data-card="costo"]');
+      await costo.waitFor();
+      await costo.click();
+      await page.locator('#vzModal .p2-mueve').waitFor();
+      assert.match(await page.locator('#vzModal .p2-mueve h3').textContent(), /Lo que mueve este cuadro · V2/);
+      assert.ok(await page.locator('#vzModal .p2-mueve .p2-lapiz').count() >= 5, 'cada punto del cuadro trae su lápiz');
+      await foto(page, 'ppp2-lapiz-cuadro');
+      await page.locator('#vzModal .p2-lapiz[data-e="palanca:indirectos"]').click();
+      const dlg = page.locator('#p2Dialogo');
+      await dlg.waitFor();
+      const texto = await dlg.textContent();
+      assert.match(texto, /Está ligado a/);
+      assert.match(texto, /Pasa por\s*Indirectos/);
+      assert.match(texto, /Ganancia real/);
+      assert.match(texto, /Sólo en la V2/);
+      await dlg.locator('input[name="valor"]').fill('15');
+      await dlg.locator('[data-accion="lapiz-probar"]').click();
+      await page.locator('#p2LapizRes .p2-sobre').waitFor();
+      const prueba = posts[posts.length - 1];
+      assert.equal(prueba.tipo, 'ppp2-simular');
+      assert.equal(prueba.version, 2);
+      assert.deepEqual(prueba.cambios, [{ clave: 'indirectos', valor: 0.15 }]);
+      assert.match(await page.locator('#p2LapizRes').textContent(), /Nada se guardó todavía/);
+      const mod = w.libro.getSheetByName('Modelo'), f = filaDe(mod, 'indirectos');
+      assert.equal(mod.f[f + ',6'], '=$D' + f, 'probar no cambia la V2');
+      await foto(page, 'ppp2-lapiz-prueba');
+      await dlg.locator('button[type="submit"]').click();
+      await page.locator('#p2Deshacer:not([hidden])').waitFor();
+      const guardado = posts[posts.length - 1];
+      assert.equal(guardado.tipo, 'ppp2-palanca');
+      assert.deepEqual([guardado.version, guardado.clave, guardado.valor], [2, 'indirectos', 0.15]);
+      assert.equal(mod.v[f - 1][5], 0.15);
+      assert.equal(await page.locator('#p2Dialogo').count(), 0, 'el diálogo se cierra al guardar');
+      await page.waitForFunction(() => window.PPP2 && !window.PPP2.estado.ocupado);
+      await page.locator('#p2Deshacer .p2-btn').click();
+      await page.getByText('Listo: regresé la cifra que había.').waitFor();
+      const atras = posts[posts.length - 1];
+      assert.equal(atras.tipo, 'ppp2-palanca');
+      assert.equal(atras.valor, null, 'deshacer regresa la V2 a seguir los datos');
+      assert.equal(mod.f[f + ',6'], '=$D' + f);
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
+    await caso('el lápiz: un dato que la versión no sigue no la mueve, un dato sin columna de prueba se guarda con su fuente y se deshace', async () => {
+      const w = mundo();
+      const { page, ctx, posts, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN });
+      await page.locator('#p2Cuadros .vz-card[data-card="tiempo"]').click();
+      await page.locator('#vzModal .p2-mueve').waitFor();
+      assert.match(await page.locator('#vzModal .p2-mueve').textContent(), /Cifra propia de la V2/);
+      await page.locator('#vzModal .p2-lapiz[data-e="palanca:obra_inicio"]').click();
+      const dlg = page.locator('#p2Dialogo');
+      await dlg.waitFor();
+      await dlg.locator('input[name="donde"][value="dato"]').check();
+      await dlg.locator('input[name="valor"]').fill('6');
+      await dlg.locator('[data-accion="lapiz-probar"]').click();
+      await page.getByText(/La V2 tiene su propia cifra \(mes 12\): cambiar el dato no la mueve/).waitFor();
+      assert.deepEqual(posts[posts.length - 1].cambios, [{ clave: 'cal.obra_inicio', valor: 6 }]);
+      await dlg.locator('[data-accion="cerrar"]').click();
+      await page.keyboard.press('Escape');
+      await page.locator('#vzModal').waitFor({ state: 'hidden' });
+      await page.locator('#p2Cuadros .vz-card[data-card="costo"]').click();
+      await page.locator('#vzModal .p2-lapiz[data-e="dato:costo.obra_directa"]').click();
+      await dlg.waitFor();
+      assert.equal(await dlg.locator('[data-accion="lapiz-probar"]').count(), 0, 'sin columna de prueba no se ofrece «Ver qué cambia»');
+      assert.match(await dlg.textContent(), /no tiene columna de prueba/);
+      const datos = w.libro.getSheetByName('Datos'), fd = filaDe(datos, 'costo.obra_directa'), antes = datos.v[fd - 1][2];
+      await dlg.locator('input[name="valor"]').fill('321');
+      await dlg.locator('select[name="estado"]').selectOption('por confirmar');
+      await dlg.locator('textarea[name="fuente"]').fill('Presupuesto de prueba');
+      await dlg.locator('button[type="submit"]').click();
+      await page.locator('#p2Deshacer:not([hidden])').waitFor();
+      const g = posts[posts.length - 1];
+      assert.deepEqual([g.tipo, g.clave, g.valor, g.estado, g.fuente], ['ppp2-dato', 'costo.obra_directa', 321, 'por confirmar', 'Presupuesto de prueba']);
+      assert.equal(datos.v[fd - 1][2], 321);
+      await page.waitForFunction(() => window.PPP2 && !window.PPP2.estado.ocupado);
+      await page.locator('#p2Deshacer .p2-btn').click();
+      await page.getByText('Listo: regresé la cifra que había.').waitFor();
+      assert.equal(datos.v[fd - 1][2], antes, 'deshacer regresa el dato que había');
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
+    await caso('deshacer va al plan donde se guardó: al abrir otro plan la barra se va y no escribe en él', async () => {
+      const w = mundo();
+      w.vivero.getSheetByName('Planes').appendRow(['p2otroplan01', 'Otro Ejemplo', 'libro-plantilla', 'activo', '2026-01-15', 'Pruebas', '', 'ppp2-libro-v1', '']);
+      const { page, ctx, posts, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN });
+      await page.locator('#p2Cuadros .vz-card[data-card="costo"]').click();
+      await page.locator('#vzModal .p2-lapiz[data-e="palanca:indirectos"]').click();
+      const dlg = page.locator('#p2Dialogo');
+      await dlg.locator('input[name="valor"]').fill('15');
+      await dlg.locator('button[type="submit"]').click();
+      await page.locator('#p2Deshacer:not([hidden])').waitFor();
+      await page.waitForFunction(() => window.PPP2 && !window.PPP2.estado.ocupado);
+      await page.evaluate(() => { location.hash = '#/plan/p2otroplan01'; });
+      await page.waitForFunction(() => window.PPP2.estado.plan && window.PPP2.estado.plan.plan_id === 'p2otroplan01');
+      assert.equal(await page.locator('#p2Deshacer').isHidden(), true, 'la barra de deshacer se fue con el plan');
+      const antes = posts.length;
+      await page.evaluate(() => document.querySelector('#p2Deshacer .p2-btn').click());     // aunque alguien la toque
+      await page.getByText(/Ese cambio era de otro plan/).waitFor();
+      assert.equal(posts.length, antes, 'no mandó nada');
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
+    await caso('el lápiz: una prueba que llega tarde no se pinta en otro diálogo, cambiar la cifra la borra y Enter prueba sin guardar', async () => {
+      const w = mundo(), red = { demora: 0 };
+      const { page, ctx, posts, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN, red });
+      await page.locator('#p2Cuadros .vz-card[data-card="costo"]').click();
+      await page.locator('#vzModal .p2-lapiz[data-e="palanca:indirectos"]').click();
+      let dlg = page.locator('#p2Dialogo');
+      // el diálogo vive en <body>, fuera de la región viva, con su título; la hoja del cuadro queda inerte
+      assert.equal(await page.evaluate(() => document.getElementById('p2Dialogo').parentElement === document.body), true);
+      assert.equal(await page.evaluate(() => document.querySelector('#p2Dialogo [role="dialog"]').getAttribute('aria-labelledby')), 'p2DialogoTitulo');
+      assert.equal(await page.evaluate(() => document.getElementById('vzModal').inert), true);
+      red.demora = 1500;
+      await dlg.locator('input[name="valor"]').fill('15');
+      await dlg.locator('[data-accion="lapiz-probar"]').click();
+      await dlg.locator('[data-accion="cerrar"]').click();
+      assert.equal(await page.evaluate(() => document.getElementById('vzModal').inert), false, 'al cerrar, la hoja vuelve a servir');
+      await page.locator('#vzModal .p2-lapiz[data-e="palanca:imprevistos"]').click();
+      dlg = page.locator('#p2Dialogo');
+      await dlg.waitFor();
+      await page.waitForFunction(() => !window.PPP2.estado.ocupado, null, { timeout: 8000 });
+      await page.waitForTimeout(200);
+      assert.equal(await page.locator('#p2LapizRes .p2-sobre').count(), 0, 'lo de indirectos no se pinta en imprevistos');
+      red.demora = 0;
+      await dlg.locator('input[name="valor"]').fill('7');
+      await dlg.locator('input[name="valor"]').press('Enter');
+      await page.locator('#p2LapizRes .p2-sobre').waitFor();
+      assert.equal(posts[posts.length - 1].tipo, 'ppp2-simular', 'Enter prueba la cifra');
+      assert.deepEqual(posts[posts.length - 1].cambios, [{ clave: 'imprevistos', valor: 0.07 }]);
+      assert.match(await page.locator('#p2LapizRes .p2-sobre').textContent(), /Con 7(\.0)?% sólo en esta versión/);
+      assert.equal(await page.locator('#p2Dialogo').count(), 1, 'y no lo guardó');
+      await dlg.locator('input[name="valor"]').fill('8');
+      assert.equal(await page.locator('#p2LapizRes .p2-sobre').count(), 0, 'cambiar la cifra borra la prueba anterior');
+      // la cifra de los datos también entra a la obra directa: guardarla ahí mueve más que la palanca, así que no se prueba
+      await dlg.locator('input[name="donde"][value="dato"]').check();
+      assert.equal(await dlg.locator('[data-accion="lapiz-probar"]').isHidden(), true);
+      assert.match(await dlg.locator('[data-otros]').textContent(), /también lo leen otras cuentas del libro \(.*Obra directa/);
+      assert.match(await dlg.locator('[data-ligado]').textContent(), /Obra directa/);
+      await dlg.locator('input[name="donde"][value="version"]').check();
+      assert.equal(await dlg.locator('[data-accion="lapiz-probar"]').isHidden(), false);
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('#p2Dialogo').count(), 0);
+      assert.equal(await page.locator('#vzModal').isVisible(), true, 'Esc cierra sólo el diálogo');
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
+    await caso('el lápiz en el teléfono: la hoja del cuadro y el diálogo caben, y la pregunta del plan lleva a su sección', async () => {
+      const w = mundo();
+      const { page, ctx, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN, movil: true });
+      await page.locator('#p2Cuadros .vz-card[data-card="dinero"]').click();
+      await page.locator('#vzModal .p2-mueve').waitFor();
+      await sinDesborde(page, 'hoja del cuadro Dinero');
+      await page.locator('#vzModal .p2-lapiz[data-e="palanca:capital"]').click();
+      await page.locator('#p2Dialogo').waitFor();
+      await sinDesborde(page, 'diálogo del lápiz');
+      await foto(page, 'ppp2-lapiz-movil');
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('#p2Dialogo').count(), 0, 'Esc cierra sólo el diálogo');
+      assert.equal(await page.locator('#vzModal').isVisible(), true, 'la hoja del cuadro sigue abierta');
+      await page.keyboard.press('Escape');
+      await page.locator('#vzModal').waitFor({ state: 'hidden' });
+      await page.locator('#p2Cuadros .vz-card[data-card="riesgo"]').click();
+      const ir = page.locator('#vzModal [data-accion="ir"][data-a="preguntas"]');
+      await ir.waitFor();
+      await ir.click();
+      await page.locator('.p2-pregunta').waitFor();
+      assert.equal(await page.locator('#vzModal').isVisible(), false);
       assert.deepEqual(errores, []);
       await ctx.close();
     });
@@ -230,8 +419,13 @@ async function foto(page, nombre) {
       await page.locator('a.p2-tarjeta').waitFor();
       assert.equal(await page.getByRole('button', { name: /Sembrar/ }).count(), 0);
       await page.locator('a.p2-tarjeta').click();
-      await page.locator('.p2-recibe').waitFor();
+      await page.locator('.p2-cuadros').waitFor();
       assert.equal(await page.locator('input[data-palanca]').count(), 0);
+      await page.locator('#p2Cuadros .vz-card[data-card="costo"]').click();
+      await page.locator('#vzModal .p2-mueve').waitFor();
+      assert.equal(await page.locator('#vzModal .p2-lapiz, #vzModal .p2-lapiz-mini').count(), 0, 'quien sólo lee ve lo que mueve el cuadro, sin lápiz');
+      await page.keyboard.press('Escape');
+      await page.locator('#vzModal').waitFor({ state: 'hidden' });
       await page.locator('.p2-pestanas a', { hasText: 'Preguntas' }).click();
       await page.locator('.p2-pregunta').waitFor();
       assert.equal(await page.locator('[data-accion="responder"], [data-accion="editar-dato"]').count(), 0);
@@ -388,7 +582,9 @@ async function foto(page, nombre) {
       assert.match(await r.page.locator('.p2-voz').innerText(), /Estoy corriendo una ronda en este momento: las cifras de mi V3 están a medias unos minutos\./);
       await r.page.locator('.p2-vbtn[data-v="3"]').click();
       await r.page.getByText('En trabajo').first().waitFor();
-      assert.equal(await r.page.locator('.p2-recibe [data-accion="aprobar"]').count(), 0, 'la versión en trabajo no se puede aprobar');
+      assert.equal(await r.page.locator('.p2-estado-v [data-accion="aprobar"]').count(), 0, 'la versión en trabajo no se puede aprobar');
+      await r.page.locator('.p2-pestanas a', { hasText: 'Versiones y reparto' }).click();
+      await r.page.locator('table.p2-tabla').first().waitFor();
       assert.equal(await r.page.locator('.p2-tabla [data-accion="aprobar"][data-v="3"]').count(), 0);
       assert.equal(await r.page.locator('.p2-tabla [data-accion="aprobar"][data-v="2"]').count(), 1, 'las otras sí');
       await r.ctx.close();
@@ -651,7 +847,7 @@ async function foto(page, nombre) {
       const { page, ctx, posts, gets, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN + '/preguntas', red });
       await page.locator('.p2-pregunta').waitFor();
       assert.equal(await page.locator('.p2-refresco').count(), 0, 'la primera vez no hay nada de antes');
-      const cifra = async () => (await page.locator('.p2-recibe .p2-cifra').innerText()).replace(/\s+/g, '');
+      const cifra = () => duenoVisto(page);
       const antes = await cifra();
       assert.equal((await memorias(page)).length, 1, 'guardó lo que vio');
       // mientras la página está cerrada, el libro cambia (como si alguien lo editara)

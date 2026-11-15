@@ -636,6 +636,72 @@ plan es su modelo, como ya lo es en los casos nativos del PPP.
   de todos, y llevar a la ficha las piezas del PPP de siempre que un plan con libro todavía no tiene
   (presentaciones, mapa, programa arquitectónico).
 
+## La carátula es el visor, y cada cuadro trae su lápiz (15-nov-2026)
+
+Dirección: «dejarla muy limpia la carátula… que sea el mismo lenguaje… cuando le damos clic a una de las
+tarjetas te va a mostrar cuáles son los puntos… un lapicito para editar… te va a decir con qué está
+relacionado… y alerta si no cumples». Plan y decisiones: encargo `CL-PPP-DEFINITIVO-20261115` del Buzón.
+
+**La carátula** (`ppp2.js`, `pintarPlan`): encabezado, versiones, los siete cuadros del visor, una línea
+con el estado de la versión que se ve (y, para Dirección, aprobarla) y la voz del plan. Se quitaron los
+bloques que repetían lo que dicen los cuadros (lo que recibe el dueño en grande, las cuatro cifras clave y
+la gráfica del dinero). Lo demás vive en **el expediente** (versiones lado a lado, preguntas y evidencia,
+rondas y bitácora), cerrado hasta que se pide: `#/plan/<id>` abre limpio; `#/plan/<id>/<sección>` abre esa
+sección, y volver a tocarla la cierra.
+
+**Lo que mueve cada cuadro.** Al abrir un cuadro, debajo de su desglose aparece «Lo que mueve este
+cuadro»: los datos y palancas que lo alimentan, con su cifra en la versión que se ve, su estado y su
+fuente. Es la ingeniería inversa del visor hacia atrás: qué se edita en cada cuadro lo dice `CUADROS` en
+`ppp2/libro/relaciones.py`. Se engancha a la hoja del cuadro desde `ppp2.js` (observa `#vzModal`) sin
+tocar `visor.js`. Quien edita (`admin` y `editor`) ve un lápiz en cada punto y también junto a «de dónde
+sale» en los renglones del propio cuadro que son un dato; quien sólo lee ve los puntos sin lápiz.
+
+**«Está ligado a» sale de las fórmulas.** `python3 ppp2/libro/relaciones.py` arma la plantilla
+(`generar.py`), sigue celda por celda las referencias de sus fórmulas desde cada dato y palanca hasta los
+resultados de la pestaña Versiones y escribe `ppp2-relaciones.js` (sólo nombres y ligas, ninguna cifra):
+por qué cálculos pasa, qué resultados mueve y qué pruebas de la revisión para fondos puede mover. Lista
+además lo que **sobra**: datos que el libro pide y que no llegan a ningún resultado del visor (hoy: la
+preventa mínima, que ninguna fórmula lee, y la utilidad, el pago al dueño y el área vendible de la lámina,
+que sólo cuentan para la edad del plan). Si cambia `generar.py` o el guion y no se regenera,
+`tests/ppp2-lapiz.test.cjs` falla.
+
+**Probar antes de guardar** (`POST tipo=ppp2-simular`, sólo `admin` y `editor`): el servidor escribe la
+cifra en la columna Prueba del Modelo (la de las pruebas de estrés) para la versión que se ve, el libro
+recalcula, se leen las cifras de antes y de después (del Modelo y de `Pruebas!B6:B10`) y la columna vuelve
+a como estaba. Los visores leen V1, V2 y V3, nunca la columna Prueba: **nadie más ve el ensayo**. No se
+anota en la bitácora porque nada cambió; si la columna no regresa, se anota y se avisa (`error: prueba`).
+Un dato se prueba por la palanca que lo copia (`=Datos!$C$n`) **sólo si nadie más lo lee**: si otra fórmula
+de Datos, Modelo, Productos o Reparto también lo usa (en la plantilla v1, la comisión, el cierre, los
+indirectos, los imprevistos y la tierra entran además a la obra directa que sale de la lámina), probarlo por
+la palanca daría otras cifras que guardarlo, así que el servidor contesta `sin_prueba` (`motivo: otros`) y la
+página ni ofrece la prueba: lo dice y muestra qué más mueve guardarlo (`dato_otros`, `dato_pasa_por` en el
+catálogo). Versiones no cuenta: sólo enseña resultados y avisos que el lápiz no lee. Si la versión tiene su
+propia cifra, el dato no la mueve y así se dice (`sin_efecto`); lo mismo con el % pagado durante la obra
+probado «en la pestaña Productos» (`como_dato`). Un dato que ninguna palanca copia (el terreno, la obra
+directa, los productos) no tiene columna de prueba: se guarda con su fuente y se puede deshacer. Los
+avisos de la prueba usan los mismos límites que dibuja el visor (`VisorPPP.PRUEBAS`, los de la revisión
+para fondos del libro): dinero que faltaría, ganancia negativa, aportación y preventa.
+
+El resultado dice qué cifra se probó y dónde, y se borra en cuanto se cambia la cifra o el lugar; una
+respuesta que llega cuando ya se abrió otro lápiz no se pinta. Enter en la cifra la prueba: guardar es
+siempre un toque en «Guardar». Si el libro cambió mientras se probaba (otra persona guardó algo), se dice
+en el diálogo y lo último se trae al cerrarlo. Escribir y regresar la columna Prueba cambia la última
+modificación del libro en Drive: el siguiente que abra el plan lo lee completo (unos segundos más), nada más.
+La hoja `Pruebas!B4` y las fórmulas de la columna Prueba se regresan siempre, también si algo falla a medias,
+y se comprueban (fórmulas y cifras) antes de contestar.
+
+**Guardar y deshacer.** Se guarda «sólo en esta versión» (`ppp2-palanca`) o «en los datos del plan»
+(`ppp2-dato`, con estado y fuente; los pagos durante la obra van a `ppp2-producto`). La vigente sólo la
+cambia Dirección: quien edita puede probar la cifra ahí, pero se guarda en los datos o en otra versión.
+Después de guardar, una barra ofrece **Deshacer** unos segundos: regresa exactamente lo que había (si la
+versión seguía los datos, vuelve a seguirlos). Deshacer va al plan y a la revisión del guardado: si alguien
+cambió el libro desde entonces no escribe (`revision`), y al abrir otro plan la barra se quita. Si el dato
+lo calculaba el libro, su fórmula se guarda como texto en la columna L de Datos («Fórmula anterior») y
+deshacer la regresa tal cual; lo que una persona haya escrito en esa columna no se pisa.
+
+Lo que sigue: la plantilla definitiva del libro (programa y norma, costo por partes, ritmo de ventas,
+alertas de norma) y llevar ahí a los planes.
+
 ## Invariantes
 
 - El PPP actual (motores, Portero, `recurso=lista|caso`) no cambia.
@@ -654,6 +720,10 @@ plan es su modelo, como ya lo es en los casos nativos del PPP.
   `ppp2-cache`: lo que ya se leyó del libro, con un Drive cuya última modificación cambia con el
   contenido y una caché que, como la real, no acepta más de 100 KB por valor)
 - `node tests/ppp2-browser.cjs` (`PPP2_SOLO=texto` corre sólo los recorridos cuyo nombre lo lleva)
+- El lápiz: `node --test tests/ppp2-lapiz.test.cjs` (probar una cifra deja la columna Prueba como estaba
+  y no anota nada; el catálogo «está ligado a» está al día con la plantilla y cubre cada palanca) y los
+  recorridos «el lápiz…» de `tests/ppp2-browser.cjs`. Si tocas `ppp2/libro/generar.py`, corre también
+  `python3 ppp2/libro/relaciones.py`.
 - El visor y la unificación: `node --test tests/ppp2-visor.test.cjs tests/ppp2-visor-pagina.test.cjs`
   (la liga, la ficha con sesión, dar y apagar ligas, lo que entrega el servidor; la página contra eso
   mismo: cifras, leyendas, límites de la revisión, planes con huecos y con `origen`) y `node tests/ppp2-visor-browser.cjs` (abrir, tocar,
