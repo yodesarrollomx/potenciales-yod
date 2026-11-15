@@ -38,9 +38,9 @@ test('el lápiz prueba una palanca en la columna Prueba, la deja como estaba y n
 
 test('un dato se prueba por la palanca que lo copia; si la versión tiene su propia cifra, el dato no la mueve', () => {
   const w = mundo();
-  const r = w.post({ k: EDITOR, tipo: 'ppp2-simular', plan: PLAN, version: 1, cambios: [{ clave: 'costo.comision', valor: 0.05 }] });
+  const r = w.post({ k: EDITOR, tipo: 'ppp2-simular', plan: PLAN, version: 1, cambios: [{ clave: 'din.tasa_capital', valor: 0.2 }] });
   assert.equal(r.ok, true, JSON.stringify(r));
-  assert.deepEqual(r.cambios, [{ clave: 'costo.comision', palanca: 'comision', valor: 0.05 }]);
+  assert.deepEqual(r.cambios, [{ clave: 'din.tasa_capital', palanca: 'tasa_capital', valor: 0.2 }]);
   // la V2 trae su propio arranque de obra (12): cambiar el dato del calendario no la toca
   const r2 = w.post({ k: EDITOR, tipo: 'ppp2-simular', plan: PLAN, version: 2, cambios: [{ clave: 'cal.obra_inicio', valor: 6 }] });
   assert.equal(r2.ok, true, JSON.stringify(r2));
@@ -49,6 +49,56 @@ test('un dato se prueba por la palanca que lo copia; si la versión tiene su pro
   assert.equal(r2.sin_efecto[0].palanca, 'obra_inicio');
   assert.equal(r2.sin_efecto[0].propia, 12);
   assert.equal(r2.antes, undefined, 'sin cambios no se recalcula nada');
+});
+
+test('un dato que también leen otras cuentas del libro no se prueba por su palanca (guardarlo movería más)', () => {
+  const w = mundo();
+  // la comisión de los datos también entra a la obra directa que sale de la lámina (=OBRA): probarla sólo por su
+  // palanca daría otras cifras que guardarla; el servidor lo dice y no escribe nada.
+  // (el accesorio sólo guarda las fórmulas del Modelo y de Pruebas: la de la obra directa se pone como la escribe la plantilla)
+  const datos = w.libro.getSheetByName('Datos'), C = (k) => 'Datos!$C$' + filaDe(datos, k);
+  datos.getRange(filaDe(datos, 'costo.obra_directa'), 3).setFormula('=IFERROR((' + C('lamina.costo_total') + '-' + C('tierra.valor') + '-' + C('costo.comision') + '*' + C('lamina.ventas') +
+    '-' + C('costo.cierre') + '*' + C('tierra.valor') + ')/(1+' + C('costo.indirectos') + '+' + C('costo.imprevistos') + '),"")');
+  const mod = w.libro.getSheetByName('Modelo'), antes = JSON.stringify(pruebaDe(mod));
+  const r = w.post({ k: EDITOR, tipo: 'ppp2-simular', plan: PLAN, version: 1, cambios: [{ clave: 'costo.comision', valor: 0.05 }] });
+  assert.equal(r.error, 'sin_prueba');
+  assert.equal(r.motivo, 'otros');
+  assert.equal(JSON.stringify(pruebaDe(mod)), antes, 'no tocó la columna Prueba');
+  ['tierra.valor', 'costo.indirectos', 'costo.imprevistos', 'costo.cierre'].forEach((clave) => {
+    const x = w.post({ k: EDITOR, tipo: 'ppp2-simular', plan: PLAN, version: 1, cambios: [{ clave, valor: 1 }] });
+    assert.equal(x.error, 'sin_prueba', clave);
+    assert.equal(x.motivo, 'otros', clave);
+  });
+  // la palanca sola (sólo en la versión) sí se prueba
+  const p = w.post({ k: EDITOR, tipo: 'ppp2-simular', plan: PLAN, version: 1, cambios: [{ clave: 'comision', valor: 0.05 }] });
+  assert.equal(p.ok, true, JSON.stringify(p));
+  // y el catálogo lo sabe, para que la página no ofrezca la prueba
+  const R = require('vm').runInNewContext(fs.readFileSync(path.join(RAIZ, 'ppp2-relaciones.js'), 'utf8') + ';window.PPP2_RELACIONES', { window: {} });
+  ['comision', 'tierra', 'indirectos', 'imprevistos', 'cierre'].forEach((k) => assert.equal(R.entradas['palanca:' + k].dato_otros, true, k));
+  // el capital de los datos también lo lee el aviso del tope (Versiones), que el lápiz no enseña: sí se prueba
+  ['tasa_capital', 'capital'].forEach((k) => assert.equal(R.entradas['palanca:' + k].dato_otros, undefined, k));
+  assert.equal(w.post({ k: EDITOR, tipo: 'ppp2-simular', plan: PLAN, version: 1, cambios: [{ clave: 'din.capital', valor: 100 }] }).ok, true);
+});
+
+test('el % pagado durante la obra, probado como dato de Productos, no mueve a la versión que tiene su propia cifra', () => {
+  const w = mundo();
+  // la V2 trae su propio 20% para el producto 1
+  const r = w.post({ k: EDITOR, tipo: 'ppp2-simular', plan: PLAN, version: 2, cambios: [{ clave: 'durante_obra_1', valor: 0.3, como_dato: true }] });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.deepEqual(r.cambios, []);
+  assert.equal(r.sin_efecto[0].palanca, 'durante_obra_1');
+  // sólo en la versión, sí
+  const v = w.post({ k: EDITOR, tipo: 'ppp2-simular', plan: PLAN, version: 2, cambios: [{ clave: 'durante_obra_1', valor: 0.3 }] });
+  assert.equal(v.ok, true);
+  assert.equal(v.cambios.length, 1);
+});
+
+test('el encabezado del Modelo no es una palanca: ni se prueba ni se escribe', () => {
+  const w = mundo();
+  const mod = w.libro.getSheetByName('Modelo'), e4 = mod.getRange(4, 5).getValue();
+  assert.equal(w.post({ k: EDITOR, tipo: 'ppp2-simular', plan: PLAN, version: 1, cambios: [{ clave: 'clave', valor: 1 }] }).error, 'clave');
+  assert.equal(w.post({ k: EDITOR, tipo: 'ppp2-palanca', plan: PLAN, version: 1, clave: 'clave', valor: 1 }).error, 'clave');
+  assert.equal(mod.getRange(4, 5).getValue(), e4);
 });
 
 test('el lápiz no prueba lo que calcula el libro, ni un dato sin columna de prueba, ni cifras inválidas', () => {
@@ -112,6 +162,16 @@ test('ppp2-relaciones.js está al día con la plantilla del libro (si no: python
   assert.equal(catalogo().huella, h.digest('hex'));
 });
 
+test('ppp2-relaciones.js no se editó a mano: su firma coincide con su contenido', () => {
+  const R = vm.runInNewContext(fs.readFileSync(path.join(RAIZ, 'ppp2-relaciones.js'), 'utf8') + ';window.PPP2_RELACIONES', { window: {} });
+  // el mismo texto que json.dumps(sort_keys=True, separators=(",", ":"), ensure_ascii=False) de Python
+  const ordenado = (x) => Array.isArray(x) ? '[' + x.map(ordenado).join(',') + ']'
+    : (x && typeof x === 'object') ? '{' + Object.keys(x).sort().map((k) => JSON.stringify(k) + ':' + ordenado(x[k])).join(',') + '}'
+      : JSON.stringify(x);
+  const cuerpo = {}; ['esquema', 'huella', 'cuadros', 'entradas', 'sobran'].forEach((k) => { cuerpo[k] = R[k]; });
+  assert.equal(crypto.createHash('sha256').update(ordenado(cuerpo), 'utf8').digest('hex'), R.firma);
+});
+
 test('cada palanca del libro se edita en algún cuadro o está marcada como sobrante, y los cuadros son los del visor', () => {
   const R = catalogo();
   const w = mundo();
@@ -168,6 +228,17 @@ test('reemplazar un dato que el libro calculaba guarda su fórmula, y «restaura
   const bit = w.libro.getSheetByName('Bitácora');
   assert.match(String(bit.v[bit.getLastRow() - 1][2]), /Regresó un dato a su fórmula/);
   assert.equal(w.post({ k: EDITOR, tipo: 'ppp2-dato', plan: PLAN, clave: 'din.capital', restaurar: true }).error, 'restaurar', 'sin fórmula guardada no hay qué regresar');
+});
+
+test('lo que una persona escribió en la columna L no se pisa', () => {
+  const w = mundo();
+  const datos = w.libro.getSheetByName('Datos'), f = filaDe(datos, 'din.capital');
+  datos.getRange(f, 3).setFormula('=IFERROR(ROUND(Productos!$E$11/3,2),"")');
+  datos.getRange(f, 12).setValue('Nota de Dirección: confirmar con el banco');
+  const r = w.post({ k: EDITOR, tipo: 'ppp2-dato', plan: PLAN, clave: 'din.capital', valor: 99 });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.guardo_formula, false, 'no había dónde guardarla sin pisar la nota');
+  assert.equal(datos.getRange(f, 12).getValue(), 'Nota de Dirección: confirmar con el banco');
 });
 
 test('una cifra encima de otra cifra no guarda nada en la columna L', () => {

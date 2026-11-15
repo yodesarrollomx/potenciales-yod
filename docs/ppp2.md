@@ -670,17 +670,34 @@ cifra en la columna Prueba del Modelo (la de las pruebas de estrés) para la ver
 recalcula, se leen las cifras de antes y de después (del Modelo y de `Pruebas!B6:B10`) y la columna vuelve
 a como estaba. Los visores leen V1, V2 y V3, nunca la columna Prueba: **nadie más ve el ensayo**. No se
 anota en la bitácora porque nada cambió; si la columna no regresa, se anota y se avisa (`error: prueba`).
-Un dato se prueba por la palanca que lo copia (`=Datos!$C$n`); si la versión tiene su propia cifra, el
-dato no la mueve y así se dice (`sin_efecto`). Un dato que ninguna palanca copia (el terreno, la obra
+Un dato se prueba por la palanca que lo copia (`=Datos!$C$n`) **sólo si nadie más lo lee**: si otra fórmula
+de Datos, Modelo, Productos o Reparto también lo usa (en la plantilla v1, la comisión, el cierre, los
+indirectos, los imprevistos y la tierra entran además a la obra directa que sale de la lámina), probarlo por
+la palanca daría otras cifras que guardarlo, así que el servidor contesta `sin_prueba` (`motivo: otros`) y la
+página ni ofrece la prueba: lo dice y muestra qué más mueve guardarlo (`dato_otros`, `dato_pasa_por` en el
+catálogo). Versiones no cuenta: sólo enseña resultados y avisos que el lápiz no lee. Si la versión tiene su
+propia cifra, el dato no la mueve y así se dice (`sin_efecto`); lo mismo con el % pagado durante la obra
+probado «en la pestaña Productos» (`como_dato`). Un dato que ninguna palanca copia (el terreno, la obra
 directa, los productos) no tiene columna de prueba: se guarda con su fuente y se puede deshacer. Los
 avisos de la prueba usan los mismos límites que dibuja el visor (`VisorPPP.PRUEBAS`, los de la revisión
 para fondos del libro): dinero que faltaría, ganancia negativa, aportación y preventa.
+
+El resultado dice qué cifra se probó y dónde, y se borra en cuanto se cambia la cifra o el lugar; una
+respuesta que llega cuando ya se abrió otro lápiz no se pinta. Enter en la cifra la prueba: guardar es
+siempre un toque en «Guardar». Si el libro cambió mientras se probaba (otra persona guardó algo), se dice
+en el diálogo y lo último se trae al cerrarlo. Escribir y regresar la columna Prueba cambia la última
+modificación del libro en Drive: el siguiente que abra el plan lo lee completo (unos segundos más), nada más.
+La hoja `Pruebas!B4` y las fórmulas de la columna Prueba se regresan siempre, también si algo falla a medias,
+y se comprueban (fórmulas y cifras) antes de contestar.
 
 **Guardar y deshacer.** Se guarda «sólo en esta versión» (`ppp2-palanca`) o «en los datos del plan»
 (`ppp2-dato`, con estado y fuente; los pagos durante la obra van a `ppp2-producto`). La vigente sólo la
 cambia Dirección: quien edita puede probar la cifra ahí, pero se guarda en los datos o en otra versión.
 Después de guardar, una barra ofrece **Deshacer** unos segundos: regresa exactamente lo que había (si la
-versión seguía los datos, vuelve a seguirlos).
+versión seguía los datos, vuelve a seguirlos). Deshacer va al plan y a la revisión del guardado: si alguien
+cambió el libro desde entonces no escribe (`revision`), y al abrir otro plan la barra se quita. Si el dato
+lo calculaba el libro, su fórmula se guarda como texto en la columna L de Datos («Fórmula anterior») y
+deshacer la regresa tal cual; lo que una persona haya escrito en esa columna no se pisa.
 
 Lo que sigue: la plantilla definitiva del libro (programa y norma, costo por partes, ritmo de ventas,
 alertas de norma) y llevar ahí a los planes.

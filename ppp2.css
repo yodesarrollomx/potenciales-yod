@@ -4,19 +4,28 @@
   --p2-oro:#9a7b3f; --p2-oro-claro:#f1e8d6; --p2-verde:#39744b; --p2-verde-claro:#e6f0e8;
   --p2-rojo:#a94438; --p2-rojo-claro:#f6e4e1; --p2-azul:#3e6484; --p2-azul-claro:#e5edf4;
   --p2-serif:'Instrument Serif',Georgia,serif; --p2-sans:'Instrument Sans','Manrope',system-ui,sans-serif;
-  max-width:1180px; margin:0 auto; padding:24px 24px 96px; color:var(--p2-tinta); font:15px/1.5 var(--p2-sans);
+  color:var(--p2-tinta); font:15px/1.5 var(--p2-sans);
 }
+/* el diálogo vive en <body> (fuera de la región viva de la página): lleva los mismos colores y letras */
+.p2-dialogo{
+  --p2-fondo:#f6f3ed; --p2-papel:#fffdf9; --p2-tinta:#231d14; --p2-tenue:#766f62; --p2-linea:#e1dacb;
+  --p2-oro:#9a7b3f; --p2-oro-claro:#f1e8d6; --p2-verde:#39744b; --p2-verde-claro:#e6f0e8;
+  --p2-rojo:#a94438; --p2-rojo-claro:#f6e4e1; --p2-azul:#3e6484; --p2-azul-claro:#e5edf4;
+  --p2-serif:'Instrument Serif',Georgia,serif; --p2-sans:'Instrument Sans','Manrope',system-ui,sans-serif;
+  color:var(--p2-tinta); font:15px/1.5 var(--p2-sans);
+}
+.p2{max-width:1180px; margin:0 auto; padding:24px 24px 96px}
 body{background:#f6f3ed;margin:0}
-.p2 *{box-sizing:border-box}
-.p2 h1,.p2 h2,.p2 .p2-cifra{font-family:var(--p2-serif);font-weight:400;letter-spacing:-.02em}
+.p2 *,.p2-dialogo *{box-sizing:border-box}
+.p2 h1,.p2 h2,.p2 .p2-cifra,.p2-dialogo h2,.p2-dialogo .p2-cifra{font-family:var(--p2-serif);font-weight:400;letter-spacing:-.02em}
 .p2 h1{font-size:clamp(34px,5vw,54px);line-height:1.04;margin:6px 0 6px}
-.p2 h2{font-size:clamp(24px,3vw,32px);line-height:1.15;margin:0 0 12px}
-.p2 h3{font-size:15px;margin:0 0 8px;font-weight:600}
-.p2 p{margin:0 0 10px}
-.p2 a{color:inherit}
-.p2 button{font:inherit;cursor:pointer}
-.p2 :focus-visible{outline:3px solid var(--p2-oro);outline-offset:2px}
-.p2 [hidden]{display:none!important}
+.p2 h2,.p2-dialogo h2{font-size:clamp(24px,3vw,32px);line-height:1.15;margin:0 0 12px}
+.p2 h3,.p2-dialogo h3{font-size:15px;margin:0 0 8px;font-weight:600}
+.p2 p,.p2-dialogo p{margin:0 0 10px}
+.p2 a,.p2-dialogo a{color:inherit}
+.p2 button,.p2-dialogo button{font:inherit;cursor:pointer}
+.p2 :focus-visible,.p2-dialogo :focus-visible{outline:3px solid var(--p2-oro);outline-offset:2px}
+.p2 [hidden],.p2-dialogo [hidden]{display:none!important}
 .p2-sobre{font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--p2-oro)}
 .p2-tenue{color:var(--p2-tenue)}
 .p2-chico{font-size:12.5px}
@@ -75,8 +84,8 @@ a.p2-tarjeta:hover{border-color:var(--p2-oro);transform:translateY(-1px)}
 .p2-ciclo li.hecho{background:var(--p2-verde-claro);border-color:transparent;color:var(--p2-verde)}
 .p2-ciclo li.ahora{background:var(--p2-oro-claro);border-color:var(--p2-oro);color:var(--p2-tinta);font-weight:700}
 .p2-tabla tr.elegida td{background:var(--p2-oro-claro);font-weight:600}
-.p2 details{margin-top:8px}
-.p2 details summary{cursor:pointer;font-weight:600;font-size:13.5px;padding:6px 0}
+.p2 details,.p2-dialogo details{margin-top:8px}
+.p2 details summary,.p2-dialogo details summary{cursor:pointer;font-weight:600;font-size:13.5px;padding:6px 0}
 .p2-aviso{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--p2-linea)}
 .p2-versiones{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 18px}
 .p2-vbtn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:1px solid var(--p2-linea);background:var(--p2-papel);border-radius:12px;padding:8px 14px;min-width:150px;text-align:left}

@@ -321,6 +321,73 @@ async function foto(page, nombre) {
       await ctx.close();
     });
 
+    await caso('deshacer va al plan donde se guardó: al abrir otro plan la barra se va y no escribe en él', async () => {
+      const w = mundo();
+      w.vivero.getSheetByName('Planes').appendRow(['p2otroplan01', 'Otro Ejemplo', 'libro-plantilla', 'activo', '2026-01-15', 'Pruebas', '', 'ppp2-libro-v1', '']);
+      const { page, ctx, posts, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN });
+      await page.locator('#p2Cuadros .vz-card[data-card="costo"]').click();
+      await page.locator('#vzModal .p2-lapiz[data-e="palanca:indirectos"]').click();
+      const dlg = page.locator('#p2Dialogo');
+      await dlg.locator('input[name="valor"]').fill('15');
+      await dlg.locator('button[type="submit"]').click();
+      await page.locator('#p2Deshacer:not([hidden])').waitFor();
+      await page.waitForFunction(() => window.PPP2 && !window.PPP2.estado.ocupado);
+      await page.evaluate(() => { location.hash = '#/plan/p2otroplan01'; });
+      await page.waitForFunction(() => window.PPP2.estado.plan && window.PPP2.estado.plan.plan_id === 'p2otroplan01');
+      assert.equal(await page.locator('#p2Deshacer').isHidden(), true, 'la barra de deshacer se fue con el plan');
+      const antes = posts.length;
+      await page.evaluate(() => document.querySelector('#p2Deshacer .p2-btn').click());     // aunque alguien la toque
+      await page.getByText(/Ese cambio era de otro plan/).waitFor();
+      assert.equal(posts.length, antes, 'no mandó nada');
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
+    await caso('el lápiz: una prueba que llega tarde no se pinta en otro diálogo, cambiar la cifra la borra y Enter prueba sin guardar', async () => {
+      const w = mundo(), red = { demora: 0 };
+      const { page, ctx, posts, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN, red });
+      await page.locator('#p2Cuadros .vz-card[data-card="costo"]').click();
+      await page.locator('#vzModal .p2-lapiz[data-e="palanca:indirectos"]').click();
+      let dlg = page.locator('#p2Dialogo');
+      // el diálogo vive en <body>, fuera de la región viva, con su título; la hoja del cuadro queda inerte
+      assert.equal(await page.evaluate(() => document.getElementById('p2Dialogo').parentElement === document.body), true);
+      assert.equal(await page.evaluate(() => document.querySelector('#p2Dialogo [role="dialog"]').getAttribute('aria-labelledby')), 'p2DialogoTitulo');
+      assert.equal(await page.evaluate(() => document.getElementById('vzModal').inert), true);
+      red.demora = 1500;
+      await dlg.locator('input[name="valor"]').fill('15');
+      await dlg.locator('[data-accion="lapiz-probar"]').click();
+      await dlg.locator('[data-accion="cerrar"]').click();
+      assert.equal(await page.evaluate(() => document.getElementById('vzModal').inert), false, 'al cerrar, la hoja vuelve a servir');
+      await page.locator('#vzModal .p2-lapiz[data-e="palanca:imprevistos"]').click();
+      dlg = page.locator('#p2Dialogo');
+      await dlg.waitFor();
+      await page.waitForFunction(() => !window.PPP2.estado.ocupado, null, { timeout: 8000 });
+      await page.waitForTimeout(200);
+      assert.equal(await page.locator('#p2LapizRes .p2-sobre').count(), 0, 'lo de indirectos no se pinta en imprevistos');
+      red.demora = 0;
+      await dlg.locator('input[name="valor"]').fill('7');
+      await dlg.locator('input[name="valor"]').press('Enter');
+      await page.locator('#p2LapizRes .p2-sobre').waitFor();
+      assert.equal(posts[posts.length - 1].tipo, 'ppp2-simular', 'Enter prueba la cifra');
+      assert.deepEqual(posts[posts.length - 1].cambios, [{ clave: 'imprevistos', valor: 0.07 }]);
+      assert.match(await page.locator('#p2LapizRes .p2-sobre').textContent(), /Con 7(\.0)?% sólo en esta versión/);
+      assert.equal(await page.locator('#p2Dialogo').count(), 1, 'y no lo guardó');
+      await dlg.locator('input[name="valor"]').fill('8');
+      assert.equal(await page.locator('#p2LapizRes .p2-sobre').count(), 0, 'cambiar la cifra borra la prueba anterior');
+      // la cifra de los datos también entra a la obra directa: guardarla ahí mueve más que la palanca, así que no se prueba
+      await dlg.locator('input[name="donde"][value="dato"]').check();
+      assert.equal(await dlg.locator('[data-accion="lapiz-probar"]').isHidden(), true);
+      assert.match(await dlg.locator('[data-otros]').textContent(), /también lo leen otras cuentas del libro \(.*Obra directa/);
+      assert.match(await dlg.locator('[data-ligado]').textContent(), /Obra directa/);
+      await dlg.locator('input[name="donde"][value="version"]').check();
+      assert.equal(await dlg.locator('[data-accion="lapiz-probar"]').isHidden(), false);
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('#p2Dialogo').count(), 0);
+      assert.equal(await page.locator('#vzModal').isVisible(), true, 'Esc cierra sólo el diálogo');
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
     await caso('el lápiz en el teléfono: la hoja del cuadro y el diálogo caben, y la pregunta del plan lleva a su sección', async () => {
       const w = mundo();
       const { page, ctx, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN, movil: true });

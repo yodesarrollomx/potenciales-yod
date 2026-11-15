@@ -10,7 +10,10 @@ Lo que sale, por cada entrada (dato o palanca):
   · pasa_por  — los cálculos del Modelo que toca primero (obra directa, comisiones, línea del banco…);
   · mueve     — los resultados que cambia (ventas, ganancia real, lo que recibe el dueño…);
   · revision  — las pruebas de la revisión para fondos que puede mover;
-  · cuadro    — el cuadro del visor donde se edita (la ingeniería inversa: del visor hacia atrás).
+  · cuadro    — el cuadro del visor donde se edita (la ingeniería inversa: del visor hacia atrás);
+  · dato_otros — (palancas que copian un dato) otras cuentas del libro también leen ese dato: guardarlo en los
+                datos mueve más que la palanca, así que el lápiz no lo prueba antes (el servidor tampoco); con
+                dato_pasa_por y dato_mueve, lo que mueve al guardarlo en los datos.
 Y además `sobran`: datos que el libro pide y que no llegan a ningún resultado del visor.
 
 Uso (desde la raíz del repo):
@@ -171,6 +174,14 @@ def construir():
                 copia[k] = {"hoja": "Productos", "fila": int(m.group(1)) - G.PROD_FILA0 + 1, "campo": "durante_obra"}
 
     fila_edad = G.RES_FILA.get("plan.edad")
+    # las hojas que alimentan lo que el lápiz lee (las mismas que mira el servidor antes de probar un dato)
+    HOJAS_CIFRAS = {"Datos", "Modelo", "Productos", "Reparto"}
+
+    def otros_leen(clave_dato, palanca_k):
+        fila = G.DATO_FILA[clave_dato]
+        propia = ("Modelo", G.MOD_FILA[palanca_k], 4)
+        return sorted(x for x in dep.get(("Datos", fila, 3), ())
+                      if x[0] in HOJAS_CIFRAS and x != propia and not (x[0] == "Datos" and x[1] == fila))
 
     def resultado(semillas):
         r = alcanza(dep, semillas)
@@ -194,6 +205,9 @@ def construir():
         if c and c["hoja"] == "Datos":
             e["dato"] = c["clave"]
             e["nota"] = dato[c["clave"]][6] or ""
+            if otros_leen(c["clave"], k):
+                r = resultado([("Datos", G.DATO_FILA[c["clave"]], 3)])
+                e.update({"dato_otros": True, "dato_pasa_por": r["pasa_por"], "dato_mueve": r["mueve"]})
         elif c:
             e["producto"] = c["fila"]
             e["nota"] = "Cuánto paga el cliente durante la obra en este producto; la base sale de la pestaña Productos."
@@ -237,13 +251,22 @@ def construir():
     sin_cuadro = [i for i, e in entradas.items() if e["tipo"] in ("palanca", "dato") and not e["cuadro"]]
     if sin_cuadro:
         raise SystemExit("relaciones: entradas que no se editan en ningún cuadro: " + ", ".join(sin_cuadro))
-    return {
+    datos = {
         "esquema": G.ESQUEMA,
         "huella": huella(),
         "cuadros": CUADROS,
         "entradas": dict(sorted(entradas.items())),
         "sobran": sobran,
     }
+    datos["firma"] = firma(datos)
+    return datos
+
+
+def firma(datos):
+    """Huella del contenido (sin la firma): si alguien edita ppp2-relaciones.js a mano, la prueba de Node la recalcula
+    y no coincide (así no hace falta Python en la integración continua)."""
+    cuerpo = {k: datos[k] for k in ("esquema", "huella", "cuadros", "entradas", "sobran")}
+    return hashlib.sha256(json.dumps(cuerpo, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
 def huella():
@@ -257,7 +280,7 @@ def huella():
 def texto(datos):
     return ("/* Generado por ppp2/libro/relaciones.py desde la plantilla del libro (" + datos["esquema"] + ").\n"
             "   No se edita a mano: si cambia ppp2/libro/generar.py, se vuelve a correr ese guion\n"
-            "   (tests/ppp2-relaciones.test.cjs lo vigila). Sólo nombres y ligas entre celdas: ninguna cifra. */\n"
+            "   (tests/ppp2-lapiz.test.cjs lo vigila). Sólo nombres y ligas entre celdas: ninguna cifra. */\n"
             "window.PPP2_RELACIONES = " + json.dumps(datos, ensure_ascii=False, indent=1) + ";\n")
 
 

@@ -36,8 +36,8 @@
     trabajando: 'Hay un plan corriendo una ronda, unas pruebas, su consejo o una investigación, y el servidor atiende de uno en uno; tarda unos minutos. Vuelve a intentarlo cuando termine.',
     board: 'Tu acceso no incluye Potenciales.', portero: 'No pude validar tu sesión con el Portero; intenta de nuevo.',
     plan: 'Ese plan no existe o está archivado.', calculado: 'Ese renglón lo calcula el libro; no se captura.',
-    prueba: 'Las pruebas no se anotaron: la columna Prueba del libro no volvió a su estado. Quedó en la bitácora.',
-    sin_prueba: 'Este dato no tiene columna de prueba en el libro: guárdalo y, si no te convence, deshazlo.',
+    prueba: 'La columna Prueba del libro (la usan las pruebas de estrés y el lápiz) no volvió a su estado: no se anotó nada y quedó en la bitácora. Avísale a Dirección.',
+    sin_prueba: 'Este dato no se puede probar antes de guardarlo: guárdalo y, si no te convence, deshazlo.',
     restaurar: 'No encontré la fórmula que tenía este dato: hay que revisarlo en el libro (pestaña Datos).',
     paso: 'El libro dice que ahora no toca mover capital ni arranque de obra; recarga para ver el siguiente paso.',
     sin_lugar: 'No tengo una versión donde escribir mi propuesta: la base y la vigente no las toco, ni el trabajo de una persona si nadie me lo presta.',
@@ -215,11 +215,13 @@
     var h = (location.hash || '').replace(/^#\/?/, '').split('/');
     if (h[0] === 'plan' && /^p2[a-z0-9]{6,20}$/.test(h[1] || '')) {
       var cambio = estado.planId !== h[1];
+      if (cambio) escondeDeshacer();
       estado.planId = h[1];
       var pes = h[2] === 'auton' ? 'rondas' : h[2];
       estado.pestana = ['versiones', 'preguntas', 'rondas', 'bitacora'].indexOf(pes) >= 0 ? pes : '';
       if (cambio || !estado.plan) { estado.plan = null; estado.version = 0; estado.fresco = true; estado.sinRed = false; cargarPlan(); } else pintarPlan();
     } else {
+      escondeDeshacer();
       estado.planId = ''; estado.plan = null;
       if (estado.vivero) pintarVivero(); else cargarVivero();
     }
@@ -460,7 +462,7 @@
   /* También en los renglones del propio cuadro que son un dato o una palanca: el lápiz va junto a «de dónde sale». */
   function identDeDato(k) {
     var R = rel();
-    if (!R) return '';
+    if (!R || !R.entradas) return '';
     if (R.entradas['dato:' + k]) return 'dato:' + k;
     for (var id in R.entradas) if (R.entradas[id].dato === k && R.entradas[id].tipo === 'palanca') return id;
     return '';
@@ -546,10 +548,11 @@
   }
 
   /* El diálogo del lápiz */
-  var lapiz = { e: null, id: '', previo: null };
+  var lapiz = { e: null, id: '', previo: null, marca: null, recargar: false };
   var DONDE_TXT = { version: 'Sólo en esta versión', dato: 'En los datos del plan' };
-  function ligadoA(e) {
+  function ligadoA(e, comoDato) {
     var p = e.pasa_por || [], m = e.mueve || [], r = e.revision || [];
+    if (comoDato && e.dato_otros) { p = e.dato_pasa_por || p; m = e.dato_mueve || m; }
     var clave = ['Ventas', 'Costo sin tierra', 'Fin de obra', 'Capital', 'Banco (saldo máximo)', 'Dinero que faltaría', 'Ganancia real', 'Lo que recibe el dueño', 'Mes de reparto', 'Edad del plan'];
     var top = m.filter(function (x) { return clave.indexOf(x) >= 0; }).slice(0, 6);
     if (!p.length && !top.length && !r.length) return '<p class="p2-chico p2-tenue">Se enseña en el cuadro; ninguna otra cifra del plan depende de este dato.</p>';
@@ -584,7 +587,7 @@
     var pideFuente = !pa || e.dato;
     abrirDialogo('<div class="p2-sobre">' + esc(CUADRO_NOMBRE[e.cuadro] || 'Lápiz') + ' · V' + k + '</div><h2>' + esc(conceptoDe(e) || e.concepto) + '</h2>' +
       '<p class="p2-tenue">Hoy en la V' + k + ': <b>' + cifra(unidad, hoy) + '</b>' + (pa && pa.cambia[k - 1] ? ' · cifra propia de esta versión' : (d ? ' · ' + esc(d.estado || '') : '')) + '</p>' +
-      '<div class="p2-ligado"><div class="p2-sobre">Está ligado a</div>' + ligadoA(e) + (e.nota ? '<p class="p2-chico p2-tenue">' + esc(e.nota) + '</p>' : '') + '</div>' +
+      '<div class="p2-ligado"><div class="p2-sobre">Está ligado a</div><div data-ligado>' + ligadoA(e, false) + '</div>' + (e.nota ? '<p class="p2-chico p2-tenue">' + esc(e.nota) + '</p>' : '') + '</div>' +
       '<form class="p2-form" data-form="lapiz">' +
       '<label>Otra cifra' + (unidad && unidad !== 'texto' ? ' <span class="p2-tenue">(' + esc(unidad === '%' ? '% · escribe 30 para 30%' : unidad === '1/0' ? '1 sí · 0 no' : unidad) + ')</span>' : '') +
       (esNumero ? '<input name="valor" inputmode="decimal" autocomplete="off" value="' + esc(mostrado) + '">' : '<textarea name="valor" rows="2">' + esc(mostrado) + '</textarea>') + '</label>' +
@@ -595,6 +598,8 @@
         '<label>De dónde sale<textarea name="fuente" rows="2" placeholder="Documento, persona o fecha">' + esc(d ? d.fuente || '' : '') + '</textarea></label></div>' : '') +
       '<div class="p2-lapiz-res" id="p2LapizRes" aria-live="polite">' + (pa ? '' : '<p class="p2-chico p2-tenue">Este dato no tiene columna de prueba en el libro: al guardarlo cambian las cifras de todas las versiones que lo usan, y lo puedes deshacer enseguida.</p>') + '</div>' +
       (sinLugar ? '<p class="p2-chico p2-aviso-chico">La V' + k + ' es la vigente: sólo la cambia Dirección. Aquí puedes probar la cifra y ver qué cambiaría.</p>' : '') +
+      (e.dato_otros ? '<p class="p2-chico p2-tenue" data-otros hidden>Ese dato también lo leen otras cuentas del libro (' + esc((e.dato_pasa_por || []).filter(function (x) { return x !== 'Indirectos' && x !== 'Imprevistos'; }).slice(0, 3).join(', ') || 'otras cifras') +
+        '): guardarlo en los datos mueve más que esta palanca, así que no lo puedo probar antes. Guárdalo y, si no te convence, toca «Deshacer».</p>' : '') +
       '<div class="p2-acciones">' + (pa ? '<button type="button" class="p2-btn" data-accion="lapiz-probar"><i class="ti ti-eye" aria-hidden="true"></i> Ver qué cambia</button>' : '') +
       (sinLugar ? '' : '<button class="p2-btn oro" type="submit">Guardar</button>') + '<button class="p2-btn suave" type="button" data-accion="cerrar">' + (sinLugar ? 'Cerrar' : 'Cancelar') + '</button></div></form>');
     if (pa) dondeCambia();
@@ -604,8 +609,19 @@
     if (!f) return;
     var donde = (f.querySelector('input[name="donde"]:checked') || {}).value || 'version';
     if (caja) caja.hidden = donde !== 'dato' || !!(lapiz.e && lapiz.e.producto);
+    // un dato que otras cuentas también leen no se prueba por su palanca: se dice y el botón se quita
+    var otros = !!(lapiz.e && lapiz.e.dato_otros) && donde === 'dato', aviso = f.querySelector('[data-otros]'), probar = f.querySelector('[data-accion="lapiz-probar"]');
+    if (aviso) aviso.hidden = !otros;
+    if (probar) probar.hidden = otros;
+    var lig = f.closest('.p2-caja') && f.closest('.p2-caja').querySelector('[data-ligado]');
+    if (lig && lapiz.e && lapiz.e.dato_otros) lig.innerHTML = ligadoA(lapiz.e, donde === 'dato');
+    limpiaPrueba();
+  }
+  /* El resultado de una prueba vale sólo para la cifra y el lugar que se probaron: si cambian, se borra. */
+  function limpiaPrueba() {
+    lapiz.marca = null;
     var res = document.getElementById('p2LapizRes');
-    if (res) res.innerHTML = '';
+    if (res && res.getAttribute('data-probado')) { res.innerHTML = ''; res.removeAttribute('data-probado'); }
   }
   function valorLapiz(f) {
     var e = lapiz.e, pa = e.tipo === 'palanca' ? palancaDe(e.palanca) : null, d = e.dato ? datoDe(e.dato) : null;
@@ -644,12 +660,12 @@
     });
     return out;
   }
-  function pintaPrueba(r) {
-    var res = document.getElementById('p2LapizRes');
-    if (!res) return;
+  function pintaPrueba(r, res, marca) {
+    if (!res || !res.isConnected) return;
+    res.setAttribute('data-probado', '1');
     if (r.sin_efecto && r.sin_efecto.length && (!r.cambios || !r.cambios.length)) {
       var s = r.sin_efecto[0];
-      res.innerHTML = '<p class="p2-aviso-chico">La V' + r.version + ' tiene su propia cifra (' + esc(cifra((palancaDe(s.palanca) || {}).unidad, s.propia)) + '): cambiar el dato no la mueve. ' +
+      res.innerHTML = '<p class="p2-aviso-chico">La V' + r.version + ' tiene su propia cifra (' + cifra((palancaDe(s.palanca) || {}).unidad, s.propia) + '): cambiar el dato no la mueve. ' +
         'Para moverla, guárdalo «sólo en esta versión».</p>';
       return;
     }
@@ -660,7 +676,8 @@
         '<td class="n ' + (mejor === null ? '' : (mejor ? 'sube' : 'baja')) + '">' + (mejor === null ? '' : (mejor ? '▲' : '▼')) + '</td></tr>';
     }).join('');
     var avisos = avisosLapiz(a, b).map(function (x) { return '<li class="' + x[0] + '">' + esc(x[1]) + '</li>'; }).join('');
-    res.innerHTML = '<div class="p2-sobre">Qué cambia en la V' + r.version + ' · lo calculó el libro en su columna de prueba</div>' +
+    var probada = marca ? cifra(marca.unidad, marca.valor) + (marca.donde === 'dato' ? ' en los datos' : ' sólo en esta versión') : '';
+    res.innerHTML = '<div class="p2-sobre">' + (probada ? 'Con ' + probada + ' · ' : '') + 'qué cambia en la V' + r.version + ' · lo calculó el libro en su columna de prueba</div>' +
       (filas ? '<table class="p2-tabla p2-antes"><thead><tr><th></th><th class="n">Hoy</th><th class="n">Con la cifra nueva</th><th></th></tr></thead><tbody>' + filas + '</tbody></table>'
         : '<p class="p2-chico">Con esta cifra no cambia ninguna de las cifras principales.</p>') +
       (avisos ? '<ul class="p2-avisos">' + avisos + '</ul>' : '') +
@@ -672,31 +689,41 @@
     var v = valorLapiz(f);
     if (!v.ok) { toast('Escribe un número.'); return; }
     var donde = (f.querySelector('input[name="donde"]:checked') || {}).value || 'version';
-    var clave = donde === 'dato' && e.dato ? e.dato : e.palanca;
+    if (donde === 'dato' && e.dato_otros) return;
+    var clave = donde === 'dato' && e.dato ? e.dato : e.palanca, cambio = { clave: clave, valor: v.valor };
+    if (donde === 'dato' && e.producto) cambio.como_dato = true;     // el % de la pestaña Productos sólo mueve a las versiones que siguen la base
     if (estado.fresco === false) { toast('Un momento: estoy trayendo lo último de mi libro.'); return; }
+    // la marca dice qué se probó: si cambian el diálogo, la cifra o el lugar antes de que conteste, el resultado no se pinta
+    var marca = { id: lapiz.id, version: estado.version, donde: donde, valor: v.valor, unidad: (e.tipo === 'palanca' ? (palancaDe(e.palanca) || {}).unidad : e.unidad) };
+    lapiz.marca = marca;
     estado.ocupado = true;
     b.disabled = true;
-    if (res) res.innerHTML = '<p class="p2-chico p2-tenue"><i class="ti ti-loader-2" aria-hidden="true"></i> El libro está recalculando con esa cifra en su columna de prueba…</p>';
-    escribir({ tipo: 'ppp2-simular', plan: estado.planId, rev: estado.plan.rev, version: estado.version, cambios: [{ clave: clave, valor: v.valor }] }, 90000).then(function (r) {
+    if (res) { res.removeAttribute('data-probado'); res.innerHTML = '<p class="p2-chico p2-tenue"><i class="ti ti-loader-2" aria-hidden="true"></i> El libro está recalculando con esa cifra en su columna de prueba…</p>'; }
+    var vigente = function () { return lapiz.marca === marca && res && res.isConnected; };
+    escribir({ tipo: 'ppp2-simular', plan: estado.planId, rev: estado.plan.rev, version: estado.version, cambios: [cambio] }, 90000).then(function (r) {
       estado.ocupado = false;
       if (b.isConnected) b.disabled = false;
+      if (r && RECHAZOS.indexOf(r.error) >= 0) { cerrarDialogo(); olvidaTodo(); fallo(r); return; }
+      if (!vigente()) return;
       if (!r || !r.ok) {
-        var er = (r && r.error) || 'red';
-        if (RECHAZOS.indexOf(er) >= 0) { cerrarDialogo(); olvidaTodo(); fallo(r); return; }
-        if (res) res.innerHTML = '<p class="p2-aviso-chico">' + esc(ERRORES[er] || 'No pude probar la cifra. Vuelve a intentarlo.') + '</p>';
-        if (er === 'revision') cargarPlan(true);
+        var er = (r && r.error) || 'red', txt = ERRORES[er] || 'No pude probar la cifra. Vuelve a intentarlo.';
+        if (er === 'sin_prueba' && r.motivo === 'otros') txt = 'Ese dato también lo leen otras cuentas del libro: no lo puedo probar antes de guardarlo. Guárdalo y, si no te convence, toca «Deshacer».';
+        // el libro cambió: no se recarga encima del diálogo; se trae lo último al cerrarlo
+        if (er === 'revision') { txt = 'El libro cambió desde que lo abriste (alguien guardó algo). Cierra esta ventana: traigo lo último y vuelves a probar.'; lapiz.recargar = true; }
+        res.innerHTML = '<p class="p2-aviso-chico">' + esc(txt) + '</p>';
         return;
       }
-      pintaPrueba(r);
+      pintaPrueba(r, res, marca);
     }, function () {
       estado.ocupado = false;
       if (b.isConnected) b.disabled = false;
-      if (res) res.innerHTML = '<p class="p2-aviso-chico">Sin respuesta del servidor. Vuelve a intentarlo.</p>';
+      if (vigente()) res.innerHTML = '<p class="p2-aviso-chico">Sin respuesta del servidor. Vuelve a intentarlo.</p>';
     });
   }
   function guardarLapiz(f) {
     var e = lapiz.e, k = estado.version, d = new FormData(f);
     if (!e) return;
+    if (estado.ocupado) { toast('Espera un momento: el libro todavía está probando la cifra.'); return; }
     var v = valorLapiz(f);
     if (!v.ok) { toast('Escribe un número.'); return; }
     var pa = e.tipo === 'palanca' ? palancaDe(e.palanca) : null, dato = e.dato ? datoDe(e.dato) : null;
@@ -724,12 +751,20 @@
       if (!r || !r.ok || !deshacer) return;
       // si el libro calculaba ese dato, deshacer le regresa su fórmula (la guardó el servidor), no una cifra fija
       if (r.guardo_formula && cuerpo.tipo === 'ppp2-dato') deshacer = { tipo: 'ppp2-dato', clave: cuerpo.clave, restaurar: true, estado: deshacer.estado, fuente: deshacer.fuente };
-      ofrecerDeshacer(nombre + ': ' + antesTxt.replace(/<[^>]+>/g, '') + ' → ' + String(despuesTxt).replace(/<[^>]+>/g, ''), deshacer);
+      ofrecerDeshacer(nombre + ': ' + antesTxt.replace(/<[^>]+>/g, '') + ' → ' + String(despuesTxt).replace(/<[^>]+>/g, ''), deshacer, r);
     });
   }
   /* Después de guardar, un momento para deshacer: regresa exactamente lo que había (o la cifra de los datos). */
   var deshacerT = 0;
-  function ofrecerDeshacer(texto, cuerpo) {
+  function escondeDeshacer() {
+    var el = document.getElementById('p2Deshacer');
+    if (el) el.hidden = true;
+    clearTimeout(deshacerT);
+  }
+  function ofrecerDeshacer(texto, cuerpo, r) {
+    // deshacer va al plan donde se guardó y sólo si nadie lo ha cambiado desde entonces (la revisión del guardado)
+    cuerpo.plan = estado.planId;
+    cuerpo.rev = (r && r.plan && r.plan.plan_id === estado.planId && r.plan.rev) || (estado.plan && estado.plan.rev);
     var el = document.getElementById('p2Deshacer');
     if (!el) {
       el = document.createElement('div');
@@ -742,6 +777,7 @@
     deshacerT = setTimeout(function () { el.hidden = true; }, 20000);
     el.querySelector('.p2-btn').onclick = function () {
       el.hidden = true; clearTimeout(deshacerT);
+      if (cuerpo.plan !== estado.planId) { toast('Ese cambio era de otro plan: ábrelo y deshazlo desde su bitácora.'); return; }
       enviar(cuerpo, 'Listo: regresé la cifra que había.');
     };
     el.querySelector('.p2-x').onclick = function () { el.hidden = true; clearTimeout(deshacerT); };
@@ -1168,21 +1204,31 @@
   var focoPrevio = null;      // al cerrar un diálogo, el foco vuelve a lo que lo abrió (el lápiz de un cuadro, por ejemplo)
   function abrirDialogo(html) {
     var previo = document.activeElement;
-    cerrarDialogo();
+    cerrarDialogo(true);
     focoPrevio = previo;
     var d = document.createElement('div');
     d.className = 'p2-dialogo'; d.id = 'p2Dialogo';
     d.innerHTML = '<div class="p2-caja" role="dialog" aria-modal="true">' + html + '</div>';
-    (raiz || document.body).appendChild(d);
+    var titulo = d.querySelector('h2');
+    if (titulo) { titulo.id = 'p2DialogoTitulo'; d.firstChild.setAttribute('aria-labelledby', 'p2DialogoTitulo'); }
+    // en <body> y después de la hoja del cuadro: no se anuncia como región viva y queda encima de todo
+    document.body.appendChild(d);
+    var vz = document.getElementById('vzModal');
+    if (vz && !vz.hidden) { vz.inert = true; vz.setAttribute('data-p2-inerte', '1'); }
     var primero = d.querySelector('input,textarea,select,button');
     if (primero) primero.focus();
   }
-  function cerrarDialogo() {
+  function cerrarDialogo(paraOtro) {
     var d = document.getElementById('p2Dialogo');
     if (!d) return;
     d.remove();
+    lapiz.marca = null;
+    var vz = document.querySelector('[data-p2-inerte]');
+    if (vz) { vz.inert = false; vz.removeAttribute('data-p2-inerte'); }
     if (focoPrevio && document.contains(focoPrevio) && focoPrevio.focus) { try { focoPrevio.focus({ preventScroll: true }); } catch (e) { } }
     focoPrevio = null;
+    // si el libro cambió mientras se probaba una cifra, se trae lo último ahora que ya no hay diálogo encima
+    if (!paraOtro && lapiz.recargar) { lapiz.recargar = false; if (estado.planId) cargarPlan(true); }
   }
 
   function enviar(cuerpo, mensaje, ms, espera) {
@@ -1193,7 +1239,7 @@
     }
     estado.ocupado = true;
     var t = token();
-    if (estado.plan) { cuerpo.plan = estado.planId; cuerpo.rev = estado.plan.rev; }
+    if (estado.plan && !cuerpo.plan) { cuerpo.plan = estado.planId; cuerpo.rev = estado.plan.rev; }
     // lo que tarda (las pruebas de estrés: el libro recalcula cada escenario) deja el aviso puesto hasta terminar
     if (ms > 60000) toast(espera || 'Corriendo en el libro… tarda cerca de un minuto; no cierres la página.', true);
     else toast('Guardando en el libro…');
@@ -1383,6 +1429,11 @@
     enviar({ tipo: 'ppp2-palanca', version: Number(i.getAttribute('data-v')), clave: i.getAttribute('data-palanca'), valor: n });
   });
 
+  // cambiar la cifra borra el resultado de la prueba anterior: lo que se ve siempre es de la cifra escrita
+  document.addEventListener('input', function (ev) {
+    if (ev.target.matches && ev.target.matches('#p2Dialogo form[data-form="lapiz"] input[name="valor"]')) limpiaPrueba();
+  });
+
   document.addEventListener('submit', function (ev) {
     var f = ev.target.closest('form[data-form]');
     if (!f) return;
@@ -1422,7 +1473,7 @@
       Object.keys(campos).forEach(function (c) { atras[c] = previo[c] === undefined || previo[c] === null ? '' : previo[c]; });
       var fila = Number(f.getAttribute('data-fila')), nom = ((estado.plan.productos || [])[fila - 1] || {}).nombre || 'Producto';
       enviar({ tipo: 'ppp2-producto', fila: fila, campos: campos }, 'Guardado: el libro recalculó las ventas.').then(function (r) {
-        if (r && r.ok) ofrecerDeshacer(nom + ': ' + Object.keys(campos).join(', '), { tipo: 'ppp2-producto', fila: fila, campos: atras });
+        if (r && r.ok) ofrecerDeshacer(nom + ': ' + Object.keys(campos).join(', '), { tipo: 'ppp2-producto', fila: fila, campos: atras }, r);
       });
       return;
     }
@@ -1430,7 +1481,7 @@
       var nuevo = Number(d.get('esquema')), antes = (lapiz.previo || {}).esquema;
       if (!nuevo || nuevo === antes) { cerrarDialogo(); return; }
       enviar({ tipo: 'ppp2-reparto', esquema: nuevo }, 'Esquema elegido: el libro recalculó lo que recibe cada parte.').then(function (r) {
-        if (r && r.ok && antes) ofrecerDeshacer('Esquema de reparto', { tipo: 'ppp2-reparto', esquema: antes });
+        if (r && r.ok && antes) ofrecerDeshacer('Esquema de reparto', { tipo: 'ppp2-reparto', esquema: antes }, r);
       });
       return;
     }
@@ -1443,6 +1494,14 @@
     var dlg = document.getElementById('p2Dialogo');
     if (!dlg) return;
     if (ev.key === 'Escape') { ev.stopPropagation(); ev.preventDefault(); cerrarDialogo(); return; }
+    if (ev.key === 'Enter' && ev.target.matches && ev.target.matches('form[data-form="lapiz"] input[name="valor"]')) {
+      // Enter en la cifra la prueba; guardar es siempre un toque en «Guardar»
+      ev.preventDefault(); ev.stopPropagation();
+      var pb = dlg.querySelector('[data-accion="lapiz-probar"]');
+      if (pb && !pb.hidden && !pb.disabled) probarLapiz(pb);
+      else { var g = dlg.querySelector('button[type="submit"]'); if (g) g.focus(); }
+      return;
+    }
     if (ev.key !== 'Tab') return;
     ev.stopPropagation();
     var f = Array.prototype.filter.call(dlg.querySelectorAll('button, [href], input, select, textarea'), function (x) { return !x.disabled && x.offsetParent !== null; });
