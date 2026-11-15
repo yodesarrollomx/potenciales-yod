@@ -68,6 +68,8 @@ jobs:
           node --check ppp2.js
           node -e "const fs=require('node:fs'),vm=require('node:vm');new vm.Script(fs.readFileSync('server/ppp2/PPP2.gs','utf8'),{filename:'server/ppp2/PPP2.gs'});"
           node --test tests/ppp2-servidor.test.cjs tests/ppp2-ronda.test.cjs tests/ppp2-libro.test.cjs tests/ppp2-consejo.test.cjs tests/ppp2-cache.test.cjs
+          node --check ppp2-relaciones.js
+          node --test tests/ppp2-lapiz.test.cjs
           node --check visor.js
           node --check ppp-libro.js
           node -e "const fs=require('node:fs'),vm=require('node:vm');new vm.Script(fs.readFileSync('server/ppp2/PPP2.gs','utf8')+'\n'+fs.readFileSync('server/ppp2/Visor.gs','utf8'),{filename:'server/ppp2/Visor.gs'});"

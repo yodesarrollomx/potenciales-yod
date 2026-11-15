@@ -472,7 +472,7 @@ function doPost(e) {
     try { res = accion_(s, b, rid); } finally { lock.releaseLock(); }
     // lo que se recuerda del request_id va sin el plan (CacheService guarda hasta 100 KB por valor); si no cabe, no se recuerda
     if (rid && res && res.ok) { try { cache.put('r_' + hash_(rid), JSON.stringify(res), PPP2.IDEM_S); } catch (x) { } }
-    if (res && res.ok) cache.remove('vivero');
+    if (res && res.ok && res.hecho !== 'simular') cache.remove('vivero');
     return out_(conPlan_(s, b, res, t0));
   } catch (err) {
     return out_({ ok: false, error: 'interno', detalle: String(err && err.message || err).slice(0, 200) });
@@ -481,7 +481,7 @@ function doPost(e) {
 /* La respuesta de una escritura trae el plan ya leído (y lo deja en la caché): la página lo pinta sin volver a
    pedirlo. Se lee fuera del candado, y sólo si sobra tiempo; si algo falla, la página lo pide como antes. */
 function conPlan_(s, b, res, t0) {
-  if (!res || !res.ok || !b || !b.plan || String(b.tipo) === 'ppp2-sembrar' || String(b.tipo) === 'ppp2-liga' || String(b.tipo) === 'ppp2-elige' || Date.now() - t0 > PPP2.CON_PLAN_MS) return res;
+  if (!res || !res.ok || !b || !b.plan || String(b.tipo) === 'ppp2-sembrar' || String(b.tipo) === 'ppp2-liga' || String(b.tipo) === 'ppp2-elige' || String(b.tipo) === 'ppp2-simular' || Date.now() - t0 > PPP2.CON_PLAN_MS) return res;
   try { var pl = plan_get_(s, b.plan, true); if (pl && pl.ok) res.plan = pl; } catch (x) { }
   return res;
 }
@@ -498,6 +498,10 @@ function accion_(s, b, rid) {
   // Si una ronda quedó a medias, primero se deja la versión como estaba… y no se sigue: quien llamó estaba
   // viendo cifras a medias, así que la página recarga y decide con las de verdad.
   if (recuperar_(p, libro)) return { ok: false, error: 'revision', recuperado: true, rev: revision_(libro) };
+  // el lápiz sólo prueba: no cambia ninguna cifra del libro, así que no despierta al latido ni anota nada
+  // (escribir y regresar la columna Prueba sí cambia la última modificación del libro en Drive: el siguiente
+  // que lo abra lo vuelve a leer completo)
+  if (tipo === 'ppp2-simular') return simular_(s, libro, b);
   var hechos;
   switch (tipo) {
     case 'ppp2-ronda': hechos = ronda_(s, p, libro, b, rev, rid); break;
@@ -539,21 +543,48 @@ function numero_(v, unidad) {
   return n;
 }
 
+/* Un dato que el libro calculaba (una fórmula en Datos!C) y que alguien reemplaza por una cifra: su fórmula se
+   guarda como texto en la columna L del mismo renglón, para que «deshacer» la regrese tal cual (restaurar: true).
+   La fórmula sale del propio libro, nunca de quien llama; se escribe con setFormula de lo que ya había, así no
+   depende del idioma del libro (con coma decimal, Sheets separa con «;»). */
+var DATO_FORMULA_COL = 12;
 function dato_(s, libro, b, rev, rid) {
   if (!puede_(s, 'editar')) return { ok: false, error: 'permiso' };
   var h = libro.getSheetByName('Datos'), clave = txt_(b.clave, 60), fila = filaPorClave_(h, clave);
   if (!fila || !/^[a-z]+\.[a-z0-9_]+$/.test(clave)) return { ok: false, error: 'clave' };
   var unidad = String(h.getRange(fila, 4).getValue());
   var antes = h.getRange(fila, 3, 1, 6).getValues()[0];
-  var valor = UNIDADES_NUM[unidad] ? numero_(b.valor, unidad) : txt_(b.valor, 500);
-  if (valor === null) return { ok: false, error: 'valor' };
   var estado = b.estado != null ? low_(b.estado) : String(antes[2] || '');
   if (estado && ESTADOS.dato.indexOf(estado) < 0) return { ok: false, error: 'estado' };
   var fuente = b.fuente != null ? txt_(b.fuente, 500) : String(antes[3] || '');
-  if (b.valor !== undefined) h.getRange(fila, 3).setValue(seguro_(valor));
+  var celda = h.getRange(fila, 3), guardada = h.getRange(fila, DATO_FORMULA_COL), guardo = false, despues;
+  if (b.restaurar === true) {
+    var frm = String(guardada.getValue() || '').replace(/^'/, '');
+    if (frm.charAt(0) !== '=') return { ok: false, error: 'restaurar' };
+    celda.setFormula(frm);
+    guardada.setValue('');
+    despues = '(vuelve a calcularse)';
+  } else {
+    var valor = UNIDADES_NUM[unidad] ? numero_(b.valor, unidad) : txt_(b.valor, 500);
+    if (valor === null) return { ok: false, error: 'valor' };
+    if (b.valor !== undefined) {
+      var previa = celda.getFormula();
+      if (previa) {
+        columnas_(h, DATO_FORMULA_COL);
+        var habia = String(guardada.getValue() || '').replace(/^'/, '');
+        if (!habia || habia.charAt(0) === '=') {             // lo que una persona haya escrito en la columna L no se pisa
+          if (!String(h.getRange(4, DATO_FORMULA_COL).getValue() || '')) h.getRange(4, DATO_FORMULA_COL).setValue('Fórmula anterior (la usa «deshacer»)');
+          guardada.setValue("'" + previa);
+          guardo = true;
+        }
+      }
+      celda.setValue(seguro_(valor));
+    }
+    despues = b.valor !== undefined ? valor : antes[0];
+  }
   h.getRange(fila, 5, 1, 4).setValues([fila_([estado, fuente, hoyISO_(), actor_(s)])]);
-  bitacora_(libro, s, 'Cambió un dato', 'Datos', clave, antes[0] + ' · ' + antes[2], (b.valor !== undefined ? valor : antes[0]) + ' · ' + estado, fuente, rev, rid);
-  return { ok: true, hecho: 'dato', clave: clave };
+  bitacora_(libro, s, b.restaurar === true ? 'Regresó un dato a su fórmula' : (guardo ? 'Cambió un dato que el libro calculaba (su fórmula quedó en la columna L)' : 'Cambió un dato'), 'Datos', clave, antes[0] + ' · ' + antes[2], despues + ' · ' + estado, fuente, rev, rid);
+  return { ok: true, hecho: 'dato', clave: clave, guardo_formula: guardo };
 }
 
 function producto_(s, libro, b, rev, rid) {
@@ -588,7 +619,7 @@ function palanca_(s, libro, b, rev, rid) {
   if (!(k >= 1 && k <= 3)) return { ok: false, error: 'version' };
   if (versionEstado_(libro, k) === 'vigente' && !puede_(s, 'aprobar')) return { ok: false, error: 'vigente' };
   var h = libro.getSheetByName('Modelo'), clave = txt_(b.clave, 40), fila = filaPorClave_(h, clave);
-  if (!fila || !/^[a-z][a-z0-9_]*$/.test(clave)) return { ok: false, error: 'clave' };
+  if (!fila || fila < 7 || !/^[a-z][a-z0-9_]*$/.test(clave)) return { ok: false, error: 'clave' };
   var base = h.getRange(fila, 4).getFormula() || h.getRange(fila, 4).getValue();
   if (base === '' || base === null) return { ok: false, error: 'calculado' };   // los renglones calculados no se tocan
   var col = 4 + k, celda = h.getRange(fila, col), unidad = String(h.getRange(fila, 3).getValue());
@@ -829,6 +860,136 @@ function sanarPrueba_(mod) {
   Object.keys(rotas).forEach(function (f) { copiarPruebaSana_(mod, Number(f), rotas); });
   SpreadsheetApp.flush();
   return hay;
+}
+
+/* ───────────────────────── el lápiz: probar otra cifra antes de guardarla ─────────────────────────
+   Quien edita prueba otra cifra para una palanca (o para un dato que una palanca copia) sobre una versión.
+   El libro la recalcula en su columna Prueba —la misma de las pruebas de estrés—, se leen las cifras de
+   antes y de después y la columna vuelve a como estaba. Los visores y la ficha leen V1, V2 y V3, nunca la
+   columna Prueba: nadie ve el ensayo. Como nada cambió, no se anota en la bitácora; si la columna no
+   vuelve a su estado, eso sí se anota y se avisa. Aquí no se calcula nada: el servidor escribe la cifra
+   de prueba, el libro calcula y el servidor lee. */
+var LAPIZ = {
+  MAX: 4,                                                     // cifras de prueba por ensayo
+  MODELO: ['ventas', 'costo_con_tierra', 'obra', 'fin_obra', 'aportacion', 'preventa_inicio'],   // renglones calculados del Modelo, columna Prueba
+  PRUEBAS: ['banco_max', 'respaldo', 'costo_dinero', 'ganancia', 'mes_reparto']                    // Pruebas!B6:B10, en ese orden
+};
+/* ¿Alguna otra fórmula de las hojas que alimentan lo que el lápiz lee (Datos, Modelo, Productos, Reparto) lee ese dato,
+   además de la palanca que lo copia? Entonces probarlo por la palanca no sería fiel: al guardarlo cambiarían también
+   esas otras cuentas (la obra directa que sale de la lámina o de las partes, la construcción que sale de la huella…).
+   Versiones no cuenta: sólo enseña resultados y avisos, y nada de lo que el lápiz lee sale de ella.
+   Sólo se miran referencias a esa celda sola, no rangos. */
+function otrosLeen_(libro, filaDato, palancaFila, cache) {
+  var dentro = new RegExp('(^|[^A-Za-z0-9_$!:])\\$?C\\$?' + filaDato + '(?![0-9:])');
+  var fuera = new RegExp('Datos!\\$?C\\$?' + filaDato + '(?![0-9:])');
+  var hojas = ['Datos', 'Modelo', 'Productos', 'Reparto'];
+  for (var i = 0; i < hojas.length; i++) {
+    var frms = cache && cache[hojas[i]];
+    if (!frms) {
+      var h = libro.getSheetByName(hojas[i]);
+      frms = h && h.getLastRow() >= 1 ? h.getRange(1, 1, h.getLastRow(), Math.max(1, Math.min(h.getMaxColumns(), 70))).getFormulas() : [];
+      if (cache) cache[hojas[i]] = frms;
+    }
+    for (var r = 0; r < frms.length; r++) for (var c = 0; c < frms[r].length; c++) {
+      var f = frms[r][c];
+      if (!f) continue;
+      if (hojas[i] === 'Modelo' && r + 1 === palancaFila && c === 3) continue;          // la propia palanca (columna Datos del Modelo)
+      if (hojas[i] === 'Datos' && r + 1 === filaDato) continue;
+      if (fuera.test(f) || (hojas[i] === 'Datos' && dentro.test(f))) return true;
+    }
+  }
+  return false;
+}
+/* Qué palanca copia cada dato: la columna Datos del Modelo dice =Datos!$C$n. */
+function espejos_(libro, mod) {
+  var n = mod.getLastRow(), claves = mod.getRange(1, 1, n, 1).getValues(), bases = mod.getRange(1, 4, n, 1).getFormulas();
+  var hd = libro.getSheetByName('Datos'), cd = hd.getRange(1, 1, Math.max(1, hd.getLastRow()), 1).getValues(), out = {};
+  for (var i = 6; i < n; i++) {
+    var m = /^=\s*Datos!\$?C\$?(\d+)\s*$/.exec(String(bases[i][0] || '')), c = String(claves[i][0]).trim();
+    if (!m || !/^[a-z][a-z0-9_]*$/.test(c)) continue;
+    var dk = String((cd[Number(m[1]) - 1] || [''])[0]).trim();
+    if (dk) out[dk] = c;
+  }
+  return out;
+}
+function leeLapiz_(mod, pru, filas) {
+  var o = {};
+  LAPIZ.MODELO.forEach(function (k) { o[k] = filas[k] ? r3_(limpio_(mod.getRange(filas[k], 8).getValue())) : null; });
+  var b = pru.getRange(6, 2, LAPIZ.PRUEBAS.length, 1).getValues();
+  LAPIZ.PRUEBAS.forEach(function (k, i) { o[k] = r3_(limpio_(b[i][0])); });
+  return o;
+}
+function simular_(s, libro, b) {
+  if (!puede_(s, 'editar')) return { ok: false, error: 'permiso' };
+  var k = Number(b.version);
+  if (!(k >= 1 && k <= 3)) return { ok: false, error: 'version' };
+  var mod = libro.getSheetByName('Modelo'), pru = libro.getSheetByName('Pruebas');
+  var lista = Array.isArray(b.cambios) ? b.cambios.slice(0, LAPIZ.MAX) : [];
+  if (!lista.length) return { ok: false, error: 'clave' };
+  var espejo = null, cambios = [], sinEfecto = [], leidas = {};
+  for (var i = 0; i < lista.length; i++) {
+    var c = lista[i] || {}, clave = txt_(c.clave, 60), palanca = clave;
+    var esDato = /^[a-z]+\.[a-z0-9_]+$/.test(clave);
+    if (esDato) {                                            // un dato: se prueba por la palanca que lo copia
+      espejo = espejo || espejos_(libro, mod);
+      palanca = espejo[clave] || '';
+      if (!palanca) return { ok: false, error: 'sin_prueba', clave: clave };
+    }
+    if (!/^[a-z][a-z0-9_]*$/.test(palanca)) return { ok: false, error: 'clave' };
+    var f = filaPorClave_(mod, palanca);
+    if (!f || f < 7) return { ok: false, error: 'clave' };    // las palancas empiezan en la fila 7 (arriba van los encabezados)
+    if (esDato && otrosLeen_(libro, filaPorClave_(libro.getSheetByName('Datos'), clave), f, leidas)) return { ok: false, error: 'sin_prueba', clave: clave, motivo: 'otros' };
+    var base = mod.getRange(f, 4).getFormula() || mod.getRange(f, 4).getValue();
+    if (base === '' || base === null) return { ok: false, error: 'calculado' };     // los renglones calculados no se prueban
+    var v = numero_(c.valor, String(mod.getRange(f, 3).getValue()));
+    if (v === null || v === '') return { ok: false, error: 'valor' };
+    // un dato sólo mueve a la versión que sigue la base (=$D…): si la versión tiene su propia cifra, el dato no la toca
+    if ((esDato || c.como_dato === true) && !/^=\s*\$?D\$?\d+\s*$/.test(String(mod.getRange(f, 4 + k).getFormula() || ''))) {
+      sinEfecto.push({ clave: clave, palanca: palanca, propia: r3_(limpio_(mod.getRange(f, 4 + k).getValue())) });
+      continue;
+    }
+    cambios.push({ clave: clave, palanca: palanca, f: f, valor: v });
+  }
+  if (!cambios.length) return { ok: true, hecho: 'simular', version: k, cambios: [], sin_efecto: sinEfecto };
+  var renglones = {};
+  LAPIZ.MODELO.forEach(function (x) { renglones[x] = filaPorClave_(mod, x); });
+  sanarPrueba_(mod);           // si una corrida anterior murió a medias, la columna vuelve a ser fórmula
+  var antesB4 = pru.getRange('B4').getFormula() || pru.getRange('B4').getValue(), filas = {}, antes, despues;
+  var vuelveB4 = function () { if (String(antesB4).charAt(0) === '=') pru.getRange('B4').setFormula(antesB4); else pru.getRange('B4').setValue(antesB4); };
+  pru.getRange('B4').setValue(k);
+  try {
+    SpreadsheetApp.flush();
+    antes = leeLapiz_(mod, pru, renglones);
+    cambios.forEach(function (x) {
+      if (!(x.palanca in filas)) filas[x.palanca] = guardarPrueba_(mod, x.palanca);
+      mod.getRange(x.f, 8).setValue(x.valor);
+    });
+    SpreadsheetApp.flush();
+    despues = leeLapiz_(mod, pru, renglones);
+  } finally {
+    try { restablecer_(mod, filas); } finally { vuelveB4(); }
+  }
+  // la columna Prueba debe quedar como estaba: sus fórmulas y, con ellas, las cifras de la versión sin la cifra de prueba
+  var otra = null, formulas = true;
+  try {
+    SpreadsheetApp.flush();
+    Object.keys(filas).forEach(function (x) {
+      var it = filas[x];
+      if (it && it.frm && !it.roto && mod.getRange(it.f, 8).getFormula() !== it.frm) formulas = false;
+    });
+    pru.getRange('B4').setValue(k);
+    otra = leeLapiz_(mod, pru, renglones);
+  } finally { vuelveB4(); }
+  if (String(antesB4).charAt(0) === '=' && pru.getRange('B4').getFormula() !== antesB4) formulas = false;
+  if (!formulas || JSON.stringify(otra) !== JSON.stringify(antes)) {
+    bitacora_(libro, s, 'El lápiz probó una cifra sobre V' + k + ' y la columna Prueba NO volvió a su estado', 'Modelo',
+      cambios.map(function (x) { return x.palanca; }).join(','), JSON.stringify(antes), JSON.stringify(otra), '', null, '');
+    return { ok: false, error: 'prueba' };
+  }
+  return {
+    ok: true, hecho: 'simular', version: k, antes: antes, despues: despues, sin_efecto: sinEfecto,
+    cambios: cambios.map(function (x) { return { clave: x.clave, palanca: x.palanca, valor: x.valor }; })
+  };
 }
 
 /* ───────────────────────── la ronda: el plan mueve sus palancas ─────────────────────────
