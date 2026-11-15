@@ -123,7 +123,7 @@ En pesos del motor; el visor recibe MDP, fracciones y meses (base 1), como siemp
 | `v.resultado_repartir` | caja al cierre − capital aportado − deuda − respaldo pendiente (= último `flujo_acum`) |
 | `v.max_ajeno` | máximo mensual de saldo del banco + capital aportado + respaldo pendiente |
 | `v.banco_mes`, `v.respaldo_mes` | último mes con saldo, más uno (regla LIQ del libro); en blanco si nunca hubo saldo |
-| `v.capital_mes`, `v.dueno_meses`, `v.dueno_anos` | el capital y el dueño que aporta cobran al cierre (mes de reparto); la tierra pagada en efectivo, en el mes 1; años = mes de reparto ÷ 12 |
+| `v.capital_mes`, `v.dueno_meses`, `v.dueno_anos` | el capital y el dueño que aporta (o que, además de la tierra en efectivo, cobra parte de la utilidad) cobran al cierre (mes de reparto); la tierra pagada en efectivo, en el mes 1; años = `dueno_meses` ÷ 12 (en el libro `dueno_meses` es el mes de reparto) |
 | `v.dueno_aporta`, `v.dueno_recibe`, `v.dueno_veces` | tierra que aporta a su valor; lo que recibe; recibe ÷ valor de la tierra |
 | `v.alianza_recibe` | lo que recibe la alianza **encima** de su capital |
 | `v.inversion_recibe`, `v.rend_capital`, `reparto.tasa_capital` | 0 cuando el motor no paga rendimiento al capital antes de repartir (el capital es de la alianza; en el vertical su preferente va dentro de la cascada); en la casa, el rendimiento pagado al inversionista |

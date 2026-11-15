@@ -167,6 +167,18 @@ test('vertical: el calendario de firmas reproduce los cobros del motor y la prev
   assert.match(b.deducido['productos.0.ventas'], /m²/);
 });
 
+test('el dueño: con la tierra en efectivo cobra en el mes 1 (y «en años» dice lo mismo); si además cobra utilidad, lo último en el reparto', () => {
+  const casa = vis(completa(CASA).fotos[0]);
+  assert.equal(casa.v.dueno_meses, 1);
+  assert.equal(casa.v.dueno_anos, N.r3(1 / 12), 'años = dueno_meses ÷ 12, no el mes de reparto');
+  const vende = { tipo: 'MACROLOTES', renglon: Object.assign({ caso_id: 'caso-de-prueba', nombre_caso: 'Caso de prueba', version: 1, escenarios_json: '' }, MACRO_BASE, { inAporteTierra: 0, inPctDueno: 20 }) };
+  const b = vis(completa(vende).fotos[0]);
+  assert.equal(b.v.dueno_aporta, 0);
+  assert.ok(b.v.dueno_recibe > b.v.tierra + 0.001, 'cobra la tierra y una parte de la utilidad');
+  assert.equal(b.v.dueno_meses, b.v.mes_reparto);
+  assert.equal(b.v.dueno_anos, N.r3(b.v.mes_reparto / 12));
+});
+
 /* ── la propuesta de reestructura ── */
 test('una reestructura sin cambios da lo mismo que su base; con cambios es una versión nueva que nunca queda elegida', () => {
   const igual = completa(RES, { reestructura: { base: 1, cambios: {}, porque: 'prueba' } });

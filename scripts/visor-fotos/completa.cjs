@@ -362,10 +362,12 @@ function llena(visor, H, F, extra) {
   if (vacio('v.dueno_recibe')) deduce('v.dueno_recibe', M(H.dueno), H.tipo === 'UNIFAMILIAR' ? 'el precio del terreno, pagado al arrancar' : 'ownerTotal del motor');
   if (vacio('v.dueno_veces') && H.tierraValor > 0 && fin(H.dueno)) deduce('v.dueno_veces', N.r6(H.dueno / H.tierraValor), 'lo que recibe el dueño ÷ valor de su tierra');
   if (vacio('v.dueno_meses') && fin(v.mes_reparto)) {
-    if ((H.tierraAportada || 0) > 0) deduce('v.dueno_meses', v.mes_reparto, 'el dueño que aporta recibe lo último en el mes de reparto');
+    /* Si además de la tierra en efectivo cobra una parte de la utilidad, lo último lo recibe en el reparto. */
+    if ((H.tierraAportada || 0) > 0 || (H.dueno || 0) > (H.tierraEfectivo || 0) + 1) deduce('v.dueno_meses', v.mes_reparto, 'el dueño recibe lo último en el mes de reparto');
     else if ((H.dueno || 0) > 0) deduce('v.dueno_meses', 1, 'la tierra se paga en efectivo en el primer mes');
   }
-  if (vacio('v.dueno_anos') && fin(v.mes_reparto)) deduce('v.dueno_anos', N.r3(v.mes_reparto / 12), 'mes de reparto ÷ 12 (como el libro)');
+  /* «En años» es lo mismo que «en cuántos meses recibe lo último», en años (en el libro, dueno_meses = mes de reparto). */
+  if (vacio('v.dueno_anos') && fin(v.dueno_meses)) deduce('v.dueno_anos', N.r3(v.dueno_meses / 12), 'meses en que el dueño recibe lo último ÷ 12 (como el libro)');
   if (fin(H.alianza)) {
     if (vacio('v.alianza_recibe')) deduce('v.alianza_recibe', M(H.alianza), H.tipo === 'UNIFAMILIAR' ? 'caja al cierre menos el capital que se devuelve' : 'lo que recibe la alianza menos su capital');
     else if (H.tipo === 'MACROLOTES' || H.tipo === 'RESIDENCIAL') corrige('v.alianza_recibe', M(H.alianza), 'lo que recibe la alianza encima de su capital (antes traía el capital adentro y el visor lo contaba dos veces)');
@@ -455,6 +457,7 @@ function llena(visor, H, F, extra) {
   noAplica('v.respaldo_mes', 'nunca hubo respaldo pendiente (el libro también lo deja en blanco)');
   noAplica('v.capital_mes', 'no hay capital aportado');
   noAplica('v.dueno_meses', 'no hay pago al dueño');
+  noAplica('v.dueno_anos', 'no hay pago al dueño');
   if (H.tipo === 'UNIFAMILIAR') ['datos.din.apertura', 'datos.din.tiie', 'datos.din.sobretasa'].forEach(k => noAplica(k, 'la casa no usa banco'));
   noAplica('reparto.numero', 'el esquema del motor no es ninguno de los cinco del libro del PPP 2');
 
