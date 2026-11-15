@@ -30,8 +30,60 @@ npm test --prefix mcp
 node mcp/src/stdio.mjs
 ```
 
-Sin sesión sólo aparecen las cuatro herramientas compartidas. `stdio.mjs` escribe
-únicamente protocolo en stdout; los avisos van a stderr.
+En stdio las herramientas privadas se descubren desde el inicio, pero no operan
+hasta conectar la cuenta. Así se puede conectar o desconectar sin reiniciar el
+asistente. `stdio.mjs` escribe únicamente protocolo en stdout; avisos a stderr.
+
+## Conectar desde YOD (v0.2)
+
+En el mismo equipo donde corren los asistentes, desde este repositorio:
+
+```sh
+node mcp/src/cli.mjs conectar
+```
+
+Abre una página del propio YOD. Entra con la cuenta que ya usas, selecciona los
+planes con libro y, si corresponde, activa los cambios. Pulsa **Conectar este
+equipo**. La terminal confirma actor y planes sin mostrar la sesión. El navegador
+debe estar en ese equipo, no en un teléfono distinto. Si el navegador pregunta
+por acceso a la red local, esta conexión necesita acceder a su proceso local.
+
+El proceso dura hasta cinco minutos y valida la sesión contra la API actual del
+PPP. No hay nueva cuenta, llave maestra, API de IA ni servicio contratado. Guarda
+la conexión en `~/.local/state/yod-mcp/conexion.json` con permisos 0600 dentro de
+un directorio 0700. La credencial es la sesión individual existente; su vigencia
+y revocación remota dependen del Portero y de sus cachés actuales. No es OAuth
+remoto ni una credencial nueva de alcance reducido emitida por el backend.
+El adaptador limita sus herramientas a los planes elegidos y permisos vigentes.
+
+Registra el servidor mediante la CLI nativa de cada cliente instalado:
+
+```sh
+node mcp/src/cli.mjs instalar codex
+node mcp/src/cli.mjs instalar claude
+node mcp/src/cli.mjs instalar hermes --perfil astra
+node mcp/src/cli.mjs diagnostico
+```
+
+Usa el **perfil real** de Hermes; `astra` es sólo un ejemplo. El instalador añade
+`yod-os-local` sin reemplazar otras conexiones. Si ya existe ese nombre se detiene
+para conservarlo. Registra rutas absolutas y ningún secreto en la configuración
+del cliente. Sigue las opciones de herramientas que muestre la CLI de Hermes.
+Abre o recarga MCP en cada asistente y pide `yod_estado`: éste es el acuse del
+cliente, distinto del registro de configuración o el diagnóstico del servidor.
+Claude Code local y un conector de Claude web son superficies diferentes; esta
+instalación no habilita edición en interfaces que sólo admitan MCP remoto.
+
+Para retirar el permiso local sin borrar recibos:
+
+```sh
+node mcp/src/cli.mjs desconectar
+```
+
+Cada llamada de stdio relee el permiso; una llamada ya enviada puede terminar.
+La revocación de la sesión de YOD se hace en sus accesos habituales. Renovar la
+conexión crea otra identidad de conexión: las propuestas anteriores no se aplican
+con ella. Los recibos permanecen privados en el equipo.
 
 Para HTTP local:
 
@@ -79,9 +131,9 @@ servidor no instala ni inicia sesión automáticamente en los clientes del usuar
 
 | Variable | Uso |
 |---|---|
-| `YOD_PORTERO_SESSION` | Sesión individual `sy…`, sólo en stdio. No acepta llave maestra |
-| `YOD_MCP_WRITE=1` | Ofrece las tres herramientas de cambios; no concede permisos de backend |
-| `YOD_MCP_STATE_DIR` | Diario privado; predeterminado `~/.local/state/yod-mcp` |
+| `YOD_PORTERO_SESSION` | Compatibilidad anterior: sesión individual `sy…`, sólo stdio. Tiene prioridad sobre la conexión de archivo; retirarla para usar el flujo nuevo |
+| `YOD_MCP_WRITE=1` | Habilita cambios sólo en la configuración anterior por entorno; no concede permisos de backend |
+| `YOD_MCP_STATE_DIR` | Conexión y diario privados; predeterminado `~/.local/state/yod-mcp` |
 | `YOD_MCP_CATALOG_FILE` | Ruta de catálogo privado de configuración, fuera de Git |
 | `YOD_MCP_CATALOG_JSON` | Alternativa al archivo, para variables de entorno en hosting |
 | `YOD_PPP_ENDPOINT` | Sólo para despliegue controlado; predeterminado el endpoint de `ppp2.js` |
@@ -94,10 +146,11 @@ servidor no instala ni inicia sesión automáticamente en los clientes del usuar
 | Herramienta | Resultado |
 |---|---|
 | `yod_capacidades` | Capacidades configuradas, adaptador/versión y límites |
+| `yod_estado` | Identidad comprobada, planes elegidos y edición efectiva; sólo stdio |
 | `ppp_leer_visor` | Plan, versión efectiva, flujo, reparto, candados, pruebas y procedencia autorizados por la liga |
 | `ppp_buscar_oportunidades` | Búsqueda paginada en entradas publicadas; seguir `siguiente` incluso si la página no tiene coincidencias |
 | `ppp_leer_oportunidad` | Consulta de una entrada publicada por su ID |
-| `ppp_listar_planes` | Vivero autorizado de la sesión local |
+| `ppp_listar_planes` | Planes autorizados de la conexión local, con enlaces a sus fichas |
 | `ppp_leer_plan` | Sección paginada, revisión, identidad y permisos efectivos |
 | `ppp_preparar_cambio` | Validación y propuesta antes/después, sin escribir en el plan |
 | `ppp_aplicar_cambio` | Operación por API existente con revisión y recibo durable |
@@ -119,7 +172,8 @@ efectiva se devuelven por separado porque el visor puede limitar versiones.
    `APLICAR <id>` recibida. Esta cadena identifica la propuesta; no sustituye la
    autorización del usuario ni los permisos del Portero.
 4. Comprobar el recibo. La API del PPP guarda, calcula y registra su bitácora.
-   MCP relee el campo; sólo entonces informa `verificado`.
+   MCP relee el campo; sólo entonces informa `verificado`. El recibo enlaza la
+   misma ficha del PPP donde debe verse la operación.
 
 Operaciones disponibles: dato, producto, palanca de una versión editable,
 respuesta a pregunta, evidencia de candado, estado de hallazgo, esquema de reparto

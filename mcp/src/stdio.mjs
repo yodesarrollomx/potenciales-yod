@@ -7,7 +7,11 @@ import { createServer } from './server.mjs';
 
 try {
   const config=await loadConfig();
-  const server=createServer(new PppAdapter(config,new PppTransport(config.endpoint),new Journal(config.stateDir)));
+  const adapterForRequest=async()=>{
+    const c=await loadConfig();
+    return new PppAdapter(c,new PppTransport(c.endpoint),new Journal(c.stateDir));
+  };
+  const server=createServer(new PppAdapter(config,new PppTransport(config.endpoint),new Journal(config.stateDir)),{adapterForRequest});
   await server.connect(new StdioServerTransport());
 } catch {
   console.error('YOD MCP no inició. Revisa endpoint, sesión individual y configuración privada según mcp/README.md.');

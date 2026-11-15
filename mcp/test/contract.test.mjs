@@ -7,6 +7,25 @@ import { YodError } from '../src/transport.mjs';
 const change={accion:'dato',clave:'terreno.m2',valor:3200,estado:'supuesto',fuente:'Plano sintético de prueba'};
 const apply=(a,p)=>a.apply({cambio_id:p.cambio_id,confirmacion:p.confirmacion});
 
+test('instantánea clásica conserva deducciones y no atribuye sus cifras al libro PPP2',async()=>{
+  const {adapter}=await setup({fetchOverride:({world,params})=>{
+    const r=world.get(params);r.menu={plan:'ppp:caso_inventado'};r.origen='Motor clásico · prueba inventada';r.deducido={'v.rv_margen':'ganancia / ventas'};
+    return new Response(JSON.stringify(r));
+  }});
+  const r=await adapter.visor({liga:LIGA});
+  assert.equal(r.data.deducido['v.rv_margen'],'ganancia / ventas');
+  assert.match(r.origen.fuentes.datos,/PPP_VISOR/);assert.equal(r.origen.fuentes.v,undefined);
+});
+test('plantilla actual: uso del producto se guarda por operación nativa y unidades nuevas exigen número',async()=>{
+  const {adapter}=await setup();
+  const p=await adapter.prepare({plan:PLAN,cambio:{accion:'producto',fila:1,campos:{uso:'comercio',fuente:'Programa inventado'}}});
+  assert.equal((await apply(adapter,p)).estado,'verificado');
+  const f=await setup();const raw=f.adapter.rawPlan.bind(f.adapter);
+  f.adapter.rawPlan=async id=>{const p=await raw(id);p.datos.find(x=>x.clave==='terreno.m2').unidad='niveles';return p;};
+  await assert.rejects(f.adapter.prepare({plan:PLAN,cambio:{...change,valor:'3'}}),{code:'numero_requerido'});
+  assert.equal(f.calls.filter(c=>c.method==='POST').length,0);
+});
+
 test('visor: cifras iguales al servidor real, fuentes, versión, sin claves/expediente privado ni aperturas',async()=>{
   const {adapter,world,calls}=await setup({session:'',write:false,mode:'http'});
   const direct=world.get({recurso:'ppp2-visor',liga:LIGA});

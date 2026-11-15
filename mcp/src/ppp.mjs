@@ -5,7 +5,8 @@ import { YodError } from './transport.mjs';
 const pick = (o, keys) => Object.fromEntries(keys.filter(k => o && Object.hasOwn(o, k)).map(k => [k, o[k]]));
 const hash = obj => createHash('sha256').update(JSON.stringify(obj)).digest('hex');
 const snapshot = p => pick(p,['rev','resumen','datos','productos','palancas','versiones','reparto','candados','preguntas','hallazgos','consejo','pruebas','rondas','bitacora']);
-const PUBLIC_FIELDS = ['plan','version','versiones','v','datos','productos','flujo','reparto','candados','pruebas','pruebas_viejas','ultimo','cambio','menu','a_medias','origen'];
+const PUBLIC_FIELDS = ['plan','version','versiones','v','datos','productos','flujo','reparto','candados','pruebas','pruebas_viejas','ultimo','cambio','menu','a_medias','origen','deducido'];
+export const planUrl = id => 'https://yodesarrollomx.github.io/potenciales-yod/ppp2.html#/plan/'+encodeURIComponent(id);
 const DENIED = new Set(['k','token','liga','ligas','libro_url','libro_id','propuesta_por','aprobada_por','correo','yo','puede','elige','marcas']);
 function clean(value) {
   if (Array.isArray(value)) return value.map(clean);
@@ -53,7 +54,7 @@ function validateChange(p,c) {
   }
   if (c.accion === 'palanca' && t.calculado) throw new YodError('calculado');
   if (c.accion === 'dato' || c.accion === 'palanca') {
-    const numeric = ['MDP','%','m²','mes','meses','1/0','unidades'].includes(t.unidad);
+    const numeric = ['MDP','%','m²','mes','meses','1/0','unidades','m','veces','niveles','cajones','por vivienda','m² por cajón','$/m²','unidades por mes'].includes(t.unidad);
     if (c.accion === 'palanca' && c.valor === 'base') return t;
     if (numeric && typeof c.valor !== 'number') throw new YodError('numero_requerido');
     if (typeof c.valor === 'string' && /^[=+@-]/.test(c.valor.trim())) throw new YodError('formula_no_permitida');
@@ -80,11 +81,12 @@ function matches(p,c) {
 
 export class PppAdapter {
   constructor(config, transport, journal) { this.config=config; this.transport=transport; this.journal=journal; }
-  binding() { return hash([this.config.endpoint,this.config.session]); }
+  binding() { return hash(this.config.connectionId?[this.config.endpoint,this.config.session,this.config.connectionId]:[this.config.endpoint,this.config.session]); }
   privateAccess() { if (!this.config.session || this.config.mode !== 'stdio') throw new YodError('requiere_sesion_local'); }
   writeAccess() { this.privateAccess(); if (!this.config.write || !this.journal) throw new YodError('escritura_desactivada'); }
   async rawPlan(id) {
     this.privateAccess(); planId.parse(id);
+    if(this.config.allowedPlans && !this.config.allowedPlans.includes(id)) throw new YodError('plan_no_conectado');
     const p=await this.transport.get({recurso:'ppp2-plan',k:this.config.session,plan:id});
     if (p.plan_id!==id || !Number.isInteger(p.rev) || !p.puede || !Array.isArray(p.datos)) throw new YodError('contrato_incompatible');
     return p;
@@ -93,7 +95,9 @@ export class PppAdapter {
     const r=await this.transport.get({recurso:'ppp2-visor',liga:parseLiga(liga),plan,v:version});
     if (r.esquema!=='ppp2-visor-v1' || !r.plan || !r.v || !Number.isInteger(r.version)) throw new YodError('contrato_incompatible');
     // The backend may fall back to a permitted version/plan; always report what was actually returned.
-    return envelope(clean(pick(r,PUBLIC_FIELDS)), 'compartido', {version:r.version, revision:r.llave || null, fecha_fuente:r.cambio || null,
+    const source = String(r.menu?.plan||'').startsWith('ppp:') ? {origen:{sistema:'PPP',contrato:'ppp2-visor-v1',
+      descripcion:r.origen||'Instantánea del motor PPP clásico',fuentes:{datos:'Instantánea PPP_VISOR; conservar origen y marcas deducido del servidor.'}}} : {};
+    return envelope(clean(pick(r,PUBLIC_FIELDS)), 'compartido', {...source,version:r.version, revision:r.llave || null, fecha_fuente:r.cambio || null,
       seleccion_solicitada:{plan:plan||null,version:version||null}, seleccion_efectiva:{plan:r.menu?.plan||null,version:r.version},
       incompleto:r.a_medias===true});
   }
@@ -125,11 +129,20 @@ export class PppAdapter {
     this.privateAccess();
     const r=await this.transport.get({recurso:'ppp2-vivero',k:this.config.session});
     if (!Array.isArray(r.planes)) throw new YodError('contrato_incompatible');
-    return envelope({planes:r.planes,puede:r.puede},'privado');
+    const planes=r.planes.filter(p=>!this.config.allowedPlans || this.config.allowedPlans.includes(p.plan_id));
+    return envelope({planes:planes.map(p=>({...p,url:planUrl(p.plan_id)})),puede:r.puede,yo:r.yo},'privado');
+  }
+  async status() {
+    if(!this.config.session) return {conectado:false,siguiente:'En el equipo: node mcp/src/cli.mjs conectar. No pegues credenciales en el chat.'};
+    const p=await this.plans();
+    return {conectado:true,actor:p.data.yo,planes:p.data.planes.map(p=>({plan:p.plan_id,nombre:p.nombre,url:p.url})),
+      edicion:this.config.write && p.data.puede?.editar===true,alcance:this.config.allowedPlans?'Planes elegidos en YOD':'Sesión individual configurada por entorno (legado)',
+      verificado_en:p.consultado_en};
   }
   async read({plan,seccion='resumen',desde=0,limite=30}) {
     const p=await this.rawPlan(plan), value=p[seccion];
-    return envelope({plan,rev:p.rev,puede:p.puede,ciclo:p.ciclo,seccion,
+    if(value===undefined) throw new YodError('seccion_no_disponible');
+    return envelope({plan,url:planUrl(plan),rev:p.rev,puede:p.puede,ciclo:p.ciclo,seccion,
       contenido:Array.isArray(value)?value.slice(desde,desde+limite):value,
       total:Array.isArray(value)?value.length:null},'privado');
   }
@@ -137,7 +150,7 @@ export class PppAdapter {
     this.writeAccess(); const c=changes.parse(cambio), p=await this.rawPlan(plan), before=validateChange(p,c);
     const record=await this.journal.create({estado:'preparado',plan,cambio:c,antes:before,actor:p.yo,
       binding:this.binding(),rev:p.rev,huella:hash(snapshot(p)),creado:Date.now(),vence:Date.now()+15*60000});
-    return {cambio_id:record.id,estado:'preparado',plan,rev:p.rev,actor:p.yo,antes:before,despues:c,vence:new Date(record.vence).toISOString(),
+    return {cambio_id:record.id,estado:'preparado',plan,url:planUrl(plan),rev:p.rev,actor:p.yo,antes:before,despues:c,vence:new Date(record.vence).toISOString(),
       efecto:'Se enviará una operación al servidor del PPP; el libro recalcula. No es una simulación financiera ni aprobación de versión.',
       confirmacion:`APLICAR ${record.id}`};
   }
@@ -148,7 +161,7 @@ export class PppAdapter {
   }
   async receipt(id) {
     const r=await this.record(id);
-    return pick(r,['id','estado','plan','rev','creado','vence','resultado']);
+    return {...pick(r,['id','estado','plan','rev','creado','vence','resultado']),url:planUrl(r.plan)};
   }
   async apply({cambio_id,confirmacion}) {
     const r=await this.record(cambio_id);
