@@ -490,13 +490,14 @@ Con la sesión del Portero (la ficha del plan) se ve como `equipo`. Lo marcado `
 `evento_id`), aunque ellos digan otra cosa; un mensaje con `visible` = `no`, tampoco.
 
 **Carpetas privadas (la válvula de Dirección):** lo que esté dentro de una subcarpeta del expediente cuyo nombre
-contenga «privado», «privada», «restringido», «restringida» o «solo dirección» (sin importar mayúsculas, acentos,
-guiones ni el número del frente: «07 Información PRIVADA», «Sólo_Dirección», «Restringidos»), a cualquier
-profundidad —también dentro de «Para compartir»—, **no sale en Archivos ni se entrega a nadie**: ni al externo, ni
-al equipo, ni con la sesión de la ficha (`PESTANAS.PRIVADA`). Un archivo así tampoco sale como archivo de un evento
-ni como adjunto que se pueda abrir. Sólo cuentan las subcarpetas de la del proyecto: si la carpeta del proyecto
-vive dentro de una que se llama «Privado», eso no esconde el expediente. Ojo: «privada» también nombra un tipo de
-desarrollo («Privada Residencial…»); una subcarpeta con ese nombre queda fuera del visor, aunque no se quisiera.
+contenga «restringido/a» o «solo dirección», o que se llame o termine en «privado/a» (sin importar mayúsculas,
+acentos, guiones ni el número del frente: «Privado», «07 Información PRIVADA», «Documentos privados»,
+«Sólo_Dirección», «Restringidos»), a cualquier profundidad —también dentro de «Para compartir»—, **no sale en
+Archivos ni se entrega a nadie**: ni al externo, ni al equipo, ni con la sesión de la ficha (`PESTANAS.PRIVADA`). Un
+archivo así tampoco sale como archivo de un evento ni como adjunto que se pueda abrir. Sólo cuentan las subcarpetas
+de la del proyecto: si la carpeta del proyecto vive dentro de una que se llama «Privado», eso no esconde el
+expediente. «Privada» al principio del nombre no cuenta, porque nombra desarrollos («Privada Residencial…»): esa
+subcarpeta sí se ve.
 
 **Los recursos** (todos por GET):
 

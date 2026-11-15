@@ -592,9 +592,11 @@ var PESTANAS = {
   LISTA_MS: 20000,                   // tiempo para recorrer las carpetas; si no alcanza, la lista sale incompleta
   COMPARTIR: /^([0-9]+ )?para compartir$/,   // «Para compartir», también con número al frente («00 Para compartir»)
   /* La válvula de Dirección: una subcarpeta del expediente cuyo nombre (sin mayúsculas ni acentos) contenga
-     «privado», «privada», «restringido», «restringida» o «solo dirección» no sale en el visor para nadie
-     —tampoco para el equipo ni con la sesión de la ficha—, ni lo que tenga dentro, a cualquier profundidad. */
-  PRIVADA: /privad[oa]|restringid[oa]|solo ?direccion/,
+     «restringido/a» o «solo dirección», o que se llame o termine en «privado/a» («Privado», «07 Información
+     privada»), no sale en el visor para nadie —tampoco para el equipo ni con la sesión de la ficha—, ni lo que
+     tenga dentro, a cualquier profundidad. «Privada» al principio no cuenta: nombra desarrollos («Privada
+     Residencial…»). */
+  PRIVADA: /restringid[oa]s?|solo ?direccion|(?:^|\s)privad[oa]s?$/,
   CARPETA: 'application/vnd.google-apps.folder',
   ATAJO: 'application/vnd.google-apps.shortcut',
   GOOGLE: 'application/vnd.google-apps.',

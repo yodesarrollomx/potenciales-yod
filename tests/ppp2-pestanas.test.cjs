@@ -664,8 +664,9 @@ test('carpetas privadas: lo que esté dentro de una subcarpeta «privado», «re
   assert.ok(idsDe(pide(a, 'ppp2-archivos', LIGA_EQ)).includes(D.plano));
   // el nombre, sin mayúsculas, acentos, guiones ni número del frente
   const { ctx } = mundo();
-  for (const n of ['Privado', 'privadas', '07 Información PRIVADA', 'Restringido', 'RESTRINGIDAS', 'Sólo Dirección', 'solo_direccion', 'SoloDirección', 'Docs (sólo dirección)'])
+  for (const n of ['Privado', 'privadas', '07 Información PRIVADA', 'Documentos privados', 'Restringido', 'RESTRINGIDAS', 'Expediente legal (RESTRINGIDO)', 'Sólo Dirección', 'solo_direccion', 'SoloDirección', 'Docs (sólo dirección)'])
     assert.equal(ctx.privada_(n), true, n);
-  for (const n of ['Para compartir', 'Privacidad', 'Presentaciones', 'Solo para el equipo', 'Dirección de obra', '04 Presentaciones'])
+  // «Privada» al principio nombra un desarrollo, no una carpeta reservada
+  for (const n of ['Para compartir', 'Privacidad', 'Presentaciones', 'Solo para el equipo', 'Dirección de obra', '04 Presentaciones', 'Privada Residencial del Mar', 'Privada San Ángel · láminas', '02 Privada Los Olivos'])
     assert.equal(ctx.privada_(n), false, n);
 });
