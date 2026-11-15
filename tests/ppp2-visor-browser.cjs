@@ -301,8 +301,11 @@ async function pagina(navegador, base, w, opciones) {
       const e2 = await estado('dinero');
       assert.equal(e2.off, e2.max, 'con la rueda llega al final'); assert.equal(e2.der, '0', 'al final ya no hay desvanecido a la derecha');
       // arrastrar con el ratón regresa, y no abre
-      await page.mouse.down(); await page.mouse.move(caja.x + caja.width / 2 + 60, caja.y + caja.height / 2, { steps: 6 }); await page.mouse.up();
-      await page.waitForTimeout(100);
+      await page.evaluate(() => {                            // arrastre con el ratón (eventos del ratón, como en escritorio)
+        const g = document.querySelector('[data-card="dinero"] svg'), r = g.getBoundingClientRect(), y = r.top + r.height / 2, x0 = r.left + r.width / 2;
+        const ev = (tipo, x) => g.dispatchEvent(new PointerEvent(tipo, { pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: tipo === 'pointerup' ? 0 : 1, clientX: x, clientY: y, bubbles: true, cancelable: true }));
+        ev('pointerdown', x0); for (let k = 1; k <= 6; k++) ev('pointermove', x0 + 10 * k); ev('pointerup', x0 + 60);
+      });
       const e3 = await estado('dinero');
       assert.ok(e3.off < e2.max - 20, 'arrastrar con el ratón la recorre'); assert.equal(await page.locator('#vzModal').isVisible(), false, 'arrastrar no abre el detalle');
       // un toque abre el detalle, con la figura completa
