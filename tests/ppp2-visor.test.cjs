@@ -265,6 +265,19 @@ test('sin escenario sirve la elegida y, si no hay, la de mayor orden; una versi�
   assert.equal(conFotos(tres().slice(3)).get({ recurso: 'ppp2-visor', k: LECTOR, plan: 'ppp:' + CASO }).error, 'plan');
 });
 
+test('sin elegida, una propuesta de reestructura no se sirve por omisión aunque tenga el mayor orden; elegida o fija, sí', () => {
+  const conRe = () => tres().slice(0, 3).concat([foto({ escenario_id: 'reestructura', escenario_nombre: 'Propuesta de reestructura · prueba', orden: 4, huella_entradas: 'h5', visor_json: vista('Propuesta', 5) })]);
+  assert.equal(pide(conFotos(conRe())).plan.nombre, 'Tres', 'la de mayor orden que no es una reestructura');
+  const w = conFotos(conRe());
+  assert.deepEqual(pide(w, { k: ADMIN }).elige.versiones.map((x) => [x.v, x.buena]), [['e1', false], ['e2', false], ['e3', true], ['reestructura', false]], 'Dirección la ve y la puede elegir');
+  assert.equal(pide(conFotos(conRe(), { plan_id: 'ppp:' + CASO + ':reestructura' })).plan.nombre, 'Propuesta', 'pedida fija en la liga, se sirve');
+  assert.equal(w.post({ tipo: 'ppp2-elige', k: ADMIN, plan: 'ppp:' + CASO, v: 'reestructura' }).ok, true);
+  assert.equal(pide(w).plan.nombre, 'Propuesta', 'elegida por Dirección, se sirve');
+  const porNombre = [foto({ escenario_id: 'e1', orden: 1, visor_json: vista('Uno', 1) }), foto({ escenario_id: 'x9', escenario_nombre: 'Propuesta de reestructura', orden: 2, huella_entradas: 'h2', visor_json: vista('Otra', 2) })];
+  assert.equal(pide(conFotos(porNombre)).plan.nombre, 'Uno', 'también se reconoce por el nombre');
+  assert.equal(pide(conFotos([foto({ escenario_id: 'reestructura', escenario_nombre: 'Propuesta de reestructura', visor_json: vista('Sola', 1) })])).error, 'plan', 'si sólo queda la propuesta, el caso no se sirve por omisión');
+});
+
 test('sin foto, sin pestaña, sin renglón en Config o con un JSON roto: «sin plan», sin romperse', () => {
   assert.equal(pide(conFotos([foto({ caso_id: 'otrocaso01' })])).error, 'plan');
   assert.equal(pide(conFotos([foto({})], {}, { sinPestanaFotos: true })).error, 'plan');
@@ -292,6 +305,10 @@ test('las marcas «deducido de …» de una foto completada salen limpias: rutas
   assert.equal(r.deducido['productos.0.ventas'].length, 240);
   assert.equal(pide(conFotos([foto({})])).deducido, null, 'sin marcas, null');
   assert.equal(pide(conFotos([foto({ visor_json: vista('Lista', 1, { deducido: ['v.x'] }) })])).deducido, null);
+  const conHtml = pide(conFotos([foto({ visor_json: vista('Html', 1, { deducido: { 'v.a': '<img src=x onerror=alert(1)>de ventas', 'v.b': '<>' } }) })]));
+  assert.deepEqual(conHtml.deducido, { 'v.a': 'img src=x onerror=alert(1)de ventas' }, 'sin < ni >; una marca que queda vacía no sale');
+  const muchas = {}; for (let i = 0; i < 450; i++) muchas['v.m' + i] = 'de algo';
+  assert.equal(Object.keys(pide(conFotos([foto({ visor_json: vista('Muchas', 1, { deducido: muchas }) })])).deducido).length, 400, 'tope de marcas');
 });
 
 test('un id de foto mal formado no se busca', () => {
