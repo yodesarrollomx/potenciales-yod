@@ -26,7 +26,7 @@
  */
 var VISOR = {
   ESQUEMA: 'ppp2-visor-v1',
-  CACHE: 'visor-1',          // forma de lo guardado: si cambia lo que se lee, se sube
+  CACHE: 'visor-2',          // forma de lo guardado: si cambia lo que se lee, se sube (visor-2: marcas `deducido` de las fotos)
   LIGAS_S: 60,               // apagar una liga tarda a lo más esto en notarse
   LLAVE_S: 2,                // la pregunta «¿cambió?» de todos los que miran un plan comparte una consulta a Drive
   MARCAS_S: 21600,
@@ -57,6 +57,10 @@ var VISOR = {
   FOTO_MAX: 50000,           // caracteres de visor_json (lo más que cabe en una celda de Sheets)
   FOTO_SIRVE: 'lista',       // estado de un renglón que se sirve; `propuesta` no
   FOTO_MESES: 600,           // tope de meses por serie del flujo de una foto
+  FOTO_DEDUCIDO: 400,        // tope de marcas «deducido de …» que se sirven de una foto
+  /* Una «Propuesta de reestructura» (scripts/visor-fotos/completa.cjs) se puede ver y elegir, pero nunca es la de
+     por omisión aunque tenga el mayor `orden`: su escenario_id es `reestructura` y su nombre empieza así. */
+  FOTO_REESTRUCTURA: /^propuesta de reestructura/i,
   FOTO_V: /^[a-z][a-z0-9_]{0,39}$/   // claves de `v` que se aceptan de una foto
 };
 
@@ -287,7 +291,8 @@ function llaveVisor_(p) {
    reciente: si la más reciente quedó `propuesta`, esa versión no se sirve (aunque haya una `lista` anterior,
    sus cifras ya no son las de hoy). `ppp:<caso_id>` sirve la versión `elegida` del caso (la escoge Dirección,
    ppp2-elige) con su foto más reciente; si la elegida no se puede servir, el caso no se sirve; si ninguna está
-   elegida, la de mayor `orden`. `ppp:<caso_id>:<escenario_id>` sirve esa versión fija. Un caso sin escenarios
+   elegida, la de mayor `orden` que no sea una propuesta de reestructura (ésa sólo se sirve si Dirección la elige o
+   si la liga la pide fija). `ppp:<caso_id>:<escenario_id>` sirve esa versión fija. Un caso sin escenarios
    tiene un solo renglón con `escenario_id` vacío: se sirve por `ppp:<caso_id>`. Sin el renglón `potenciales_id`,
    sin la pestaña o sin acceso, no hay fotos: el visor responde como «sin plan». */
 function esFoto_(id) { return String(id || '').indexOf('ppp:') === 0; }
@@ -337,9 +342,10 @@ function versionesFoto_(caso) {
   lista.sort(function (a, b) { return a.orden - b.orden; });
   var buena = null;
   if (marcada !== null) buena = lista.filter(function (f) { return f.esc === marcada; })[0] || null;
-  else lista.forEach(function (f) { if (!buena || f.orden >= buena.orden) buena = f; });
+  else lista.forEach(function (f) { if (!esReestructura_(f) && (!buena || f.orden >= buena.orden)) buena = f; });
   return { lista: lista, buena: buena };
 }
+function esReestructura_(f) { return low_(f.esc) === 'reestructura' || VISOR.FOTO_REESTRUCTURA.test(String(f.nombre || '')); }
 function fotoPlan_(id) {
   id = String(id || '').trim();
   var m = VISOR.FOTO_RE.exec(id);
@@ -415,8 +421,21 @@ function fotoLimpia_(o, p) {
     pruebas_viejas: numero(o.pruebas_viejas),
     ultimo: ou ? { fecha: texto(ou.fecha, 40), accion: texto(ou.accion, 160) } : null,
     cambio: texto(o.cambio, 40) || f.calc || '',
-    origen: origen
+    origen: origen,
+    deducido: deducidoLimpio_(o.deducido)
   };
+}
+/* Las marcas de lo que el paso «completa» dedujo o corrigió (scripts/visor-fotos/completa.cjs): ruta del cuadro
+   (`v.rv_margen`, `flujo.total.obra`, `productos.0.ventas`…) → «de qué sale y cómo». Sólo texto corto, sin < ni >,
+   con rutas bien formadas; sin marcas, null. Sirven para que la leyenda diga «deducido de …». */
+function deducidoLimpio_(x) {
+  if (!x || typeof x !== 'object' || Array.isArray(x)) return null;
+  var out = {}, n = 0;
+  Object.keys(x).forEach(function (k) {
+    var t = typeof x[k] === 'string' ? txt_(x[k].replace(/[<>]/g, ''), 240) : '';
+    if (n < VISOR.FOTO_DEDUCIDO && /^[a-z][a-z0-9_]*(\.[a-z0-9_]+){1,3}$/.test(k) && k.length <= 60 && t) { out[k] = t; n++; }
+  });
+  return n ? out : null;
 }
 /* Dirección escoge «la buena» de un caso del PPP 1 (POST tipo=ppp2-elige; doPost ya pone candado, pausa e
    idempotencia por request_id). Sólo mueve `elegida` en PPP_VISOR y anota quién y cuándo; no toca ningún libro.
