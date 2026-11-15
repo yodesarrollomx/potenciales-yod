@@ -1,0 +1,20 @@
+{
+  "name": "@yodesarrollo/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/stdio.mjs",
+    "http": "node src/http.mjs",
+    "test": "node --test test/*.test.mjs",
+    "check": "node --check src/server.mjs && node --check src/http.mjs && node --check src/ppp.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "express": "5.1.0",
+    "zod": "4.6.7"
+  }
+}

@@ -1,20 +1,20 @@
 {
-  "model_revision": "2026-11-13.folio-cartera.2",
-  "proposal_id": "CHG-PPP2-20261112",
-  "summary": "PPP 2 · ajustes a la ficha del plan tras la unificación (seguimiento de CHG-PPP2-20261112). (1) La fecha en que se aprobó la versión vigente llega del libro como número de fecha de la hoja y la ficha la enseñaba tal cual: ahora se enseña como fecha. (2) El diálogo «Compartir visor» se volvía a pintar al llegar la lista de planes y borraba lo que la persona ya había escrito: ahora lo conserva. Sólo cambia ppp2.js y su recorrido de navegador; sube la etiqueta de caché de los archivos de este repo para todas las páginas (también accesos.html, por eso se declara SYS-CONTROL): sólo cambia el ?v= de sus recursos. No cambian el servidor, los libros, el visor, los motores ni el Portero.",
+  "model_revision": "2026-11-15.mcp-ppp.1",
+  "proposal_id": "CHG-YOD-MCP-20261115",
+  "summary": "MCP YOD OS sobre PPP existente: lector visor HTTP, cliente interno stdio y edición controlada con recibos. Sin cambios en Apps Script, visor ni fórmulas.",
   "components": [
+    "SYS-YOD-MCP",
     "SYS-POTENCIALES",
     "SYS-PPP2",
     "GAS-PPP2",
     "SHEET-PPP2",
-    "SYS-CONTROL"
+    "SYS-YOD-OS"
   ],
   "tests": [
-    "node tests/ppp2-visor-browser.cjs (9 recorridos; el de compartir comprueba que lo escrito se conserva)",
-    "node tests/ppp2-browser.cjs",
+    "npm --prefix mcp test",
     "node --test tests/*.test.cjs",
     "node scripts/versiones.cjs --check",
-    "verificar-impacto contra el atlas fijado"
+    "verificar-impacto contra atlas MCP"
   ],
-  "rollback": "Revertir el PR: la ficha vuelve a enseñar el número de fecha y el diálogo vuelve a borrar lo escrito al repintarse. No hay nada que revertir en el servidor ni en los libros."
+  "rollback": "Revertir propuesta; no se modifican datos, identidades ni fórmulas."
 }
