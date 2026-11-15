@@ -428,9 +428,14 @@ hecha para caber en la pantalla de un teléfono y se ve igual en todos los plane
   nunca un cero inventado, un guion suelto ni NaN. El servidor no cambia por esto.
   Pruebas que llegan sin número (sólo texto) no cuentan como revisión. En «Terreno», un plan de casas se
   dibuja con tantas casas como unidades (hasta doce; una sola, como una casa).
-- **Horizontes largos** (hay planes de más de 150 meses): con más de 48 meses el eje de «Tiempo» y de
-  «Dinero» va por años (marcas cada año; rótulos cada uno, dos, tres o cinco años según quepan, y el
-  último mes al final), y con más de 72 meses las barras de «Dinero» suman seis meses en lugar de tres.
+- **Horizontes largos** (hay planes de más de 150 meses; decisión de Dirección, 15-nov-2026). En el cuadro
+  chico, «Tiempo» y «Dinero» conservan siempre la escala de un plan normal (60 meses a la vista): un plan
+  más largo se dibuja a lo largo y se recorre de lado con dos dedos en el teléfono, con la rueda o
+  arrastrando con el ratón en escritorio; un desvanecido con una flechita en el borde dice que hay más
+  (y a la izquierda, cuando ya se avanzó). Un dedo sigue haciendo lo de siempre: desplazar la página y
+  tocar para abrir. Lo recorrido se conserva cuando la pantalla se repinta sola. En la hoja, la figura
+  grande va completa, con el eje por años (rótulos cada uno, dos, tres o cinco años según quepan) y, en
+  «Dinero», barras de seis meses pasados los seis años.
 - **Dirección escoge «la buena» desde el visor** (15-nov-2026, lado de la página; el servidor que lo
   entiende se publica aparte). Si el navegador tiene la sesión del Portero (`pyod_clave_v1`), el visor
   la manda como `k` en sus lecturas: sólo la lee, nunca la borra ni la escribe. Si la respuesta trae

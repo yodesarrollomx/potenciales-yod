@@ -43,7 +43,8 @@ async function pagina(navegador, base, w, opciones) {
       if (req.method() !== 'GET') { otros.push(req.method()); return route.abort(); }
       const p = Object.fromEntries(new URL(url).searchParams);
       pedidos.push(p);
-      return route.fulfill({ status: 200, contentType: 'application/json', body: w.ctx.doGet({ parameter: p }).contenido });
+      const cuerpo = w.ctx.doGet({ parameter: p }).contenido;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: op.transforma ? JSON.stringify(op.transforma(JSON.parse(cuerpo))) : cuerpo });
     }
     return route.fulfill({ status: 200, contentType: /\.css(\?|$)|fonts\.googleapis/.test(url) ? 'text/css' : 'text/javascript', body: '' });
   });
@@ -263,6 +264,54 @@ async function pagina(navegador, base, w, opciones) {
       await page.evaluate(() => { window.__oculto = false; document.dispatchEvent(new Event('visibilitychange')); });
       await page.waitForTimeout(400);
       assert.ok(cuenta() > antes, 'al volver a verse, pregunta de inmediato');
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
+    await caso('un plan de 153 meses: Tiempo y Dinero conservan la escala y se recorren de lado con dos dedos, la rueda o el ratón; un dedo abre', async () => {
+      const alarga = (j) => {
+        if (!j || !j.ok || !j.flujo || !j.flujo.filas) return j;
+        const n = 153;
+        for (const c of Object.keys(j.flujo.filas)) { const s = j.flujo.filas[c] || [], u = s[s.length - 1] || 0; while (s.length < n) s.push(/saldo|acum|caja/.test(c) ? u : 0); j.flujo.filas[c] = s; }
+        j.flujo.meses = n; j.v.mes_reparto = n; j.llave = (j.llave || '') + '-153';
+        return j;
+      };
+      const w = conLiga(), { ctx, page, errores } = await pagina(navegador, base, w, { transforma: alarga });
+      await page.locator('[data-card="dinero"] .vz-pan').waitFor();
+      assert.equal(await page.locator('[data-card="tiempo"] .vz-pan').count(), 1, 'Tiempo también se recorre');
+      const estado = (id) => page.evaluate((i) => { const c = document.querySelector('[data-card="' + i + '"]'), g = c.querySelector('.vz-pan'); return { off: +g.getAttribute('data-off'), max: +g.getAttribute('data-pan-max'), izq: c.querySelector('.vz-des-i').getAttribute('opacity'), der: c.querySelector('.vz-des-d').getAttribute('opacity') }; }, id);
+      let e0 = await estado('dinero');
+      assert.equal(e0.off, 0); assert.ok(e0.max > 50); assert.equal(e0.izq, '0', 'al inicio, nada a la izquierda'); assert.notEqual(e0.der, '0', 'y se nota que hay más a la derecha');
+      // dos dedos hacia la izquierda: avanza en el tiempo
+      await page.evaluate(() => {
+        const g = document.querySelector('[data-card="dinero"] svg'), r = g.getBoundingClientRect(), y = r.top + r.height / 2;
+        const ev = (tipo, id, x) => g.dispatchEvent(new PointerEvent(tipo, { pointerId: id, pointerType: 'touch', isPrimary: id === 11, clientX: x, clientY: y, bubbles: true, cancelable: true }));
+        ev('pointerdown', 11, r.left + 150); ev('pointerdown', 12, r.left + 190);
+        for (let k = 1; k <= 5; k++) { ev('pointermove', 11, r.left + 150 - 20 * k); ev('pointermove', 12, r.left + 190 - 20 * k); }
+        ev('pointerup', 11, r.left + 50); ev('pointerup', 12, r.left + 90);
+      });
+      const e1 = await estado('dinero');
+      assert.ok(e1.off > 20, 'dos dedos la recorren: ' + e1.off); assert.equal(e1.izq, '1', 'ahora hay algo a la izquierda');
+      assert.equal(await page.locator('#vzModal').isVisible(), false, 'recorrer no abre el detalle');
+      // la rueda hasta el final
+      const caja = await page.locator('[data-card="dinero"] svg').boundingBox();
+      await page.mouse.move(caja.x + caja.width / 2, caja.y + caja.height / 2);
+      await page.mouse.wheel(0, 5000);
+      await page.waitForTimeout(100);
+      const e2 = await estado('dinero');
+      assert.equal(e2.off, e2.max, 'con la rueda llega al final'); assert.equal(e2.der, '0', 'al final ya no hay desvanecido a la derecha');
+      // arrastrar con el ratón regresa, y no abre
+      await page.mouse.down(); await page.mouse.move(caja.x + caja.width / 2 + 60, caja.y + caja.height / 2, { steps: 6 }); await page.mouse.up();
+      await page.waitForTimeout(100);
+      const e3 = await estado('dinero');
+      assert.ok(e3.off < e2.max - 20, 'arrastrar con el ratón la recorre'); assert.equal(await page.locator('#vzModal').isVisible(), false, 'arrastrar no abre el detalle');
+      // un toque abre el detalle, con la figura completa
+      await page.waitForTimeout(450);
+      await page.locator('[data-card="dinero"]').click();
+      await page.locator('#vzModal').waitFor({ state: 'visible' });
+      assert.equal(await page.locator('#vzModal .vz-pan').count(), 0, 'en la hoja, la figura va completa');
+      assert.match(await page.locator('#vzModal .vz-m-fig').innerHTML(), /mes 153/);
+      await page.keyboard.press('Escape'); await page.locator('#vzModal').waitFor({ state: 'hidden' });
       assert.deepEqual(errores, []);
       await ctx.close();
     });

@@ -221,25 +221,41 @@ test('fotos del PPP de siempre: Dinero sin saldo acumulado, una sola casa, prueb
   assert.doesNotMatch(visible(ti), /—|NaN|undefined|arranca/);
 });
 
-test('horizontes largos (hasta 153 meses): el eje va por años y los rótulos no se enciman', () => {
+const largo = (n) => {
+  const d = copia(datos());
+  for (const c of Object.keys(d.flujo.filas)) { const s = d.flujo.filas[c], u = s[s.length - 1]; while (s.length < n) s.push(/saldo|acum|caja/.test(c) ? u : 0); d.flujo.filas[c] = s.slice(0, n); }
+  Object.assign(d.v, { mes_reparto: n, dueno_meses: n, obra_inicio: Math.round(n * 0.2), fin_obra: Math.round(n * 0.7) }); d.flujo.meses = n;
+  return d;
+};
+const rotulosDe = (svg, y) => [...svg.matchAll(new RegExp('<text x="([\\d.]+)" y="' + y + '"(?: text-anchor="(\\w+)")? font-size="7.2"[^>]*>([^<]+)</text>', 'g'))]
+  .map((m) => { const x = +m[1], w = m[3].length * 7.2 * 0.55, a = m[2] || 'start'; return { t: m[3], a: a === 'end' ? x - w : a === 'middle' ? x - w / 2 : x, b: a === 'end' ? x : a === 'middle' ? x + w / 2 : x + w }; })
+  .sort((p, q) => p.a - q.a);
+const sinEncimar = (rs, que) => { for (let i = 1; i < rs.length; i++) assert.ok(rs[i].a - rs[i - 1].b >= 2, que + ': «' + rs[i - 1].t + '» y «' + rs[i].t + '» se enciman'); };
+
+test('horizontes largos (hasta 153 meses): el cuadro conserva la escala de 60 meses y se recorre de lado; la hoja la enseña completa', () => {
+  const ancho = (svg) => { const m = /data-t="\{&quot;t&quot;:&quot;Mes 1&quot;[^"]*" x="[\d.]+" y="[\d.]+" width="([\d.]+)"/.exec(svg); return m ? +m[1] : null; };
+  const normal = visor.pinta(largo(60), null).cuadros.find((c) => c.id === 'dinero').svg;
+  assert.doesNotMatch(normal, /vz-pan/, 'un plan de 60 meses no se recorre');
   for (const n of [80, 92, 153]) {
-    const d = copia(datos());
-    for (const c of Object.keys(d.flujo.filas)) { const s = d.flujo.filas[c], u = s[s.length - 1]; while (s.length < n) s.push(/saldo|acum|caja/.test(c) ? u : 0); }
-    Object.assign(d.v, { mes_reparto: n, dueno_meses: n, obra_inicio: Math.round(n * 0.2), fin_obra: Math.round(n * 0.7) }); d.flujo.meses = n;
-    const cs = visor.pinta(d, null).cuadros;
-    for (const [id, y] of [['tiempo', 89], ['dinero', 116]]) {
-      const svg = cs.find((c) => c.id === id).svg;
-      assert.doesNotMatch(svg, /NaN|undefined|Infinity/, id + ' ' + n);
-      const rotulos = [...svg.matchAll(new RegExp('<text x="([\\d.]+)" y="' + y + '"(?: text-anchor="(\\w+)")? font-size="7.2"[^>]*>([^<]+)</text>', 'g'))]
-        .map((m) => { const x = +m[1], w = m[3].length * 7.2 * 0.55, a = m[2] || 'start'; return { t: m[3], a: a === 'end' ? x - w : a === 'middle' ? x - w / 2 : x, b: a === 'end' ? x : a === 'middle' ? x + w / 2 : x + w }; })
-        .sort((p, q) => p.a - q.a);
-      assert.ok(rotulos.some((r) => r.t === 'mes ' + n), id + ' ' + n + ': dice el último mes');
-      assert.ok(rotulos.some((r) => r.t === 'año'), id + ' ' + n + ': marcas por año');
-      assert.ok(rotulos.length <= 9, id + ' ' + n + ': ' + rotulos.length + ' rótulos');
-      for (let i = 1; i < rotulos.length; i++) assert.ok(rotulos[i].a - rotulos[i - 1].b >= 2, id + ' ' + n + ': «' + rotulos[i - 1].t + '» y «' + rotulos[i].t + '» se enciman');
+    const cs = visor.pinta(largo(n), null).cuadros;
+    for (const [id, y, yG] of [['tiempo', 89, 89], ['dinero', 116, 123.4]]) {
+      const c = cs.find((x) => x.id === id);
+      assert.doesNotMatch(c.svg + c.svgG, /NaN|undefined|Infinity/, id + ' ' + n);
+      const pan = /<g class="vz-pan" data-pan-max="([\d.]+)"/.exec(c.svg);
+      assert.ok(pan && +pan[1] > 0, id + ' ' + n + ': el cuadro se recorre de lado');
+      assert.match(c.svg, /class="vz-des-d"/, id + ' ' + n + ': un desvanecido dice que hay más a la derecha');
+      assert.match(visor.pinta(largo(n), null).html, /<svg[^>]*class="vz-panea"/, 'la tarjeta lo sabe (touch-action: pan-y)');
+      const rs = rotulosDe(c.svg, y);
+      assert.ok(rs.some((r) => r.t === 'mes ' + n), id + ' ' + n + ': el último mes, al final del recorrido');
+      sinEncimar(rs, id + ' ' + n + ' (cuadro)');
+      assert.doesNotMatch(c.svgG, /vz-pan/, id + ' ' + n + ': la hoja enseña la figura completa');
+      const rg = rotulosDe(c.svgG, yG);
+      assert.ok(rg.some((r) => r.t === 'año') && rg.some((r) => r.t === 'mes ' + n), id + ' ' + n + ': la hoja, por años');
+      assert.ok(rg.length <= 9); sinEncimar(rg, id + ' ' + n + ' (hoja)');
     }
-    const barras = cs.find((c) => c.id === 'dinero').svg.match(/data-t="\{&quot;t&quot;:&quot;Meses \d+ a \d+/g) || [];
-    assert.equal(barras.length, Math.ceil(n / (n > 72 ? 6 : 3)), 'barras por semestre en planes largos');
+    const d = cs.find((c) => c.id === 'dinero').svg;
+    assert.equal(ancho(d), ancho(normal), 'un mes mide lo mismo que en un plan de 60 meses (misma escala)');
+    assert.equal((d.match(/data-t="\{&quot;t&quot;:&quot;Mes \d+&quot;/g) || []).length, n, 'se pueden recorrer todos los meses');
   }
 });
 

@@ -257,6 +257,25 @@
     var pm = (x1 - x0) / Math.max(1, N);
     return { pm: pm, x0: x0, x1: x1, X: function (m) { return x0 + (m - 1) * pm; }, XE: function (m) { return x0 + m * pm; } };
   }
+  /* La escala de Tiempo y Dinero en el cuadro chico es siempre la de un plan normal (60 meses a la vista).
+     Un plan más largo se dibuja a lo largo y se recorre de lado (dos dedos, rueda o arrastrar con el ratón);
+     un desvanecido en el borde dice que hay más. En la hoja, la figura grande va completa. */
+  var VISTA = 60;
+  function reglaPan(N, x0, x1) {
+    if (N <= VISTA) return regla(N, x0, x1);
+    var r = regla(N, x0, x0 + (x1 - x0) * N / VISTA); r.vista = x1; return r;
+  }
+  function panWrap(id, inner, R, y0, y1) {
+    if (!R.vista) return inner;
+    var ancho0 = R.vista - R.x0, max = R.x1 - R.vista, h = y1 - y0;
+    return '<defs><clipPath id="vzRec' + id + '"><rect x="' + f1(R.x0 - 1) + '" y="' + y0 + '" width="' + f1(ancho0 + 2) + '" height="' + h + '"></rect></clipPath>' +
+      '<linearGradient id="vzDesD' + id + '" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#fffdf9" stop-opacity="0"></stop><stop offset="1" stop-color="#fffdf9" stop-opacity="0.95"></stop></linearGradient>' +
+      '<linearGradient id="vzDesI' + id + '" x1="1" x2="0" y1="0" y2="0"><stop offset="0" stop-color="#fffdf9" stop-opacity="0"></stop><stop offset="1" stop-color="#fffdf9" stop-opacity="0.95"></stop></linearGradient></defs>' +
+      '<g clip-path="url(#vzRec' + id + ')"><g class="vz-pan" data-pan-max="' + f1(max) + '" data-off="0" transform="translate(0 0)">' + inner + '</g></g>' +
+      '<rect class="vz-des-i" x="' + f1(R.x0 - 1) + '" y="' + y0 + '" width="16" height="' + h + '" fill="url(#vzDesI' + id + ')" opacity="0" pointer-events="none"></rect>' +
+      '<rect class="vz-des-d" x="' + f1(R.vista - 15) + '" y="' + y0 + '" width="16" height="' + h + '" fill="url(#vzDesD' + id + ')" pointer-events="none"></rect>' +
+      '<path class="vz-des-d" d="M' + f1(R.vista - 4) + ' ' + f1(y0 + h / 2 - 3) + ' l3 3 l-3 3" fill="none" stroke="' + MUTED + '" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"></path>';
+  }
   function marcasMes(d, N) {
     var v = d.v || {}, cand = [1, num(v.obra_inicio), num(v.fin_obra), N], out = [];
     cand.forEach(function (m) { if (m && m >= 1 && m <= N && out.indexOf(m) < 0) out.push(m); });
@@ -278,8 +297,9 @@
   }
   function ejeMeses(d, N, yLinea, yTexto, R) {
     R = R || regla(N);
-    if (N > 48) return ejeAnios(N, yLinea, yTexto, R);
+    if (N > 48 && !R.vista) return ejeAnios(N, yLinea, yTexto, R);
     var o = '<line x1="' + R.x0 + '" y1="' + yLinea + '" x2="' + R.x1 + '" y2="' + yLinea + '" stroke="#cfc6b3" stroke-width="0.8"></line>', ms = marcasMes(d, N), ult = -99;
+    if (R.vista) { for (var m12 = 12; m12 < N; m12 += 12) if (ms.indexOf(m12) < 0) ms.push(m12); ms.sort(function (a, b) { return a - b; }); }   // a lo largo: también cada año
     ms.forEach(function (m, i) {
       var fin = i === ms.length - 1 && m === N, ini = i === 0 && m === 1 && R.x0 < 8, x = fin ? R.x1 : (ini ? R.x0 : R.X(m));
       if (x - ult < 11 && !fin) return;
@@ -290,31 +310,36 @@
     return o;
   }
   function cTiempo(d) {
-    var v = d.v || {}, N = Math.max(1, (d.flujo && d.flujo.meses) || num(v.mes_reparto) || 1), R = regla(N), o = [];
+    var v = d.v || {}, N = Math.max(1, (d.flujo && d.flujo.meses) || num(v.mes_reparto) || 1), o = [];
     var firmas = fila(d, 'firmas'), saldos = fila(d, 'saldos'), vi = primero(firmas), vf = ultimo(firmas), ei = primero(saldos), ef = ultimo(saldos);
     var oi = num(v.obra_inicio), of = num(v.fin_obra), rep = num(v.mes_reparto), prev = num(v.rv_preventa), pmin = num(dato(d, 'din.preventa_minima'));
     var unidades = total(d, 'firmas'), mesesVenta = vi && vf ? vf - vi + 1 : 0, corto = prev !== null && pmin !== null && prev < pmin;
-    if (oi) {
-      var tx = clamp(R.X(oi), 50, 134);
-      o.push('<line x1="' + f1(R.X(oi)) + '" y1="12" x2="' + f1(R.X(oi)) + '" y2="78" stroke="' + TIE + '" stroke-width="0.9" stroke-dasharray="2 2"></line>' +
-        '<text' + T('Arranque de obra', [['Mes de arranque', 'mes ' + oi], ['Preventa firmada al arrancar', pct(prev)], ['Mínimo para arrancar', pct(pmin, 0)]], L('Versiones', 'obra_inicio y rv_preventa')) +
-        ' x="' + f1(tx) + '" y="8.5" text-anchor="middle" font-size="7.5" fill="' + ORO + '">arranca la obra · <tspan font-weight="700"' + (corto ? ' fill="' + BADT + '"' : '') + '>' + (prev === null ? 'mes ' + oi : pct(prev) + ' vendido') + '</tspan></text>');
-    }
     var rows = [['Ventas', vi, vf, TIE, 'Meses con firmas', L('Flujo', 'unidades que se firman')], ['Obra', oi, of, CAP, 'Meses de obra', L('Versiones', 'obra_inicio y fin_obra')], ['Escrituras', ei, ef, CLI, 'Meses en que se cobran los saldos', L('Flujo', 'saldos al escriturar')]];
-    rows.forEach(function (r, i) {
-      var y = 16 + i * 16, a = r[1], b = r[2];
-      o.push('<text x="0" y="' + (y + 7.8) + '" font-size="8.6" fill="' + BODY + '">' + r[0] + '</text>');
-      if (!a || !b) { o.push('<text x="48" y="' + (y + 7.6) + '" font-size="7.2" fill="' + MUTED + '">sin dato</text>'); return; }
-      var w = (b - a + 1) * R.pm, txt = (b - a + 1) + ' meses';
-      o.push('<g' + T(r[0], [['Del mes', a], ['Al mes', b], ['Duración', txt]].concat(i === 0 && unidades ? [['Unidades que se firman', ent(unidades)]] : []), r[5]) + '><rect x="' + f1(R.X(a)) + '" y="' + y + '" width="' + f1(w) + '" height="10" rx="3" fill="' + r[3] + '"></rect>' +
-        (w >= ancho(txt, 7.5, true) + 8 ? '<text x="' + f1(R.X(a) + 4) + '" y="' + (y + 7.6) + '" font-size="7.5" font-weight="600" fill="#fffdf9">' + txt + '</text>' : '') + '</g>');
-    });
-    if (rep) {
-      var cx = clamp(R.XE(rep) - 3.5, 52, 180);
-      o.push('<g' + T('Reparto', [['Mes del reparto', 'mes ' + rep], ['El dueño recibe lo último en el mes', num(v.dueno_meses) || '—']], L('Versiones', 'mes_reparto')) + '><text x="0" y="71.5" font-size="8.5" font-weight="700" fill="' + INK + '">Reparto</text>' +
-        '<circle cx="' + f1(cx) + '" cy="69" r="3.5" fill="' + INK + '"></circle><text x="' + f1(cx - 6.5) + '" y="71.6" text-anchor="end" font-size="7.5" font-weight="700" fill="' + INK + '">mes ' + rep + '</text></g>');
+    /* la parte que corre con el tiempo (barras, arranque, reparto, eje) y la que se queda (nombres de renglón) */
+    function grafica(grande) {
+      var R = grande ? regla(N) : reglaPan(N, 48, 182), p = [], f = [];
+      if (oi) {
+        var tx = clamp(R.X(oi), R.x0 + 2, R.x1 - 48);
+        p.push('<line x1="' + f1(R.X(oi)) + '" y1="12" x2="' + f1(R.X(oi)) + '" y2="78" stroke="' + TIE + '" stroke-width="0.9" stroke-dasharray="2 2"></line>' +
+          '<text' + T('Arranque de obra', [['Mes de arranque', 'mes ' + oi], ['Preventa firmada al arrancar', pct(prev)], ['Mínimo para arrancar', pct(pmin, 0)]], L('Versiones', 'obra_inicio y rv_preventa')) +
+          ' x="' + f1(tx) + '" y="8.5" text-anchor="middle" font-size="7.5" fill="' + ORO + '">arranca la obra · <tspan font-weight="700"' + (corto ? ' fill="' + BADT + '"' : '') + '>' + (prev === null ? 'mes ' + oi : pct(prev) + ' vendido') + '</tspan></text>');
+      }
+      rows.forEach(function (r, i) {
+        var y = 16 + i * 16, a = r[1], b = r[2];
+        f.push('<text x="0" y="' + (y + 7.8) + '" font-size="8.6" fill="' + BODY + '">' + r[0] + '</text>');
+        if (!a || !b) { f.push('<text x="48" y="' + (y + 7.6) + '" font-size="7.2" fill="' + MUTED + '">sin dato</text>'); return; }
+        var w = (b - a + 1) * R.pm, txt = (b - a + 1) + ' meses';
+        p.push('<g' + T(r[0], [['Del mes', a], ['Al mes', b], ['Duración', txt]].concat(i === 0 && unidades ? [['Unidades que se firman', ent(unidades)]] : []), r[5]) + '><rect x="' + f1(R.X(a)) + '" y="' + y + '" width="' + f1(w) + '" height="10" rx="3" fill="' + r[3] + '"></rect>' +
+          (w >= ancho(txt, 7.5, true) + 8 ? '<text x="' + f1(R.X(a) + 4) + '" y="' + (y + 7.6) + '" font-size="7.5" font-weight="600" fill="#fffdf9">' + txt + '</text>' : '') + '</g>');
+      });
+      if (rep) {
+        var cx = clamp(R.XE(rep) - 3.5, R.x0 + 4, R.x1 - 2), tr = T('Reparto', [['Mes del reparto', 'mes ' + rep], ['El dueño recibe lo último en el mes', num(v.dueno_meses) || '—']], L('Versiones', 'mes_reparto'));
+        f.push('<text' + tr + ' x="0" y="71.5" font-size="8.5" font-weight="700" fill="' + INK + '">Reparto</text>');
+        p.push('<g' + tr + '><circle cx="' + f1(cx) + '" cy="69" r="3.5" fill="' + INK + '"></circle><text x="' + f1(cx - 6.5) + '" y="71.6" text-anchor="end" font-size="7.5" font-weight="700" fill="' + INK + '">mes ' + rep + '</text></g>');
+      }
+      p.push(ejeMeses(d, N, 81, 89, R));
+      return f.join('') + panWrap('T', p.join(''), R, 0, 92);
     }
-    o.push(ejeMeses(d, N, 81, 89));
     var kpis = [
       [rep ? String(rep) : '—', 'meses de plazo', 'firma a reparto', T('Plazo', [['Mes del reparto', rep || '—']], L('Versiones', 'mes_reparto'))],
       [pct(prev), 'preventa', pmin !== null ? 'mínimo ' + pct(pmin, 0) : '', T('Preventa al arrancar la obra', [['Preventa firmada', pct(prev)], ['Mínimo', pct(pmin, 0)]], L('Versiones', 'rv_preventa'))],
@@ -329,7 +354,9 @@
         (kp[2] ? '<text x="' + x + '" y="132.5" font-size="7.2" fill="' + MUTED + '">' + kp[2] + '</text>' : '') + '</g>');
     });
     return {
-      id: 'tiempo', n: 3, titulo: 'Tiempo', sub: 'etapas y cifras', svg: d.flujo && d.flujo.meses && (vi || oi || rep) ? o.join('') : sinDatos(184, 'Aún no hay calendario calculado'), w: 184,
+      id: 'tiempo', n: 3, titulo: 'Tiempo', sub: 'etapas y cifras', w: 184, wG: 184, hG: 136,
+      svg: d.flujo && d.flujo.meses && (vi || oi || rep) ? grafica(false) + o.join('') : sinDatos(184, 'Aún no hay calendario calculado'),
+      svgG: d.flujo && d.flujo.meses && (vi || oi || rep) ? grafica(true) + o.join('') : sinDatos(184, 'Aún no hay calendario calculado'),
       aria: 'Tiempo: ventas del mes ' + vi + ' al ' + vf + ', obra del ' + oi + ' al ' + of + ', reparto en el mes ' + rep,
       detalle: [{ h: 'Calendario (meses del plan)', filas: [
         ['Ventas', vi ? 'mes ' + vi + ' a ' + vf : '—', mesesVenta + ' meses · ' + L('Flujo', 'unidades que se firman')],
@@ -448,7 +475,7 @@
     var tipItem = function (it) { return T(Mayus(it[1]), it[5].map(function (f) { return [f[0], f[1]]; }).concat(it[5].length > 1 ? [['Total', mdp(it[2])]] : []), it[4]); };
 
     function figura(grande) {
-      var x0 = grande ? 48 : 1, R = regla(N, x0, 183), o = [], AX = 24, yT = 47, yB = grande ? 104 : 96, fs = grande ? 6.6 : 7.6;
+      var x0 = grande ? 48 : 1, R = grande ? regla(N, x0, 183) : reglaPan(N, x0, 183), o = [], fijo = [], AX = 24, yT = 47, yB = grande ? 104 : 96, fs = grande ? 6.6 : 7.6;
       /* columnas: entra arriba, sale abajo, por trimestre */
       var maxQ = 1;
       Q.forEach(function (t) { maxQ = Math.max(maxQ, t.cli + t.ban + t.cap + t.res, t.obra + t.costob + t.pagob + t.pagoc + t.pagor); });
@@ -546,14 +573,14 @@
         claves.forEach(function (c, j) {
           var par = c[2] ? [c[2]] : entra.concat(sale).filter(function (it) { return it[0] === c[0]; });
           var filas = []; par.forEach(function (it) { filas.push([Mayus(it[1]), mdp(it[2])]); });
-          o.push('<g' + (c[2] ? tipItem(c[2]) : T(Mayus(c[1]), filas, par.length ? par[0][4] : L('Flujo'))) + '>' + cuadrito(xc, 125.6, c[0], 5) + '<text x="' + f1(xc + 7) + '" y="' + 125.6 + '" font-size="' + tamC + '" fill="' + BODY + '">' + c[1] + '</text></g>');
+          fijo.push('<g' + (c[2] ? tipItem(c[2]) : T(Mayus(c[1]), filas, par.length ? par[0][4] : L('Flujo'))) + '>' + cuadrito(xc, 125.6, c[0], 5) + '<text x="' + f1(xc + 7) + '" y="' + 125.6 + '" font-size="' + tamC + '" fill="' + BODY + '">' + c[1] + '</text></g>');
           xc += anchos[j] + hueco;
         });
         o.push(ejeMeses(d, N, 108.5, 116, R));
-        o.push('<text' + T('Dinero ajeno y caja', [['Máximo de dinero ajeno en uso', mdp(ajeno)], ['Caja mínima exigida', mdp(cajaMin)], ['Costo del dinero', mdp(num(v.costo_dinero))]], Ly(L('Versiones', 'max_ajeno'), 'Flujo V' + d.version + ' · caja mínima')) +
+        fijo.push('<text' + T('Dinero ajeno y caja', [['Máximo de dinero ajeno en uso', mdp(ajeno)], ['Caja mínima exigida', mdp(cajaMin)], ['Costo del dinero', mdp(num(v.costo_dinero))]], Ly(L('Versiones', 'max_ajeno'), 'Flujo V' + d.version + ' · caja mínima')) +
           ' x="0" y="135" font-size="7.6" fill="' + BODY + '">' + (ajeno === null ? '' : 'Dinero ajeno máximo <tspan font-weight="700" fill="' + INK + '">' + mdp(ajeno) + '</tspan>') + '</text>');
       }
-      return o.join('');
+      return grande ? o.join('') : panWrap('D', o.join(''), R, 0, 119) + fijo.join('');
     }
     var desglose = function (lista) {
       var out = [];
@@ -785,7 +812,7 @@
   function cuadros(d) { VER = d.version || 0; ORIGEN = typeof d.origen === 'string' ? d.origen.trim().slice(0, 120) : ''; return [cReparto(d), cTerreno(d), cProducto(d), cTiempo(d), cCosto(d), cDinero(d), cRiesgo(d)]; }
   function svgDe(c, grande) {
     if (grande) return '<svg viewBox="0 0 ' + (c.wG || c.w) + ' ' + (c.hG || 136) + '" class="vz-svg-g" role="img" aria-label="' + esc(c.aria) + '">' + (c.svgG || c.svg) + '</svg>';
-    return '<svg viewBox="0 0 ' + c.w + ' 136" width="' + c.w + '" height="136" role="img" aria-label="' + esc(c.aria) + '">' + c.svg + '</svg>';
+    return '<svg viewBox="0 0 ' + c.w + ' 136" width="' + c.w + '" height="136" role="img" aria-label="' + esc(c.aria) + '"' + (/class="vz-pan"/.test(c.svg) ? ' class="vz-panea"' : '') + '>' + c.svg + '</svg>';
   }
   function tarjeta(c) {
     return '<section class="vz-card' + (c.doble ? ' vz-doble' : '') + '" data-card="' + c.id + '" tabindex="0" role="button" aria-haspopup="dialog" aria-label="' + esc(c.titulo + ': ver el detalle') + '">' +
@@ -918,6 +945,7 @@
         if (antes[id] && antes[id] !== ahora[id]) el.classList.add('vz-cambio');
       });
       firmas = ahora;
+      Object.keys(pans).forEach(function (id) { var card = caja.querySelector('[data-card="' + id + '"]'); if (card) panea(card, 0, pans[id]); });
       ajusta();
       Array.prototype.forEach.call(caja.querySelectorAll('.vz-marcas img'), function (im) { if (!im.complete) im.addEventListener('load', ajusta); });
       if (abierto()) abre(abierto(), true);
@@ -1006,6 +1034,7 @@
     }
     var cerca = function (e, sel) { return e.target && e.target.closest ? e.target.closest(sel) : null; };
     caja.addEventListener('click', function (e) {
+      if (Date.now() - recienPan < 400) return;   // fue un recorrido de lado, no un toque
       var chip = cerca(e, '.vz-chip'), card = cerca(e, '.vz-card'), otra = cerca(e, '.vz-otra');
       if (otra) { try { win.location.reload(); } catch (er) { } return; }
       var op1 = cerca(e, '.vz-elige-op');
@@ -1015,6 +1044,55 @@
         if (op.alEscoger) op.alEscoger(chip.getAttribute('data-plan') ? { plan: chip.getAttribute('data-plan') } : { v: Number(chip.getAttribute('data-v')) || 0 });
       } else if (card) { modal._vzUltimo = card.getAttribute('data-card'); abre(card.getAttribute('data-card')); }
     });
+    /* Recorrer de lado las gráficas largas (Tiempo y Dinero): dos dedos en el teléfono, la rueda o arrastrar
+       con el ratón. Un dedo hace lo de siempre (desplazar la página, tocar para abrir). */
+    var pans = {}, dedos = {}, gesto2 = null, recienPan = 0;
+    function panea(card, du, fijo) {
+      var off = 0, max = 0;
+      Array.prototype.forEach.call(card.querySelectorAll('.vz-pan'), function (g) {
+        max = Number(g.getAttribute('data-pan-max')) || 0;
+        off = clamp(fijo != null ? fijo : (Number(g.getAttribute('data-off')) || 0) + du, 0, max);
+        g.setAttribute('data-off', f1(off)); g.setAttribute('transform', 'translate(' + f1(-off) + ' 0)');
+      });
+      Array.prototype.forEach.call(card.querySelectorAll('.vz-des-i'), function (x) { x.setAttribute('opacity', off > 0.5 ? '1' : '0'); });
+      Array.prototype.forEach.call(card.querySelectorAll('.vz-des-d'), function (x) { x.setAttribute('opacity', off < max - 0.5 ? '1' : '0'); });
+      pans[card.getAttribute('data-card')] = off;
+    }
+    function escalaDe(card) { var g = card.querySelector('svg'), m = g && g.getScreenCTM && g.getScreenCTM(); return (m && m.a) || 1; }
+    function tarjetaPan(e) { var card = cerca(e, '.vz-card'); return card && card.querySelector('.vz-pan') ? card : null; }
+    caja.addEventListener('wheel', function (e) {
+      var card = tarjetaPan(e); if (!card) return;
+      var d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : (op.incrustado ? 0 : e.deltaY);
+      if (!d) return;
+      e.preventDefault();
+      panea(card, d / escalaDe(card));
+    }, { passive: false });
+    caja.addEventListener('pointerdown', function (e) {
+      var card = tarjetaPan(e); if (!card) return;
+      dedos[e.pointerId] = { x: e.clientX, card: card, tipo: e.pointerType };
+      var ids = Object.keys(dedos).filter(function (k) { return dedos[k].card === card && dedos[k].tipo === 'touch'; });
+      if (e.pointerType === 'touch' && ids.length >= 2) gesto2 = { card: card, mid: (dedos[ids[0]].x + dedos[ids[1]].x) / 2, ids: ids.slice(0, 2), movio: false };
+      else if (e.pointerType === 'mouse' && e.button === 0) gesto2 = { card: card, raton: true, x: e.clientX, x0: e.clientX, movio: false };
+    });
+    caja.addEventListener('pointermove', function (e) {
+      if (dedos[e.pointerId]) dedos[e.pointerId].x = e.clientX;
+      if (!gesto2) return;
+      if (gesto2.raton) {
+        if (e.pointerId !== undefined && e.pointerType !== 'mouse') return;
+        if (!gesto2.movio && Math.abs(e.clientX - gesto2.x0) < 5) return;
+        gesto2.movio = true; panea(gesto2.card, -(e.clientX - gesto2.x) / escalaDe(gesto2.card)); gesto2.x = e.clientX; return;
+      }
+      var a = dedos[gesto2.ids[0]], b = dedos[gesto2.ids[1]]; if (!a || !b) return;
+      var mid = (a.x + b.x) / 2;
+      if (Math.abs(mid - gesto2.mid) > 0.5) { gesto2.movio = true; panea(gesto2.card, -(mid - gesto2.mid) / escalaDe(gesto2.card)); gesto2.mid = mid; }
+      if (e.cancelable) e.preventDefault();
+    });
+    var suelta2 = function (e) {
+      delete dedos[e.pointerId];
+      if (gesto2 && (gesto2.raton || gesto2.ids.indexOf(String(e.pointerId)) >= 0)) { if (gesto2.movio) recienPan = Date.now(); gesto2 = null; }
+    };
+    caja.addEventListener('pointerup', suelta2);
+    caja.addEventListener('pointercancel', suelta2);
     caja.addEventListener('keydown', function (e) {
       var card = cerca(e, '.vz-card');
       if (card && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); modal._vzUltimo = card.getAttribute('data-card'); abre(card.getAttribute('data-card')); }

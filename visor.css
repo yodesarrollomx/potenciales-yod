@@ -73,6 +73,8 @@ html.vz-con-modal, html.vz-con-modal body { overflow: hidden; }
 .vz-card { position: relative; background: var(--papel); border: 1px solid var(--linea); border-radius: 12px; padding: 7px 8px 5px; cursor: pointer; box-shadow: var(--sombra); transition: border-color .15s, box-shadow .15s, transform .12s; -webkit-tap-highlight-color: transparent; }
 .vz-card.vz-doble { grid-column: 1 / -1; }
 .vz-card svg { margin: 0 auto; }
+/* gráficas largas: se recorren de lado con dos dedos (un dedo sigue desplazando la página) */
+.vz-card svg.vz-panea { touch-action: pan-y; -webkit-user-select: none; user-select: none; }
 .vz-card:hover { border-color: #cdbd93; box-shadow: 0 2px 4px rgba(35, 29, 20, .05), 0 8px 22px rgba(35, 29, 20, .08); }
 .vz-card:focus-visible { outline: 2px solid var(--oro); outline-offset: 2px; }
 .vz-card:active { transform: scale(.985); border-color: #9a7b3f; }
