@@ -45,9 +45,10 @@ html.vz-con-modal, html.vz-con-modal body { overflow: hidden; }
 .vz-ver { font-size: 10px; color: var(--mudo); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* selectores: sólo salen si la liga trae más de un terreno o más de una versión */
-.vz-chips { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 8px; padding: 0 2px 1px; scrollbar-width: none; }
+.vz-chips { display: flex; gap: 7px; overflow-x: auto; margin: 0 0 8px; padding: 5px 4px 5px; scrollbar-width: none; }
 .vz-chips::-webkit-scrollbar { display: none; }
-.vz-chip { flex: none; font: 600 9.5px var(--sans); color: var(--cuerpo); background: var(--papel); border: 1px solid var(--linea); border-radius: 99px; padding: 5px 10px; cursor: pointer; }
+.vz-chip { position: relative; flex: none; min-height: 26px; font: 600 10px var(--sans); color: var(--cuerpo); background: var(--papel); border: 1px solid var(--linea); border-radius: 99px; padding: 6px 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.vz-chip::after { content: ''; position: absolute; inset: -5px -3px; }   /* el dedo atina aunque el chip se vea chico */
 .vz-chip.vz-on { color: var(--papel); background: var(--tinta); border-color: var(--tinta); }
 .vz-chip:focus-visible { outline: 2px solid var(--oro); outline-offset: 1px; }
 .vz-aviso { font-size: 9.5px; color: var(--oro); background: #f3e9cf; border-radius: 6px; padding: 5px 8px; margin: 0 0 8px; }
@@ -115,7 +116,7 @@ html.vz-con-modal, html.vz-con-modal body { overflow: hidden; }
 /* hoja de un cuadro (pop-up): sube desde abajo en el teléfono, centrada en pantalla grande */
 .vz-modal, .vz-tip { font-family: var(--sans); }
 .vz-modal { color: var(--tinta); position: fixed; inset: 0; z-index: 20; display: flex; align-items: flex-end; justify-content: center; background: rgba(35, 29, 20, .5); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); animation: vzVela .2s ease-out; }
-.vz-modal.vz-baja { background: rgba(35, 29, 20, 0); transition: background-color .2s; }
+.vz-modal.vz-baja { background: rgba(35, 29, 20, 0); transition: background-color .2s; pointer-events: none; }   /* al soltarla ya no atrapa el siguiente toque */
 .vz-m-caja { width: 100%; max-width: 620px; max-height: 92vh; max-height: 92dvh; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; background: var(--papel); border-radius: 22px 22px 0 0; padding: 0 18px calc(24px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -8px 40px rgba(35, 29, 20, .22); animation: vzSube .26s cubic-bezier(.2, .8, .2, 1); outline: none; }
 .vz-modal.vz-baja .vz-m-caja { transition: transform .2s ease-in; }
 .vz-m-head { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 22px 0 12px; background: var(--papel); border-bottom: 1px solid var(--linea); touch-action: none; cursor: grab; }
@@ -125,6 +126,7 @@ html.vz-con-modal, html.vz-con-modal body { overflow: hidden; }
 .vz-x { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-right: -6px; border-radius: 50%; border: 0; background: var(--crema); color: var(--tinta); cursor: pointer; }
 .vz-x:hover { background: #eee8dc; }
 .vz-x:focus-visible { outline: 2px solid var(--oro); outline-offset: 2px; }
+.vz-m-que { margin: 14px 0 0; font-size: 14px; line-height: 1.45; color: var(--cuerpo); }
 .vz-m-fig { padding: 16px 0 4px; }
 .vz-svg-g { width: 100%; height: auto; overflow: visible; touch-action: pan-y; -webkit-user-select: none; user-select: none; }
 .vz-m-fig .vz-t.vz-sel { filter: brightness(.88) saturate(1.25); }
@@ -135,6 +137,12 @@ html.vz-con-modal, html.vz-con-modal body { overflow: hidden; }
 .vz-m-caja dt { font-size: 14px; line-height: 1.3; color: var(--tinta); }
 .vz-m-caja dd { margin: 0; font-size: 14px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .vz-m-caja small { grid-column: 1 / -1; font-size: 11px; line-height: 1.35; color: var(--mudo); }
+/* «deducido de …»: un chip discreto junto al origen; al tocarlo enseña de qué sale la cifra */
+.vz-ded { position: relative; display: inline-flex; align-items: center; gap: 3px; min-height: 22px; margin: 2px 0 0 1px; padding: 1px 8px 1px 6px; border: 1px solid #e3d6b6; border-radius: 99px; background: #f8f0dc; color: #5e4710; font: 600 11px var(--sans); vertical-align: middle; cursor: pointer; }
+.vz-ded::after { content: ''; position: absolute; inset: -11px -6px; }   /* objetivo táctil de 44 px */
+.vz-ded[aria-expanded="true"] { background: #efe2bf; }
+.vz-ded:focus-visible { outline: 2px solid var(--oro); outline-offset: 1px; }
+.vz-m-caja small.vz-ded-txt { padding: 6px 9px; margin-top: 4px; border-radius: 9px; background: #fbf5e6; color: #5e4710; line-height: 1.4; }
 @media (min-width: 700px) {
   .vz-modal { align-items: center; padding: 24px; }
   .vz-m-caja { border-radius: 20px; max-height: 88vh; padding-bottom: 24px; box-shadow: 0 20px 60px rgba(35, 29, 20, .25); animation-name: vzAparece; }
@@ -149,6 +157,9 @@ html.vz-con-modal, html.vz-con-modal body { overflow: hidden; }
 .vz-tip div span:last-child { color: var(--papel); font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .vz-tip div span:last-child:empty { display: none; }
 .vz-tip small { display: block; margin-top: 6px; padding-top: 5px; border-top: 1px solid rgba(255, 253, 249, .16); font-size: 10.5px; color: #d9c79a; }
+.vz-tip small.vz-tip-ded { display: flex; align-items: flex-start; gap: 5px; margin-top: 4px; padding-top: 0; border-top: 0; color: #f0dfb0; }
+.vz-tip small.vz-tip-ded svg { flex: none; margin-top: 1px; }
+.vz-pie-ded { margin-top: 1px; color: #6a5013; }
 
 @keyframes vzLate { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 @keyframes vzCambio { 0% { box-shadow: 0 0 0 3px rgba(154, 123, 63, .85); background: #fbf3dc; } 100% { box-shadow: 0 0 0 3px rgba(154, 123, 63, 0); background: var(--papel); } }
