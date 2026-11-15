@@ -178,7 +178,11 @@ nueva** sobre la implementación de siempre (nunca «Nueva implementación»).
 
 **Comprobar** (son GET de sólo lectura; nunca POST): `…/exec?recurso=ppp2-historial&liga=<liga>` debe traer
 `"ok":true` con `audiencia`, `dias` y `versiones`; `…&recurso=ppp2-archivos&liga=<liga>`, `"ok":true` con sus
-`grupos`. Con una liga apagada, `"error":"liga"`.
+`grupos`. Con una liga apagada, `"error":"liga"`. Y un archivo de más de 3 MB de esa lista, por partes:
+`…&recurso=ppp2-archivo&liga=<liga>&id=<id>&parte=1` debe traer `"ok":true` y `"parte":1`. Las partes de un
+archivo así se leen con la API de Drive (GET con la credencial del script); si contestan `"error":"interno"` y un
+archivo de menos de 3 MB sí sale, falta activar el servicio avanzado «Drive API» del proyecto (Servicios → Drive
+API) y volver a publicar la versión.
 
 **Límites que conviene saber:** cada parte de un archivo pesa hasta 3 MB y un archivo hasta 40 MB (uno más
 grande sale en la lista con `vista` = `no` y no se entrega). Docs, Hojas, Presentaciones y Dibujos de Google se
