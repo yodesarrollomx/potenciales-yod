@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
-const { mundo, PLAN, filaDe, EDITOR, LECTOR } = require('./ppp2-mundo.cjs');
+const { mundo, PLAN, filaDe, EDITOR, LECTOR, ADMIN } = require('./ppp2-mundo.cjs');
 
 const RAIZ = path.join(__dirname, '..');
 const FOTOS = process.env.PPP_SCREENSHOTS || '';
@@ -43,11 +43,15 @@ async function pagina(navegador, base, w, opciones) {
       if (req.method() !== 'GET') { otros.push(req.method()); return route.abort(); }
       const p = Object.fromEntries(new URL(url).searchParams);
       pedidos.push(p);
-      return route.fulfill({ status: 200, contentType: 'application/json', body: w.ctx.doGet({ parameter: p }).contenido });
+      const cuerpo = w.ctx.doGet({ parameter: p }).contenido;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: op.transforma ? JSON.stringify(op.transforma(JSON.parse(cuerpo))) : cuerpo });
     }
     return route.fulfill({ status: 200, contentType: /\.css(\?|$)|fonts\.googleapis/.test(url) ? 'text/css' : 'text/javascript', body: '' });
   });
-  await ctx.addInitScript(([ep, sesion]) => { window.PPP2_ENDPOINT = ep; window.PPP2_VISOR_MS = 250; if (sesion) localStorage.setItem('pyod_clave_v1', sesion); }, [ENDPOINT, op.sesion || '']);
+  await ctx.addInitScript(([ep, sesion, ms]) => {
+    window.PPP2_ENDPOINT = ep; if (ms) window.PPP2_VISOR_MS = ms; if (sesion) localStorage.setItem('pyod_clave_v1', sesion);
+    window.__oculto = false; Object.defineProperty(document, 'hidden', { configurable: true, get: () => window.__oculto });   // para probar la pausa
+  }, [ENDPOINT, op.sesion || '', op.ms === undefined ? 250 : op.ms]);
   const page = await ctx.newPage();
   const errores = [];
   page.on('pageerror', (e) => errores.push(e.message));
@@ -122,6 +126,207 @@ async function pagina(navegador, base, w, opciones) {
       await ctx.close();
     });
 
+    await caso('la hoja del detalle: el foco entra y regresa al cuadro, Esc cierra la leyenda y luego la hoja, y bajarla con el dedo la cierra', async () => {
+      const w = conLiga(), { ctx, page, errores } = await pagina(navegador, base, w);
+      await page.locator('.vz-card').first().waitFor();
+      assert.equal(await page.locator('#vzEsq').count(), 0, 'el esqueleto se va en cuanto llega el plan');
+      assert.equal(await page.locator('#vz[aria-busy]').count(), 0);
+      await page.locator('[data-card="tiempo"]').click();
+      await page.locator('#vzModal').waitFor({ state: 'visible' });
+      assert.equal(await page.evaluate(() => document.activeElement.classList.contains('vz-x')), true, 'el foco entra a la hoja');
+      assert.equal(await page.locator('#vzModal [role="dialog"][aria-labelledby="vzMTit"] #vzMTit').textContent(), 'Tiempo');
+      const caja = await page.evaluate(() => { const x = document.querySelector('#vzModal .vz-x'); return { w: x.offsetWidth, h: x.offsetHeight }; });
+      assert.ok(caja.w >= 44 && caja.h >= 44, 'la × mide 44 px o más');
+      await page.locator('#vzModal .vz-m-fig .vz-t').first().click();
+      await page.locator('#vzTip').waitFor({ state: 'visible' });
+      await page.keyboard.press('Escape');
+      await page.locator('#vzTip').waitFor({ state: 'hidden' });
+      assert.equal(await page.locator('#vzModal').isVisible(), true, 'el primer Esc sólo quita la leyenda');
+      await page.keyboard.press('Escape');
+      await page.locator('#vzModal').waitFor({ state: 'hidden' });
+      assert.equal(await page.evaluate(() => document.activeElement.getAttribute('data-card')), 'tiempo', 'el foco regresa al cuadro');
+      await page.locator('[data-card="costo"]').click();
+      await page.locator('#vzModal').waitFor({ state: 'visible' });
+      await page.waitForTimeout(400);
+      const h = await page.locator('#vzModal .vz-m-head').boundingBox();
+      await page.mouse.move(h.x + 40, h.y + 20); await page.mouse.down();
+      for (let i = 1; i <= 8; i++) await page.mouse.move(h.x + 40, h.y + 20 + i * 22);
+      await page.mouse.up();
+      await page.locator('#vzModal').waitFor({ state: 'hidden' });
+      await page.locator('[data-card="costo"]').click();
+      await page.locator('#vzModal').waitFor({ state: 'visible' });
+      await page.waitForTimeout(400);                         // que termine de subir
+      const h2 = await page.locator('#vzModal .vz-m-head').boundingBox();
+      await page.mouse.move(h2.x + 40, h2.y + 20); await page.mouse.down(); await page.mouse.move(h2.x + 40, h2.y + 34); await page.mouse.up();
+      await page.waitForTimeout(250);
+      assert.equal(await page.locator('#vzModal').isVisible(), true, 'un jalón corto no la cierra');
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
+    /* Servidor simulado para el selector de Dirección: el de hoy ignora `k` y no manda `elige`; éste, con la
+       sesión de quien aprueba, manda `elige` y entiende `ppp2-elige`. Nada sale a la red. Como el de verdad
+       (Visor.gs, eligeDe_/elige_), `v` es un id de texto (el escenario_id), no un número: uno que no
+       coincide, o que llega como número, es error `version`. */
+    const conDireccion = async (opciones) => {
+      const op = opciones || {}, w = mundo({ ligas: [renglon({ versiones: 'todas' })], aperturas: true });
+      const estadoSrv = { buena: 2, posts: [], gets: [] };
+      const ctxs = [];
+      const sirve = async (route) => {
+        const req = route.request(), url = req.url();
+        if (url.startsWith(base)) return route.continue();
+        if (url.startsWith(ENDPOINT)) {
+          if (req.method() === 'POST') {
+            const b = JSON.parse(req.postData() || '{}'); estadoSrv.posts.push(b);
+            if (op.falla || b.tipo !== 'ppp2-elige' || b.k !== ADMIN) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'permiso' }) });
+            if (typeof b.v !== 'string' || !/^esc-\d$/.test(b.v)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'version' }) });
+            estadoSrv.buena = Number(b.v.slice(4));
+            return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+          }
+          const p = Object.fromEntries(new URL(url).searchParams); estadoSrv.gets.push(p);
+          const llave = 'llave-b' + estadoSrv.buena;
+          if (p.si && p.si === llave) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, igual: true, llave }) });
+          const q = Object.assign({}, p); delete q.k; delete q.si; if (!q.v) q.v = String(estadoSrv.buena);
+          const j = JSON.parse(w.ctx.doGet({ parameter: q }).contenido);
+          j.llave = llave;
+          if (p.k === ADMIN) j.elige = { versiones: (j.versiones || []).map((x) => ({ v: 'esc-' + x.n, nombre: x.nombre, buena: x.n === estadoSrv.buena })) };
+          return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(j) });
+        }
+        return route.fulfill({ status: 200, contentType: /\.css(\?|$)|fonts\.googleapis/.test(url) ? 'text/css' : 'text/javascript', body: '' });
+      };
+      const abre = async (sesion) => {            // cada quien en su navegador (su propio localStorage)
+        const c = await navegador.newContext({ viewport: { width: 440, height: 880 }, deviceScaleFactor: 1, hasTouch: true });
+        ctxs.push(c); await c.route('**/*', sirve);
+        const page = await c.newPage(), errores = [];
+        await page.addInitScript(([ep, s]) => { window.PPP2_ENDPOINT = ep; window.PPP2_VISOR_MS = 250; if (s) localStorage.setItem('pyod_clave_v1', s); }, [ENDPOINT, sesion || '']);
+        page.on('pageerror', (e) => errores.push(e.message));
+        await page.goto(base + '/visor.html#l=' + LIGA);
+        await page.locator('.vz-card').first().waitFor();
+        return { page, errores };
+      };
+      const ctx = { close: () => Promise.all(ctxs.map((c) => c.close())) };
+      return { ctx, estadoSrv, abre };
+    };
+
+    await caso('Dirección escoge la versión buena desde el visor; los demás la siguen solos y no ven el selector', async () => {
+      const { ctx, estadoSrv, abre } = await conDireccion();
+      const dir = await abre(ADMIN);
+      assert.ok(estadoSrv.gets.some((p) => p.k === ADMIN), 'con sesión, el visor la manda como k');
+      await dir.page.locator('.vz-elige').waitFor();
+      const nombre = async (v) => dir.page.locator('.vz-elige-op[data-elige="esc-' + v + '"]').getAttribute('data-nombre');
+      const n1 = await nombre(1), n2 = await nombre(2);
+      assert.ok(n1 && n2 && n1 !== n2, 'cada opción lleva el nombre de su versión');
+      assert.equal(await dir.page.locator('.vz-elige-op.vz-buena').getAttribute('data-elige'), 'esc-2');
+      assert.equal(await dir.page.locator('.vz-elige-op[data-elige="0"]').count(), 0, 'un id de texto nunca se vuelve 0');
+      assert.equal(await dir.page.locator('.vz-elige-op[aria-checked="true"]').count(), 1);
+      assert.equal(await dir.page.evaluate(() => localStorage.getItem('pyod_clave_v1')), ADMIN, 'la sesión no se toca');
+      // otro navegador, sin sesión: sin selector de Dirección
+      const socio = await abre('');
+      assert.equal(await socio.page.locator('.vz-elige').count(), 0);
+      assert.ok(estadoSrv.gets.filter((p) => !p.k).length > 0, 'sin sesión, no manda k');
+      await socio.page.locator('.vz-ver', { hasText: 'V2' }).waitFor();
+      // Dirección toca V1
+      await dir.page.locator('.vz-elige-op[data-elige="esc-1"]').click();
+      assert.equal(await dir.page.locator('.vz-elige-op.vz-buena').getAttribute('data-elige'), 'esc-1', 'su pantalla cambia de inmediato');
+      await dir.page.locator('.vz-elige-msg', { hasText: 'Listo: todos ven ahora «' + n1 + '»' }).waitFor({ timeout: 5000 });
+      await dir.page.locator('.vz-ver', { hasText: 'V1' }).waitFor({ timeout: 5000 });
+      const post = estadoSrv.posts[0];
+      assert.deepEqual(Object.keys(post).sort(), ['k', 'plan', 'request_id', 'tipo', 'v']);
+      assert.equal(post.tipo, 'ppp2-elige'); assert.equal(post.k, ADMIN); assert.equal(post.plan, PLAN); assert.equal(post.v, 'esc-1', 'el id viaja tal cual, como texto');
+      // el socio la ve sola, con «Se actualizó»
+      await socio.page.locator('.vz-ver', { hasText: 'V1' }).waitFor({ timeout: 5000 });
+      assert.match(await socio.page.locator('#vzVivo').innerText(), /Se actualizó/);
+      assert.equal(await socio.page.locator('.vz-elige').count(), 0);
+      // otro toque, otro request_id
+      await dir.page.locator('.vz-elige-op[data-elige="esc-2"]').click();
+      await dir.page.locator('.vz-elige-msg', { hasText: 'todos ven ahora «' + n2 + '»' }).waitFor({ timeout: 5000 });
+      assert.notEqual(estadoSrv.posts[1].request_id, estadoSrv.posts[0].request_id);
+      assert.deepEqual(dir.errores.concat(socio.errores), []);
+      await ctx.close();
+    });
+
+    await caso('si el servidor no acepta el cambio de Dirección, el selector vuelve atrás y lo dice', async () => {
+      const { ctx, estadoSrv, abre } = await conDireccion({ falla: true });
+      const dir = await abre(ADMIN);
+      const n2 = await dir.page.locator('.vz-elige-op[data-elige="esc-2"]').getAttribute('data-nombre');
+      await dir.page.locator('.vz-elige-op[data-elige="esc-1"]').click();
+      await dir.page.locator('.vz-elige-msg.vz-malo').waitFor({ timeout: 5000 });
+      assert.equal(await dir.page.locator('.vz-elige-msg').innerText(), 'No se pudo cambiar: todos siguen viendo «' + n2 + '». Intenta otra vez.');
+      assert.equal(await dir.page.locator('.vz-elige-op.vz-buena').getAttribute('data-elige'), 'esc-2');
+      assert.equal(estadoSrv.posts.length, 1);
+      assert.deepEqual(dir.errores, []);
+      await ctx.close();
+    });
+
+    await caso('el sondeo pregunta cada 3 s con la página a la vista y se detiene si la pestaña se oculta', async () => {
+      const w = conLiga(), { ctx, page, pedidos, errores } = await pagina(navegador, base, w, { ms: 0 });
+      await page.locator('.vz-card').first().waitFor();
+      const cuenta = () => pedidos.filter((p) => p.si).length;
+      await page.waitForTimeout(6600);
+      const vistos = cuenta();
+      assert.ok(vistos >= 2 && vistos <= 3, 'cada 3 s: ' + vistos + ' en 6.6 s');
+      await page.evaluate(() => { window.__oculto = true; document.dispatchEvent(new Event('visibilitychange')); });
+      const antes = cuenta();
+      await page.waitForTimeout(3600);
+      assert.equal(cuenta(), antes, 'oculta, no pregunta');
+      await page.evaluate(() => { window.__oculto = false; document.dispatchEvent(new Event('visibilitychange')); });
+      await page.waitForTimeout(400);
+      assert.ok(cuenta() > antes, 'al volver a verse, pregunta de inmediato');
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
+    await caso('un plan de 153 meses: Tiempo y Dinero conservan la escala y se recorren de lado con dos dedos, la rueda o el ratón; un dedo abre', async () => {
+      const alarga = (j) => {
+        if (!j || !j.ok || !j.flujo || !j.flujo.filas) return j;
+        const n = 153;
+        for (const c of Object.keys(j.flujo.filas)) { const s = j.flujo.filas[c] || [], u = s[s.length - 1] || 0; while (s.length < n) s.push(/saldo|acum|caja/.test(c) ? u : 0); j.flujo.filas[c] = s; }
+        j.flujo.meses = n; j.v.mes_reparto = n; j.llave = (j.llave || '') + '-153';
+        return j;
+      };
+      const w = conLiga(), { ctx, page, errores } = await pagina(navegador, base, w, { transforma: alarga });
+      await page.locator('[data-card="dinero"] .vz-pan').waitFor();
+      assert.equal(await page.locator('[data-card="tiempo"] .vz-pan').count(), 1, 'Tiempo también se recorre');
+      const estado = (id) => page.evaluate((i) => { const c = document.querySelector('[data-card="' + i + '"]'), g = c.querySelector('.vz-pan'); return { off: +g.getAttribute('data-off'), max: +g.getAttribute('data-pan-max'), izq: c.querySelector('.vz-des-i').getAttribute('opacity'), der: c.querySelector('.vz-des-d').getAttribute('opacity') }; }, id);
+      let e0 = await estado('dinero');
+      assert.equal(e0.off, 0); assert.ok(e0.max > 50); assert.equal(e0.izq, '0', 'al inicio, nada a la izquierda'); assert.notEqual(e0.der, '0', 'y se nota que hay más a la derecha');
+      // dos dedos hacia la izquierda: avanza en el tiempo
+      await page.evaluate(() => {
+        const g = document.querySelector('[data-card="dinero"] svg'), r = g.getBoundingClientRect(), y = r.top + r.height / 2;
+        const ev = (tipo, id, x) => g.dispatchEvent(new PointerEvent(tipo, { pointerId: id, pointerType: 'touch', isPrimary: id === 11, clientX: x, clientY: y, bubbles: true, cancelable: true }));
+        ev('pointerdown', 11, r.left + 150); ev('pointerdown', 12, r.left + 190);
+        for (let k = 1; k <= 5; k++) { ev('pointermove', 11, r.left + 150 - 20 * k); ev('pointermove', 12, r.left + 190 - 20 * k); }
+        ev('pointerup', 11, r.left + 50); ev('pointerup', 12, r.left + 90);
+      });
+      const e1 = await estado('dinero');
+      assert.ok(e1.off > 20, 'dos dedos la recorren: ' + e1.off); assert.equal(e1.izq, '1', 'ahora hay algo a la izquierda');
+      assert.equal(await page.locator('#vzModal').isVisible(), false, 'recorrer no abre el detalle');
+      // la rueda hasta el final
+      const caja = await page.locator('[data-card="dinero"] svg').boundingBox();
+      await page.mouse.move(caja.x + caja.width / 2, caja.y + caja.height / 2);
+      await page.mouse.wheel(0, 5000);
+      await page.waitForTimeout(100);
+      const e2 = await estado('dinero');
+      assert.equal(e2.off, e2.max, 'con la rueda llega al final'); assert.equal(e2.der, '0', 'al final ya no hay desvanecido a la derecha');
+      // arrastrar con el ratón regresa, y no abre
+      await page.evaluate(() => {                            // arrastre con el ratón (eventos del ratón, como en escritorio)
+        const g = document.querySelector('[data-card="dinero"] svg'), r = g.getBoundingClientRect(), y = r.top + r.height / 2, x0 = r.left + r.width / 2;
+        const ev = (tipo, x) => g.dispatchEvent(new PointerEvent(tipo, { pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: tipo === 'pointerup' ? 0 : 1, clientX: x, clientY: y, bubbles: true, cancelable: true }));
+        ev('pointerdown', x0); for (let k = 1; k <= 6; k++) ev('pointermove', x0 + 10 * k); ev('pointerup', x0 + 60);
+      });
+      const e3 = await estado('dinero');
+      assert.ok(e3.off < e2.max - 20, 'arrastrar con el ratón la recorre'); assert.equal(await page.locator('#vzModal').isVisible(), false, 'arrastrar no abre el detalle');
+      // un toque abre el detalle, con la figura completa
+      await page.waitForTimeout(450);
+      await page.locator('[data-card="dinero"]').click();
+      await page.locator('#vzModal').waitFor({ state: 'visible' });
+      assert.equal(await page.locator('#vzModal .vz-pan').count(), 0, 'en la hoja, la figura va completa');
+      assert.match(await page.locator('#vzModal .vz-m-fig').innerHTML(), /mes 153/);
+      await page.keyboard.press('Escape'); await page.locator('#vzModal').waitFor({ state: 'hidden' });
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
     await caso('si el libro cambia, la página lo pinta sola y marca el cuadro que cambió, también con el detalle abierto', async () => {
       const w = conLiga(), { ctx, page, errores } = await pagina(navegador, base, w);
       await page.locator('.vz-card').first().waitFor();
@@ -130,7 +335,7 @@ async function pagina(navegador, base, w, opciones) {
       res.v[filaDe(res, 'v2.tierra') - 1][1] = 41.5;         // alguien cambió el libro
       w.cache.delete('vk_' + PLAN);
       await page.locator('#vzModal').getByText('$41.5').first().waitFor({ timeout: 5000 });
-      assert.match(await page.locator('#vzVivo').innerText(), /Actualizado/);
+      assert.match(await page.locator('#vzVivo').innerText(), /Se actualizó/);
       assert.equal(await page.locator('#vzModal').isVisible(), true, 'el detalle abierto se queda abierto');
       assert.ok(await page.locator('[data-card="terreno"].vz-cambio').count() === 1, 'el cuadro que cambió se marca');
       assert.equal(await page.locator('[data-card="tiempo"].vz-cambio').count(), 0, 'el que no cambió, no');
@@ -181,6 +386,8 @@ async function pagina(navegador, base, w, opciones) {
       const m = await page.evaluate(() => { const r = document.querySelector('.vz-marco').getBoundingClientRect(); return { abajo: r.bottom, alto: innerHeight, izq: r.left, der: innerWidth - r.right }; });
       assert.ok(m.abajo <= m.alto + 1, 'cabe a lo alto sin deslizar');
       assert.ok(Math.abs(m.izq - m.der) < 2, 'queda centrado');
+      const filas = await page.evaluate(() => new Set([...document.querySelectorAll('.vz-card')].map((c) => Math.round(c.getBoundingClientRect().top))).size);
+      assert.equal(filas, 2, 'en pantalla ancha, cuatro columnas: dos renglones');
       await page.locator('[data-card="producto"] .vz-t').first().hover();
       await page.locator('#vzTip').waitFor({ state: 'visible' });
       assert.match(await page.locator('#vzTip').innerText(), /Libro · Productos/);

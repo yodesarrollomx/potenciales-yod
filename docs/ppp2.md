@@ -374,8 +374,8 @@ hecha para caber en la pantalla de un teléfono y se ve igual en todos los plane
   una. Tocar una figura o una cifra —o pasar el cursor— saca su leyenda: qué hay detrás (las ventas
   por producto, lo que entra de clientes por enganches, pagos y saldos, el saldo de cada mes…) y de
   dónde sale. «Atrás», la × o tocar fuera regresan a la pantalla.
-- **En vivo.** Con la página a la vista pregunta cada 5 segundos «¿cambió?» (cada 15 si lleva diez
-  minutos sin cambios ni toques) mandando la llave de lo que ya tiene; el servidor contesta `igual`
+- **En vivo.** Con la página a la vista pregunta cada 3 segundos «¿cambió?» (cada 15 si lleva diez
+  minutos sin cambios ni toques; con la pestaña oculta no pregunta) mandando la llave de lo que ya tiene; el servidor contesta `igual`
   sin abrir el libro. La llave es la del plan («Abrir rápido», arriba): cambia en cuanto el libro
   cambia, lo escriba el servidor o una persona en la hoja, y se comparte dos segundos entre todos los
   que miran para no consultar Drive por cada teléfono. Cuando cambia, la página se repinta sola y
@@ -398,6 +398,57 @@ hecha para caber en la pantalla de un teléfono y se ve igual en todos los plane
 - **El pie de marcas** sale de `Config` (`visor_marcas` y, para los logos, `visor_logos`): la página
   no lleva nombres ni logos de nadie. La página tampoco lleva el nombre de ningún plan: la vista previa
   de la liga en un chat es genérica.
+- **Cómo se ve y se usa** (15-nov-2026). La pantalla se dibuja a 424 px de ancho y se escala al
+  teléfono; si por poco no cabe a lo alto (la barra de Safari), se encoge hasta 10 % más. En pantalla
+  ancha y apaisada (escritorio, tableta acostada) los cuadros van en cuatro columnas, dos renglones, y
+  caben a lo alto; en una tableta parada, en dos columnas centradas. El texto más chico de los cuadros pasó de
+  unos 5 px reales a unos 6.3 en un teléfono de 430 px: «Dinero» y «Riesgo y estado» llevan en el cuadro
+  chico sólo la figura y lo esencial (la clave de colores, la holgura corta de cada prueba) y su versión
+  completa —la columna de totales, los extremos de cada escala, el siguiente paso— va en la hoja. Las
+  cifras van en millones de pesos y lo dice el pie una sola vez. Los colores de texto y de relleno con
+  texto encima pasan AA.
+- **Estados.** Mientras llega el plan se ve un esqueleto que viene en el propio HTML (las tipografías ya
+  no detienen la primera pintura); «Se actualizó» marca el cuadro que cambió y la pastilla vuelve a «En
+  vivo» a los pocos segundos; sin red la pastilla lo dice («Sin conexión · reintentando», también con el
+  evento `offline` del navegador) y vuelve sola; liga apagada, falta de liga y falla al abrir tienen su
+  pantalla (la falla, con «Volver a intentar»). Los cambios de estado se anuncian una vez a los lectores
+  de pantalla (`#vzAviso`); el resto de la pantalla no es región viva.
+- **La hoja del detalle** sube desde abajo con su asa: se cierra con la ×, Esc, el botón «atrás», tocando
+  fuera o bajándola con el dedo desde el encabezado. El foco entra a la hoja (a la ×, de 44 px), no sale
+  de ella con Tab y regresa al cuadro al cerrar. Si hay una leyenda abierta, el primer Esc la quita.
+- **Leyendas.** En la hoja, un toque que cae a menos de 22 px de una figura la toma (objetivo de 44 px);
+  la leyenda se pone arriba del dedo, con aire, para que la mano no la tape. Con `prefers-reduced-motion`
+  no hay animaciones.
+- **Planes con huecos y su propio origen.** El visor también puede pintar planes que no vienen de un
+  libro (el PPP de siempre) con la misma forma de datos. Si lo que llega trae `origen` (texto, en la
+  raíz), todas las leyendas «de dónde sale» dicen ese texto en lugar de la pestaña del libro. Sin ninguna
+  prueba `rv_*`, «Riesgo y estado» dice «Sin revisión para fondos» (y lo que sí haya de etapa, candados y
+  pruebas de estrés) en lugar de anillos vacíos. Una serie o clave que no llegó (firmas por mes, reparto,
+  flujo mensual, respaldo, banco, terreno) deja su cuadro en «Aún no hay…» o su renglón en «sin dato»:
+  nunca un cero inventado, un guion suelto ni NaN. El servidor no cambia por esto.
+  Pruebas que llegan sin número (sólo texto) no cuentan como revisión. En «Terreno», un plan de casas se
+  dibuja con tantas casas como unidades (hasta doce; una sola, como una casa).
+- **Horizontes largos** (hay planes de más de 150 meses; decisión de Dirección, 15-nov-2026). En el cuadro
+  chico, «Tiempo» y «Dinero» conservan siempre la escala de un plan normal (60 meses a la vista): un plan
+  más largo se dibuja a lo largo y se recorre de lado con dos dedos en el teléfono, con la rueda o
+  arrastrando con el ratón en escritorio; un desvanecido con una flechita en el borde dice que hay más
+  (y a la izquierda, cuando ya se avanzó). Un dedo sigue haciendo lo de siempre: desplazar la página y
+  tocar para abrir. Lo recorrido se conserva cuando la pantalla se repinta sola. En la hoja, la figura
+  grande va completa, con el eje por años (rótulos cada uno, dos, tres o cinco años según quepan) y, en
+  «Dinero», barras de seis meses pasados los seis años.
+- **Dirección escoge «la buena» desde el visor** (15-nov-2026, lado de la página; el servidor que lo
+  entiende ya está en `server/ppp2/Visor.gs` y se publica aparte). Si el navegador tiene la sesión del Portero (`pyod_clave_v1`), el visor
+  la manda como `k` en sus lecturas: sólo la lee, nunca la borra ni la escribe. Si la respuesta trae
+  `elige: { versiones: [{ v, nombre, buena }] }` (el servidor sólo lo manda a quien puede aprobar), arriba
+  sale un selector oscuro, «La versión que ven todos · sólo tú ves esto», con una opción por versión
+  rotulada con su nombre y la buena marcada. `v` es el `escenario_id` (un texto, vacío en un caso sin
+  escenarios): la página lo devuelve tal cual y nunca lo convierte en número. Tocar otra
+  manda `POST` (text/plain, JSON) `{ tipo: 'ppp2-elige', k, plan, v, request_id }` con un `request_id`
+  nuevo por toque; la pantalla de Dirección marca la nueva al instante y dice «Listo: todos ven ahora» y el nombre;
+  si el servidor responde error, el selector vuelve a la de antes y lo dice. Los demás no ven selector:
+  su visor la sigue en el siguiente sondeo, con «Se actualizó». Los selectores de versiones y terrenos
+  que la liga deja recorrer a cada quien siguen igual y son otra cosa. Contra el servidor de hoy (que
+  ignora `k` y no manda `elige`) el visor se comporta como antes.
 - Instalación, alta de ligas y marcas: `server/ppp2/INSTALAR.md`, «El visor en vivo».
 
 ### Los mismos cuadros, en la ficha del plan
@@ -510,8 +561,8 @@ plan es su modelo, como ya lo es en los casos nativos del PPP.
 - `node tests/ppp2-browser.cjs` (`PPP2_SOLO=texto` corre sólo los recorridos cuyo nombre lo lleva)
 - El visor y la unificación: `node --test tests/ppp2-visor.test.cjs tests/ppp2-visor-pagina.test.cjs`
   (la liga, la ficha con sesión, dar y apagar ligas, lo que entrega el servidor; la página contra eso
-  mismo: cifras, leyendas, límites de la revisión) y `node tests/ppp2-visor-browser.cjs` (abrir, tocar,
-  cerrar, cambio en vivo, liga apagada, los cuadros en la ficha, compartir desde el plan, y la portada y
+  mismo: cifras, leyendas, límites de la revisión, planes con huecos y con `origen`) y `node tests/ppp2-visor-browser.cjs` (abrir, tocar,
+  cerrar, la hoja —foco, Esc, bajarla con el dedo—, cuatro columnas en pantalla ancha, el selector de Dirección con un servidor simulado (y el error), el ritmo del sondeo y su pausa, cambio en vivo, liga apagada, los cuadros en la ficha, compartir desde el plan, y la portada y
   un motor del PPP de siempre con planes con libro, sobre `tests/fixtures/libro/`).
 - Tres accesorios salen de una hoja de cálculo de verdad (LibreOffice) con el plan inventado, y se
   regeneran juntos con `python3 ppp2/libro/regenerar.py`:
