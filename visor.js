@@ -12,7 +12,7 @@
 (function (root) {
   'use strict';
   var ENDPOINT = root.PPP2_ENDPOINT || 'https://script.google.com/macros/s/AKfycbywqwBh7uiD6DLmpTD6OUhzBX-AhkNxePhYgjn5Up3vAYdBzbV-2JyE7a5kKF_2QnO4/exec';
-  var CADA_MS = Number(root.PPP2_VISOR_MS) || 5000;   // cada cuánto se pregunta «¿cambió el libro?» (sólo con la página a la vista)
+  var CADA_MS = Number(root.PPP2_VISOR_MS) || 3000;   // cada cuánto se pregunta «¿cambió el libro?» (sólo con la página a la vista)
 
   /* ───────────────────────── colores y medidas ───────────────────────── */
   var INK = '#231d14', MUTED = '#6e675a', BODY = '#4a4336', ORO = '#7d5f1e', GRIS = '#8a8272';
@@ -782,6 +782,20 @@
     }).join('') + '</div>';
     return o;
   }
+  /* El selector de Dirección: sólo sale si el servidor lo manda (`elige`, a quien puede aprobar). Escoge
+     cuál versión es «la buena», la que ven todos los que tienen la liga. No se confunde con los selectores
+     de arriba (versiones o terrenos que la liga deja recorrer a cada quien). */
+  function eligeHtml(d) {
+    var vs = (d.elige && d.elige.versiones) || [];
+    if (!vs.length) return '';
+    return '<section class="vz-elige" aria-label="Dirección: la versión que ven todos">' +
+      '<div class="vz-elige-cab"><span class="vz-elige-tit">La versión que ven todos</span><span class="vz-elige-solo">sólo tú ves esto</span></div>' +
+      '<div class="vz-elige-ops" role="radiogroup" aria-label="Versión buena">' + vs.map(function (x) {
+        var n = Number(x.v) || 0;
+        return '<button type="button" class="vz-elige-op' + (x.buena ? ' vz-buena' : '') + '" role="radio" aria-checked="' + (x.buena ? 'true' : 'false') + '" data-elige="' + n + '" data-nombre="' + esc(x.nombre || '') + '">' +
+          '<b>V' + n + '</b><span>' + esc(corta(x.nombre || '', 22)) + '</span>' + (x.buena ? '<i>la buena</i>' : '') + '</button>';
+      }).join('') + '</div><p class="vz-elige-msg" role="status" aria-live="polite"></p></section>';
+  }
   function pieMarcas(marcas) {
     if (!marcas || !marcas.length) return '';
     return '<div class="vz-marcas">' + marcas.map(function (m) {
@@ -792,7 +806,7 @@
     var cs = cuadros(d);
     return {
       cuadros: cs,
-      html: encabezado(d) + selector(d) + (d.a_medias ? '<p class="vz-aviso">El plan está recalculando esta versión: las cifras pueden moverse.</p>' : '') +
+      html: encabezado(d) + eligeHtml(d) + selector(d) + (d.a_medias ? '<p class="vz-aviso">El plan está recalculando esta versión: las cifras pueden moverse.</p>' : '') +
         '<main class="vz-grid">' + cs.map(tarjeta).join('') + '</main>' + pieMarcas(marcas) +
         '<footer class="vz-pie"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg><span>Cifras en millones de pesos · Confidencial: quien tenga esta liga ve el plan. No la reenvíes.</span></footer>'
     };
@@ -969,6 +983,8 @@
     caja.addEventListener('click', function (e) {
       var chip = cerca(e, '.vz-chip'), card = cerca(e, '.vz-card'), otra = cerca(e, '.vz-otra');
       if (otra) { try { win.location.reload(); } catch (er) { } return; }
+      var op1 = cerca(e, '.vz-elige-op');
+      if (op1) { if (!/vz-buena/.test(op1.className) && op.alElegir) op.alElegir({ v: Number(op1.getAttribute('data-elige')) || 0, nombre: op1.getAttribute('data-nombre') || '' }); return; }
       if (chip) {
         Array.prototype.forEach.call(chip.parentNode.children, function (c) { c.classList.toggle('vz-on', c === chip); c.setAttribute('aria-pressed', c === chip ? 'true' : 'false'); });
         if (op.alEscoger) op.alEscoger(chip.getAttribute('data-plan') ? { plan: chip.getAttribute('data-plan') } : { v: Number(chip.getAttribute('data-v')) || 0 });
@@ -1028,7 +1044,7 @@
     return { muestra: muestra, mensaje: mensaje, cierra: cierra, ajusta: ajusta, olvida: olvida };
   }
 
-  var api = { pinta: pinta, cuadros: cuadros, soloCuadros: soloCuadros, detalleHtml: detalleHtml, monta: monta, fechaCorta: fechaCorta, PRUEBAS: PRUEBAS, estadoPrueba: estadoPrueba, ENDPOINT: ENDPOINT };
+  var api = { CADA_MS: CADA_MS, eligeHtml: eligeHtml, pinta: pinta, cuadros: cuadros, soloCuadros: soloCuadros, detalleHtml: detalleHtml, monta: monta, fechaCorta: fechaCorta, PRUEBAS: PRUEBAS, estadoPrueba: estadoPrueba, ENDPOINT: ENDPOINT };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; }
   root.VisorPPP = api;
   if (!root.document || !root.document.getElementById || !root.document.getElementById('vz')) return;   // sólo la página del visor sigue de aquí
@@ -1045,8 +1061,12 @@
     var u = root.navigator.userAgent || '';
     return /iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : 'otro';
   }
+  /* La sesión del Portero, si este navegador la tiene: sólo se lee (nunca se borra ni se escribe). Con ella el
+     servidor puede reconocer a Dirección y mandarle el selector; el servidor de hoy la ignora. */
+  function sesion() { try { var k = root.localStorage.getItem('pyod_clave_v1'); return k && /^[A-Za-z0-9_-]{8,200}$/.test(k) ? k : ''; } catch (e) { return ''; } }
   function pide(extra) {
-    var q = '?recurso=ppp2-visor&liga=' + encodeURIComponent(estado.liga) + (estado.plan ? '&plan=' + encodeURIComponent(estado.plan) : '') + (estado.v ? '&v=' + estado.v : '') + (extra || '');
+    var k = sesion();
+    var q = '?recurso=ppp2-visor&liga=' + encodeURIComponent(estado.liga) + (k ? '&k=' + encodeURIComponent(k) : '') + (estado.plan ? '&plan=' + encodeURIComponent(estado.plan) : '') + (estado.v ? '&v=' + estado.v : '') + (extra || '');
     var ctl = root.AbortController ? new root.AbortController() : null, t = setTimeout(function () { if (ctl) ctl.abort(); }, 45000);
     return root.fetch(ENDPOINT + q, { credentials: 'omit', redirect: 'follow', referrerPolicy: 'no-referrer', signal: ctl ? ctl.signal : undefined })
       .then(function (r) { return r.json(); }).then(function (j) { clearTimeout(t); return j; }, function (e) { clearTimeout(t); throw e; });
@@ -1069,6 +1089,7 @@
   }
   function muestra(d, primera) {
     estado.llave = d.llave || '';
+    estado.ultimo = d;
     lienzo.muestra(d, estado.marcas, !primera);
     doc.title = ((d.plan && d.plan.nombre) || 'Plan de Potencial') + ' · en vivo';
   }
@@ -1089,7 +1110,7 @@
   }
   /* «¿Cambió el libro?»: una pregunta ligera; el servidor sólo vuelve a mandar el plan si su libro cambió. */
   function late() {
-    if (!estado.liga || doc.hidden || !estado.llave || estado.enVuelo) return;
+    if (!estado.liga || doc.hidden || !estado.llave || estado.enVuelo || estado.eligiendo) return;
     var turno = estado.turno;
     estado.enVuelo = true;
     pide('&si=' + encodeURIComponent(estado.llave)).then(function (j) {
@@ -1106,8 +1127,51 @@
     if (!estado.liga) return;
     estado.reloj = setTimeout(function () { late(); programa(); }, estado.quieto > 600000 / CADA_MS ? 15000 : CADA_MS);
   }
+  /* Dirección escoge la versión buena: su pantalla lo dice al instante; si el servidor no lo acepta, vuelve
+     atrás y lo dice. Los demás lo ven en el siguiente sondeo, con «Se actualizó». */
+  function avisoElige(texto, malo) {
+    var m = doc.querySelector('.vz-elige-msg');
+    if (m) { m.textContent = texto; m.className = 'vz-elige-msg' + (malo ? ' vz-malo' : ' vz-bien'); }
+  }
+  function marcaBuena(v) {
+    Array.prototype.forEach.call(doc.querySelectorAll('.vz-elige-op'), function (b) {
+      var si = Number(b.getAttribute('data-elige')) === v;
+      b.classList.toggle('vz-buena', si); b.setAttribute('aria-checked', si ? 'true' : 'false');
+      var i = b.querySelector('i'); if (si && !i) b.insertAdjacentHTML('beforeend', '<i>la buena</i>'); else if (!si && i) i.parentNode.removeChild(i);
+    });
+  }
+  function elige(x) {
+    var k = sesion(), d = estado.ultimo || {}, plan = estado.plan || (d.menu && d.menu.plan) || '';
+    if (!k || !plan || !x.v || estado.eligiendo) return;
+    var antes = ((d.elige && d.elige.versiones) || []).filter(function (y) { return y.buena; })[0];
+    var etiqueta = 'V' + x.v + (x.nombre ? ' · ' + x.nombre : '');
+    estado.eligiendo = true;
+    estado.turno++;   // lo que traiga un sondeo que ya iba en camino ya no se pinta
+    marcaBuena(x.v);
+    avisoElige('Cambiando… en unos segundos todos verán ' + etiqueta + '.');
+    var rid = 'el-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+    var ctl = root.AbortController ? new root.AbortController() : null, t = setTimeout(function () { if (ctl) ctl.abort(); }, 45000);
+    root.fetch(ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ tipo: 'ppp2-elige', k: k, plan: plan, v: x.v, request_id: rid }),
+      credentials: 'omit', redirect: 'follow', referrerPolicy: 'no-referrer', signal: ctl ? ctl.signal : undefined })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        clearTimeout(t);
+        if (!j || !j.ok) throw new Error((j && j.error) || 'error');
+        estado.v = 0;   // Dirección sigue a la buena, como todos
+        var listo = function () { estado.eligiendo = false; marcaBuena(x.v); avisoElige('Listo: todos ven ahora ' + etiqueta + '.'); if ($('vzAviso')) $('vzAviso').textContent = 'Todos ven ahora ' + etiqueta; };
+        if (j.version && j.v && j.plan) { muestra(j, false); listo(); return; }
+        return carga(false).then(listo, listo);
+      })
+      .catch(function () {
+        clearTimeout(t);
+        estado.eligiendo = false;
+        marcaBuena(antes ? Number(antes.v) : 0);
+        avisoElige('No se pudo cambiar: todos siguen viendo ' + (antes ? 'V' + antes.v + (antes.nombre ? ' · ' + antes.nombre : '') : 'la versión de antes') + '. Intenta otra vez.', true);
+      });
+  }
   function arranca() {
     lienzo = monta($('vz'), {
+      alElegir: elige,
       alEscoger: function (x) {
         if (x.plan) { estado.plan = x.plan; estado.v = 0; } else estado.v = x.v;
         estado.llave = ''; lienzo.olvida(); vivo('vz-nuevo', 'Abriendo…');

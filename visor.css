@@ -52,6 +52,22 @@ html.vz-con-modal, html.vz-con-modal body { overflow: hidden; }
 .vz-chip:focus-visible { outline: 2px solid var(--oro); outline-offset: 1px; }
 .vz-aviso { font-size: 9.5px; color: var(--oro); background: #f3e9cf; border-radius: 6px; padding: 5px 8px; margin: 0 0 8px; }
 
+/* selector de Dirección: la versión que ven todos (sólo lo ve quien puede aprobar) */
+.vz-elige { margin: 0 0 8px; padding: 7px 8px 6px; border-radius: 12px; background: var(--tinta); color: var(--papel); }
+.vz-elige-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 0 2px 6px; }
+.vz-elige-tit { font-size: 9px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase; color: #e6cf98; }
+.vz-elige-solo { font-size: 8.5px; color: #cfc6b3; }
+.vz-elige-ops { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; }
+.vz-elige-ops::-webkit-scrollbar { display: none; }
+.vz-elige-op { flex: none; display: inline-flex; align-items: baseline; gap: 5px; min-height: 30px; padding: 7px 11px; border-radius: 99px; border: 1px solid rgba(255, 253, 249, .28); background: transparent; color: var(--papel); font: 500 9.5px var(--sans); cursor: pointer; }
+.vz-elige-op b { font-weight: 700; }
+.vz-elige-op i { font-style: normal; font-size: 8.5px; font-weight: 700; color: var(--verde); }
+.vz-elige-op.vz-buena { background: var(--papel); color: var(--tinta); border-color: var(--papel); }
+.vz-elige-op:focus-visible { outline: 2px solid #e6cf98; outline-offset: 1px; }
+.vz-elige-msg { margin: 5px 2px 0; font-size: 9px; line-height: 1.3; color: #e9e3d6; }
+.vz-elige-msg:empty { display: none; }
+.vz-elige-msg.vz-malo { color: #f3b8ad; }
+
 /* los ocho espacios */
 .vz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
 .vz-card { position: relative; background: var(--papel); border: 1px solid var(--linea); border-radius: 12px; padding: 7px 8px 5px; cursor: pointer; box-shadow: var(--sombra); transition: border-color .15s, box-shadow .15s, transform .12s; -webkit-tap-highlight-color: transparent; }

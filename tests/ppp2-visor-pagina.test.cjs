@@ -180,6 +180,23 @@ test('una serie o clave que no llegó cae en un estado vacío limpio: sin ceros 
   assert.match(visible(visor.pinta(sinTerreno, null).cuadros.find((c) => c.id === 'terreno')), /Aún no hay terreno capturado/);
 });
 
+test('selector de Dirección: sólo con `elige`, con la buena marcada, sin confundirse con los de la liga; la sesión sólo se lee', () => {
+  const d = datos();
+  assert.doesNotMatch(visor.pinta(d, null).html, /vz-elige/, 'sin `elige` (el servidor de hoy) no hay selector');
+  const con = copia(d);
+  con.elige = { versiones: [{ v: 1, nombre: 'Base <b>', buena: false }, { v: 2, nombre: 'Con banco', buena: true }] };
+  const h = visor.pinta(con, null).html;
+  assert.equal((h.match(/class="vz-elige-op[ "]/g) || []).length, 2);
+  assert.match(h, /class="vz-elige-op vz-buena" role="radio" aria-checked="true" data-elige="2"/);
+  assert.match(h, /data-elige="1" data-nombre="Base &lt;b&gt;"/, 'los nombres se escapan');
+  assert.doesNotMatch(h, /vz-chip/, 'no es un selector de los de la liga');
+  assert.match(h, /sólo tú ves esto/);
+  const src = fs.readFileSync(path.join(RAIZ, 'visor.js'), 'utf8');
+  assert.doesNotMatch(src, /(setItem|removeItem)\(\s*'pyod_clave_v1'/, 'la sesión del Portero nunca se escribe ni se borra');
+  assert.match(src, /tipo: 'ppp2-elige', k: k, plan: plan, v: x\.v, request_id: rid/);
+  assert.equal(visor.CADA_MS, 3000, 'el sondeo pregunta cada 3 s');
+});
+
 test('lo que escribe una persona en el libro no se vuelve marcado en la página', () => {
   const d = copia(datos());
   d.plan.nombre = '<img src=x onerror=alert(1)>';

@@ -374,8 +374,8 @@ hecha para caber en la pantalla de un teléfono y se ve igual en todos los plane
   una. Tocar una figura o una cifra —o pasar el cursor— saca su leyenda: qué hay detrás (las ventas
   por producto, lo que entra de clientes por enganches, pagos y saldos, el saldo de cada mes…) y de
   dónde sale. «Atrás», la × o tocar fuera regresan a la pantalla.
-- **En vivo.** Con la página a la vista pregunta cada 5 segundos «¿cambió?» (cada 15 si lleva diez
-  minutos sin cambios ni toques) mandando la llave de lo que ya tiene; el servidor contesta `igual`
+- **En vivo.** Con la página a la vista pregunta cada 3 segundos «¿cambió?» (cada 15 si lleva diez
+  minutos sin cambios ni toques; con la pestaña oculta no pregunta) mandando la llave de lo que ya tiene; el servidor contesta `igual`
   sin abrir el libro. La llave es la del plan («Abrir rápido», arriba): cambia en cuanto el libro
   cambia, lo escriba el servidor o una persona en la hoja, y se comparte dos segundos entre todos los
   que miran para no consultar Drive por cada teléfono. Cuando cambia, la página se repinta sola y
@@ -426,6 +426,17 @@ hecha para caber en la pantalla de un teléfono y se ve igual en todos los plane
   pruebas de estrés) en lugar de anillos vacíos. Una serie o clave que no llegó (firmas por mes, reparto,
   flujo mensual, respaldo, banco, terreno) deja su cuadro en «Aún no hay…» o su renglón en «sin dato»:
   nunca un cero inventado, un guion suelto ni NaN. El servidor no cambia por esto.
+- **Dirección escoge «la buena» desde el visor** (15-nov-2026, lado de la página; el servidor que lo
+  entiende se publica aparte). Si el navegador tiene la sesión del Portero (`pyod_clave_v1`), el visor
+  la manda como `k` en sus lecturas: sólo la lee, nunca la borra ni la escribe. Si la respuesta trae
+  `elige: { versiones: [{ v, nombre, buena }] }` (el servidor sólo lo manda a quien puede aprobar), arriba
+  sale un selector oscuro, «La versión que ven todos · sólo tú ves esto», con la buena marcada. Tocar otra
+  manda `POST` (text/plain, JSON) `{ tipo: 'ppp2-elige', k, plan, v, request_id }` con un `request_id`
+  nuevo por toque; la pantalla de Dirección marca la nueva al instante y dice «Listo: todos ven ahora V…»;
+  si el servidor responde error, el selector vuelve a la de antes y lo dice. Los demás no ven selector:
+  su visor la sigue en el siguiente sondeo, con «Se actualizó». Los selectores de versiones y terrenos
+  que la liga deja recorrer a cada quien siguen igual y son otra cosa. Contra el servidor de hoy (que
+  ignora `k` y no manda `elige`) el visor se comporta como antes.
 - Instalación, alta de ligas y marcas: `server/ppp2/INSTALAR.md`, «El visor en vivo».
 
 ### Los mismos cuadros, en la ficha del plan
@@ -539,7 +550,7 @@ plan es su modelo, como ya lo es en los casos nativos del PPP.
 - El visor y la unificación: `node --test tests/ppp2-visor.test.cjs tests/ppp2-visor-pagina.test.cjs`
   (la liga, la ficha con sesión, dar y apagar ligas, lo que entrega el servidor; la página contra eso
   mismo: cifras, leyendas, límites de la revisión, planes con huecos y con `origen`) y `node tests/ppp2-visor-browser.cjs` (abrir, tocar,
-  cerrar, la hoja —foco, Esc, bajarla con el dedo—, cuatro columnas en pantalla ancha, cambio en vivo, liga apagada, los cuadros en la ficha, compartir desde el plan, y la portada y
+  cerrar, la hoja —foco, Esc, bajarla con el dedo—, cuatro columnas en pantalla ancha, el selector de Dirección con un servidor simulado (y el error), el ritmo del sondeo y su pausa, cambio en vivo, liga apagada, los cuadros en la ficha, compartir desde el plan, y la portada y
   un motor del PPP de siempre con planes con libro, sobre `tests/fixtures/libro/`).
 - Tres accesorios salen de una hoja de cálculo de verdad (LibreOffice) con el plan inventado, y se
   regeneran juntos con `python3 ppp2/libro/regenerar.py`:

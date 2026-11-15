@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
-const { mundo, PLAN, filaDe, EDITOR, LECTOR } = require('./ppp2-mundo.cjs');
+const { mundo, PLAN, filaDe, EDITOR, LECTOR, ADMIN } = require('./ppp2-mundo.cjs');
 
 const RAIZ = path.join(__dirname, '..');
 const FOTOS = process.env.PPP_SCREENSHOTS || '';
@@ -47,7 +47,10 @@ async function pagina(navegador, base, w, opciones) {
     }
     return route.fulfill({ status: 200, contentType: /\.css(\?|$)|fonts\.googleapis/.test(url) ? 'text/css' : 'text/javascript', body: '' });
   });
-  await ctx.addInitScript(([ep, sesion]) => { window.PPP2_ENDPOINT = ep; window.PPP2_VISOR_MS = 250; if (sesion) localStorage.setItem('pyod_clave_v1', sesion); }, [ENDPOINT, op.sesion || '']);
+  await ctx.addInitScript(([ep, sesion, ms]) => {
+    window.PPP2_ENDPOINT = ep; if (ms) window.PPP2_VISOR_MS = ms; if (sesion) localStorage.setItem('pyod_clave_v1', sesion);
+    window.__oculto = false; Object.defineProperty(document, 'hidden', { configurable: true, get: () => window.__oculto });   // para probar la pausa
+  }, [ENDPOINT, op.sesion || '', op.ms === undefined ? 250 : op.ms]);
   const page = await ctx.newPage();
   const errores = [];
   page.on('pageerror', (e) => errores.push(e.message));
@@ -131,8 +134,8 @@ async function pagina(navegador, base, w, opciones) {
       await page.locator('#vzModal').waitFor({ state: 'visible' });
       assert.equal(await page.evaluate(() => document.activeElement.classList.contains('vz-x')), true, 'el foco entra a la hoja');
       assert.equal(await page.locator('#vzModal [role="dialog"][aria-labelledby="vzMTit"] #vzMTit').textContent(), 'Tiempo');
-      const caja = await page.locator('#vzModal .vz-x').boundingBox();
-      assert.ok(caja.width >= 44 && caja.height >= 44, 'la × mide 44 px o más');
+      const caja = await page.evaluate(() => { const x = document.querySelector('#vzModal .vz-x'); return { w: x.offsetWidth, h: x.offsetHeight }; });
+      assert.ok(caja.w >= 44 && caja.h >= 44, 'la × mide 44 px o más');
       await page.locator('#vzModal .vz-m-fig .vz-t').first().click();
       await page.locator('#vzTip').waitFor({ state: 'visible' });
       await page.keyboard.press('Escape');
@@ -156,6 +159,110 @@ async function pagina(navegador, base, w, opciones) {
       await page.mouse.move(h2.x + 40, h2.y + 20); await page.mouse.down(); await page.mouse.move(h2.x + 40, h2.y + 34); await page.mouse.up();
       await page.waitForTimeout(250);
       assert.equal(await page.locator('#vzModal').isVisible(), true, 'un jalón corto no la cierra');
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
+    /* Servidor simulado para el selector de Dirección: el de hoy ignora `k` y no manda `elige`; éste, con la
+       sesión de quien aprueba, manda `elige` y entiende `ppp2-elige`. Nada sale a la red. */
+    const conDireccion = async (opciones) => {
+      const op = opciones || {}, w = mundo({ ligas: [renglon({ versiones: 'todas' })], aperturas: true });
+      const estadoSrv = { buena: 2, posts: [], gets: [] };
+      const ctxs = [];
+      const sirve = async (route) => {
+        const req = route.request(), url = req.url();
+        if (url.startsWith(base)) return route.continue();
+        if (url.startsWith(ENDPOINT)) {
+          if (req.method() === 'POST') {
+            const b = JSON.parse(req.postData() || '{}'); estadoSrv.posts.push(b);
+            if (op.falla || b.tipo !== 'ppp2-elige' || b.k !== ADMIN) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'permiso' }) });
+            estadoSrv.buena = b.v;
+            return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+          }
+          const p = Object.fromEntries(new URL(url).searchParams); estadoSrv.gets.push(p);
+          const llave = 'llave-b' + estadoSrv.buena;
+          if (p.si && p.si === llave) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, igual: true, llave }) });
+          const q = Object.assign({}, p); delete q.k; delete q.si; if (!q.v) q.v = String(estadoSrv.buena);
+          const j = JSON.parse(w.ctx.doGet({ parameter: q }).contenido);
+          j.llave = llave;
+          if (p.k === ADMIN) j.elige = { versiones: (j.versiones || []).map((x) => ({ v: x.n, nombre: x.nombre, buena: x.n === estadoSrv.buena })) };
+          return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(j) });
+        }
+        return route.fulfill({ status: 200, contentType: /\.css(\?|$)|fonts\.googleapis/.test(url) ? 'text/css' : 'text/javascript', body: '' });
+      };
+      const abre = async (sesion) => {            // cada quien en su navegador (su propio localStorage)
+        const c = await navegador.newContext({ viewport: { width: 440, height: 880 }, deviceScaleFactor: 1, hasTouch: true });
+        ctxs.push(c); await c.route('**/*', sirve);
+        const page = await c.newPage(), errores = [];
+        await page.addInitScript(([ep, s]) => { window.PPP2_ENDPOINT = ep; window.PPP2_VISOR_MS = 250; if (s) localStorage.setItem('pyod_clave_v1', s); }, [ENDPOINT, sesion || '']);
+        page.on('pageerror', (e) => errores.push(e.message));
+        await page.goto(base + '/visor.html#l=' + LIGA);
+        await page.locator('.vz-card').first().waitFor();
+        return { page, errores };
+      };
+      const ctx = { close: () => Promise.all(ctxs.map((c) => c.close())) };
+      return { ctx, estadoSrv, abre };
+    };
+
+    await caso('Dirección escoge la versión buena desde el visor; los demás la siguen solos y no ven el selector', async () => {
+      const { ctx, estadoSrv, abre } = await conDireccion();
+      const dir = await abre(ADMIN);
+      assert.ok(estadoSrv.gets.some((p) => p.k === ADMIN), 'con sesión, el visor la manda como k');
+      await dir.page.locator('.vz-elige').waitFor();
+      assert.match(await dir.page.locator('.vz-elige-op.vz-buena').innerText(), /^V2/);
+      assert.equal(await dir.page.locator('.vz-elige-op[aria-checked="true"]').count(), 1);
+      assert.equal(await dir.page.evaluate(() => localStorage.getItem('pyod_clave_v1')), ADMIN, 'la sesión no se toca');
+      // otro navegador, sin sesión: sin selector de Dirección
+      const socio = await abre('');
+      assert.equal(await socio.page.locator('.vz-elige').count(), 0);
+      assert.ok(estadoSrv.gets.filter((p) => !p.k).length > 0, 'sin sesión, no manda k');
+      await socio.page.locator('.vz-ver', { hasText: 'V2' }).waitFor();
+      // Dirección toca V1
+      await dir.page.locator('.vz-elige-op[data-elige="1"]').click();
+      assert.match(await dir.page.locator('.vz-elige-op.vz-buena').innerText(), /^V1/, 'su pantalla cambia de inmediato');
+      await dir.page.locator('.vz-elige-msg', { hasText: 'Listo: todos ven ahora V1' }).waitFor({ timeout: 5000 });
+      await dir.page.locator('.vz-ver', { hasText: 'V1' }).waitFor({ timeout: 5000 });
+      const post = estadoSrv.posts[0];
+      assert.deepEqual(Object.keys(post).sort(), ['k', 'plan', 'request_id', 'tipo', 'v']);
+      assert.equal(post.tipo, 'ppp2-elige'); assert.equal(post.k, ADMIN); assert.equal(post.plan, PLAN); assert.equal(post.v, 1);
+      // el socio la ve sola, con «Se actualizó»
+      await socio.page.locator('.vz-ver', { hasText: 'V1' }).waitFor({ timeout: 5000 });
+      assert.match(await socio.page.locator('#vzVivo').innerText(), /Se actualizó/);
+      assert.equal(await socio.page.locator('.vz-elige').count(), 0);
+      // otro toque, otro request_id
+      await dir.page.locator('.vz-elige-op[data-elige="2"]').click();
+      await dir.page.locator('.vz-elige-msg', { hasText: 'todos ven ahora V2' }).waitFor({ timeout: 5000 });
+      assert.notEqual(estadoSrv.posts[1].request_id, estadoSrv.posts[0].request_id);
+      assert.deepEqual(dir.errores.concat(socio.errores), []);
+      await ctx.close();
+    });
+
+    await caso('si el servidor no acepta el cambio de Dirección, el selector vuelve atrás y lo dice', async () => {
+      const { ctx, estadoSrv, abre } = await conDireccion({ falla: true });
+      const dir = await abre(ADMIN);
+      await dir.page.locator('.vz-elige-op[data-elige="1"]').click();
+      await dir.page.locator('.vz-elige-msg.vz-malo').waitFor({ timeout: 5000 });
+      assert.match(await dir.page.locator('.vz-elige-msg').innerText(), /No se pudo cambiar: todos siguen viendo V2/);
+      assert.match(await dir.page.locator('.vz-elige-op.vz-buena').innerText(), /^V2/);
+      assert.equal(estadoSrv.posts.length, 1);
+      assert.deepEqual(dir.errores, []);
+      await ctx.close();
+    });
+
+    await caso('el sondeo pregunta cada 3 s con la página a la vista y se detiene si la pestaña se oculta', async () => {
+      const w = conLiga(), { ctx, page, pedidos, errores } = await pagina(navegador, base, w, { ms: 0 });
+      await page.locator('.vz-card').first().waitFor();
+      const cuenta = () => pedidos.filter((p) => p.si).length;
+      await page.waitForTimeout(6600);
+      const vistos = cuenta();
+      assert.ok(vistos >= 2 && vistos <= 3, 'cada 3 s: ' + vistos + ' en 6.6 s');
+      await page.evaluate(() => { window.__oculto = true; document.dispatchEvent(new Event('visibilitychange')); });
+      const antes = cuenta();
+      await page.waitForTimeout(3600);
+      assert.equal(cuenta(), antes, 'oculta, no pregunta');
+      await page.evaluate(() => { window.__oculto = false; document.dispatchEvent(new Event('visibilitychange')); });
+      await page.waitForTimeout(400);
+      assert.ok(cuenta() > antes, 'al volver a verse, pregunta de inmediato');
       assert.deepEqual(errores, []);
       await ctx.close();
     });
