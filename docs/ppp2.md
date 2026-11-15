@@ -426,7 +426,8 @@ hecha para caber en la pantalla de un teléfono y se ve igual en todos los plane
   prueba `rv_*`, «Riesgo y estado» dice «Sin revisión para fondos» (y lo que sí haya de etapa, candados y
   pruebas de estrés) en lugar de anillos vacíos. Una serie o clave que no llegó (firmas por mes, reparto,
   flujo mensual, respaldo, banco, terreno) deja su cuadro en «Aún no hay…» o su renglón en «sin dato»:
-  nunca un cero inventado, un guion suelto ni NaN. El servidor no cambia por esto.
+  nunca un cero inventado, un guion suelto ni NaN. El servidor no cambia por esto. «Dinero» enseña lo que sí
+  llegó (ver «Visor 2.0», abajo): sin saldo acumulado, lo que entra y sale y las series de saldo que haya.
   Pruebas que llegan sin número (sólo texto) no cuentan como revisión. En «Terreno», un plan de casas se
   dibuja con tantas casas como unidades (hasta doce; una sola, como una casa).
 - **Horizontes largos** (hay planes de más de 150 meses; decisión de Dirección, 15-nov-2026). En el cuadro
@@ -440,8 +441,10 @@ hecha para caber en la pantalla de un teléfono y se ve igual en todos los plane
 - **Dirección escoge «la buena» desde el visor** (15-nov-2026, lado de la página; el servidor que lo
   entiende ya está en `server/ppp2/Visor.gs` y se publica aparte). Si el navegador tiene la sesión del Portero (`pyod_clave_v1`), el visor
   la manda como `k` en sus lecturas: sólo la lee, nunca la borra ni la escribe. Si la respuesta trae
-  `elige: { versiones: [{ v, nombre, buena }] }` (el servidor sólo lo manda a quien puede aprobar), arriba
-  sale un selector oscuro, «La versión que ven todos · sólo tú ves esto», con una opción por versión
+  `elige: { versiones: [{ v, nombre, buena }] }` (el servidor sólo lo manda a quien puede aprobar), en la
+  pestaña «Opciones» sale un selector oscuro, «La versión que ven todos · sólo tú ves esto» (desde el Visor 2.0
+  ya no va arriba del plan: así no se ve en la pantalla que se le está enseñando a otros; un punto en la pestaña
+  avisa que está ahí; sin `visor-pestanas.js` vuelve arriba del plan), con una opción por versión
   rotulada con su nombre y la buena marcada. `v` es el `escenario_id` (un texto, vacío en un caso sin
   escenarios): la página lo devuelve tal cual y nunca lo convierte en número. Tocar otra
   manda `POST` (text/plain, JSON) `{ tipo: 'ppp2-elige', k, plan, v, request_id }` con un `request_id`
@@ -451,6 +454,93 @@ hecha para caber en la pantalla de un teléfono y se ve igual en todos los plane
   que la liga deja recorrer a cada quien siguen igual y son otra cosa. Contra el servidor de hoy (que
   ignora `k` y no manda `elige`) el visor se comporta como antes.
 - Instalación, alta de ligas y marcas: `server/ppp2/INSTALAR.md`, «El visor en vivo».
+
+### Visor 2.0: las pestañas en la pantalla (15-nov-2026)
+
+Pedido de Dirección: que los socios, los dueños de terreno, los inversionistas y los Master Brokers abran
+la liga y queden sorprendidos. Una barra fija abajo, estilo teléfono y con su área segura: **Plan ·
+Historial · Archivos · Opciones**. En pantalla ancha flota como cápsula. `visor-pestanas.js` y
+`visor-pestanas.css` (sólo los carga `visor.html`; la ficha del plan no) ponen la barra, las tres pestañas
+nuevas y las hojas que suben desde abajo; `visor.js` sigue dibujando los siete cuadros y le pasa a las
+pestañas lo que leyó (si el archivo de las pestañas no carga, el visor es el de siempre). El contrato de los
+recursos de Historial y Archivos lo documenta el servidor en «Pestañas del visor» (en este mismo archivo).
+
+- **La dirección recuerda la pestaña:** `visor.html#l=<liga>&t=historial|archivos|opciones` (Plan no lleva
+  `t`). Cambiar de pestaña no llena el «atrás»; cada pestaña conserva su desplazamiento y tocar la que ya
+  está abierta sube al principio. Las ligas ya repartidas (`#l=…` o `?l=…`) abren igual, en Plan.
+- **Plan** son los siete cuadros. Los selectores de terrenos y versiones de la liga siguen arriba (con
+  blanco táctil más grande); el de Dirección pasó a «Opciones».
+- **Historial** (`ppp2-historial`): arriba, lo más importante —reuniones, versiones y pendientes— como
+  tres botones que llevan al día de la última o a la lista; luego la línea de tiempo a todo lo ancho, que se
+  desliza con el dedo, del día más viejo (izquierda) al más reciente (derecha), un nodo por día con los
+  íconos de lo que pasó (el mes se rotula en su primer día) y abre en el más reciente; abajo, el día
+  escogido con una tarjeta por evento (tipo, hora, título, resumen que se abre si es largo, la fuente y, si
+  trae archivos, un botón que los abre como en Archivos: en una reunión, «Abrir la transcripción»).
+  **La conversación del día** (`ppp2-chat`) se abre desde su tarjeta («Chat del equipo», con un ícono de
+  burbuja propio y la palabra WhatsApp sólo como texto; nunca su logotipo): burbujas con nombre, hora y
+  adjuntos tocables, en capturas que se recorren de lado y que se parten con la altura real de cada
+  burbuja para que cada una quepa a la vista. Al final, los pendientes abiertos (lo vencido en rojo) y las
+  versiones del plan. **Una liga que no es de equipo nunca ve la conversación ni los pendientes**, aunque
+  llegaran: la pantalla sólo los enseña con `audiencia` = `equipo` y nunca pide `ppp2-chat` sin ella.
+- **Archivos** (`ppp2-archivos`): los siete grupos en el orden del contrato con su número, cada archivo con
+  un ícono por tipo (PDF, XLS, PPT, DOC, KMZ, JPG…), fecha y tamaño (los de Google dicen qué son); `vista` =
+  `no` se enseña sin botón («Sólo en el expediente»); `incompleta`, con una nota discreta. Tocar uno lo baja
+  con `ppp2-archivo` **por partes, desde la 0 y en orden**, con barra de avance real (parte y MB) y lo
+  enseña en una hoja: la imagen tal cual; el PDF, página por página dentro de la página (abajo); lo demás,
+  listo para guardar. Siempre hay «Abrir aparte» y «Guardar» (el nombre al guardar va sin acentos: hay
+  sistemas que si no lo pueden escribir lo cambian por «download», sin extensión). `grande` dice que no se
+  puede abrir aquí, sin reintentar.
+- **PDF dentro de la página:** con pdf.js 3.11.174 (build `legacy`, Mozilla, Apache-2.0), que se carga sólo
+  al abrir un PDF, desde jsDelivr y con su huella SRI (el script y el *worker*, que se arma desde un
+  `fetch` con `integrity`), con `isEvalSupported: false`. Cada página se dibuja al acercarse a la vista y se
+  vuelve imagen. Por qué no un `<iframe>`: Safari del iPhone enseña sólo la primera página de un PDF
+  incrustado (WebKit 253671) y Chrome de Android no lo enseña. Si pdf.js no carga: en escritorio, el visor
+  de PDF del navegador; en el teléfono, «Abrir el PDF» aparte.
+- **Opciones:** una tarjeta por opción de la liga (cada terreno y cada versión que la liga deja ver; con
+  varios terrenos y varias versiones, agrupadas por terreno) con tres cifras que el servidor ya da —ventas,
+  ganancia y lo que recibe el dueño (y cuántas veces su tierra)—, su terreno, la marca «vigente» y «viendo
+  ahora». Las otras opciones se leen al abrir la pestaña con el mismo `ppp2-visor` (`&plan=`, `&v=`; sin
+  sesión, sin `abre`, tres a la vez). Tocar una la abre en Plan. «Comparar las n opciones lado a lado» va a
+  `visor-comparar.html#l=<liga>`; con una sola opción, su tarjeta y una frase que lo explica.
+- **«deducido de …»:** si la respuesta trae `deducido` (`{ "<ruta>": "<de qué sale>" }`, de las fotos del
+  PPP de siempre), cada leyenda cuya cifra sale de una ruta marcada agrega, aparte del origen, «Deducido de
+  …» (o «Corregido: …» tal cual); en la hoja del cuadro sale un chip discreto «deducido» que al tocarlo lo
+  dice; el pie avisa una vez. Cómo se asigna una ruta a cada cifra: «Versiones» → `v.<clave>`, «Datos» →
+  `datos.<clave>`, «Flujo» → `flujo.<serie>` y `flujo.total.<serie>` por el rótulo del renglón, un producto →
+  `productos.<n>.<campo>` (`FLUJO_RUTA` y `rutasDe` en `visor.js`).
+- **Dinero con lo que llegue:** con saldo acumulado, como siempre; sin él pero con lo que entra y sale por
+  mes, las columnas por trimestre y las series de saldo que sí llegaron (saldo del banco, dinero ajeno en
+  uso o caja del proyecto, tal cual), con la nota de que esa versión no trae el saldo acumulado; con sólo
+  totales, dos barras (entra y sale) con su cifra; sin nada, «Aún no hay flujo calculado» y por qué.
+- **Cada hoja abre con una frase llana** de qué es el cuadro (para quien no es financiero).
+- **Estados dignos:** mientras llega, un esqueleto con «Reuniendo el expediente…» (la primera lectura puede
+  tardar unos 20 s; a los 5 s dice que la primera vez tarda) y nunca un error por tiempo (45 s). Contra el
+  servidor de hoy, que a estos recursos contesta `sin_sesion`, cada pestaña dice que todavía no hay
+  («Aún no hay historial en esta liga»…) y el plan sigue igual: **ninguna respuesta de las pestañas apaga la
+  liga**; si una dice `liga`, se pregunta en seguida al plan y es él quien lo confirma. `plan`, `interno` y
+  sin red tienen su mensaje (los dos últimos, con «Volver a intentar»). Si la liga se apaga, se cierran las
+  hojas y desaparecen la barra y las pestañas.
+- **Las hojas** (la conversación, un archivo, una sobre otra): × (44 px), Esc, «atrás», tocar fuera o
+  bajarlas con el dedo; el foco entra y regresa. Al soltarla, la capa deja de atrapar toques en ese mismo
+  instante, y el encabezado cancela `touchstart` para que el gesto no deje en Chromium un «fling» que se coma
+  el siguiente toque (lo mismo en la hoja de los cuadros: era «se pierde el primer toque tras bajarla»).
+  Un «atrás» que pidió el propio cierre se descuenta, para que no cierre la hoja que se abra en seguida.
+- **Reglas que no cambian:** sólo GET (la única escritura sigue siendo `ppp2-elige`); no calcula cifras:
+  acomoda, redondea como enseña y compara lo que llega; no guarda nada en el navegador ni toca
+  `pyod_clave_v1`; a los recursos de las pestañas no les manda la sesión (la liga basta). En el teléfono
+  todo mide 44 px o más para el dedo y los colores de texto pasan AA. El visor sigue en tema claro también
+  con el sistema en oscuro (`color-scheme: light`).
+- **Qué conviene revisar en un iPhone de verdad** (Safari no se pudo probar aquí): el área segura de la
+  barra con la barra de Safari abierta y recogida; que una página de PDF se vea con pdf.js (y, si no carga,
+  que «Abrir el PDF» abra todas sus páginas); «Guardar» (Safari pregunta si se descarga); deslizar la línea
+  de tiempo y las capturas sin que se mueva la página; bajar la hoja con el dedo y tocar otra cosa en
+  seguida; «atrás» con una hoja abierta.
+
+Pruebas: `node --test tests/visor-pestanas.test.cjs` (dirección, estados contra el servidor de hoy,
+historial de equipo y de fuera, el día, la conversación, archivos, opciones, «deducido de …», Dinero sin
+saldo acumulado, la barra y que el archivo sólo lee y no calcula) y `node tests/visor-pestanas-browser.cjs`
+(12 recorridos con los dobles del contrato de `tests/visor-pestanas-dobles.cjs`; con `PPP_PDFJS_DIR`
+apuntando a `pdfjs-dist@3.11.174/legacy/build`, también el PDF dibujado por pdf.js con su huella SRI).
 
 ### Los mismos cuadros, en la ficha del plan
 

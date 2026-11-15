@@ -208,11 +208,14 @@ async function pagina(navegador, base, w, opciones) {
       return { ctx, estadoSrv, abre };
     };
 
-    await caso('Dirección escoge la versión buena desde el visor; los demás la siguen solos y no ven el selector', async () => {
+    await caso('Dirección escoge la versión buena desde el visor (pestaña Opciones); los demás la siguen solos y no ven el selector', async () => {
       const { ctx, estadoSrv, abre } = await conDireccion();
       const dir = await abre(ADMIN);
       assert.ok(estadoSrv.gets.some((p) => p.k === ADMIN), 'con sesión, el visor la manda como k');
-      await dir.page.locator('.vz-elige').waitFor();
+      assert.equal(await dir.page.locator('#vzpPanel-plan .vz-elige').count(), 0, 'el selector de Dirección no va arriba del plan');
+      const opciones = () => dir.page.locator('#vzpTab-opciones').click();
+      await opciones();
+      await dir.page.locator('#vzpPanel-opciones .vz-elige').waitFor();
       const nombre = async (v) => dir.page.locator('.vz-elige-op[data-elige="esc-' + v + '"]').getAttribute('data-nombre');
       const n1 = await nombre(1), n2 = await nombre(2);
       assert.ok(n1 && n2 && n1 !== n2, 'cada opción lleva el nombre de su versión');
@@ -229,6 +232,7 @@ async function pagina(navegador, base, w, opciones) {
       await dir.page.locator('.vz-elige-op[data-elige="esc-1"]').click();
       assert.equal(await dir.page.locator('.vz-elige-op.vz-buena').getAttribute('data-elige'), 'esc-1', 'su pantalla cambia de inmediato');
       await dir.page.locator('.vz-elige-msg', { hasText: 'Listo: todos ven ahora «' + n1 + '»' }).waitFor({ timeout: 5000 });
+      await dir.page.locator('#vzpTab-plan').click();
       await dir.page.locator('.vz-ver', { hasText: 'V1' }).waitFor({ timeout: 5000 });
       const post = estadoSrv.posts[0];
       assert.deepEqual(Object.keys(post).sort(), ['k', 'plan', 'request_id', 'tipo', 'v']);
@@ -238,6 +242,7 @@ async function pagina(navegador, base, w, opciones) {
       assert.match(await socio.page.locator('#vzVivo').innerText(), /Se actualizó/);
       assert.equal(await socio.page.locator('.vz-elige').count(), 0);
       // otro toque, otro request_id
+      await opciones();
       await dir.page.locator('.vz-elige-op[data-elige="esc-2"]').click();
       await dir.page.locator('.vz-elige-msg', { hasText: 'todos ven ahora «' + n2 + '»' }).waitFor({ timeout: 5000 });
       assert.notEqual(estadoSrv.posts[1].request_id, estadoSrv.posts[0].request_id);
@@ -248,6 +253,7 @@ async function pagina(navegador, base, w, opciones) {
     await caso('si el servidor no acepta el cambio de Dirección, el selector vuelve atrás y lo dice', async () => {
       const { ctx, estadoSrv, abre } = await conDireccion({ falla: true });
       const dir = await abre(ADMIN);
+      await dir.page.locator('#vzpTab-opciones').click();
       const n2 = await dir.page.locator('.vz-elige-op[data-elige="esc-2"]').getAttribute('data-nombre');
       await dir.page.locator('.vz-elige-op[data-elige="esc-1"]').click();
       await dir.page.locator('.vz-elige-msg.vz-malo').waitFor({ timeout: 5000 });

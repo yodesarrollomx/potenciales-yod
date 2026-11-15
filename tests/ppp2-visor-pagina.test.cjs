@@ -206,8 +206,12 @@ test('fotos del PPP de siempre: Dinero sin saldo acumulado, una sola casa, prueb
   for (const vacio of [null, []]) {
     const d = copia(datos()); d.origen = 'PPP · caso'; d.flujo.filas.flujo_acum = vacio;
     const c = visor.pinta(d, null).cuadros.find((x) => x.id === 'dinero');
-    assert.doesNotMatch(visible(c), /a repartir|\+\$0\.0/, 'no inventa un cero');
-    assert.match(visible(c), /Aún no hay flujo calculado/);
+    assert.doesNotMatch(visible(c), /a repartir|\+\$0\.0|Lo más hondo/, 'no inventa un saldo ni un cero');
+    // sin saldo acumulado no queda un hueco: lo que entra y sale por trimestre y las series de saldo que sí llegaron
+    assert.match(visible(c), /clientes[\s\S]*costos/);
+    assert.match(visible(c), /saldo del banco/);
+    assert.equal(c.sub, 'entra y sale');
+    assert.match(texto(visor.detalleHtml(c)), /Saldo acumulado sin dato/);
   }
   const casa = (n) => { const d = copia(datos()); d.plan.tipo = 'Casa unifamiliar'; d.productos = [{ nombre: 'Casa', unidades: n, m2: 240 * n, precio_m2: 30000, ventas: 7.2 * n, precio_unidad: 7.2 }]; return visor.pinta(d, null).cuadros.find((x) => x.id === 'terreno').svg; };
   assert.match(casa(1), /<rect x="18" y="26" width="54" height="40"><\/rect>/, 'una casa se ve como una sola casa');

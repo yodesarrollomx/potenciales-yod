@@ -85,17 +85,74 @@
   }
   /* De dónde sale cada cifra, con el nombre real de la pestaña del libro. «Versiones» son las claves
      `v{n}.…` de la pestaña Resumen; «Flujo» es la pestaña «Flujo V{n}» de la versión que se ve. */
-  var VER = 0, ORIGEN = '';
+  var VER = 0, ORIGEN = '', DED = null;
+  /* Lo que el servidor marca como deducido (`deducido`: ruta del cuadro → «de qué sale y cómo») viaja pegado al
+     origen tras este separador; la leyenda y la hoja lo enseñan aparte, como «deducido de …». */
+  var SEP = ' ‖ ';
+  /* Las rutas de `deducido` que toca cada origen: «Versiones» = sus claves (v.x), «Datos» = datos.x, «Flujo» = el
+     renglón por su rótulo (su serie y su total), «Productos» = los campos que se pueden deducir. */
+  var FLUJO_RUTA = {
+    'unidades que se firman': 'firmas', 'saldos al escriturar': 'saldos', 'obra directa': 'obra', 'indirectos': 'indirectos', 'imprevistos': 'imprevistos',
+    'comisiones': 'comisiones', 'cobranza total': 'cobranza', 'egresos totales': 'egresos', 'enganches al firmar': 'enganches', 'pagos durante la obra': 'pagos_obra',
+    'cierre de tierra': 'cierre', 'banco: disposición': 'disposicion', 'banco: pago, interés y apertura': 'pago_banco interes apertura', 'banco: pago': 'pago_banco',
+    'banco: interés': 'interes', 'banco: comisión de apertura': 'apertura', 'capital: aportación': 'cap_aporta', 'capital: pago con su rendimiento': 'pago_capital',
+    'respaldo: lo que faltaría': 'respaldo', 'respaldo: pago': 'pago_respaldo', 'flujo acumulado': 'flujo_acum', 'caja mínima': 'caja_minima', 'capital: pago': 'pago_capital',
+    'saldo del banco': 'saldo_banco', 'caja del proyecto': 'caja'
+  };
+  function rutasDe(hoja, clave) {
+    var c = String(clave || ''), out = [];
+    if (hoja === 'Versiones') (c.match(/[a-z][a-z0-9_]*[a-z0-9]/g) || []).forEach(function (k) { out.push('v.' + k); });
+    else if (hoja === 'Datos') { if (c) out.push('datos.' + c); }
+    else if (hoja === 'Flujo') {
+      var k = FLUJO_RUTA[c] || (/^columna del mes/.test(c) ? 'flujo_acum cap_acum saldo_banco saldo_respaldo caja' : '');
+      k.split(' ').forEach(function (x) { if (x) out.push('flujo.' + x, 'flujo.total.' + x); });
+    } else if (hoja === 'Plan') { if (c) out.push(c.indexOf('plan.') === 0 ? c : 'plan.' + c); }
+    else if (hoja === 'Reparto') out.push(c === 'esquema elegido' ? 'reparto.esquema' : 'reparto.*');
+    else if (hoja === 'Productos') out.push(/m²/.test(c) ? 'productos.*.m2' : 'productos.*.ventas', 'productos.*.precio_unidad', 'productos.*.precio_m2');
+    return out;
+  }
+  function coincide(patron, ruta) {
+    if (patron.indexOf('*') < 0) return patron === ruta;
+    return new RegExp('^' + patron.replace(/\./g, '\\.').replace(/\\\.\*$/, '\\..+').replace(/\*/g, '[^.]+') + '$').test(ruta);
+  }
+  /* «deducido de …»: el texto del servidor, tal cual; si ya dice «deducido» o «corregido», no se repite. */
+  function fraseDeducido(t) {
+    t = String(t == null ? '' : t).replace(/\s+/g, ' ').trim();
+    if (!t) return '';
+    if (/^(deducid|corregid)/i.test(t)) return t.charAt(0).toLowerCase() + t.slice(1);
+    return /^el\s/i.test(t) ? 'deducido del ' + t.slice(3) : 'deducido de ' + t.charAt(0).toLowerCase() + t.slice(1);
+  }
+  function deducidoDe(rutas) {
+    if (!DED) return '';
+    var textos = [];
+    (rutas || []).forEach(function (r) {
+      Object.keys(DED).forEach(function (k) { var f = fraseDeducido(DED[k]); if (f && coincide(r, k) && textos.indexOf(f) < 0) textos.push(f); });
+    });
+    return textos.join(' · ');
+  }
   /* Un plan que no viene de un libro (el PPP de siempre) puede traer su propio `origen`: entonces todas las
      leyendas dicen ese texto en lugar del rótulo de la pestaña. */
-  function L(hoja, clave) {
-    if (ORIGEN) return ORIGEN;
-    if (hoja === 'Versiones') return 'Libro · Resumen · ' + String(clave || '').replace(/[a-z][a-z0-9_]*[a-z0-9]/g, function (m) { return 'v' + VER + '.' + m; });
-    if (hoja === 'Flujo') return 'Libro · Flujo V' + VER + (clave ? ' · ' + clave : '');
-    if (hoja === 'Plan') return 'Libro · Resumen · ' + (clave || 'plan');
-    return 'Libro · ' + hoja + (clave ? ' · ' + clave : '');
+  function L(hoja, clave, rutas) {
+    var base;
+    if (ORIGEN) base = ORIGEN;
+    else if (hoja === 'Versiones') base = 'Libro · Resumen · ' + String(clave || '').replace(/[a-z][a-z0-9_]*[a-z0-9]/g, function (m) { return 'v' + VER + '.' + m; });
+    else if (hoja === 'Flujo') base = 'Libro · Flujo V' + VER + (clave ? ' · ' + clave : '');
+    else if (hoja === 'Plan') base = 'Libro · Resumen · ' + (clave || 'plan');
+    else base = 'Libro · ' + hoja + (clave ? ' · ' + clave : '');
+    var ded = DED ? deducidoDe(rutas || rutasDe(hoja, clave)) : '';
+    return ded ? base + SEP + ded : base;
   }
-  function Ly(a, b) { return ORIGEN || a + ' y ' + b; }
+  function Ly(a, b) {
+    var pa = String(a).split(SEP), pb = String(b).split(SEP), ded = [];
+    pa.slice(1).concat(pb.slice(1)).forEach(function (x) { if (x && ded.indexOf(x) < 0) ded.push(x); });
+    var base = ORIGEN || pa[0] + ' y ' + pb[0];
+    return ded.length ? base + SEP + ded.join(' · ') : base;
+  }
+  /* Sólo la nota «deducido de …» de un origen (para el segundo término de Ly cuando ése va escrito a mano). */
+  function Lded(hoja, clave) { var d = DED ? deducidoDe(rutasDe(hoja, clave)) : ''; return d ? SEP + d : ''; }
+  /* El origen y su nota «deducido de …», separados para pintarlos aparte. */
+  function partesOrigen(o) { var p = String(o == null ? '' : o).split(SEP); return { base: p[0], ded: p.slice(1).join(' · ') }; }
+  function mayus1(t) { t = String(t || ''); return t.charAt(0).toUpperCase() + t.slice(1); }
   /* Un cuadro sin sus datos se ve tranquilo, no como error: un círculo suave, la frase y, si hay, una nota. */
   function sinDatos(w, texto, nota) {
     var cx = w / 2;
@@ -133,7 +190,7 @@
       bloques.forEach(function (p, i) {
         var h = altos[i] * esc2, w = anchos[i], x = 45 - w / 2;
         y -= h;
-        o.push('<rect' + T(p.nombre, [['Área vendible', ent(p.m2) + ' m²'], ['Parte del vendible', vend ? pct(p.m2 / vend, 0) : '—']], L('Productos')) +
+        o.push('<rect' + T(p.nombre, [['Área vendible', ent(p.m2) + ' m²'], ['Parte del vendible', vend ? pct(p.m2 / vend, 0) : '—']], L('Productos', null, ['productos.' + i + '.m2'])) +
           ' x="' + f1(x) + '" y="' + f1(y + (i ? 0.5 : 0)) + '" width="' + w + '" height="' + f1(h - (i ? 0.5 : 0)) + '" fill="' + (P.length ? PRODUCTO[i % 6] : '#b9b1a1') + '"></rect>');
       });
       var tope = y;
@@ -179,7 +236,7 @@
         ['Valor de la tierra', mdp(tierra), L('Versiones', 'tierra')],
         ['Tierra entre ventas', tierra && ventas ? pct(tierra / ventas, 1) : '—', 'tierra ÷ ventas'],
         ['Construcción total', constr ? ent(constr) + ' m²' : '—', L('Datos', 'lamina.m2_construidos')],
-        ['Área vendible', ent(vend) + ' m²', L('Productos')],
+        ['Área vendible', ent(vend) + ' m²', L('Productos', null, ['productos.*.m2'])],
         ['Vendible entre construcción', constr && vend ? pct(vend / constr, 1) : '—', 'vendible ÷ construcción']
       ] }, { h: 'Tipo de proyecto', filas: [[(d.plan && d.plan.tipo) || '—', '', L('Plan', 'plan.tipo')]] }]
     };
@@ -213,7 +270,7 @@
       f.forEach(function (b, j) {
         var p = b.p, w = anchos[j], c = PRODUCTO[b.i % 6], parte = tot ? Math.round(p.m2 / tot * 100) + '%' : '';
         var tip = T(p.nombre, [['Ventas', mdp(p.ventas)], ['Unidades', ent(p.unidades)], ['Área vendible', ent(p.m2) + ' m² · ' + parte + ' del total'],
-          ['Precio por m²', '$' + ent(p.precio_m2)], ['Precio por unidad', mdp(p.precio_unidad) + ' MDP']], L('Productos'));
+          ['Precio por m²', '$' + ent(p.precio_m2)], ['Precio por unidad', mdp(p.precio_unidad) + ' MDP']], L('Productos', null, ['productos.' + b.i + '.ventas', 'productos.' + b.i + '.precio_unidad', 'productos.' + b.i + '.precio_m2']));
         o.push('<g' + tip + '><rect x="' + f1(x) + '" y="' + f1(y) + '" width="' + f1(w) + '" height="' + f1(h) + '" fill="' + c + '"></rect>' +
           (p.unidades > 0 && p.unidades <= 400 ? '<g stroke="#fffdf9" stroke-opacity="0.32" stroke-width="0.7">' + rejilla(x, y, w, h, Math.round(p.unidades)) + '</g>' : '') + '</g>');
         var nom = corta(p.nombre, Math.max(4, Math.floor((w - 10) / 5.2))), u = ent(p.unidades) + ' u', m = ent(p.m2) + ' m²';
@@ -241,12 +298,13 @@
     o.push('</g><g pointer-events="none">' + texto.join('') + '</g>');
     o.push('<rect x="0.5" y="124.5" width="7" height="7" fill="' + GRIS + '"></rect><g stroke="#fffdf9" stroke-width="0.6"><line x1="4" y1="124.5" x2="4" y2="131.5"></line><line x1="0.5" y1="128" x2="7.5" y2="128"></line></g>' +
       '<text x="10" y="131" font-size="8" fill="' + MUTED + '">= 1 unidad</text>');
-    o.push('<text' + T('Ventas totales', ventasPorProducto(d).concat([['Total de ventas', mdp(ventas)], ['Unidades', ent(unidades)], ['Área vendible', ent(tot) + ' m²']]), Ly(L('Productos'), 'Resumen · v' + d.version + '.ventas')) + ' x="184" y="131.5" text-anchor="end" font-size="10.5" font-weight="700" fill="' + INK + '">' + mdp(ventas) + '</text>');
+    o.push('<text' + T('Ventas totales', ventasPorProducto(d).concat([['Total de ventas', mdp(ventas)], ['Unidades', ent(unidades)], ['Área vendible', ent(tot) + ' m²']]), Ly(L('Productos'), 'Resumen · v' + d.version + '.ventas' + Lded('Versiones', 'ventas'))) + ' x="184" y="131.5" text-anchor="end" font-size="10.5" font-weight="700" fill="' + INK + '">' + mdp(ventas) + '</text>');
     return {
       id: 'producto', n: 2, titulo: 'Producto', sub: n ? ent(tot) + ' m² vendibles' : '', svg: n ? o.join('') : sinDatos(184, 'Aún no hay productos capturados'), w: 184,
       aria: 'Producto: ' + n + ' productos, ' + ent(unidades) + ' unidades, ventas ' + mdp(ventas),
-      detalle: [{ h: 'Ventas por producto (MDP)', filas: (d.productos || []).map(function (p) {
-        return [p.nombre, mdp(p.ventas), ent(p.unidades) + ' u · ' + ent(p.m2) + ' m² · $' + ent(p.precio_m2) + '/m² · ' + mdp(p.precio_unidad) + ' por unidad'];
+      detalle: [{ h: 'Ventas por producto (MDP)', filas: (d.productos || []).map(function (p, i) {
+        var ded = deducidoDe(['productos.' + i + '.ventas', 'productos.' + i + '.precio_unidad', 'productos.' + i + '.precio_m2']);
+        return [p.nombre, mdp(p.ventas), ent(p.unidades) + ' u · ' + ent(p.m2) + ' m² · $' + ent(p.precio_m2) + '/m² · ' + mdp(p.precio_unidad) + ' por unidad' + (ded ? SEP + ded : '')];
       }).concat([['Total', mdp(ventas), ent(unidades) + ' u · ' + ent(tot) + ' m² · ' + L('Productos')]]) }]
     };
   }
@@ -379,7 +437,7 @@
     var v = d.v || {}, ventas = num(v.ventas) || 0, tierra = num(v.tierra) || 0, cierre = total(d, 'cierre') || 0, gan = num(v.ganancia);
     var rend = num(v.rend_capital) || 0, costoDin = num(v.costo_dinero) || 0, banco = Math.max(0, costoDin - rend), sinTierra = num(v.costo_sin_tierra) || 0;
     var items = [
-      ['Terreno', tierra + cierre, '#9a7b3f', [['Valor de la tierra', mdp(tierra)], ['Cierre de tierra', mdp(cierre)]], Ly(L('Versiones', 'tierra'), 'Flujo V' + d.version + ' · cierre de tierra')],
+      ['Terreno', tierra + cierre, '#9a7b3f', [['Valor de la tierra', mdp(tierra)], ['Cierre de tierra', mdp(cierre)]], Ly(L('Versiones', 'tierra'), 'Flujo V' + d.version + ' · cierre de tierra' + Lded('Flujo', 'cierre de tierra'))],
       ['Costos directos', total(d, 'obra') || 0, '#b06a5f', [['Obra directa', mdp(total(d, 'obra'))]], L('Flujo', 'obra directa')],
       ['Costos indirectos', total(d, 'indirectos') || 0, '#d39a6a', [['Indirectos', mdp(total(d, 'indirectos'))]], L('Flujo', 'indirectos')],
       ['Contingencias', total(d, 'imprevistos') || 0, '#e2c08d', [['Imprevistos', mdp(total(d, 'imprevistos'))]], L('Flujo', 'imprevistos')],
@@ -391,7 +449,7 @@
     if (!pierde && gan !== null) items.push(['Utilidad antes de ISR', gan, CLI, [['Ganancia real, después de la tierra', mdp(gan)], ['Sobre ventas', pct(num(v.margen))]], L('Versiones', 'ganancia')]);
     var RX = 60, g = 3.6, top = 2, H = 112, suman = suma(items.map(function (it) { return it[1]; })) || 1;
     var sc = (H - g * (items.length - 1)) / suman, lh = suman * sc, yl = top + (H - lh) / 2, yr = top, o = [], centros = [];
-    o.push('<rect' + T('Ingresos por ventas', ventasPorProducto(d).concat([['Total de ventas', mdp(ventas)]]), Ly(L('Productos'), 'Resumen · v' + d.version + '.ventas')) + ' x="0" y="' + f1(yl) + '" width="6" height="' + f1(lh) + '" rx="1.5" fill="' + INK + '"></rect>');
+    o.push('<rect' + T('Ingresos por ventas', ventasPorProducto(d).concat([['Total de ventas', mdp(ventas)]]), Ly(L('Productos'), 'Resumen · v' + d.version + '.ventas' + Lded('Versiones', 'ventas'))) + ' x="0" y="' + f1(yl) + '" width="6" height="' + f1(lh) + '" rx="1.5" fill="' + INK + '"></rect>');
     items.forEach(function (it) {
       var h = it[1] * sc, xm = (6 + RX) / 2;
       var filasIt = it[3].concat(it[3].length > 1 ? [['Total', mdp(it[1])]] : []).concat([['De cada $100 de ventas', ventas ? '$' + f1(it[1] / ventas * 100) : '—']]);
@@ -476,10 +534,9 @@
     var Mayus = function (t) { return t.charAt(0).toUpperCase() + t.slice(1); };
     var tipItem = function (it) { return T(Mayus(it[1]), it[5].map(function (f) { return [f[0], f[1]]; }).concat(it[5].length > 1 ? [['Total', mdp(it[2])]] : []), it[4]); };
 
-    function figura(grande) {
-      var x0 = grande ? 48 : 1, R = grande ? regla(N, x0, 183) : reglaPan(N, x0, 183), o = [], fijo = [], AX = 24, yT = 47, yB = grande ? 104 : 96, fs = grande ? 6.6 : 7.6;
-      /* columnas: entra arriba, sale abajo, por trimestre */
-      var maxQ = 1;
+    /* columnas: entra arriba, sale abajo, por trimestre (o semestre) */
+    function columnas(R, AX) {
+      var o = [], maxQ = 1;
       Q.forEach(function (t) { maxQ = Math.max(maxQ, t.cli + t.ban + t.cap + t.res, t.obra + t.costob + t.pagob + t.pagoc + t.pagor); });
       var sc = 17 / maxQ;
       Q.forEach(function (t) {
@@ -502,6 +559,41 @@
         o.push('<g' + T('Meses ' + t.de + ' a ' + t.a, f, L('Flujo', N > 72 ? 'suma de seis meses' : 'suma de tres meses')) + '><rect x="' + f1(x - 0.9) + '" y="5" width="' + f1(w + 1.8) + '" height="38" fill="#fffdf9" fill-opacity="0"></rect>' + cols + '</g>');
       });
       o.push('<line x1="' + R.x0 + '" y1="' + AX + '" x2="' + R.x1 + '" y2="' + AX + '" stroke="' + INK + '" stroke-width="0.7"></line>');
+      return o;
+    }
+    /* la clave de colores del cuadro chico, en un renglón: cada color con lo que entra y sale por él */
+    function claveColores(fijo) {
+      var claves = [[CLI, 'clientes', entra[0]]];
+      if (hayBanco) claves.push([BAN, 'banco', null]);
+      if (hayCap) claves.push([CAP, 'capital', null]);
+      if (hayRes) claves.push([RES, 'respaldo', null]);
+      claves.push([OBR, 'costos', sale[0]]);
+      var tamC = 7.2, anchos = claves.map(function (c) { return 7 + ancho(c[1], tamC); }), hueco = Math.max(3, Math.min(9, (183 - suma(anchos)) / Math.max(1, claves.length - 1))), xc = 0;
+      claves.forEach(function (c, j) {
+        var par = c[2] ? [c[2]] : entra.concat(sale).filter(function (it) { return it[0] === c[0]; });
+        var filas = []; par.forEach(function (it) { filas.push([Mayus(it[1]), mdp(it[2])]); });
+        fijo.push('<g' + (c[2] ? tipItem(c[2]) : T(Mayus(c[1]), filas, par.length ? par[0][4] : L('Flujo'))) + '>' + cuadrito(xc, 125.6, c[0], 5) + '<text x="' + f1(xc + 7) + '" y="' + 125.6 + '" font-size="' + tamC + '" fill="' + BODY + '">' + c[1] + '</text></g>');
+        xc += anchos[j] + hueco;
+      });
+    }
+    /* la columna de totales de la hoja: entra y sale */
+    function columnaTotales(o) {
+      var paso = entra.length + sale.length > 6 ? 12.6 : 15, yy = 6.4;
+      var item = function (it, y) {
+        return '<g' + tipItem(it) + '>' + cuadrito(0, y, it[0]) + '<text x="6.4" y="' + f1(y) + '" font-size="5.8" fill="' + BODY + '">' + it[1] + '</text>' +
+          '<text x="6.4" y="' + f1(y + 6.6) + '" font-size="6.4" font-weight="700" fill="' + it[3] + '">' + mdp(it[2]) + '</text></g>';
+      };
+      o.push('<text x="0" y="' + yy + '" font-size="5.2" font-weight="700" letter-spacing="0.5" fill="' + ORO + '">ENTRA</text>');
+      entra.forEach(function (it, j) { o.push(item(it, yy + 8 + j * paso)); });
+      yy += 8 + entra.length * paso + 1;
+      o.push('<text x="0" y="' + f1(yy) + '" font-size="5.2" font-weight="700" letter-spacing="0.5" fill="' + ORO + '">SALE</text>');
+      sale.forEach(function (it, j) { o.push(item(it, yy + 8 + j * paso)); });
+    }
+    var tipAjeno = function () { return T('Dinero ajeno y caja', [['Máximo de dinero ajeno en uso', mdp(ajeno)], ['Caja mínima exigida', mdp(cajaMin)], ['Costo del dinero', mdp(num(v.costo_dinero))]], Ly(L('Versiones', 'max_ajeno'), 'Flujo V' + d.version + ' · caja mínima' + Lded('Flujo', 'caja mínima'))); };
+
+    function figura(grande) {
+      var x0 = grande ? 48 : 1, R = grande ? regla(N, x0, 183) : reglaPan(N, x0, 183), fijo = [], AX = 24, yT = 47, yB = grande ? 104 : 96, fs = grande ? 6.6 : 7.6;
+      var o = columnas(R, AX);
       /* el valle: saldo acumulado, con el hoyo pintado por quién lo tapa */
       var maxF = Math.max.apply(null, [0].concat(F)), minF = Math.min.apply(null, [0].concat(F));
       var es = (yB - yT) / Math.max(1, maxF - minF), Z = yT + maxF * es, Y = function (x) { return Z - x * es; };
@@ -548,55 +640,110 @@
       var tf = T('Resultado a repartir', [['Antes de pagar capital y tierra', mdp(num(v.resultado_repartir))], ['Mes', N]], L('Versiones', 'resultado_repartir'));
       o.push(punto(N, fin, fin >= 0 ? CLI : BAD, tf) + '<text' + tf + ' x="' + (R.x1 - 8) + '" y="' + f1(clamp(Y(fin) + fs + 1, yT + 4, yB + 4)) + '" text-anchor="end" font-size="' + fs + '" fill="' + MUTED + '">a repartir <tspan font-weight="700" fill="' + (fin >= 0 ? CLIT : BADT) + '">' + (fin >= 0 ? '+' : '') + mdp(fin) + '</tspan></text>');
       if (grande) {
-        /* la columna de totales: entra y sale */
-        var paso = entra.length + sale.length > 6 ? 12.6 : 15, yy = 6.4;
-        var item = function (it, y) {
-          return '<g' + tipItem(it) + '>' + cuadrito(0, y, it[0]) + '<text x="6.4" y="' + f1(y) + '" font-size="5.8" fill="' + BODY + '">' + it[1] + '</text>' +
-            '<text x="6.4" y="' + f1(y + 6.6) + '" font-size="6.4" font-weight="700" fill="' + it[3] + '">' + mdp(it[2]) + '</text></g>';
-        };
-        o.push('<text x="0" y="' + yy + '" font-size="5.2" font-weight="700" letter-spacing="0.5" fill="' + ORO + '">ENTRA</text>');
-        entra.forEach(function (it, j) { o.push(item(it, yy + 8 + j * paso)); });
-        yy += 8 + entra.length * paso + 1;
-        o.push('<text x="0" y="' + f1(yy) + '" font-size="5.2" font-weight="700" letter-spacing="0.5" fill="' + ORO + '">SALE</text>');
-        sale.forEach(function (it, j) { o.push(item(it, yy + 8 + j * paso)); });
+        columnaTotales(o);
         o.push('<text x="45" y="' + (AX - 2.6) + '" text-anchor="end" font-size="5.2" fill="' + MUTED + '">entra</text><text x="45" y="' + (AX + 6.6) + '" text-anchor="end" font-size="5.2" fill="' + MUTED + '">sale</text>' +
           '<text x="45" y="' + f1(Z - 2) + '" text-anchor="end" font-size="5.2" fill="' + MUTED + '">saldo</text>');
         o.push(ejeMeses(d, N, 116, 123.4, R));
-        o.push('<text' + T('Dinero ajeno y caja', [['Máximo de dinero ajeno en uso', mdp(ajeno)], ['Caja mínima exigida', mdp(cajaMin)], ['Costo del dinero', mdp(num(v.costo_dinero))]], Ly(L('Versiones', 'max_ajeno'), 'Flujo V' + d.version + ' · caja mínima')) +
-          ' x="0" y="133" font-size="6.3" fill="' + BODY + '">Dinero ajeno máx. <tspan font-weight="700" fill="' + INK + '">' + mdp(ajeno) + '</tspan>' + (cajaMin ? ' · caja mínima ' + mdp(cajaMin) : '') + '</text>');
+        o.push('<text' + tipAjeno() + ' x="0" y="133" font-size="6.3" fill="' + BODY + '">Dinero ajeno máx. <tspan font-weight="700" fill="' + INK + '">' + mdp(ajeno) + '</tspan>' + (cajaMin ? ' · caja mínima ' + mdp(cajaMin) : '') + '</text>');
       } else {
-        /* la clave de colores, en un renglón: cada color con lo que entra y sale por él */
-        var claves = [[CLI, 'clientes', entra[0]]];
-        if (hayBanco) claves.push([BAN, 'banco', null]);
-        if (hayCap) claves.push([CAP, 'capital', null]);
-        if (hayRes) claves.push([RES, 'respaldo', null]);
-        claves.push([OBR, 'costos', sale[0]]);
-        var tamC = 7.2, anchos = claves.map(function (c) { return 7 + ancho(c[1], tamC); }), hueco = Math.max(3, Math.min(9, (183 - suma(anchos)) / Math.max(1, claves.length - 1))), xc = 0;
-        claves.forEach(function (c, j) {
-          var par = c[2] ? [c[2]] : entra.concat(sale).filter(function (it) { return it[0] === c[0]; });
-          var filas = []; par.forEach(function (it) { filas.push([Mayus(it[1]), mdp(it[2])]); });
-          fijo.push('<g' + (c[2] ? tipItem(c[2]) : T(Mayus(c[1]), filas, par.length ? par[0][4] : L('Flujo'))) + '>' + cuadrito(xc, 125.6, c[0], 5) + '<text x="' + f1(xc + 7) + '" y="' + 125.6 + '" font-size="' + tamC + '" fill="' + BODY + '">' + c[1] + '</text></g>');
-          xc += anchos[j] + hueco;
-        });
+        claveColores(fijo);
         o.push(ejeMeses(d, N, 108.5, 116, R));
-        fijo.push('<text' + T('Dinero ajeno y caja', [['Máximo de dinero ajeno en uso', mdp(ajeno)], ['Caja mínima exigida', mdp(cajaMin)], ['Costo del dinero', mdp(num(v.costo_dinero))]], Ly(L('Versiones', 'max_ajeno'), 'Flujo V' + d.version + ' · caja mínima')) +
-          ' x="0" y="135" font-size="7.6" fill="' + BODY + '">' + (ajeno === null ? '' : 'Dinero ajeno máximo <tspan font-weight="700" fill="' + INK + '">' + mdp(ajeno) + '</tspan>') + '</text>');
+        fijo.push('<text' + tipAjeno() + ' x="0" y="135" font-size="7.6" fill="' + BODY + '">' + (ajeno === null ? '' : 'Dinero ajeno máximo <tspan font-weight="700" fill="' + INK + '">' + mdp(ajeno) + '</tspan>') + '</text>');
       }
       return grande ? o.join('') : panWrap('D', o.join(''), R, 0, 119) + fijo.join('');
+    }
+
+    /* Sin saldo acumulado (hay fotos del PPP de siempre que no lo traen): lo que entra y sale por trimestre, como
+       siempre, y abajo las series de saldo que sí llegaron (saldo del banco, dinero ajeno en uso, caja del
+       proyecto), tal cual. El saldo acumulado no se inventa: el cuadro dice que esta versión no lo trae. */
+    var LINEAS = [['saldo_banco', BAN, 'saldo del banco', 'Saldo del banco'], ['ajeno', CAP, 'dinero ajeno', 'Dinero ajeno en uso'], ['caja', CLIT, 'caja', 'Caja del proyecto']]
+      .filter(function (l) { return fila(d, l[0]).some(function (x) { return Math.abs(x || 0) > 0.0005; }); }).slice(0, 2);
+    function figura2(grande) {
+      var x0 = grande ? 48 : 1, R = grande ? regla(N, x0, 183) : reglaPan(N, x0, 183), fijo = [], AX = 24, yT = grande ? 52 : 54, yB = grande ? 104 : 100, fs = grande ? 6.2 : 7.2;
+      var o = columnas(R, AX), series = LINEAS.map(function (l) { return { l: l, s: fila(d, l[0]) }; }), max = 0.001, m;
+      series.forEach(function (x) { for (m = 0; m < N; m++) max = Math.max(max, x.s[m] || 0); });
+      var Y = function (val) { return yB - clamp(val || 0, 0, max) / max * (yB - yT); };
+      if (series.length) o.push('<line x1="' + R.x0 + '" y1="' + yB + '" x2="' + R.x1 + '" y2="' + yB + '" stroke="#cfc6b3" stroke-width="0.7"></line>');
+      series.forEach(function (x, j) {
+        var pts = [];
+        for (m = 0; m < N; m++) pts.push(f1(R.XE(m + 1)) + ',' + f1(Y(x.s[m])));
+        o.push('<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + x.l[1] + '" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"' + (j ? ' stroke-dasharray="3 2"' : '') + '></polyline>');
+        if (j === 0) {
+          var mm = 0; for (m = 0; m < N; m++) if ((x.s[m] || 0) > (x.s[mm] || 0)) mm = m;
+          var tl = T(mayus1(x.l[2]) + ', lo más alto', [[x.l[3], mdp(x.s[mm] || 0)], ['Mes', mm + 1]], L('Flujo', x.l[3].toLowerCase()));
+          o.push('<circle' + tl + ' cx="' + f1(R.XE(mm + 1)) + '" cy="' + f1(Y(x.s[mm])) + '" r="' + (grande ? 1.9 : 2.2) + '" fill="' + x.l[1] + '" stroke="#fffdf9" stroke-width="0.8"></circle>' +
+            '<text' + tl + ' x="' + f1(clamp(R.XE(mm + 1), R.x0 + 22, R.x1 - 22)) + '" y="' + f1(Y(x.s[mm]) - 4) + '" text-anchor="middle" font-size="' + fs + '" font-weight="700" fill="' + (x.l[1] === BAN ? INK : x.l[1]) + '">' + mdp(x.s[mm] || 0) + '</text>');
+        }
+      });
+      var franjas = '';
+      for (i = 0; i < N; i++) {
+        var fm = [['Entra de clientes', mdp(fila(d, 'cobranza')[i] || 0)], ['Sale a costos', mdp(fila(d, 'egresos')[i] || 0)]];
+        series.forEach(function (x) { fm.push([x.l[3], mdp(x.s[i] || 0)]); });
+        franjas += '<rect' + T('Mes ' + (i + 1), fm, L('Flujo', 'columna del mes ' + (i + 1))) + ' x="' + f1(R.X(i + 1)) + '" y="' + (yT - 3) + '" width="' + f1(R.pm) + '" height="' + (yB - yT + 6) + '" fill="#fffdf9" fill-opacity="0"></rect>';
+      }
+      o.push(franjas);
+      /* rótulo de las líneas, fijo (no se recorre de lado) */
+      var rot = '', xr = x0;
+      series.forEach(function (x, j) {
+        rot += '<line x1="' + f1(xr) + '" y1="' + (yT - 7.6) + '" x2="' + f1(xr + 9) + '" y2="' + (yT - 7.6) + '" stroke="' + x.l[1] + '" stroke-width="1.4"' + (j ? ' stroke-dasharray="3 2"' : '') + '></line>' +
+          '<text x="' + f1(xr + 12) + '" y="' + (yT - 5.4) + '" font-size="' + (grande ? 5.6 : 6.8) + '" fill="' + BODY + '">' + x.l[2] + '</text>';
+        xr += 12 + ancho(x.l[2], grande ? 5.6 : 6.8) + 8;
+      });
+      var nota = ajeno !== null ? 'Dinero ajeno máximo <tspan font-weight="700" fill="' + INK + '">' + mdp(ajeno) + '</tspan>' : '<tspan fill="' + MUTED + '">Esta versión no trae el saldo acumulado</tspan>';
+      if (grande) {
+        columnaTotales(o);
+        o.push('<text x="45" y="' + (AX - 2.6) + '" text-anchor="end" font-size="5.2" fill="' + MUTED + '">entra</text><text x="45" y="' + (AX + 6.6) + '" text-anchor="end" font-size="5.2" fill="' + MUTED + '">sale</text>');
+        o.push(rot, ejeMeses(d, N, 116, 123.4, R));
+        o.push('<text' + tipAjeno() + ' x="0" y="133" font-size="6.3" fill="' + BODY + '">' + nota + '</text>');
+        return o.join('');
+      }
+      claveColores(fijo);
+      o.push(ejeMeses(d, N, 108.5, 116, R));
+      fijo.push(rot, '<text' + tipAjeno() + ' x="0" y="135" font-size="7.6" fill="' + BODY + '">' + nota + '</text>');
+      return panWrap('D', o.join(''), R, 0, 119) + fijo.join('');
+    }
+    /* Sólo los totales (sin renglones por mes): dos barras, lo que entra y lo que sale, cada parte con su cifra. */
+    function figura3() {
+      var ent = entra.filter(function (it) { return (it[2] || 0) > 0.05; }), sal = sale.filter(function (it) { return (it[2] || 0) > 0.05; }), o = [];
+      var tope = Math.max(0.001, suma(ent.map(function (it) { return it[2]; })), suma(sal.map(function (it) { return it[2]; })));
+      [['Entra', ent, 8], ['Sale', sal, 60]].forEach(function (b) {
+        var x = 0, lx = 0;
+        o.push('<text x="0" y="' + b[2] + '" font-size="7.4" font-weight="700" letter-spacing="0.6" fill="' + MUTED + '">' + b[0].toUpperCase() + '</text>');
+        b[1].forEach(function (it) {
+          var w = Math.max(1.2, it[2] / tope * 184);
+          o.push('<rect' + tipItem(it) + ' x="' + f1(x) + '" y="' + (b[2] + 4) + '" width="' + f1(Math.max(0.6, w - 1)) + '" height="13" rx="2" fill="' + it[0] + '"></rect>');
+          x += w;
+        });
+        b[1].slice(0, 3).forEach(function (it) {
+          var txt = it[1] + ' ' + mdp(it[2]);
+          o.push('<g' + tipItem(it) + '>' + cuadrito(lx, b[2] + 30, it[0], 4.6) + '<text x="' + f1(lx + 6.5) + '" y="' + (b[2] + 30) + '" font-size="7.2" fill="' + BODY + '">' + it[1] + ' <tspan font-weight="700" fill="' + INK + '">' + mdp(it[2]) + '</tspan></text></g>');
+          lx += 12 + ancho(txt, 7.2);
+        });
+      });
+      o.push('<text x="0" y="121" font-size="7.4" fill="' + MUTED + '">Esta versión no trae su flujo mes a mes</text>');
+      if (ajeno !== null) o.push('<text' + tipAjeno() + ' x="0" y="133" font-size="7.6" fill="' + BODY + '">Dinero ajeno máximo <tspan font-weight="700" fill="' + INK + '">' + mdp(ajeno) + '</tspan></text>');
+      return o.join('');
     }
     var desglose = function (lista) {
       var out = [];
       lista.forEach(function (it) { out.push([Mayus(it[1]), mdp(it[2]), it[4]]); if (it[5].length > 1) it[5].forEach(function (f) { out.push(['· ' + f[0].toLowerCase(), f[1], f[2]]); }); });
       return out;
     };
+    var hayMes = function (c) { return fila(d, c).some(function (x) { return Math.abs(x || 0) > 0.0005; }); };
     var hay = d.flujo && d.flujo.meses && F.length && F.some(function (x) { return Math.abs(x || 0) > 0.0005; });
+    var nivel = hay ? 1 : (d.flujo && d.flujo.meses && (hayMes('cobranza') || hayMes('egresos')) ? 2 : ((total(d, 'cobranza') || 0) > 0.05 || (total(d, 'egresos') || 0) > 0.05 ? 3 : 0));
+    var vacio = sinDatos(184, 'Aún no hay flujo calculado', ajeno !== null ? 'Dinero ajeno máximo ' + mdp(ajeno) : 'Esta versión todavía no trae su flujo mes a mes.');
+    var saldoFilas = hay ? [
+      ['Lo que junta la preventa', junta > 0.05 ? '+' + mdp(junta) : '—', 'mes ' + (mh + 1) + ' · ' + L('Flujo', 'flujo acumulado')],
+      ['Lo más hondo', mdp(hoyo), 'mes ' + (mv + 1) + ' · ' + L('Flujo', 'flujo acumulado')]
+    ] : [['Saldo acumulado', 'sin dato', 'Esta versión no trae el flujo acumulado mes a mes']];
     return {
-      id: 'dinero', n: 5, titulo: 'Dinero', sub: 'entra, sale y saldo', svg: hay ? figura(false) : sinDatos(184, 'Aún no hay flujo calculado'), w: 184,
-      svgG: hay ? figura(true) : sinDatos(184, 'Aún no hay flujo calculado'), wG: 184, hG: 136,
-      aria: 'Dinero: lo más hondo ' + mdp(hoyo) + ' en el mes ' + (mv + 1) + ', dinero ajeno máximo ' + mdp(ajeno) + ', a repartir ' + mdp(fin),
-      detalle: [{ h: 'Entra (MDP)', filas: desglose(entra) }, { h: 'Sale (MDP)', filas: desglose(sale) }, { h: 'Saldo y dinero ajeno', filas: [
-        ['Lo que junta la preventa', junta > 0.05 ? '+' + mdp(junta) : '—', 'mes ' + (mh + 1) + ' · ' + L('Flujo', 'flujo acumulado')],
-        ['Lo más hondo', mdp(hoyo), 'mes ' + (mv + 1) + ' · ' + L('Flujo', 'flujo acumulado')],
+      id: 'dinero', n: 5, titulo: 'Dinero', sub: nivel === 1 ? 'entra, sale y saldo' : (nivel ? 'entra y sale' : ''), w: 184, wG: 184, hG: 136,
+      svg: nivel === 1 ? figura(false) : nivel === 2 ? figura2(false) : nivel === 3 ? figura3() : vacio,
+      svgG: nivel === 1 ? figura(true) : nivel === 2 ? figura2(true) : nivel === 3 ? figura3() : vacio,
+      aria: nivel === 1 ? 'Dinero: lo más hondo ' + mdp(hoyo) + ' en el mes ' + (mv + 1) + ', dinero ajeno máximo ' + mdp(ajeno) + ', a repartir ' + mdp(fin)
+        : 'Dinero: entra ' + mdp(total(d, 'cobranza')) + ' de clientes y sale ' + mdp(total(d, 'egresos')) + ' a costos; esta versión no trae el saldo acumulado',
+      detalle: [{ h: 'Entra (MDP)', filas: desglose(entra) }, { h: 'Sale (MDP)', filas: desglose(sale) }, { h: 'Saldo y dinero ajeno', filas: saldoFilas.concat([
         ['Resultado a repartir', mdp(num(v.resultado_repartir)), L('Versiones', 'resultado_repartir')],
         ['Dinero ajeno en uso, máximo', mdp(ajeno), L('Versiones', 'max_ajeno')],
         ['Crédito del banco, saldo máximo', mdp(num(v.banco_max)), L('Versiones', 'banco_max')],
@@ -604,7 +751,7 @@
         ['Caja mínima exigida', mdp(cajaMin), L('Flujo', 'caja mínima')],
         ['Caja al cierre', mdp(num(v.caja_cierre)), L('Versiones', 'caja_cierre')],
         ['Costo del dinero', mdp(num(v.costo_dinero)), L('Versiones', 'costo_dinero')]
-      ] }]
+      ]) }]
     };
   }
 
@@ -616,7 +763,7 @@
     var rows = [['Dueño', 'pone su terreno', TIE, ORO, pone, 'pone ' + mdp(pone), recibe, 'recibe ' + mdp(recibe), num(v.dueno_veces) ? '×' + v.dueno_veces.toFixed(2) : '',
       T('Dueño del terreno', [['Aporta su tierra', mdp(pone)], ['Recibe en total', mdp(recibe)], ['Veces el valor de su tierra', num(v.dueno_veces) ? v.dueno_veces.toFixed(2) + '×' : '—'], ['Recibe lo último en el mes', num(v.dueno_meses) || '—']], L('Versiones', 'dueno_aporta, dueno_recibe y dueno_veces'))]];
     if (capital > 0.05) rows.push(['Capital', 'pone efectivo', CAP, CAPT, capital, 'pone ' + mdp(capital), capRecibe, 'recibe ' + mdp(capRecibe), '×' + (capRecibe / capital).toFixed(2),
-      T('Capital', [['Aporta', mdp(capital)], ['Recibe con su rendimiento', mdp(capRecibe)], ['Rendimiento', mdp(num(v.rend_capital))], ['Tasa anual', pct(num(rp.tasa_capital), 0)], ['Liquidado en el mes', num(v.capital_mes) || '—']], Ly(L('Versiones', 'capital y rend_capital'), 'Flujo V' + d.version + ' · capital: pago'))]);
+      T('Capital', [['Aporta', mdp(capital)], ['Recibe con su rendimiento', mdp(capRecibe)], ['Rendimiento', mdp(num(v.rend_capital))], ['Tasa anual', pct(num(rp.tasa_capital), 0)], ['Liquidado en el mes', num(v.capital_mes) || '—']], Ly(L('Versiones', 'capital y rend_capital'), 'Flujo V' + d.version + ' · capital: pago' + Lded('Flujo', 'capital: pago')))]);
     rows.push(['Alianza', 'pone trabajo y gestión', CLI, CLIT, 0, 'sin dinero propio', alianza, 'recibe ' + mdp(alianza) + ' de utilidad', '',
       T('Alianza desarrolladora', [['Recibe', mdp(alianza)], ['Su parte de la utilidad', pct(num(rp.parte_alianza), 0)]], L('Versiones', 'alianza_recibe'))]);
     var paso = rows.length === 3 ? 39 : 52;
@@ -811,7 +958,19 @@
   }
 
   /* ───────────────────────── la pantalla ───────────────────────── */
-  function cuadros(d) { VER = d.version || 0; ORIGEN = typeof d.origen === 'string' ? d.origen.trim().slice(0, 120) : ''; return [cReparto(d), cTerreno(d), cProducto(d), cTiempo(d), cCosto(d), cDinero(d), cRiesgo(d)]; }
+  function cuadros(d) {
+    VER = d.version || 0; ORIGEN = typeof d.origen === 'string' ? d.origen.trim().slice(0, 120) : '';
+    DED = d.deducido && typeof d.deducido === 'object' && !Array.isArray(d.deducido) && Object.keys(d.deducido).length ? d.deducido : null;
+    return [cReparto(d), cTerreno(d), cProducto(d), cTiempo(d), cCosto(d), cDinero(d), cRiesgo(d)];
+  }
+  /* El origen de una cifra, con su nota «deducido de …» aparte: en la leyenda va abierta; en la hoja, tras un chip. */
+  var ICONO_DED = '<svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.4"></circle><path d="M5.2 6.6h5.6M5.2 9.6h5.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path></svg>';
+  function origenTip(o) { var p = partesOrigen(o); return (p.base ? '<small>' + esc(p.base) + '</small>' : '') + (p.ded ? '<small class="vz-tip-ded">' + ICONO_DED + '<span>' + esc(mayus1(p.ded)) + '</span></small>' : ''); }
+  function origenFila(o) {
+    var p = partesOrigen(o);
+    if (!p.ded) return p.base ? '<small>' + esc(p.base) + '</small>' : '';
+    return '<small>' + (p.base ? esc(p.base) + ' ' : '') + '<button type="button" class="vz-ded" aria-expanded="false">' + ICONO_DED + 'deducido</button></small><small class="vz-ded-txt" hidden>' + esc(mayus1(p.ded)) + '</small>';
+  }
   function svgDe(c, grande) {
     if (grande) return '<svg viewBox="0 0 ' + (c.wG || c.w) + ' ' + (c.hG || 136) + '" class="vz-svg-g" role="img" aria-label="' + esc(c.aria) + '">' + (c.svgG || c.svg) + '</svg>';
     return '<svg viewBox="0 0 ' + c.w + ' 136" width="' + c.w + '" height="136" role="img" aria-label="' + esc(c.aria) + '"' + (/class="vz-pan"/.test(c.svg) ? ' class="vz-panea"' : '') + '>' + c.svg + '</svg>';
@@ -859,22 +1018,36 @@
       return m.img && /^data:image\//.test(m.img) ? '<img src="' + esc(m.img) + '" alt="' + esc(m.nombre) + '">' : '<span>' + esc(m.nombre) + '</span>';
     }).join('') + '</div>';
   }
-  function pinta(d, marcas) {
-    var cs = cuadros(d);
+  /* `op.sinElige`: la página con pestañas lleva el selector de Dirección en «Opciones», no arriba del plan. */
+  function pinta(d, marcas, op) {
+    var cs = cuadros(d), hayDed = !!DED;
+    op = op || {};
     return {
       cuadros: cs,
-      html: encabezado(d) + eligeHtml(d) + selector(d) + (d.a_medias ? '<p class="vz-aviso">El plan está recalculando esta versión: las cifras pueden moverse.</p>' : '') +
+      html: encabezado(d) + (op.sinElige ? '' : eligeHtml(d)) + selector(d) + (d.a_medias ? '<p class="vz-aviso">El plan está recalculando esta versión: las cifras pueden moverse.</p>' : '') +
         '<main class="vz-grid">' + cs.map(tarjeta).join('') + '</main>' + pieMarcas(marcas) +
-        '<footer class="vz-pie"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg><span>Cifras en millones de pesos · Confidencial: quien tenga esta liga ve el plan. No la reenvíes.</span></footer>'
+        '<footer class="vz-pie"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg><span>Cifras en millones de pesos · Confidencial: quien tenga esta liga ve el plan. No la reenvíes.</span></footer>' +
+        (hayDed ? '<p class="vz-pie vz-pie-ded">' + ICONO_DED + '<span>Algunas cifras se deducen de las del motor: toca una para ver de qué salen.</span></p>' : '')
     };
   }
+  /* Qué es cada cuadro, dicho para quien no es financiero (sale arriba de su hoja). */
+  var QUE = {
+    reparto: 'Quién pone qué y cuánto recibe al final. «Veces lo que puso» compara lo que recibe con lo que puso.',
+    terreno: 'El terreno, lo que se construye en él y la parte que se puede vender.',
+    producto: 'Lo que se vende: cada tipo de unidad, cuántas son y cuánto suman sus ventas.',
+    tiempo: 'Cuándo se vende, cuándo se construye y cuándo se cobra y se reparte, en meses desde el arranque.',
+    costo: 'De todo lo que se vende, cuánto se va a cada costo y cuánto queda de utilidad.',
+    dinero: 'Lo que entra y lo que sale con el tiempo, y quién pone el dinero mientras lo vendido todavía no alcanza.',
+    riesgo: 'Las nueve pruebas que revisa un banco antes de prestar, y cómo aguanta el plan si las cosas salen peor.'
+  };
   function detalleHtml(c) {
     return '<div class="vz-m-head"><span class="vz-asa" aria-hidden="true"></span><div><h2 class="vz-tit" id="vzMTit">' + esc(c.titulo) + '</h2><span class="vz-sub">' + c.sub + '</span></div>' +
-      '<button type="button" class="vz-x" aria-label="Cerrar"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></button></div><div class="vz-m-fig">' + svgDe(c, true) + '</div>' +
+      '<button type="button" class="vz-x" aria-label="Cerrar"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></button></div>' +
+      (QUE[c.id] ? '<p class="vz-m-que">' + esc(QUE[c.id]) + '</p>' : '') + '<div class="vz-m-fig">' + svgDe(c, true) + '</div>' +
       '<p class="vz-m-pista">Toca una cifra o una figura para ver qué hay detrás y de dónde sale. Cifras en millones de pesos.</p>' +
       c.detalle.map(function (s) {
         return '<h3>' + esc(s.h) + '</h3><dl>' + s.filas.map(function (f) {
-          return '<div><dt>' + esc(f[0]) + '</dt><dd>' + esc(f[1]) + '</dd>' + (f[2] ? '<small>' + esc(f[2]) + '</small>' : '') + '</div>';
+          return '<div><dt>' + esc(f[0]) + '</dt><dd>' + esc(f[1]) + '</dd>' + (f[2] ? origenFila(f[2]) : '') + '</div>';
         }).join('') + '</dl>';
       }).join('');
   }
@@ -916,7 +1089,11 @@
         marco.style.height = (Math.max(1, caja.offsetHeight) * s) + 'px';
         return;
       }
-      var W = doc.documentElement.clientWidth || win.innerWidth, H = win.innerHeight, ancha = W >= 960 && W > H * 1.15, base = ancha ? BASE4 : BASE;
+      /* con la pestaña Plan oculta no hay qué medir: se ajusta al volver a ella. La barra de pestañas (fija abajo)
+         no cuenta como alto disponible. */
+      if (!marco.offsetParent) return;
+      var barra = doc.getElementById('vzBarra'), hb = barra && !barra.hidden ? Math.max(0, win.innerHeight - barra.getBoundingClientRect().top) : 0;
+      var W = doc.documentElement.clientWidth || win.innerWidth, H = Math.max(200, win.innerHeight - hb), ancha = W >= 960 && W > H * 1.15, base = ancha ? BASE4 : BASE;
       caja.classList.toggle('vz-4', ancha);
       caja.style.width = base + 'px';
       alto = Math.max(1, caja.offsetHeight); s = W / base;
@@ -943,7 +1120,7 @@
       var cs = cuadros(d), antes = firmas, ahora = {};
       act = cs;
       quitaEsqueleto();
-      caja.innerHTML = op.incrustado ? soloCuadros(cs) : pinta(d, marcas).html;
+      caja.innerHTML = op.incrustado ? soloCuadros(cs) : pinta(d, marcas, { sinElige: op.sinElige }).html;
       cs.forEach(function (c) { ahora[c.id] = c.svg; });
       if (marca) Array.prototype.forEach.call(caja.querySelectorAll('.vz-card'), function (el) {
         var id = el.getAttribute('data-card');
@@ -970,6 +1147,7 @@
       quitaBurbuja();
       if (repinta) { hoja.scrollTop = top; return; }
       previo = doc.activeElement;
+      modal._vzTurno = (modal._vzTurno || 0) + 1;   // cada apertura es un turno: lo que quedó pendiente de la anterior ya no la cierra
       modal.setAttribute('data-abierto', id);
       modal.classList.remove('vz-baja');
       hoja.style.transform = '';
@@ -991,11 +1169,13 @@
       if (previo && previo.focus && doc.contains(previo)) { try { previo.focus({ preventScroll: true }); } catch (e) { } }
       else { var card = caja.querySelector('[data-card="' + (modal._vzUltimo || '') + '"]'); if (card) try { card.focus({ preventScroll: true }); } catch (e) { } }
       previo = null;
-      if (!desdeHistoria) { try { if (win.history.state && win.history.state.vz) win.history.back(); } catch (e) { } }
+      /* el «atrás» que pide este cierre llega después (es asíncrono): se cuenta para que, si mientras tanto se abrió
+         otra hoja, no la cierre */
+      if (!desdeHistoria) { try { if (win.history.state && win.history.state.vz) { modal._vzAtras = (modal._vzAtras || 0) + 1; win.history.back(); } } catch (e) { } }
     }
     /* bajar la hoja con el dedo: desde el asa o el encabezado; si baja lo suficiente (o rápido), se cierra */
     function bajaConGesto(y0, t0, id) {
-      var dy = 0;
+      var dy = 0, turno = modal._vzTurno;
       return {
         mueve: function (y) { dy = Math.max(0, y - y0); hoja.style.transform = dy ? 'translateY(' + dy + 'px)' : ''; },
         suelta: function (y, t) {
@@ -1004,7 +1184,7 @@
             if (reducido()) { cierra(); return; }
             modal.classList.add('vz-baja');
             hoja.style.transform = 'translateY(110%)';
-            setTimeout(function () { if (abierto() === id) cierra(); }, 200);
+            setTimeout(function () { if (abierto() === id && modal._vzTurno === turno) cierra(); }, 200);
           } else {
             hoja.style.transition = 'transform .18s ease-out'; hoja.style.transform = '';
             setTimeout(function () { hoja.style.transition = ''; }, 200);
@@ -1024,7 +1204,7 @@
       try { t = JSON.parse(el.getAttribute('data-t')); } catch (e) { return; }
       quitaBurbuja();
       el.classList.add('vz-sel');
-      burbuja.innerHTML = '<b>' + esc(t.t) + '</b>' + (t.f || []).map(function (f) { return '<div><span>' + esc(f[0]) + '</span><span>' + esc(f[1]) + '</span></div>'; }).join('') + (t.o ? '<small>' + esc(t.o) + '</small>' : '');
+      burbuja.innerHTML = '<b>' + esc(t.t) + '</b>' + (t.f || []).map(function (f) { return '<div><span>' + esc(f[0]) + '</span><span>' + esc(f[1]) + '</span></div>'; }).join('') + (t.o ? origenTip(t.o) : '');
       burbuja.hidden = false;
       modal._vzTop = hoja.scrollTop;
       var w = burbuja.offsetWidth, h = burbuja.offsetHeight, W = doc.documentElement.clientWidth || win.innerWidth, H = win.innerHeight, aire = dedo ? 34 : 14;
@@ -1112,6 +1292,13 @@
       win.addEventListener('resize', function () { modal._vz.ajusta(); });
       doc.addEventListener('pointerdown', function (e) { tipo = e.pointerType || 'mouse'; }, true);
       modal.addEventListener('click', function (e) {
+        var ded = cerca(e, '.vz-ded');
+        if (ded) {                                   // el chip «deducido»: abre y cierra su nota
+          var abierta = ded.getAttribute('aria-expanded') === 'true', nota = ded.parentNode.nextElementSibling;
+          ded.setAttribute('aria-expanded', abierta ? 'false' : 'true');
+          if (nota && /vz-ded-txt/.test(nota.className)) nota.hidden = abierta;
+          return;
+        }
         var t = cerca(e, '.vz-t'), dedo = tipo !== 'mouse';
         if (e.target === modal || cerca(e, '.vz-x')) { modal._vz.cierra(); return; }
         if (!t && dedo && cerca(e, '.vz-m-fig')) t = modal._vz.cercana(e.clientX, e.clientY);
@@ -1123,6 +1310,10 @@
         var t = cerca(e, '.vz-t');
         if (t) modal._vz.pon(t, e.clientX, e.clientY, false); else if (!burbuja.hidden) modal._vz.quita();
       });
+      /* Chromium: el gesto rápido de bajar la hoja deja un «fling» aunque el encabezado no se desplace, y el
+         siguiente toque (hasta ~½ s después) se gasta en detenerlo: no llega su click. Cancelar touchstart en el
+         encabezado evita que nazca ese gesto; los eventos de puntero, que mueven la hoja, siguen llegando. */
+      hoja.addEventListener('touchstart', function (e) { var t = e.target; if (t.closest && t.closest('.vz-m-head') && !t.closest('.vz-x')) e.preventDefault(); }, { passive: false });
       /* en el pop-up, con el dedo: deslizar de lado recorre la figura; desde el encabezado, bajar cierra */
       hoja.addEventListener('pointerdown', function (e) {
         if (!e.isPrimary || !(e.target.closest && e.target.closest('.vz-m-head')) || (e.target.closest && e.target.closest('.vz-x'))) return;
@@ -1149,13 +1340,14 @@
           if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && (i < 0 || i === f.length - 1)) { e.preventDefault(); f[0].focus(); }
         }
       });
-      win.addEventListener('popstate', function () { modal._vz.cierra(true); });
+      win.addEventListener('popstate', function () { if (modal._vzAtras > 0) { modal._vzAtras--; return; } modal._vz.cierra(true); });
     } else modal._vz = { cierra: cierra, pon: ponBurbuja, quita: quitaBurbuja, ajusta: ajusta, cercana: cercana, gesto: bajaConGesto, abierto: abierto };
     if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(ajusta);
     return { muestra: muestra, mensaje: mensaje, cierra: cierra, ajusta: ajusta, olvida: olvida };
   }
 
-  var api = { CADA_MS: CADA_MS, eligeHtml: eligeHtml, pinta: pinta, cuadros: cuadros, soloCuadros: soloCuadros, detalleHtml: detalleHtml, monta: monta, fechaCorta: fechaCorta, PRUEBAS: PRUEBAS, estadoPrueba: estadoPrueba, ENDPOINT: ENDPOINT };
+  var api = { CADA_MS: CADA_MS, eligeHtml: eligeHtml, pinta: pinta, cuadros: cuadros, soloCuadros: soloCuadros, detalleHtml: detalleHtml, monta: monta, fechaCorta: fechaCorta, PRUEBAS: PRUEBAS, estadoPrueba: estadoPrueba, ENDPOINT: ENDPOINT,
+    rutasDe: rutasDe, fraseDeducido: fraseDeducido, partesOrigen: partesOrigen, esc: esc, mdp: mdp, ent: ent, num: num };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; }
   root.VisorPPP = api;
   if (!root.document || !root.document.getElementById || !root.document.getElementById('vz')) return;   // sólo la página del visor sigue de aquí
@@ -1194,8 +1386,12 @@
     if (aviso && texto && clase) aviso.textContent = texto;
     if (clase === 'vz-nuevo' && !/Abriendo/.test(texto || '')) regreso = setTimeout(function () { var b = $('vzVivo'); if (b && /vz-nuevo/.test(b.className)) { b.className = 'vz-vivo'; b.lastChild.textContent = b.getAttribute('data-base') || 'En vivo'; } }, 8000);
   }
+  /* Las pestañas (visor-pestanas.js): Historial, Archivos y Opciones. Si no cargaron, el visor es el de siempre. */
+  var P = null;
+  function avisaPestanas(que, a, b) { if (P && typeof P[que] === 'function') { try { P[que](a, b); } catch (e) { } } }
   function seApago() {
     estado.liga = ''; clearTimeout(estado.reloj);
+    avisaPestanas('apaga');
     lienzo.mensaje('Esta liga ya no está activa', 'Pide una nueva a quien te la compartió.', 'llave');
   }
   function muestra(d, primera) {
@@ -1203,6 +1399,7 @@
     estado.ultimo = d;
     lienzo.muestra(d, estado.marcas, !primera);
     doc.title = ((d.plan && d.plan.nombre) || 'Plan de Potencial') + ' · en vivo';
+    avisaPestanas('pinta', d, !!primera);
   }
   function carga(primera) {
     var turno = ++estado.turno;
@@ -1210,7 +1407,7 @@
       if (turno !== estado.turno) return;
       if (!j || !j.ok) {
         if (j && (j.error === 'liga' || j.error === 'plan')) seApago();
-        else if (primera) lienzo.mensaje('No pude abrir el plan', 'Vuelve a intentar en un momento.', 'falla');
+        else if (primera) { avisaPestanas('apaga'); lienzo.mensaje('No pude abrir el plan', 'Vuelve a intentar en un momento.', 'falla'); }
         else vivo('vz-off', 'No pude abrirlo · reintentando');
         return;
       }
@@ -1280,19 +1477,31 @@
         avisoElige('No se pudo cambiar: todos siguen viendo ' + (antes ? '«' + nombreElige(antes) + '»' : 'la versión de antes') + '. Intenta otra vez.', true);
       });
   }
+  /* Escoger otro terreno o versión (los selectores del plan o una tarjeta de «Opciones»). */
+  function escoge(x) {
+    if (x.plan) { estado.plan = x.plan; estado.v = x.v || 0; } else estado.v = x.v;
+    estado.llave = ''; lienzo.olvida(); vivo('vz-nuevo', 'Abriendo…');
+    carga(false).catch(function () { vivo('vz-off', 'Sin conexión · reintentando'); });
+  }
+  /* Lo que las pestañas pueden pedirle a la página. No escriben nada: la única escritura sigue siendo `elige`. */
+  var pagina = {
+    ENDPOINT: ENDPOINT,
+    liga: function () { return estado.liga; },
+    plan: function () { var d = estado.ultimo; return estado.plan || (d && d.menu && d.menu.plan) || ''; },
+    datos: function () { return estado.ultimo || null; },
+    escoge: escoge,
+    elige: elige,
+    ajusta: function () { if (lienzo) lienzo.ajusta(); },
+    confirma: function () { if (estado.liga && !estado.enVuelo) late(); },   // un recurso de las pestañas dijo «liga»: el sondeo lo confirma
+    aviso: function (t) { var a = $('vzAviso'); if (a && t) a.textContent = t; }
+  };
   function arranca() {
-    lienzo = monta($('vz'), {
-      alElegir: elige,
-      alEscoger: function (x) {
-        if (x.plan) { estado.plan = x.plan; estado.v = 0; } else estado.v = x.v;
-        estado.llave = ''; lienzo.olvida(); vivo('vz-nuevo', 'Abriendo…');
-        carga(false).catch(function () { vivo('vz-off', 'Sin conexión · reintentando'); });
-      }
-    });
     estado.liga = ligaDeLaDireccion();
+    if (estado.liga && root.VisorPestanas && typeof root.VisorPestanas.monta === 'function') { try { P = root.VisorPestanas.monta(pagina); } catch (e) { P = null; } }
+    lienzo = monta($('vz'), { alElegir: elige, alEscoger: escoge, sinElige: !!P });
     if (!estado.liga) { lienzo.mensaje('Falta la liga', 'Abre el visor desde la liga completa que te compartieron.', 'llave'); return; }
     if (!$('vzEsq')) lienzo.mensaje('Abriendo el plan…', 'Leyendo el libro.');   // el esqueleto de visor.html ya dice «abriendo»
-    carga(true).catch(function () { lienzo.mensaje('No pude abrir el plan', 'Revisa tu conexión y vuelve a intentar.', 'falla'); });
+    carga(true).catch(function () { avisaPestanas('apaga'); lienzo.mensaje('No pude abrir el plan', 'Revisa tu conexión y vuelve a intentar.', 'falla'); });
     root.addEventListener('offline', function () { vivo('vz-off', 'Sin conexión · reintentando'); });
     root.addEventListener('online', function () { estado.quieto = 0; late(); });
     programa();
