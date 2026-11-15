@@ -1,6 +1,6 @@
 # El visor en vivo con los casos del PPP de siempre (PPP 1)
 
-Decisiones de Dirección del 15-nov-2026. Estado: contrato, núcleo, módulos por motor (vertical, macrolotes, residencial, unifamiliar) y servidor listos en el repo. Faltan publicar el servidor, cargar `PPP_VISOR` y dar las ligas.
+Decisiones de Dirección del 15-nov-2026. Estado: contrato, núcleo, módulos por motor (vertical, macrolotes, residencial, unifamiliar) y servidor listos en el repo. El 15-nov se publicó el servidor (versión nueva de la implementación de siempre), se creó y cargó `PPP_VISOR` y se puso el renglón `potenciales_id` en `Config` del vivero. Falta dar las ligas.
 
 El visor (`visor.html`) nació para los planes con libro del PPP 2. Ahora también enseña los casos del PPP 1. Lo hace con **fotos**: un registro fechado de lo que el motor real de cada tablero calcula para cada versión de un caso. El servidor sirve esas fotos tal cual y no calcula nada.
 
@@ -37,7 +37,7 @@ Un renglón por (caso, versión). Columnas, en este orden (`COLUMNAS` del núcle
 
 **Lo escribe un solo agente (P5) y sólo con el visto bueno de Dirección.** Nunca se borra un renglón: una foto nueva de la misma versión va abajo y el servidor toma la más reciente. Si la más reciente quedó `propuesta`, esa versión deja de servirse (aunque haya una `lista` anterior); si era la elegida, el caso no se sirve por `ppp:<caso_id>` hasta que Dirección elija otra. `calculado` se escribe como texto. Si Sheets lo convierte en fecha, el servidor lo devuelve a la misma forma.
 
-**Al volver a fotografiar un caso,** quien escribe conserva la elección de Dirección: si una versión del caso trae `elegida_por`, la foto nueva de esa versión lleva `elegida` = `sí` y las demás van sin marcar. Si no, la marca por omisión del lote nuevo (la última) queda más abajo y es la que manda.
+**Al volver a fotografiar un caso (también al reescribir fotos ya completadas), la columna `elegida` se conserva.** Antes de escribir, quien escribe lee de la pestaña qué versión de cada caso tiene hoy `elegida` = `sí` (si hay dos, la de más abajo) y pone `elegida` = `sí` en la foto nueva de esa misma versión, con su `elegida_por` y `elegida_fecha` si los trae, aunque la marca haya sido la de omisión. Las demás fotos nuevas del caso van sin marcar y no se vuelve a calcular la marca por omisión de un caso que ya tiene una. Los renglones anteriores no se tocan. Sólo un caso que entra por primera vez lleva la marca por omisión (su última versión `lista`). Si la foto nueva de la versión marcada queda `propuesta`, la marca no se mueve a otra versión: el caso deja de servirse por `ppp:<caso_id>` y se le avisa a Dirección para que elija.
 
 ## Cómo se toma una foto
 
