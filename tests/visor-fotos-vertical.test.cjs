@@ -150,10 +150,10 @@ test('lo que el motor no produce va en null, nunca en 0', () => {
 
 test('números del libro con formato es-MX', () => {
   assert.equal(V.numeroLibro('1.234,5'), 1234.5);
-  assert.equal(V.numeroLibro('(16.308.143)'), -16308143);
+  assert.equal(V.numeroLibro('(12.345.678)'), -12345678);
   assert.equal(V.numeroLibro('–'), 0);
   assert.equal(V.numeroLibro('0,62'), 0.62);
-  assert.equal(V.numeroLibro('3.837'), 3837);
+  assert.equal(V.numeroLibro('4.512'), 4512);
   assert.equal(V.numeroLibro(''), null);
   assert.equal(V.numeroLibro('TRUE'), 1);
   assert.equal(V.numeroLibro(12.5), 12.5);

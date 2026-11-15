@@ -84,7 +84,7 @@ function numeroLibro(x) {
   s = s.replace(/[$\s%]/g, '');
   if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.');
   else if (s.includes(',')) s = s.replace(',', '.');
-  else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');  // 3.837 con miles es-MX
+  else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');  // 4.512 con miles es-MX
   const n = Number(s);
   if (!Number.isFinite(n)) return null;
   return neg ? -n : n;
