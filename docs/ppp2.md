@@ -415,6 +415,59 @@ cuántas veces se abrió y se apaga o se vuelve a encender. Es `POST tipo=ppp2-l
 `apagar` o `activar`): escribe sólo en la hoja `Ligas` del vivero (la crea, con `Aperturas`, la primera
 vez), deja renglón en la bitácora del vivero sin copiar la liga completa y **no toca ningún libro**.
 
+### Fotos de casos del PPP de siempre (15-nov-2026)
+
+El mismo visor enseña también casos del PPP de siempre (PPP 1), **sin calcular nada y sin abrir sus
+libros**: sirve una «foto» ya hecha de cada versión. Contrato completo en `docs/visor-ppp1.md`.
+
+- **Dónde viven:** pestaña `PPP_VISOR` del libro «YOD - POTENCIALES» (no el vivero), un renglón por
+  (caso, versión), con columnas `caso_id | tipo | escenario_id | escenario_nombre | estado | elegida |
+  elegida_por | elegida_fecha | orden | motor_commit | huella_entradas | calculado | origen |
+  conciliacion | visor_json` (se leen por encabezado). El id de ese libro llega por el renglón
+  `potenciales_id` de `Config` del vivero; nunca va en el repo. Sin ese renglón, sin la pestaña o sin
+  acceso, el visor responde «sin plan» (`error: 'plan'`) y lo demás sigue igual.
+- **Cómo se piden:** en `Ligas`, un `plan_id` = `ppp:<caso_id>` o `ppp:<caso_id>:<escenario_id>`, solo o
+  mezclado con planes con libro (cada uno con su etiqueta). La ficha con sesión acepta el mismo
+  `plan=ppp:…` con el mismo permiso de siempre (sesión del Portero con `PT`); para una foto no ofrece
+  «Compartir visor» (sus ligas se dan en la hoja). El id se valida con una expresión estricta
+  (`VISOR.FOTO_RE`); uno mal formado no se busca.
+- **Cuál se sirve:** de cada versión manda su foto **más reciente** (la de más abajo); si esa quedó
+  `propuesta`, la versión no se sirve, aunque haya una `lista` anterior. `ppp:<caso_id>` sirve la versión
+  **elegida** (`elegida` = `sí`, una por caso) con su foto más reciente; si la elegida no se puede servir,
+  el caso responde «sin plan» (no se pone otra en su lugar); si ninguna está elegida, la de mayor `orden`
+  entre las que se pueden servir. `ppp:<caso_id>:<escenario_id>` sirve siempre esa versión. Un caso sin
+  escenarios tiene un solo renglón con `escenario_id` vacío y se sirve por `ppp:<caso_id>`.
+- **Qué sale:** la forma `ppp2-visor-v1` (más `origen`) tomada del `visor_json`, **clave por clave y con
+  su tipo** (`fotoLimpia_`): números finitos o `null`, textos recortados, sí/no; lo que no es de la forma
+  no sale. Así la foto no pisa lo que arma el servidor (`ok`, `llave`, `menu`, `puede`, `elige`, `marcas`…)
+  ni mete marcado donde la página espera un número. Se revisa que sea un objeto y que no pase de 50 000
+  caracteres; no salen `elegida_por`, `motor_commit` ni nombres de personas. `version` y `plan.mostrada`
+  son el `orden` del renglón; `versiones` trae sólo la versión servida (la lista completa sólo la ve quien
+  aprueba, en `elige`). Si la servida es la elegida, el servidor la rotula vigente: `v.estado` =
+  `vigente`, `plan.vigente` = su número y en `origen` «versión vigente». Las versiones de la liga no
+  aplican.
+- **«¿Cambió?»:** la llave de una foto es su `huella_entradas` + `calculado`, qué versión es y cuál es
+  la buena del caso (así cambia cuando Dirección cambia la elegida, también para quien mira una versión
+  fija). El índice de la pestaña (sin `visor_json`) se comparte dos segundos entre quienes miran, como
+  la llave de un plan; el JSON sólo se vuelve a leer cuando la llave cambia.
+- **Dirección escoge «la buena».** Si `ppp2-visor` trae además `k` (sesión del Portero, por liga o por la
+  ficha) y su rol puede aprobar (`roles_aprobar` de `Config`), la respuesta de un plan-foto agrega
+  `elige: { versiones: [{ v, nombre, buena }] }` (`v` = `escenario_id`, por `orden`; `buena` = la que
+  sirve `ppp:<caso_id>`). Sin `k`, con una sesión que no vale o sin ese rol, el campo no sale y nada más
+  cambia. Para cambiarla: `POST {tipo: 'ppp2-elige', k, plan, v, request_id}` (sólo quien aprueba;
+  `plan` puede ser `ppp:<caso>` o `ppp:<caso>:<esc>`, se elige para el caso). Mueve `elegida`, anota
+  `elegida_por` y `elegida_fecha` en la foto más reciente de esa versión (y los borra de las demás del
+  caso), deja renglón `visor-elige` en la bitácora del vivero, borra el índice guardado y responde
+  `{ok: true, llave}` (la llave que verá la ficha con sesión). Idempotente: por `request_id`, y elegir la
+  que ya es la buena no escribe nada; con `pausa` = `sí` no escribe. `v` vacío elige la versión única de
+  un caso sin escenarios. Errores: `permiso`, `plan`, `version` (no existe), `propuesta` (su foto más
+  reciente no concilió: no se elige), `hoja` (faltan las columnas de elección). Los visores la siguen en lo que
+  tardan en preguntar «¿cambió?» (unos segundos).
+- **Los planes con libro no se eligen así:** su versión mostrada (`plan.version_mostrada` = `Plan!B6`)
+  es la `vigente` del libro y, si no hay, la `propuesta`; cambiarla es aprobar una versión
+  (`ppp2-version`, que ya exige `admin`). Por eso `ppp2-elige` responde `plan` para ellos y no llevan
+  `elige`.
+
 ## Un solo PPP: los planes con libro se abren desde el PPP de siempre (14-nov-2026)
 
 Dirección pidió unificar: el PPP de siempre es la entrada y lo que nació aquí como «PPP 2» pasa a ser

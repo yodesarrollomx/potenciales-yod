@@ -481,7 +481,7 @@ function doPost(e) {
 /* La respuesta de una escritura trae el plan ya leído (y lo deja en la caché): la página lo pinta sin volver a
    pedirlo. Se lee fuera del candado, y sólo si sobra tiempo; si algo falla, la página lo pide como antes. */
 function conPlan_(s, b, res, t0) {
-  if (!res || !res.ok || !b || !b.plan || String(b.tipo) === 'ppp2-sembrar' || String(b.tipo) === 'ppp2-liga' || Date.now() - t0 > PPP2.CON_PLAN_MS) return res;
+  if (!res || !res.ok || !b || !b.plan || String(b.tipo) === 'ppp2-sembrar' || String(b.tipo) === 'ppp2-liga' || String(b.tipo) === 'ppp2-elige' || Date.now() - t0 > PPP2.CON_PLAN_MS) return res;
   try { var pl = plan_get_(s, b.plan, true); if (pl && pl.ok) res.plan = pl; } catch (x) { }
   return res;
 }
@@ -490,6 +490,7 @@ function accion_(s, b, rid) {
   var tipo = String(b.tipo || '');
   if (tipo === 'ppp2-sembrar') return sembrar_(s, b, rid);
   if (tipo === 'ppp2-liga') return liga_(s, b, rid);              // ligas del visor (Visor.gs): sólo la hoja Ligas del vivero, ningún libro
+  if (tipo === 'ppp2-elige') return elige_(s, b, rid);            // «la buena» de un caso del PPP 1 (Visor.gs): sólo la pestaña PPP_VISOR, ningún libro
   var p = planPorId_(b.plan);
   if (!p) return { ok: false, error: 'plan' };
   var libro = libro_(p), rev = revision_(libro);
