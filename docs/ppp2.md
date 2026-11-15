@@ -510,7 +510,8 @@ recursos de Historial y Archivos lo documenta el servidor en «Pestañas del vis
   varios terrenos y varias versiones, agrupadas por terreno) con tres cifras que el servidor ya da —ventas,
   ganancia y lo que recibe el dueño (y cuántas veces su tierra)—, su terreno, la marca «vigente» y «viendo
   ahora». Las otras opciones se leen al abrir la pestaña con el mismo `ppp2-visor` (`&plan=`, `&v=`; sin
-  sesión, sin `abre`, tres a la vez). Tocar una la abre en Plan. «Comparar las n opciones lado a lado» va a
+  sesión, sin `abre`, tres a la vez; una que no se pudo leer se vuelve a pedir al regresar a la pestaña). Tocar
+  una la abre en Plan. «Comparar las n opciones lado a lado» va a
   `visor-comparar.html#l=<liga>`; con una sola opción, su tarjeta y una frase que lo explica.
 - **«deducido de …»:** si la respuesta trae `deducido` (`{ "<ruta>": "<de qué sale>" }`, de las fotos del
   PPP de siempre), cada leyenda cuya cifra sale de una ruta marcada agrega, aparte del origen, «Deducido de

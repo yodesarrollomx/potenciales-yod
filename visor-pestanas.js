@@ -710,7 +710,7 @@
     function cargaOpciones() {
       var d = pagina.datos();
       if (!d || ops.corriendo || apagado || Date.now() - ops.t < FRESCO_MS) return;
-      var pendientes = listaOpciones().filter(function (o) { return !o.listo; });
+      var pendientes = listaOpciones().filter(function (o) { return !o.listo || o.error; });   // una que falló se vuelve a pedir al regresar a la pestaña
       if (!pendientes.length) { ops.t = Date.now(); return; }
       ops.corriendo = true;
       var base = ops.base, enCurso = 0, i = 0;
@@ -725,6 +725,7 @@
         if (ops.base !== base) return;
         while (enCurso < 3 && i < pendientes.length) (function (o) {
           enCurso++; i++;
+          if (o.error) { o.error = false; o.listo = false; o.cargando = true; }
           trae(o).then(function (j) {
             if (ops.base !== base) return;
             if (j && j.ok && j.menu) {
@@ -761,6 +762,11 @@
         '<div class="vzp-hoja-tits"><h2 id="' + id + '">' + esc(o.titulo) + '</h2>' + (o.sub ? '<p>' + esc(o.sub) + '</p>' : '') + '</div><div class="vzp-hoja-acc"></div>' +
         '<button type="button" class="vzp-x" aria-label="Cerrar">' + ico('cerrar') + '</button></div><div class="vzp-hoja-cuerpo"></div></div>';
       doc.body.appendChild(capa);
+      /* como en la hoja de los cuadros: que el gesto de bajarla desde el encabezado no deje un «fling» que se coma
+         el siguiente toque (los botones y ligas del encabezado siguen tocándose) */
+      capa.querySelector('.vzp-hoja-cab').addEventListener('touchstart', function (e) {
+        if (!(e.target.closest && e.target.closest('button, a'))) e.preventDefault();
+      }, { passive: false });
       var h = { capa: capa, caja: capa.firstChild, cuerpo: capa.querySelector('.vzp-hoja-cuerpo'), acciones: capa.querySelector('.vzp-hoja-acc'), previo: doc.activeElement, alCerrar: null, nivel: pila.length + 1 };
       h.cierra = function (desdeHistoria, animada) { cierraHoja(h, desdeHistoria, animada); };
       pila.push(h);
@@ -1060,11 +1066,8 @@
         if ((x = cerca('.vzp-cap-b'))) { irCaptura(h, Number(x.getAttribute('data-cap')) || 0); return; }
         if ((x = cerca('[data-archivo]'))) { abreArchivo({ id: x.getAttribute('data-archivo'), nombre: x.getAttribute('data-nombre'), tipo: x.getAttribute('data-tipo'), vista: x.getAttribute('data-vista') || '', tamano: null }); }
       });
-      /* como en la hoja de los cuadros: que el gesto de bajarla no deje un «fling» que se coma el siguiente toque */
-      doc.addEventListener('touchstart', function (e) {
-        var h = hojaArriba(), t = e.target;
-        if (h && t.closest && t.closest('.vzp-hoja-cab') && !t.closest('button, a') && h.capa.contains(t)) e.preventDefault();
-      }, { passive: false });
+      /* (el touchstart que evita el «fling» al bajar una hoja va en el encabezado de cada hoja, en abreHoja: así la
+         página no carga un escucha que frena el desplazamiento en cada toque) */
       doc.addEventListener('pointerdown', function (e) {
         var h = hojaArriba(); if (!h || !e.isPrimary || !e.target.closest) return;
         if (!e.target.closest('.vzp-hoja-cab') || e.target.closest('button, a') || !h.capa.contains(e.target)) return;
