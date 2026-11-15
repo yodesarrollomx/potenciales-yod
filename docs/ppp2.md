@@ -519,6 +519,101 @@ libros**: sirve una «foto» ya hecha de cada versión. Contrato completo en `do
   (`ppp2-version`, que ya exige `admin`). Por eso `ppp2-elige` responde `plan` para ellos y no llevan
   `elige`.
 
+## Opciones y comparativo: todas las opciones de una liga, lado a lado (15-nov-2026)
+
+Dirección: un plan a veces tiene varias opciones (el mismo proyecto en terrenos de distinto tamaño, o
+varias versiones del libro). Se cambia entre ellas en el visor y, cuando se quiere ver todas juntas, se
+pide el **comparativo**: «como cuando comparas los specs de un carro nuevo», con todos los factores
+alineados, una barrita por factor, la flecha verde en la mejor y la roja sólo donde el cambio es grande.
+
+- **Página propia, misma liga:** `visor-comparar.html#l=<liga>` (también `?l=`) + `visor-compara.js` +
+  `visor-comparar.css`. No carga `visor.js`, ni `portero.js`, ni el marco. Sólo GET al mismo recurso del
+  visor (`?recurso=ppp2-visor&liga=…`): primero la liga tal cual (trae los planes y las versiones que deja
+  ver), luego la versión que muestra cada otro plan (`&plan=`) y luego cada otra versión (`&plan=…&v=…`),
+  a lo más tres a la vez y dieciocho opciones. Sólo la primera lleva `abre=1` (trae las marcas del pie y
+  deja **un** renglón en `Aperturas`, con el equipo seguido de «· comparar»). No escribe nada más ni guarda
+  nada en el navegador. Si una opción no contesta, enseña las demás y lo dice.
+- **Columnas = opciones** (en el orden de la liga: planes y, dentro, versiones), con su nombre corto
+  (la etiqueta del plan en la liga y/o «V{n} · nombre de la versión»), su terreno y en cuántos factores es
+  la mejor. **Renglones = factores**, agrupados como los siete cuadros. Cada celda: la cifra con su unidad,
+  una barrita proporcional dentro del renglón (siempre desde cero; con negativos, una raya marca el cero) y
+  la marca. Al pasar el cursor, de qué pestaña y clave del libro sale.
+- **Encabezado:** cuál opción es la mejor en más factores y en cuáles (las demás, con sus factores si son
+  hasta cuatro opciones; con más, sólo cuántos), y en qué queda alguna muy por debajo. Sólo cuenta marcas:
+  sin adjetivos.
+- **Una liga con una sola opción** lo dice («no hay otra con qué compararla»), no pinta tabla y lleva al
+  visor.
+- **Descargar PDF** = `window.print()` con la hoja de impresión de `visor-comparar.css`: carta horizontal,
+  sin botones, la fila de opciones repetida en cada hoja, el encabezado con la fecha y hora de los datos
+  (`leido` y el último `cambio` de las opciones), las marcas de `Config` y el aviso de confidencialidad; el
+  pie de cada hoja repite el aviso y lleva «Página n de m».
+- **Teléfono primero:** a 430 px la tabla se desliza de lado y a lo alto dentro de su caja, con la columna
+  de factores y la fila de opciones fijas; la página no se desliza de lado. En escritorio, si cabe, la tabla
+  se ve completa y la página baja entera.
+
+**No es una fórmula financiera.** Cada factor es **una** cifra que el libro ya dio; la página la redondea
+como la enseña (MDP a un decimal, porcentajes a una décima de punto, veces a dos decimales, meses y m²
+enteros), la compara con la mejor y cuenta marcas. No calcula TIR, márgenes ni sumas que el libro no dé
+(las unidades son el total del renglón «Total de unidades» de «Flujo V{n}», no la suma de los productos).
+Lo que no llega (vacío, nulo o texto donde va número, como «sin banco») se enseña **no aplica**, sin marca
+y sin contar como la peor.
+
+**Las marcas.** Flecha verde hacia arriba (texto alternativo «mejor»): la opción con la mejor cifra del
+factor; si empatan a la precisión con que se enseñan, todas; si todas son iguales o hay menos de dos con
+cifra, ninguna. Flecha roja hacia abajo («muy por debajo»): **sólo** si el factor declara umbral y la
+opción queda más allá de él respecto de la mejor (en el umbral exacto, no). «Dato» es el tamaño del
+proyecto: se enseña y se dibuja, pero no tiene mejor ni peor (un terreno chico vende menos sin estar
+«peor»). Los factores de resultado (lo que da) son «más es mejor»; los de exposición (lo que pide), «menos
+es mejor». La tabla vive en `FACTORES` de `visor-compara.js`; si cambia allá, cambia aquí
+(`tests/visor-compara.test.cjs` compara los dos).
+
+| Factor | De dónde sale | Sentido | Rojo si… |
+|---|---|---|---|
+| Superficie del terreno | Datos · terreno.m2 | dato | — |
+| Valor de la tierra | Resumen · v{n}.tierra | dato | — |
+| Ventas totales | Resumen · v{n}.ventas | dato | — |
+| Área vendible | Datos · lamina.m2_vendibles | dato | — |
+| Unidades | Flujo V{n} · total de «Total de unidades» | dato | — |
+| Plazo hasta el reparto | Resumen · v{n}.mes_reparto | menos es mejor | más de 25 % peor que la mejor |
+| Preventa al arrancar la obra | Resumen · v{n}.rv_preventa | más es mejor | más de 15 puntos abajo de la mejor |
+| Costo sin tierra | Resumen · v{n}.costo_sin_tierra | dato | — |
+| Ganancia real | Resumen · v{n}.ganancia | más es mejor | más de 25 % peor que la mejor |
+| Ganancia sobre ventas | Resumen · v{n}.margen | más es mejor | más de 5 puntos abajo de la mejor |
+| Costo del dinero | Resumen · v{n}.costo_dinero | menos es mejor | — |
+| Dinero ajeno, máximo | Resumen · v{n}.max_ajeno | menos es mejor | más de 25 % peor que la mejor |
+| Crédito del banco, saldo máximo | Resumen · v{n}.banco_max | menos es mejor | — |
+| Capital aportado | Resumen · v{n}.capital | menos es mejor | — |
+| Dinero que faltaría | Resumen · v{n}.respaldo | menos es mejor | le falta más que a la mejor (más de $0.05 MDP) |
+| El dueño recibe | Resumen · v{n}.dueno_recibe | más es mejor | más de 25 % peor que la mejor |
+| Veces el valor de su tierra | Resumen · v{n}.dueno_veces | más es mejor | más de 25 % peor que la mejor |
+| El dueño cobra lo último | Resumen · v{n}.dueno_meses | menos es mejor | — |
+| La alianza recibe | Resumen · v{n}.alianza_recibe | más es mejor | más de 25 % peor que la mejor |
+| Revisión para fondos | Resumen · v{n}.rv_resultado | pasar es mejor | no pasa y otra sí |
+| Margen antes de financiamiento, sobre costo | Resumen · v{n}.rv_margen | más es mejor | — |
+| Aportación: tierra y capital entre costo | Resumen · v{n}.rv_aportacion | más es mejor | — |
+| Cobertura: por cobrar entre saldo del banco | Resumen · v{n}.rv_cobertura | más es mejor | — |
+| Candados abiertos | Resumen · plan.candados_abiertos | menos es mejor | — |
+
+El rojo se reserva para lo que cambia la decisión (plazo, preventa, ganancia, dinero ajeno, dinero que
+faltaría, lo que reciben el dueño y la alianza, la revisión para fondos); los demás factores sólo marcan
+la mejor. Un porcentaje relativo no existe si la mejor es cero: ahí no hay rojo relativo. Revisión para
+fondos: «Pasa…» está un escalón arriba de «No pasa…»; si ninguna pasa no se marca (contar pruebas sería
+otra cuenta). Los planes «foto» del PPP de siempre traen la misma forma con varios campos en nulo: esos
+factores salen «no aplica».
+
+**Cómo se enlaza desde el visor (pestaña «Opciones»).** El visor ya sabe si hay opciones: la respuesta
+trae `menu.planes` (más de uno = varios terrenos) y `versiones` (más de una = varias versiones). Con
+cualquiera de los dos, la pestaña «Opciones» cambia entre ellas como hoy los selectores y ofrece «Comparar
+todas», que abre `visor-comparar.html#l=<la misma liga>` en la misma pestaña (atrás regresa al visor). No
+hay que pasarle nada más: la página pide todo con la liga. Sin opciones, la pestaña no hace falta (si se
+abre igual, la página dice que hay una sola). El comparativo regresa con «Ver el visor»
+(`visor.html#l=<liga>`).
+
+Pruebas: `node --test tests/visor-compara.test.cjs` (marcas, umbrales, empates, ausentes, encabezado,
+una sola opción, juntar opciones con el servidor real, sólo GET, hoja de impresión) y
+`node tests/visor-compara-browser.cjs` (teléfono con la tabla deslizándose y los factores fijos,
+escritorio, «Descargar PDF» con un PDF carta horizontal de verdad, una sola opción, liga apagada).
+
 ## Un solo PPP: los planes con libro se abren desde el PPP de siempre (14-nov-2026)
 
 Dirección pidió unificar: el PPP de siempre es la entrada y lo que nació aquí como «PPP 2» pasa a ser

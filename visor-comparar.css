@@ -1,0 +1,162 @@
+/* Comparativo de opciones del Plan de Potencial (visor-comparar.html + visor-compara.js).
+   Misma paleta y letras que el visor: crema, papel, tinta y oro; Instrument Serif e Instrument Sans.
+   Teléfono primero: la tabla se recorre de lado con la columna de factores fija. Al imprimir (o
+   «Descargar PDF») sale en carta horizontal, sin botones y con el aviso de confidencialidad. */
+:root {
+  --crema: #f6f3ed; --papel: #fffdf9; --tinta: #231d14; --cuerpo: #4a4336; --mudo: #6e675a; --linea: #e1dacb; --raya: #f0ebe0;
+  --oro: #7d5f1e; --verde: #2b5b39; --rojo: #7f2f26;
+  --barra: #9a7b3f; --barra-dato: #8a8272; --barra-mejor: #39744b; --barra-rojo: #a94438; --pista: #efe9dc;
+  --fondo-mejor: #eef5eb; --fondo-rojo: #faeeea; --grupo: #f3eee3;
+  --sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; --serif: 'Instrument Serif', Georgia, serif;
+}
+html.vc-pagina, html.vc-pagina body { margin: 0; background: var(--crema); color: var(--tinta); -webkit-text-size-adjust: 100%; }
+html.vc-pagina body { font-family: var(--sans); min-height: 100vh; min-height: 100dvh; overflow-x: hidden; }
+.vc, .vc * { box-sizing: border-box; }
+.vc { max-width: 1280px; margin: 0 auto; padding: 18px 16px calc(24px + env(safe-area-inset-bottom, 0px)); }
+.vc-oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* encabezado */
+.vc-top { margin-bottom: 14px; }
+.vc-l1 { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.vc-marca { font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--oro); }
+.vc-sello { font-size: 11px; font-weight: 600; color: var(--cuerpo); background: var(--papel); border: 1px solid var(--linea); border-radius: 99px; padding: 3px 10px; }
+.vc-top h1 { font-family: var(--serif); font-weight: 400; font-size: 31px; line-height: 1.05; margin: 10px 0 4px; overflow-wrap: anywhere; }
+.vc-datos { font-size: 12.5px; color: var(--mudo); margin: 0 0 12px; }
+.vc-resumen { font-size: 14.5px; line-height: 1.45; color: var(--cuerpo); max-width: 78ch; }
+.vc-resumen p { margin: 0 0 7px; }
+.vc-resumen b { color: var(--tinta); font-weight: 700; }
+.vc-abajo .vc-fl { vertical-align: -1px; margin-right: 2px; }
+.vc-acciones { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 10px; }
+.vc-boton { display: inline-flex; align-items: center; min-height: 40px; font: 600 14px var(--sans); color: var(--papel); background: var(--tinta); border: 1px solid var(--tinta); border-radius: 99px; padding: 8px 16px; cursor: pointer; text-decoration: none; }
+.vc-boton.vc-sec { color: var(--tinta); background: var(--papel); border-color: var(--linea); }
+.vc-boton:focus-visible, .vc-caja:focus-visible { outline: 3px solid #c9a75a; outline-offset: 2px; }
+.vc-leyenda { font-size: 12px; line-height: 1.5; color: var(--mudo); margin: 0; }
+.vc-leyenda .vc-fl { vertical-align: -1px; }
+.vc-aviso { font-size: 12.5px; color: var(--oro); background: #f3e9cf; border-radius: 8px; padding: 6px 10px; margin: 8px 0 0; }
+.vc-una { font-size: 15px; color: var(--cuerpo); background: var(--papel); border: 1px solid var(--linea); border-radius: 12px; padding: 16px; margin-top: 8px; }
+.vc-una p { margin: 0 0 10px; }
+.vc-una p:last-child { margin: 0; }
+
+/* flechas: verde hacia arriba = la mejor; roja hacia abajo = muy por debajo (la forma también lo dice) */
+.vc-fl { display: inline-block; flex: none; width: 12px; height: 12px; }
+.vc-fl-mejor { fill: var(--verde); }
+.vc-fl-rojo { fill: var(--rojo); }
+
+/* la tabla: se desliza de lado; la columna de factores y la fila de opciones se quedan fijas */
+.vc-caja { position: relative; background: var(--papel); border: 1px solid var(--linea); border-radius: 12px; overflow: auto; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.vc-caja.vc-cabe { overflow: visible; max-height: none; }
+.vc-caja.vc-cabe .vc-tabla { table-layout: fixed; width: 100%; }   /* cabe: las opciones, del mismo ancho */
+.vc-caja.vc-cabe thead th:first-child { border-top-left-radius: 12px; }
+.vc-caja.vc-cabe thead th:last-child { border-top-right-radius: 12px; }
+.vc-caja.vc-cabe tbody:last-child tr:last-child > :first-child { border-bottom-left-radius: 12px; }
+.vc-caja.vc-cabe tbody:last-child tr:last-child > :last-child { border-bottom-right-radius: 12px; }
+.vc-tabla { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; font-variant-numeric: tabular-nums; }
+.vc-tabla th, .vc-tabla td { text-align: left; vertical-align: top; }
+.vc-fac { position: sticky; left: 0; z-index: 2; width: 138px; min-width: 138px; max-width: 138px; background: var(--papel); padding: 8px 9px 8px 11px; border-right: 1px solid var(--linea); border-bottom: 1px solid var(--raya); font-weight: 400; }
+.vc-fn { display: block; font-size: 12.5px; font-weight: 600; line-height: 1.2; color: var(--tinta); }
+.vc-fs { display: block; font-size: 10.5px; line-height: 1.25; color: var(--mudo); margin-top: 2px; }
+.vc-fu { display: none; }
+.vc-tabla thead th { position: sticky; top: 0; z-index: 3; background: var(--papel); border-bottom: 1px solid var(--linea); }
+.vc-tabla thead .vc-esq { z-index: 4; font-size: 11px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase; color: var(--oro); vertical-align: bottom; }
+.vc-op { min-width: 116px; max-width: 168px; padding: 10px 10px 9px; border-left: 1px solid var(--raya); }
+.vc-op-n { display: block; font-size: 13px; font-weight: 700; line-height: 1.2; color: var(--tinta); overflow-wrap: anywhere; }
+.vc-op-s { display: block; font-size: 11px; line-height: 1.3; color: var(--mudo); margin-top: 2px; overflow-wrap: anywhere; }
+.vc-op-g { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--verde); margin-top: 5px; }
+.vc-gt th { padding: 0; background: var(--grupo); border-bottom: 1px solid var(--linea); border-top: 1px solid var(--linea); }
+.vc-grupo:first-of-type .vc-gt th { border-top: 0; }
+.vc-gt span { position: sticky; left: 0; display: inline-block; padding: 6px 11px 5px; font-size: 11px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase; color: var(--oro); }
+.vc-c { padding: 8px 10px 9px; border-left: 1px solid var(--raya); border-bottom: 1px solid var(--raya); min-width: 116px; }
+.vc-v { display: flex; align-items: center; gap: 5px; min-height: 18px; }
+.vc-num { font-size: 14px; font-weight: 600; color: var(--tinta); white-space: nowrap; }
+.vc-c.vc-mejor { background: var(--fondo-mejor); }
+.vc-c.vc-rojo { background: var(--fondo-rojo); }
+.vc-c.vc-na .vc-num { font-size: 12px; font-weight: 400; font-style: italic; color: var(--mudo); }
+.vc-num.vc-pasa { color: var(--verde); font-size: 12.5px; white-space: normal; }
+.vc-num.vc-nopasa { color: var(--rojo); font-size: 12.5px; white-space: normal; }
+/* la barrita: proporcional dentro del renglón, desde cero; el extremo del dato redondeado, la base recta */
+.vc-barra { position: relative; display: block; height: 6px; margin-top: 7px; border-radius: 3px; background: var(--pista); }
+.vc-barra i { position: absolute; top: 0; bottom: 0; background: var(--barra); border-radius: 0 3px 3px 0; }
+.vc-barra i.vc-neg { border-radius: 3px 0 0 3px; }
+.vc-barra i.vc-b-dato { background: var(--barra-dato); }
+.vc-barra i.vc-b-mejor { background: var(--barra-mejor); }
+.vc-barra i.vc-b-rojo { background: var(--barra-rojo); }
+.vc-barra.vc-con-cero::after { content: ''; position: absolute; top: -2px; bottom: -2px; left: var(--cero); width: 1px; background: var(--cuerpo); }
+.vc-tabla tbody tr:last-child .vc-c, .vc-tabla tbody tr:last-child .vc-fac { border-bottom-color: var(--raya); }
+
+/* pie */
+.vc-pie { margin-top: 16px; text-align: center; }
+.vc-pie p { display: flex; justify-content: center; align-items: center; gap: 5px; font-size: 12px; color: var(--mudo); margin: 6px 0 0; }
+.vc-marcas { display: flex; justify-content: center; align-items: center; gap: 28px; flex-wrap: wrap; min-height: 26px; }
+.vc-marcas img { max-height: 24px; max-width: 120px; width: auto; height: auto; object-fit: contain; }
+.vc-marcas span { font-family: var(--serif); font-size: 17px; color: var(--cuerpo); white-space: nowrap; }
+
+.vc-impreso { display: none; }
+
+/* mensajes (cargando, sin liga, liga apagada) */
+.vc-msg { min-height: 60vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px 20px; gap: 10px; }
+.vc-msg h1 { font-family: var(--serif); font-weight: 400; font-size: 29px; margin: 0; }
+.vc-msg p { font-size: 14px; color: var(--mudo); margin: 0; }
+
+@media (min-width: 760px) {
+  .vc { padding: 28px 28px 32px; }
+  .vc-top h1 { font-size: 40px; }
+  .vc-fac { width: 250px; min-width: 250px; max-width: 250px; padding-left: 14px; }
+  .vc-fn { font-size: 13.5px; }
+  .vc-fu { display: inline; }
+  .vc-op, .vc-c { min-width: 128px; }
+  .vc-gt span { padding-left: 14px; }
+}
+
+/* ── impresión / «Descargar PDF»: carta horizontal ── */
+@page {
+  size: letter landscape;
+  margin: 10mm 10mm 13mm;
+  @bottom-left { content: "Confidencial · quien tenga esta liga ve el plan. No la reenvíes."; font-family: 'Instrument Sans', sans-serif; font-size: 7.5pt; color: #6e675a; }
+  @bottom-right { content: "Página " counter(page) " de " counter(pages); font-family: 'Instrument Sans', sans-serif; font-size: 7.5pt; color: #6e675a; }
+}
+@media print {
+  html.vc-pagina, html.vc-pagina body { background: #fff; min-height: 0; }
+  .vc, .vc * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .vc { max-width: none; padding: 0; }
+  .vc-acciones { display: none; }
+  .vc-top { margin-bottom: 8px; break-inside: avoid; }
+  .vc-marca, .vc-sello { font-size: 8pt; }
+  .vc-sello { padding: 1px 8px; }
+  .vc-top h1 { font-size: 22pt; margin: 4px 0 2px; }
+  .vc-datos { font-size: 8.5pt; margin-bottom: 6px; }
+  .vc-resumen { font-size: 9pt; line-height: 1.35; max-width: none; }
+  .vc-resumen p { margin-bottom: 3px; }
+  .vc-leyenda { font-size: 7.5pt; margin-top: 4px; }
+  .vc-aviso { font-size: 8pt; padding: 3px 8px; }
+  .vc-caja, .vc-caja.vc-cabe { overflow: visible; max-height: none; border-radius: 0; border: 1px solid var(--linea); }
+  .vc-caja th, .vc-caja td { border-radius: 0 !important; }
+  .vc-tabla { width: 100%; min-width: 0; table-layout: fixed; }
+  .vc-fac, .vc-tabla thead th, .vc-gt span { position: static; }
+  .vc-tabla thead { display: table-header-group; }
+  .vc-tabla tr { break-inside: avoid; }
+  .vc-gt { break-after: avoid; page-break-after: avoid; }
+  .vc-fac { width: 54mm; min-width: 0; max-width: none; padding: 3px 5px 3px 7px; }
+  .vc-fn { font-size: 7.5pt; }
+  .vc-fs { font-size: 6.2pt; margin-top: 1px; }
+  .vc-fu { display: inline; }
+  .vc-op { min-width: 0; max-width: none; padding: 4px 5px; }
+  .vc-op-n { font-size: 7.8pt; }
+  .vc-op-s, .vc-op-g { font-size: 6.4pt; margin-top: 1px; }
+  .vc-gt span { padding: 2px 7px; font-size: 7pt; }
+  .vc-c { min-width: 0; padding: 3px 5px 4px; }
+  .vc-v { min-height: 0; gap: 3px; }
+  .vc-num { font-size: 8.2pt; }
+  .vc-c.vc-na .vc-num, .vc-num.vc-pasa, .vc-num.vc-nopasa { font-size: 7pt; }
+  .vc-fl { width: 8px; height: 8px; }
+  .vc-barra { height: 3.5px; margin-top: 3px; }
+  .vc-pie { display: none; }
+  .vc-impreso { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 5px; padding-top: 4px; border-top: 1px solid var(--linea); }
+  .vc-impreso p { display: flex; align-items: center; gap: 4px; font-size: 7.5pt; color: var(--mudo); margin: 0; }
+  .vc-impreso .vc-marcas { justify-content: flex-start; gap: 18px; min-height: 0; }
+  .vc-marcas img { max-height: 14px; }
+  .vc-marcas span { font-size: 10pt; }
+  /* muchas opciones: letras un poco más chicas para que quepan en lo ancho de la hoja */
+  .vc-n9 .vc-num, .vc-n10 .vc-num, .vc-n11 .vc-num, .vc-n12 .vc-num { font-size: 7pt; }
+  .vc-n9 .vc-fac, .vc-n10 .vc-fac, .vc-n11 .vc-fac, .vc-n12 .vc-fac { width: 44mm; }
+}
+@media (prefers-reduced-motion: reduce) { .vc * { transition: none !important; animation: none !important; } }
