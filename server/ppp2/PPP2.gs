@@ -472,7 +472,7 @@ function doPost(e) {
     try { res = accion_(s, b, rid); } finally { lock.releaseLock(); }
     // lo que se recuerda del request_id va sin el plan (CacheService guarda hasta 100 KB por valor); si no cabe, no se recuerda
     if (rid && res && res.ok) { try { cache.put('r_' + hash_(rid), JSON.stringify(res), PPP2.IDEM_S); } catch (x) { } }
-    if (res && res.ok) cache.remove('vivero');
+    if (res && res.ok && res.hecho !== 'simular') cache.remove('vivero');
     return out_(conPlan_(s, b, res, t0));
   } catch (err) {
     return out_({ ok: false, error: 'interno', detalle: String(err && err.message || err).slice(0, 200) });
@@ -481,7 +481,7 @@ function doPost(e) {
 /* La respuesta de una escritura trae el plan ya leído (y lo deja en la caché): la página lo pinta sin volver a
    pedirlo. Se lee fuera del candado, y sólo si sobra tiempo; si algo falla, la página lo pide como antes. */
 function conPlan_(s, b, res, t0) {
-  if (!res || !res.ok || !b || !b.plan || String(b.tipo) === 'ppp2-sembrar' || String(b.tipo) === 'ppp2-liga' || String(b.tipo) === 'ppp2-elige' || Date.now() - t0 > PPP2.CON_PLAN_MS) return res;
+  if (!res || !res.ok || !b || !b.plan || String(b.tipo) === 'ppp2-sembrar' || String(b.tipo) === 'ppp2-liga' || String(b.tipo) === 'ppp2-elige' || String(b.tipo) === 'ppp2-simular' || Date.now() - t0 > PPP2.CON_PLAN_MS) return res;
   try { var pl = plan_get_(s, b.plan, true); if (pl && pl.ok) res.plan = pl; } catch (x) { }
   return res;
 }
@@ -498,6 +498,8 @@ function accion_(s, b, rid) {
   // Si una ronda quedó a medias, primero se deja la versión como estaba… y no se sigue: quien llamó estaba
   // viendo cifras a medias, así que la página recarga y decide con las de verdad.
   if (recuperar_(p, libro)) return { ok: false, error: 'revision', recuperado: true, rev: revision_(libro) };
+  // el lápiz sólo prueba: no cambia nada del libro, así que no despierta al latido ni toca la caché del plan
+  if (tipo === 'ppp2-simular') return simular_(s, libro, b);
   var hechos;
   switch (tipo) {
     case 'ppp2-ronda': hechos = ronda_(s, p, libro, b, rev, rid); break;
@@ -829,6 +831,102 @@ function sanarPrueba_(mod) {
   Object.keys(rotas).forEach(function (f) { copiarPruebaSana_(mod, Number(f), rotas); });
   SpreadsheetApp.flush();
   return hay;
+}
+
+/* ───────────────────────── el lápiz: probar otra cifra antes de guardarla ─────────────────────────
+   Quien edita prueba otra cifra para una palanca (o para un dato que una palanca copia) sobre una versión.
+   El libro la recalcula en su columna Prueba —la misma de las pruebas de estrés—, se leen las cifras de
+   antes y de después y la columna vuelve a como estaba. Los visores y la ficha leen V1, V2 y V3, nunca la
+   columna Prueba: nadie ve el ensayo. Como nada cambió, no se anota en la bitácora; si la columna no
+   vuelve a su estado, eso sí se anota y se avisa. Aquí no se calcula nada: el servidor escribe la cifra
+   de prueba, el libro calcula y el servidor lee. */
+var LAPIZ = {
+  MAX: 4,                                                     // cifras de prueba por ensayo
+  MODELO: ['ventas', 'costo_con_tierra', 'obra', 'fin_obra', 'aportacion', 'preventa_inicio'],   // renglones calculados del Modelo, columna Prueba
+  PRUEBAS: ['banco_max', 'respaldo', 'costo_dinero', 'ganancia', 'mes_reparto']                    // Pruebas!B6:B10, en ese orden
+};
+/* Qué palanca copia cada dato: la columna Datos del Modelo dice =Datos!$C$n. */
+function espejos_(libro, mod) {
+  var n = mod.getLastRow(), claves = mod.getRange(1, 1, n, 1).getValues(), bases = mod.getRange(1, 4, n, 1).getFormulas();
+  var hd = libro.getSheetByName('Datos'), cd = hd.getRange(1, 1, Math.max(1, hd.getLastRow()), 1).getValues(), out = {};
+  for (var i = 6; i < n; i++) {
+    var m = /^=\s*Datos!\$?C\$?(\d+)\s*$/.exec(String(bases[i][0] || '')), c = String(claves[i][0]).trim();
+    if (!m || !/^[a-z][a-z0-9_]*$/.test(c)) continue;
+    var dk = String((cd[Number(m[1]) - 1] || [''])[0]).trim();
+    if (dk) out[dk] = c;
+  }
+  return out;
+}
+function leeLapiz_(mod, pru, filas) {
+  var o = {};
+  LAPIZ.MODELO.forEach(function (k) { o[k] = filas[k] ? r3_(limpio_(mod.getRange(filas[k], 8).getValue())) : null; });
+  var b = pru.getRange(6, 2, LAPIZ.PRUEBAS.length, 1).getValues();
+  LAPIZ.PRUEBAS.forEach(function (k, i) { o[k] = r3_(limpio_(b[i][0])); });
+  return o;
+}
+function simular_(s, libro, b) {
+  if (!puede_(s, 'editar')) return { ok: false, error: 'permiso' };
+  var k = Number(b.version);
+  if (!(k >= 1 && k <= 3)) return { ok: false, error: 'version' };
+  var mod = libro.getSheetByName('Modelo'), pru = libro.getSheetByName('Pruebas');
+  var lista = Array.isArray(b.cambios) ? b.cambios.slice(0, LAPIZ.MAX) : [];
+  if (!lista.length) return { ok: false, error: 'clave' };
+  var espejo = null, cambios = [], sinEfecto = [];
+  for (var i = 0; i < lista.length; i++) {
+    var c = lista[i] || {}, clave = txt_(c.clave, 60), palanca = clave;
+    if (/^[a-z]+\.[a-z0-9_]+$/.test(clave)) {               // un dato: se prueba por la palanca que lo copia
+      espejo = espejo || espejos_(libro, mod);
+      palanca = espejo[clave] || '';
+      if (!palanca) return { ok: false, error: 'sin_prueba', clave: clave };
+    }
+    if (!/^[a-z][a-z0-9_]*$/.test(palanca)) return { ok: false, error: 'clave' };
+    var f = filaPorClave_(mod, palanca);
+    if (!f) return { ok: false, error: 'clave' };
+    var base = mod.getRange(f, 4).getFormula() || mod.getRange(f, 4).getValue();
+    if (base === '' || base === null) return { ok: false, error: 'calculado' };     // los renglones calculados no se prueban
+    var v = numero_(c.valor, String(mod.getRange(f, 3).getValue()));
+    if (v === null || v === '') return { ok: false, error: 'valor' };
+    // un dato sólo mueve a la versión que sigue la base (=$D…): si la versión tiene su propia cifra, el dato no la toca
+    if (palanca !== clave && !/^=\s*\$?D\$?\d+\s*$/.test(String(mod.getRange(f, 4 + k).getFormula() || ''))) {
+      sinEfecto.push({ clave: clave, palanca: palanca, propia: r3_(limpio_(mod.getRange(f, 4 + k).getValue())) });
+      continue;
+    }
+    cambios.push({ clave: clave, palanca: palanca, f: f, valor: v });
+  }
+  if (!cambios.length) return { ok: true, hecho: 'simular', version: k, cambios: [], sin_efecto: sinEfecto };
+  var renglones = {};
+  LAPIZ.MODELO.forEach(function (x) { renglones[x] = filaPorClave_(mod, x); });
+  sanarPrueba_(mod);           // si una corrida anterior murió a medias, la columna vuelve a ser fórmula
+  var antesB4 = pru.getRange('B4').getFormula() || pru.getRange('B4').getValue(), filas = {}, antes, despues;
+  var vuelveB4 = function () { if (String(antesB4).charAt(0) === '=') pru.getRange('B4').setFormula(antesB4); else pru.getRange('B4').setValue(antesB4); };
+  pru.getRange('B4').setValue(k);
+  try {
+    SpreadsheetApp.flush();
+    antes = leeLapiz_(mod, pru, renglones);
+    cambios.forEach(function (x) {
+      if (!(x.palanca in filas)) filas[x.palanca] = guardarPrueba_(mod, x.palanca);
+      mod.getRange(x.f, 8).setValue(x.valor);
+    });
+    SpreadsheetApp.flush();
+    despues = leeLapiz_(mod, pru, renglones);
+  } finally {
+    restablecer_(mod, filas);
+    vuelveB4();
+  }
+  // la columna Prueba debe quedar como estaba: se vuelve a leer la versión sin la cifra de prueba
+  SpreadsheetApp.flush();
+  pru.getRange('B4').setValue(k);
+  var otra = leeLapiz_(mod, pru, renglones);
+  vuelveB4();
+  if (JSON.stringify(otra) !== JSON.stringify(antes)) {
+    bitacora_(libro, s, 'El lápiz probó una cifra sobre V' + k + ' y la columna Prueba NO volvió a su estado', 'Modelo',
+      cambios.map(function (x) { return x.palanca; }).join(','), JSON.stringify(antes), JSON.stringify(otra), '', null, '');
+    return { ok: false, error: 'prueba' };
+  }
+  return {
+    ok: true, hecho: 'simular', version: k, antes: antes, despues: despues, sin_efecto: sinEfecto,
+    cambios: cambios.map(function (x) { return { clave: x.clave, palanca: x.palanca, valor: x.valor }; })
+  };
 }
 
 /* ───────────────────────── la ronda: el plan mueve sus palancas ─────────────────────────

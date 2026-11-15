@@ -37,6 +37,7 @@
     board: 'Tu acceso no incluye Potenciales.', portero: 'No pude validar tu sesión con el Portero; intenta de nuevo.',
     plan: 'Ese plan no existe o está archivado.', calculado: 'Ese renglón lo calcula el libro; no se captura.',
     prueba: 'Las pruebas no se anotaron: la columna Prueba del libro no volvió a su estado. Quedó en la bitácora.',
+    sin_prueba: 'Este dato no tiene columna de prueba en el libro: guárdalo y, si no te convence, deshazlo.',
     paso: 'El libro dice que ahora no toca mover capital ni arranque de obra; recarga para ver el siguiente paso.',
     sin_lugar: 'No tengo una versión donde escribir mi propuesta: la base y la vigente no las toco, ni el trabajo de una persona si nadie me lo presta.',
     tiempo: 'Mi libro va lento y no alcancé a probar todas las combinaciones. No cambié nada y guardé lo que llevo: vuelve a pedirme la ronda para continuar.',
@@ -63,7 +64,8 @@
   var CICLO = [['explorar', 'Muevo capital y arranque'], ['probar', 'Me pruebo contra los golpes'], ['consejo', 'Me defiendo ante el consejo'], ['direccion', 'Dirección decide']];
   /* fresco = lo que se ve llegó del servidor en esta visita; si es false, es lo último que vi (visto = cuándo) y,
      con sinRed, no pude traer lo nuevo. Mientras no sea fresco no se guarda nada. */
-  var estado = { vivero: null, plan: null, planId: '', pestana: 'versiones', version: 0, ocupado: false, fresco: true, visto: 0, sinRed: false,
+  /* pestana: la sección del expediente que está abierta debajo de los cuadros ('' = ninguna: la carátula limpia). */
+  var estado = { vivero: null, plan: null, planId: '', pestana: '', version: 0, ocupado: false, fresco: true, visto: 0, sinRed: false,
     viveroCopia: null };
   var raiz = document.getElementById('ppp2');
 
@@ -86,7 +88,7 @@
     var n = num(d.valor);
     if (d.unidad === 'MDP') return mdp(d.valor);
     if (d.unidad === '%') return pct(d.valor);
-    if (d.unidad === 'm²') return n === null ? esc(d.valor || '—') : fmt(n, 2) + ' m²';
+    if (d.unidad === 'm²') return n === null ? esc(d.valor || '—') : fmt(n, n % 1 ? 2 : 0) + ' m²';
     if (d.unidad === 'mes' || d.unidad === 'meses') return n === null ? esc(d.valor || '—') : (d.unidad === 'mes' ? 'mes ' + n : n + ' meses');
     return esc(d.valor || '—');
   }
@@ -214,7 +216,7 @@
       var cambio = estado.planId !== h[1];
       estado.planId = h[1];
       var pes = h[2] === 'auton' ? 'rondas' : h[2];
-      estado.pestana = ['versiones', 'preguntas', 'rondas', 'bitacora'].indexOf(pes) >= 0 ? pes : 'versiones';
+      estado.pestana = ['versiones', 'preguntas', 'rondas', 'bitacora'].indexOf(pes) >= 0 ? pes : '';
       if (cambio || !estado.plan) { estado.plan = null; estado.version = 0; estado.fresco = true; estado.sinRed = false; cargarPlan(); } else pintarPlan();
     } else {
       estado.planId = ''; estado.plan = null;
@@ -338,6 +340,8 @@
 
   /* ───────── plan ───────── */
   function ver(k) { return (estado.plan.versiones || [])[(k || estado.version) - 1] || {}; }
+  /* La carátula del plan es el visor: encabezado, versiones, los siete cuadros y lo que dice el plan.
+     Lo demás (versiones lado a lado, preguntas, rondas y bitácora) vive en el expediente, cerrado hasta que se pide. */
   function pintarPlan() {
     var p = estado.plan, r = p.resumen || {}, v = ver(), puede = p.puede || {};
     var vers = (p.versiones || []).map(function (x) {
@@ -345,47 +349,41 @@
         '<b>V' + x.numero + ' · ' + esc(x.nombre || '') + '</b><span>' + esc(x.estado || '') + (num(x.dueno_recibe) !== null ? ' · dueño ' + mdpCorto(x.dueno_recibe) + ' MDP' : '') +
         ((p.ciclo || {}).defiende === x.numero && (p.ciclo || {}).paso ? ' · la que defiendo' : '') + '</span></button>';
     }).join('');
-    var ciclo = p.ciclo || {}, enTrabajo = (ciclo.en_ronda || ciclo.interrumpida) && ciclo.trabajo === estado.version;
-    var aviso = '';
-    if (enTrabajo) aviso = '<div class="p2-aviso">' + chip('En trabajo', 'ambar') + '<span>Estas cifras están a medias: ' + (ciclo.en_ronda ? 'estoy corriendo una ronda en esta versión' : 'una ronda se interrumpió en esta versión') + '. No se puede aprobar hasta que quede como estaba.</span></div>';
-    else if (v.estado === 'propuesta') aviso = '<div class="p2-aviso">' + chip('Propuesta', 'azul') + '<span>Falta que Dirección la apruebe para que quede vigente.</span>' +
-      (puede.aprobar ? '<button class="p2-btn verde" data-accion="aprobar" data-v="' + estado.version + '"><i class="ti ti-check"></i> Aprobar esta versión</button>' : '') + '</div>';
-    else if (v.estado === 'vigente') aviso = '<div class="p2-aviso">' + chip('Vigente', 'verde') + '<span>Aprobada por ' + esc(v.aprobada_por || '—') + (v.fecha_aprobacion ? ' el ' + esc(fechaLibro(v.fecha_aprobacion)) : '') + '.</span></div>';
-    else if (puede.aprobar && v.estado !== 'descartada') aviso = '<div class="p2-aviso">' + chip(v.estado || '', claseEstado(v.estado)) +
-      '<button class="p2-btn" data-accion="aprobar" data-v="' + estado.version + '"><i class="ti ti-check"></i> Volver vigente esta versión</button></div>';
-    aviso += avisoTope(v);
-    var rv = v.rv_resultado || '';
     raiz.innerHTML =
       '<div class="p2-migas"><a href="#/">Vivero</a><i class="ti ti-chevron-right"></i><span>' + esc(r['plan.nombre'] || '') + '</span></div>' +
       (estado.fresco === false ? refresco({ visto: estado.visto, sinRed: estado.sinRed }) : '') +
       '<div class="p2-cabeza"><div><h1>' + esc(r['plan.nombre'] || 'Plan') + '</h1><div class="p2-lugar">' + esc(r['plan.ubicacion'] || '') + '<span id="p2Folio"></span></div>' +
       '<div class="p2-crecer">' + edad(r['plan.edad']) + '<span class="p2-tenue"><b>Para crecer falta:</b> ' + esc(r['plan.para_crecer'] || '—') + '</span></div></div>' +
       (p.libro_url ? '<a class="p2-btn suave" href="' + esc(p.libro_url) + '" target="_blank" rel="noopener"><i class="ti ti-table"></i> Abrir el libro</a>' : '') + '</div>' +
-      voz() +
       '<div class="p2-versiones" role="group" aria-label="Versiones">' + vers + '</div>' +
       '<section class="p2-cuadros" aria-label="El plan en siete cuadros"><div class="p2-cuadros-cab"><div><div class="p2-sobre">El plan en siete cuadros · V' + estado.version + '</div>' +
-      '<span class="p2-tenue p2-chico">Toca un cuadro para ver su desglose y de dónde sale cada cifra.</span></div>' +
+      '<span class="p2-tenue p2-chico">Toca un cuadro para ver sus puntos y de dónde sale cada cifra' + (puede.editar ? '; con el lápiz pruebas otra cifra antes de guardarla.' : '.') + '</span></div>' +
       (puede.editar ? '<button class="p2-btn suave" data-accion="compartir"><i class="ti ti-share-2"></i> Compartir visor</button>' : '') + '</div>' +
-      '<div class="vz-inc-marco"><div id="p2Cuadros"></div></div></section>' +
-      '<section class="p2-heroe" aria-label="Lo que recibe el dueño">' +
-      '<div class="p2-recibe"><div class="p2-sobre">Lo que recibe el dueño · V' + estado.version + '</div>' +
-      (num(v.dueno_recibe) === null ? '<p class="p2-cifra">—</p><p class="p2-frase">Esta versión todavía no calcula: faltan datos.</p>' :
-        '<p class="p2-cifra">' + mdpCorto(v.dueno_recibe) + '<small>MDP</small></p>' +
-        '<p class="p2-frase">Aporta su tierra (' + mdp(v.dueno_aporta) + ') y recibe <b>' + veces(v.dueno_veces) + '</b> su valor, en <b>' + meses(v.dueno_meses) + '</b>, con el esquema ' + esc(r['plan.esquema'] || '') + '.</p>') +
-      aviso + '</div>' +
-      '<div class="p2-claves">' +
-      clave('Ganancia real', mdp(v.ganancia), 'ya pagada la tierra, antes de impuestos') +
-      clave('Dinero ajeno máximo', mdp(v.max_ajeno), 'capital ' + mdpCorto(v.capital) + ' · banco ' + mdpCorto(v.banco_max)) +
-      clave('Ventas', mdp(v.ventas), 'costo sin tierra ' + mdpCorto(v.costo_sin_tierra)) +
-      clave('Revisión para fondos', esc(rv || '—'), 'lo que revisa un comité de crédito', /^Pasa/.test(rv) ? 'ok' : (/^No/.test(rv) ? 'mal' : '')) +
-      '</div></section>' +
-      grafica() +
-      '<nav class="p2-pestanas" aria-label="Secciones del plan">' +
-      pest('versiones', 'Versiones y reparto') + pest('preguntas', 'Preguntas y evidencia') + pest('rondas', 'Mis rondas') + pest('bitacora', 'Bitácora') + '</nav>' +
-      '<div id="p2Pestana">' + ({ versiones: pVersiones, preguntas: pPreguntas, rondas: pRondas, bitacora: pBitacora }[estado.pestana] || pVersiones)() + '</div>';
+      '<div class="vz-inc-marco"><div id="p2Cuadros"></div></div>' + estadoVersion(v) + '</section>' +
+      voz() + expediente();
     // etapa 2 del análisis «tablero por tablero»: el terreno y su etapa se leen del folio (ppp-folio.js), no se copian al plan
     if (window.YodPPPFolio) window.YodPPPFolio.caso('ppp2', estado.planId, document.getElementById('p2Folio'));
     pintarCuadros();
+  }
+  /* Bajo los cuadros, una sola línea: en qué estado está la versión que se ve y, para Dirección, aprobarla. */
+  function estadoVersion(v) {
+    var p = estado.plan, puede = p.puede || {}, ciclo = p.ciclo || {}, enTrabajo = (ciclo.en_ronda || ciclo.interrumpida) && ciclo.trabajo === estado.version;
+    var html = '';
+    if (enTrabajo) html = chip('En trabajo', 'ambar') + '<span>Estas cifras están a medias: ' + (ciclo.en_ronda ? 'estoy corriendo una ronda en esta versión' : 'una ronda se interrumpió en esta versión') + '. No se puede aprobar hasta que quede como estaba.</span>';
+    else if (v.estado === 'propuesta') html = chip('Propuesta', 'azul') + '<span>Falta que Dirección la apruebe para que quede vigente.</span>' +
+      (puede.aprobar ? '<button class="p2-btn verde" data-accion="aprobar" data-v="' + estado.version + '"><i class="ti ti-check"></i> Aprobar esta versión</button>' : '');
+    else if (v.estado === 'vigente') html = chip('Vigente', 'verde') + '<span>Aprobada por ' + esc(v.aprobada_por || '—') + (v.fecha_aprobacion ? ' el ' + esc(fechaLibro(v.fecha_aprobacion)) : '') + '.</span>';
+    else if (puede.aprobar && v.estado !== 'descartada') html = chip(v.estado || '', claseEstado(v.estado)) +
+      '<button class="p2-btn" data-accion="aprobar" data-v="' + estado.version + '"><i class="ti ti-check"></i> Volver vigente esta versión</button>';
+    else if (v.estado) html = chip(v.estado, claseEstado(v.estado));
+    return (html ? '<div class="p2-estado-v">' + html + '</div>' : '') + avisoTope(v);
+  }
+  /* El expediente: lo que respalda a los cuadros. Cerrado por omisión; una sección se abre al pedirla y se cierra al volver a tocarla. */
+  function expediente() {
+    var abre = { versiones: pVersiones, preguntas: pPreguntas, rondas: pRondas, bitacora: pBitacora }[estado.pestana];
+    return '<nav class="p2-pestanas p2-expediente" aria-label="El expediente del plan"><span class="p2-sobre">El expediente</span>' +
+      pest('versiones', 'Versiones y reparto') + pest('preguntas', 'Preguntas y evidencia') + pest('rondas', 'Mis rondas') + pest('bitacora', 'Bitácora') + '</nav>' +
+      (abre ? '<div id="p2Pestana">' + abre() + '</div>' : '');
   }
 
   /* ───────── el plan en siete cuadros (los mismos del visor) y sus ligas ─────────
@@ -396,6 +394,7 @@
     var el = document.getElementById('p2Cuadros'), V = window.VisorPPP;
     if (!el || !V || !V.monta) return;
     var plan = estado.planId, v = estado.version, turno = ++cuadros.turno, lienzo = V.monta(el, { incrustado: true });
+    vigilaHoja();
     var memo = cuadros.memo && cuadros.memo.plan === plan && cuadros.memo.v === v ? cuadros.memo : null;
     if (memo) lienzo.muestra(memo.d); else lienzo.mensaje('Dibujando el plan…', 'Leyendo el libro.');
     var extra = { plan: plan, v: v };
@@ -411,6 +410,366 @@
       if (cambio) lienzo.muestra(d, null, !!memo);
     }).catch(function () { if (turno === cuadros.turno && !memo && document.body.contains(el)) lienzo.mensaje('No pude dibujar los cuadros', 'Las cifras del plan siguen abajo.'); });
   }
+  /* ───────── el lápiz: los puntos de cada cuadro y lo que los mueve ─────────
+     Al abrir un cuadro, visor.js pinta su hoja (#vzModal). Aquí, sin tocar visor.js, se le agrega abajo «Lo que mueve
+     este cuadro»: los datos y palancas que lo alimentan (del visor hacia atrás, ppp2-relaciones.js), cada uno con su
+     lápiz para quien edita. El lápiz dice con qué está ligado cada cifra (sale de las fórmulas del libro), deja probar
+     otra cifra en la columna Prueba del libro (ppp2-simular: nadie más la ve) y guardarla en la versión o en los datos;
+     después de guardar, se puede deshacer. Aquí no se calcula ninguna cifra: todas salen del libro. */
+  function rel() { return window.PPP2_RELACIONES || null; }
+  var LAPIZ_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20h4L18.5 9.5a2.83 2.83 0 0 0-4-4L4 16v4"/><path d="M13.5 6.5l4 4"/></svg>';
+  var CUADRO_NOMBRE = { terreno: 'Terreno', producto: 'Producto', tiempo: 'Tiempo', costo: 'Costo y ganancia', dinero: 'Dinero', reparto: 'Reparto', riesgo: 'Riesgo y estado' };
+  function entrada(id) { var R = rel(); return R && R.entradas ? R.entradas[id] || null : null; }
+  function palancaDe(c) { return (estado.plan.palancas || []).filter(function (x) { return x.clave === c; })[0] || null; }
+  function datoDe(c) { return (estado.plan.datos || []).filter(function (x) { return x.clave === c; })[0] || null; }
+  function corta(t, n) { t = String(t || ''); return t.length > n ? t.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : t; }
+  function cifra(unidad, v) {
+    if (num(v) === null) return v === '' || v === null || v === undefined ? '—' : esc(v);
+    if (unidad === '%') return pct(v);
+    if (unidad === 'MDP') return mdp(v);
+    if (unidad === 'mes') return 'mes ' + fmt(v, 0);
+    if (unidad === 'meses') return fmt(v, 0) + ' meses';
+    if (unidad === 'm²') return fmt(v, 0) + ' m²';
+    if (unidad === '1/0') return v ? 'sí' : 'no';
+    return fmt(v, 2);
+  }
+  function enFicha() { return !!(estado.planId && estado.plan && document.getElementById('p2Cuadros')); }
+  function vigilaHoja() {
+    var modal = document.getElementById('vzModal');
+    if (!modal || modal._p2 || typeof MutationObserver !== 'function') return;
+    var caja = modal.querySelector('.vz-m-caja') || modal.firstElementChild;
+    if (!caja) return;
+    modal._p2 = true;
+    var mira = function () { decoraHoja(modal, caja); };
+    new MutationObserver(mira).observe(caja, { childList: true });
+    new MutationObserver(mira).observe(modal, { attributes: true, attributeFilter: ['data-abierto', 'hidden'] });
+  }
+  function decoraHoja(modal, caja) {
+    var id = modal.getAttribute('data-abierto');
+    if (!id || modal.hidden || !enFicha() || caja.querySelector('.p2-mueve')) return;
+    var html = mueveCuadro(id);
+    if (!html) return;
+    var s = document.createElement('section');
+    s.className = 'p2-mueve';
+    s.setAttribute('aria-label', 'Lo que mueve este cuadro');
+    s.innerHTML = html;
+    caja.appendChild(s);
+    if ((estado.plan.puede || {}).editar) lapizEnRenglones(caja);
+  }
+  /* También en los renglones del propio cuadro que son un dato o una palanca: el lápiz va junto a «de dónde sale». */
+  function identDeDato(k) {
+    var R = rel();
+    if (!R) return '';
+    if (R.entradas['dato:' + k]) return 'dato:' + k;
+    for (var id in R.entradas) if (R.entradas[id].dato === k && R.entradas[id].tipo === 'palanca') return id;
+    return '';
+  }
+  function lapizEnRenglones(caja) {
+    Array.prototype.forEach.call(caja.querySelectorAll('dl > div > small'), function (sm) {
+      if (sm.closest('.p2-mueve') || sm.querySelector('.p2-lapiz-mini')) return;
+      var t = sm.textContent || '', m = /Libro · Datos · ([a-z]+\.[a-z0-9_]+)\s*$/.exec(t), ident = '';
+      if (m) ident = identDeDato(m[1]);
+      else if (/Libro · Resumen · v\d\.tierra\s*$/.test(t)) ident = 'palanca:tierra';
+      else if (/Libro · Resumen · v\d\.obra_inicio\b/.test(t)) ident = 'palanca:obra_inicio';
+      if (!ident || !entrada(ident)) return;
+      sm.insertAdjacentHTML('beforeend', ' <button type="button" class="p2-lapiz-mini" data-accion="lapiz" data-e="' + esc(ident) + '">' + LAPIZ_SVG + ' cambiar</button>');
+    });
+  }
+  function renglon(etiqueta, valor, nota, ident, titulo) {
+    return '<div' + (ident ? ' class="con-lapiz"' : '') + '><dt>' + esc(etiqueta) + '</dt><dd>' + valor + '</dd>' +
+      (ident ? '<button type="button" class="p2-lapiz" data-accion="lapiz" data-e="' + esc(ident) + '" aria-label="Cambiar ' + esc(titulo || etiqueta) + '" title="Cambiar">' + LAPIZ_SVG + '</button>' : '') +
+      (nota ? '<small>' + nota + '</small>' : '') + '</div>';
+  }
+  function conceptoDe(e) {
+    if (!e.producto) return e.concepto;
+    var pr = (estado.plan.productos || [])[e.producto - 1];
+    return pr && pr.nombre ? '% pagado durante la obra · ' + pr.nombre : '';
+  }
+  function renglonesDe(ident, k, editar) {
+    var e = entrada(ident), p = estado.plan;
+    if (!e) return [];
+    if (e.tipo === 'palanca') {
+      var pa = palancaDe(e.palanca), concepto = conceptoDe(e);
+      if (!pa || pa.calculado || !concepto) return [];
+      var d = e.dato ? datoDe(e.dato) : null, propia = pa.cambia[k - 1];
+      var nota = propia ? 'Cifra propia de la V' + k + ' · los datos dicen ' + cifra(pa.unidad, pa.base)
+        : (d ? 'De los datos del plan · ' + esc(d.estado || 'sin estado') + (d.fuente ? ' · ' + esc(corta(d.fuente, 80)) : '') : (e.producto ? 'De la pestaña Productos' : 'De esta versión'));
+      return [renglon(concepto, cifra(pa.unidad, pa.v[k - 1]), nota, editar ? ident : '', concepto)];
+    }
+    if (e.tipo === 'dato') {
+      var dd = datoDe(e.dato);
+      if (!dd) return [];
+      return [renglon(dd.concepto || e.concepto, valorDato(dd), esc(dd.estado || 'sin estado') + (dd.fuente ? ' · ' + esc(corta(dd.fuente, 80)) : '') +
+        (e.solo_se_ve ? ' · se enseña en el cuadro; no mueve otras cifras' : ''), editar ? ident : '')];
+    }
+    if (e.tipo === 'productos') {
+      return (p.productos || []).filter(function (x) { return x.nombre; }).map(function (x) {
+        return renglon(x.nombre, (num(x.unidades) === null ? '—' : fmt(x.unidades, 0)) + ' u · ' + (num(x.m2) === null ? '—' : fmt(x.m2, 0)) + ' m²',
+          (num(x.precio_m2) === null ? '' : '$' + fmt(x.precio_m2, 0) + ' por m² · ') + 'ventas ' + mdp(x.ventas) + (x.estado ? ' · ' + esc(x.estado) : ''),
+          editar ? 'producto:' + x.fila : '', x.nombre);
+      });
+    }
+    if (e.tipo === 'reparto') {
+      var rp = p.reparto || {}, nombres = ((rp.parametros || [])[0] || []).slice(1, 6), el = Number(rp.esquema) || 0;
+      if (!nombres.length) return [];
+      return [renglon('Esquema de reparto', esc(nombres[el - 1] || '—'), 'Se calcula con el flujo de la V' + esc(rp.version || k), editar ? 'reparto:esquema' : '')];
+    }
+    if (e.tipo === 'candados') {
+      return (p.candados || []).map(function (c) {
+        return renglon(c.candado, chip(c.estado), 'Lo cierra: ' + esc(c.cierra || '') + (c.evidencia ? ' · Evidencia: ' + esc(corta(c.evidencia, 80)) : ''), editar && c.estado !== 'cerrado' ? 'candado:' + c.id : '', c.candado);
+      });
+    }
+    if (e.tipo === 'preguntas') {
+      var sig = (p.preguntas || []).filter(function (q) { return q.siguiente; })[0];
+      if (!sig) return [];
+      return [renglon('La pregunta que más mueve el plan', '<button type="button" class="p2-enlace" data-accion="ir" data-a="preguntas">' + (editar ? 'Responder' : 'Ver') + '</button>', esc(sig.texto), '')];
+    }
+    return [];
+  }
+  function mueveCuadro(id) {
+    var R = rel(), editar = !!(estado.plan.puede || {}).editar, k = estado.version, filas = [];
+    if (!R || !R.cuadros || !R.cuadros[id]) return '';
+    R.cuadros[id].forEach(function (ident) { filas = filas.concat(renglonesDe(ident, k, editar)); });
+    if (!filas.length) return '';
+    return '<h3>Lo que mueve este cuadro · V' + k + '</h3><p class="p2-mueve-pista">' +
+      (editar ? 'Con el lápiz pruebas otra cifra, ves qué cambia y decides si la guardas.' : 'Las cifras que alimentan este cuadro y de dónde salen.') + '</p><dl>' + filas.join('') + '</dl>';
+  }
+  /* Cerrar la hoja del cuadro antes de ir a otra parte: la hoja vive en la historia del navegador (atrás la cierra). */
+  function cierraHojaY(fn) {
+    var x = document.querySelector('#vzModal:not([hidden]) .vz-x');
+    if (!x) { fn(); return; }
+    var hecho = false, sigue = function () { if (hecho) return; hecho = true; window.removeEventListener('popstate', sigue); setTimeout(fn, 0); };
+    window.addEventListener('popstate', sigue);
+    x.click();
+    setTimeout(sigue, 450);
+  }
+
+  /* El diálogo del lápiz */
+  var lapiz = { e: null, id: '', previo: null };
+  var DONDE_TXT = { version: 'Sólo en esta versión', dato: 'En los datos del plan' };
+  function ligadoA(e) {
+    var p = e.pasa_por || [], m = e.mueve || [], r = e.revision || [];
+    var clave = ['Ventas', 'Costo sin tierra', 'Fin de obra', 'Capital', 'Banco (saldo máximo)', 'Dinero que faltaría', 'Ganancia real', 'Lo que recibe el dueño', 'Mes de reparto', 'Edad del plan'];
+    var top = m.filter(function (x) { return clave.indexOf(x) >= 0; }).slice(0, 6);
+    if (!p.length && !top.length && !r.length) return '<p class="p2-chico p2-tenue">Se enseña en el cuadro; ninguna otra cifra del plan depende de este dato.</p>';
+    return (p.length ? '<p><b>Pasa por</b> ' + esc(p.slice(0, 4).join(' · ')) + (p.length > 4 ? ' <span class="p2-tenue">y ' + (p.length - 4) + ' cálculos más</span>' : '') + '</p>' : '') +
+      (top.length ? '<p><b>Mueve</b> ' + esc(top.join(' · ')) + (m.length > top.length ? ' <span class="p2-tenue">y ' + (m.length - top.length) + ' más</span>' : '') + '</p>' : '') +
+      (r.length ? '<p><b>Puede mover la revisión para fondos:</b> ' + esc(r.join(', ')) + '.</p>' : '');
+  }
+  function versionesQueSiguen(pa) { return [1, 2, 3].filter(function (k) { return !pa.cambia[k - 1]; }); }
+  function abrirLapiz(ident) {
+    var e = entrada(ident), p = estado.plan, puede = p.puede || {}, k = estado.version;
+    if (!puede.editar) return;
+    if (/^candado:/.test(ident)) { dialogoCandado(ident.slice(8)); return; }
+    if (/^producto:/.test(ident)) { dialogoProducto(Number(ident.slice(9))); return; }
+    if (ident === 'reparto:esquema') { dialogoEsquema(); return; }
+    if (!e) return;
+    lapiz.e = e; lapiz.id = ident;
+    var pa = e.tipo === 'palanca' ? palancaDe(e.palanca) : null, d = e.dato ? datoDe(e.dato) : null;
+    var unidad = pa ? pa.unidad : (d ? d.unidad : e.unidad), hoy = pa ? pa.v[k - 1] : (d ? d.valor : null);
+    var esNumero = ['MDP', '%', 'm²', 'meses', 'mes', '1/0', 'unidades'].indexOf(unidad) >= 0;
+    var mostrado = unidad === '%' && num(hoy) !== null ? Math.round(hoy * 10000) / 100 : (hoy == null ? '' : hoy);
+    var vigente = ver(k).estado === 'vigente', bloqueada = vigente && !puede.aprobar;
+    var opciones = '';
+    if (pa) {
+      var siguen = versionesQueSiguen(pa).map(function (x) { return 'V' + x; });
+      var conDato = !!(e.dato || e.producto);
+      opciones = '<fieldset class="p2-donde"><legend>Dónde se guarda</legend>' +
+        '<label><input type="radio" name="donde" value="version"' + (bloqueada ? ' disabled' : ' checked') + '> Sólo en la V' + k + (bloqueada ? ' <span class="p2-tenue">(es la vigente: sólo la cambia Dirección)</span>' : '') + '</label>' +
+        (conDato ? '<label><input type="radio" name="donde" value="dato"' + (bloqueada ? ' checked' : '') + '> En ' + (e.producto ? 'la pestaña Productos' : 'los datos del plan') + ': lo toman ' +
+          (siguen.length ? 'las versiones que siguen los datos (' + esc(siguen.join(', ')) + ')' : 'las versiones que siguen los datos (hoy ninguna)') + '</label>' : '') + '</fieldset>';
+    }
+    var derivado = d && d.estado === 'derivado', sinLugar = pa && bloqueada && !(e.dato || e.producto);
+    var pideFuente = !pa || e.dato;
+    abrirDialogo('<div class="p2-sobre">' + esc(CUADRO_NOMBRE[e.cuadro] || 'Lápiz') + ' · V' + k + '</div><h2>' + esc(conceptoDe(e) || e.concepto) + '</h2>' +
+      '<p class="p2-tenue">Hoy en la V' + k + ': <b>' + cifra(unidad, hoy) + '</b>' + (pa && pa.cambia[k - 1] ? ' · cifra propia de esta versión' : (d ? ' · ' + esc(d.estado || '') : '')) + '</p>' +
+      '<div class="p2-ligado"><div class="p2-sobre">Está ligado a</div>' + ligadoA(e) + (e.nota ? '<p class="p2-chico p2-tenue">' + esc(e.nota) + '</p>' : '') + '</div>' +
+      '<form class="p2-form" data-form="lapiz">' +
+      '<label>Otra cifra' + (unidad && unidad !== 'texto' ? ' <span class="p2-tenue">(' + esc(unidad === '%' ? '% · escribe 30 para 30%' : unidad === '1/0' ? '1 sí · 0 no' : unidad) + ')</span>' : '') +
+      (esNumero ? '<input name="valor" inputmode="decimal" autocomplete="off" value="' + esc(mostrado) + '">' : '<textarea name="valor" rows="2">' + esc(mostrado) + '</textarea>') + '</label>' +
+      opciones +
+      (derivado ? '<p class="p2-chico p2-aviso-chico">Hoy lo calcula el libro' + (d.fuente ? ' (' + esc(corta(d.fuente, 90)) + ')' : '') + '. Si escribes una cifra en los datos, deja de calcularse.</p>' : '') +
+      (pideFuente ? '<div class="p2-fuente"' + (pa ? ' data-solo-dato="1" hidden' : '') + '><label>Estado del dato<select name="estado">' +
+        ['confirmado', 'supuesto', 'por confirmar', 'en conflicto', 'derivado', 'falta'].map(function (x) { return '<option' + (d && x === d.estado ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label>' +
+        '<label>De dónde sale<textarea name="fuente" rows="2" placeholder="Documento, persona o fecha">' + esc(d ? d.fuente || '' : '') + '</textarea></label></div>' : '') +
+      '<div class="p2-lapiz-res" id="p2LapizRes" aria-live="polite">' + (pa ? '' : '<p class="p2-chico p2-tenue">Este dato no tiene columna de prueba en el libro: al guardarlo cambian las cifras de todas las versiones que lo usan, y lo puedes deshacer enseguida.</p>') + '</div>' +
+      (sinLugar ? '<p class="p2-chico p2-aviso-chico">La V' + k + ' es la vigente: sólo la cambia Dirección. Aquí puedes probar la cifra y ver qué cambiaría.</p>' : '') +
+      '<div class="p2-acciones">' + (pa ? '<button type="button" class="p2-btn" data-accion="lapiz-probar"><i class="ti ti-eye" aria-hidden="true"></i> Ver qué cambia</button>' : '') +
+      (sinLugar ? '' : '<button class="p2-btn oro" type="submit">Guardar</button>') + '<button class="p2-btn suave" type="button" data-accion="cerrar">' + (sinLugar ? 'Cerrar' : 'Cancelar') + '</button></div></form>');
+    if (pa) dondeCambia();
+  }
+  function dondeCambia() {
+    var f = document.querySelector('#p2Dialogo form[data-form="lapiz"]'), caja = f && f.querySelector('.p2-fuente[data-solo-dato]');
+    if (!f) return;
+    var donde = (f.querySelector('input[name="donde"]:checked') || {}).value || 'version';
+    if (caja) caja.hidden = donde !== 'dato' || !!(lapiz.e && lapiz.e.producto);
+    var res = document.getElementById('p2LapizRes');
+    if (res) res.innerHTML = '';
+  }
+  function valorLapiz(f) {
+    var e = lapiz.e, pa = e.tipo === 'palanca' ? palancaDe(e.palanca) : null, d = e.dato ? datoDe(e.dato) : null;
+    var unidad = pa ? pa.unidad : (d ? d.unidad : e.unidad), crudo = f.valor.value;
+    if (['MDP', '%', 'm²', 'meses', 'mes', '1/0', 'unidades'].indexOf(unidad) < 0) return { ok: true, valor: crudo };
+    var n = aNumero(crudo, unidad);
+    if (n === null || isNaN(n)) return { ok: false };
+    return { ok: true, valor: n };
+  }
+  var FILAS_LAPIZ = [
+    ['ventas', 'Ventas', 'MDP', 1], ['obra', 'Obra directa', 'MDP', -1], ['costo_con_tierra', 'Costo con tierra', 'MDP', -1],
+    ['ganancia', 'Ganancia real', 'MDP', 1], ['banco_max', 'Banco, saldo máximo', 'MDP', -1], ['respaldo', 'Dinero que faltaría', 'MDP', -1],
+    ['costo_dinero', 'Costo del dinero', 'MDP', -1], ['aportacion', 'Tierra y capital entre costo', '%', 1],
+    ['preventa_inicio', 'Preventa al arrancar la obra', '%', 1], ['fin_obra', 'Fin de obra', 'mes', -1], ['mes_reparto', 'Mes de reparto', 'mes', -1]
+  ];
+  function diferente(u, a, b) {
+    if (num(a) === null || num(b) === null) return a !== b;
+    return Math.abs(a - b) >= (u === 'MDP' ? 0.05 : (u === '%' ? 0.0005 : 0.5));
+  }
+  /* Avisos con los mismos límites que dibuja el visor (los de la revisión para fondos del libro). */
+  function avisosLapiz(antes, despues) {
+    var V = window.VisorPPP, out = [], P = {};
+    ((V && V.PRUEBAS) || []).forEach(function (x) { P[x.k] = x; });
+    var falta = num(despues.respaldo), faltaba = num(antes.respaldo);
+    if (falta !== null && falta >= 0.01) out.push(['mal', 'Faltaría dinero: ' + mdp(falta) + ' de respaldo. La revisión para fondos pide que sea cero.']);
+    else if (faltaba !== null && faltaba >= 0.01) out.push(['bien', 'Ya no faltaría dinero.']);
+    if (num(despues.ganancia) !== null && despues.ganancia < 0) out.push(['mal', 'La ganancia real queda negativa.']);
+    [['aportacion', 'rv_aportacion', 'Tierra y capital entre costo'], ['preventa_inicio', 'rv_preventa', 'La preventa al arrancar la obra']].forEach(function (x) {
+      var pr = P[x[1]], a = num(antes[x[0]]), b = num(despues[x[0]]);
+      if (!pr || !V.estadoPrueba || b === null) return;
+      var ea = a === null ? 'na' : V.estadoPrueba(pr, a), eb = V.estadoPrueba(pr, b);
+      if (eb === 'fuera' && ea !== 'fuera') out.push(['mal', x[2] + ' queda en ' + pct(b) + ': deja de cumplir (se pide ' + pct(pr.lim) + ' o más).']);
+      else if (eb === 'fuera') out.push(['mal', x[2] + ' sigue sin cumplir: ' + pct(b) + ' (se pide ' + pct(pr.lim) + ').']);
+      else if (eb === 'justa' && ea !== 'justa') out.push(['ojo', x[2] + ' queda justa: ' + pct(b) + ' (lo ideal es ' + pct(pr.ideal) + ').']);
+      else if (ea === 'fuera' && eb === 'ok') out.push(['bien', x[2] + ' ya cumple: ' + pct(b) + '.']);
+    });
+    return out;
+  }
+  function pintaPrueba(r) {
+    var res = document.getElementById('p2LapizRes');
+    if (!res) return;
+    if (r.sin_efecto && r.sin_efecto.length && (!r.cambios || !r.cambios.length)) {
+      var s = r.sin_efecto[0];
+      res.innerHTML = '<p class="p2-aviso-chico">La V' + r.version + ' tiene su propia cifra (' + esc(cifra((palancaDe(s.palanca) || {}).unidad, s.propia)) + '): cambiar el dato no la mueve. ' +
+        'Para moverla, guárdalo «sólo en esta versión».</p>';
+      return;
+    }
+    var a = r.antes || {}, b = r.despues || {}, cambian = FILAS_LAPIZ.filter(function (f) { return diferente(f[2], a[f[0]], b[f[0]]); });
+    var filas = cambian.map(function (f) {
+      var mejor = num(a[f[0]]) !== null && num(b[f[0]]) !== null ? (b[f[0]] - a[f[0]]) * f[3] > 0 : null;
+      return '<tr><td>' + esc(f[1]) + '</td><td class="n">' + cifra(f[2], a[f[0]]) + '</td><td class="n"><b>' + cifra(f[2], b[f[0]]) + '</b></td>' +
+        '<td class="n ' + (mejor === null ? '' : (mejor ? 'sube' : 'baja')) + '">' + (mejor === null ? '' : (mejor ? '▲' : '▼')) + '</td></tr>';
+    }).join('');
+    var avisos = avisosLapiz(a, b).map(function (x) { return '<li class="' + x[0] + '">' + esc(x[1]) + '</li>'; }).join('');
+    res.innerHTML = '<div class="p2-sobre">Qué cambia en la V' + r.version + ' · lo calculó el libro en su columna de prueba</div>' +
+      (filas ? '<table class="p2-tabla p2-antes"><thead><tr><th></th><th class="n">Hoy</th><th class="n">Con la cifra nueva</th><th></th></tr></thead><tbody>' + filas + '</tbody></table>'
+        : '<p class="p2-chico">Con esta cifra no cambia ninguna de las cifras principales.</p>') +
+      (avisos ? '<ul class="p2-avisos">' + avisos + '</ul>' : '') +
+      '<p class="p2-chico p2-tenue">Nada se guardó todavía: el libro ya regresó a como estaba.' + (cambian.length < FILAS_LAPIZ.length && filas ? ' Lo demás no cambia.' : '') + '</p>';
+  }
+  function probarLapiz(b) {
+    var f = document.querySelector('#p2Dialogo form[data-form="lapiz"]'), e = lapiz.e, res = document.getElementById('p2LapizRes');
+    if (!f || !e || estado.ocupado) return;
+    var v = valorLapiz(f);
+    if (!v.ok) { toast('Escribe un número.'); return; }
+    var donde = (f.querySelector('input[name="donde"]:checked') || {}).value || 'version';
+    var clave = donde === 'dato' && e.dato ? e.dato : e.palanca;
+    if (estado.fresco === false) { toast('Un momento: estoy trayendo lo último de mi libro.'); return; }
+    estado.ocupado = true;
+    b.disabled = true;
+    if (res) res.innerHTML = '<p class="p2-chico p2-tenue"><i class="ti ti-loader-2" aria-hidden="true"></i> El libro está recalculando con esa cifra en su columna de prueba…</p>';
+    escribir({ tipo: 'ppp2-simular', plan: estado.planId, rev: estado.plan.rev, version: estado.version, cambios: [{ clave: clave, valor: v.valor }] }, 90000).then(function (r) {
+      estado.ocupado = false;
+      if (b.isConnected) b.disabled = false;
+      if (!r || !r.ok) {
+        var er = (r && r.error) || 'red';
+        if (RECHAZOS.indexOf(er) >= 0) { cerrarDialogo(); olvidaTodo(); fallo(r); return; }
+        if (res) res.innerHTML = '<p class="p2-aviso-chico">' + esc(ERRORES[er] || 'No pude probar la cifra. Vuelve a intentarlo.') + '</p>';
+        if (er === 'revision') cargarPlan(true);
+        return;
+      }
+      pintaPrueba(r);
+    }, function () {
+      estado.ocupado = false;
+      if (b.isConnected) b.disabled = false;
+      if (res) res.innerHTML = '<p class="p2-aviso-chico">Sin respuesta del servidor. Vuelve a intentarlo.</p>';
+    });
+  }
+  function guardarLapiz(f) {
+    var e = lapiz.e, k = estado.version, d = new FormData(f);
+    if (!e) return;
+    var v = valorLapiz(f);
+    if (!v.ok) { toast('Escribe un número.'); return; }
+    var pa = e.tipo === 'palanca' ? palancaDe(e.palanca) : null, dato = e.dato ? datoDe(e.dato) : null;
+    var donde = pa ? (d.get('donde') || 'version') : 'dato', nombre = conceptoDe(e) || e.concepto, cuerpo, deshacer, antesTxt, unidad;
+    if (donde === 'version') {
+      unidad = pa.unidad;
+      cuerpo = { tipo: 'ppp2-palanca', version: k, clave: e.palanca, valor: v.valor, razon: 'Con el lápiz del cuadro ' + (e.cuadro || '') };
+      deshacer = { tipo: 'ppp2-palanca', version: k, clave: e.palanca, valor: pa.cambia[k - 1] ? pa.v[k - 1] : null };
+      antesTxt = cifra(unidad, pa.v[k - 1]);
+      nombre += ' · V' + k;
+    } else if (e.producto) {
+      var pr = (estado.plan.productos || [])[e.producto - 1] || {};
+      unidad = '%';
+      cuerpo = { tipo: 'ppp2-producto', fila: e.producto, campos: { durante_obra: v.valor } };
+      deshacer = { tipo: 'ppp2-producto', fila: e.producto, campos: { durante_obra: num(pr.durante_obra) === null ? 0 : pr.durante_obra } };
+      antesTxt = cifra('%', pr.durante_obra);
+    } else {
+      unidad = dato ? dato.unidad : e.unidad;
+      cuerpo = { tipo: 'ppp2-dato', clave: e.dato, valor: v.valor, estado: d.get('estado'), fuente: d.get('fuente') };
+      deshacer = dato ? { tipo: 'ppp2-dato', clave: e.dato, valor: dato.valor === null || dato.valor === undefined ? '' : dato.valor, estado: dato.estado || '', fuente: dato.fuente || '' } : null;
+      antesTxt = dato ? valorDato(dato) : '—';
+    }
+    var despuesTxt = cifra(unidad, v.valor);
+    enviar(cuerpo, 'Guardado: el libro recalculó.').then(function (r) {
+      if (r && r.ok && deshacer) ofrecerDeshacer(nombre + ': ' + antesTxt.replace(/<[^>]+>/g, '') + ' → ' + String(despuesTxt).replace(/<[^>]+>/g, ''), deshacer);
+    });
+  }
+  /* Después de guardar, un momento para deshacer: regresa exactamente lo que había (o la cifra de los datos). */
+  var deshacerT = 0;
+  function ofrecerDeshacer(texto, cuerpo) {
+    var el = document.getElementById('p2Deshacer');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'p2Deshacer'; el.className = 'p2-deshacer'; el.setAttribute('role', 'status');
+      document.body.appendChild(el);
+    }
+    el.innerHTML = '<span>Guardado · ' + esc(texto) + '</span><button type="button" class="p2-btn suave">Deshacer</button><button type="button" class="p2-x" aria-label="Cerrar">×</button>';
+    el.hidden = false;
+    clearTimeout(deshacerT);
+    deshacerT = setTimeout(function () { el.hidden = true; }, 20000);
+    el.querySelector('.p2-btn').onclick = function () {
+      el.hidden = true; clearTimeout(deshacerT);
+      enviar(cuerpo, 'Listo: regresé la cifra que había.');
+    };
+    el.querySelector('.p2-x').onclick = function () { el.hidden = true; clearTimeout(deshacerT); };
+  }
+  function dialogoProducto(i) {
+    var x = (estado.plan.productos || [])[i - 1];
+    if (!x) return;
+    lapiz.previo = { fila: i, campos: { unidades: x.unidades, m2: x.m2, precio_m2: x.precio_m2, estado: x.estado || '', fuente: x.fuente || '' } };
+    var R = entrada('productos');
+    abrirDialogo('<div class="p2-sobre">Producto · todas las versiones</div><h2>' + esc(x.nombre) + '</h2>' +
+      (R ? '<div class="p2-ligado"><div class="p2-sobre">Está ligado a</div>' + ligadoA(R) + '</div>' : '') +
+      '<form class="p2-form" data-form="producto" data-fila="' + i + '">' +
+      '<label>Unidades<input name="unidades" inputmode="decimal" value="' + esc(x.unidades == null ? '' : x.unidades) + '"></label>' +
+      '<label>m² vendibles<input name="m2" inputmode="decimal" value="' + esc(x.m2 == null ? '' : x.m2) + '"></label>' +
+      '<label>Precio por m² (pesos)<input name="precio_m2" inputmode="decimal" value="' + esc(x.precio_m2 == null ? '' : x.precio_m2) + '"></label>' +
+      '<label>Estado<select name="estado">' + ['confirmado', 'supuesto', 'por confirmar', 'en conflicto', 'derivado', 'falta'].map(function (e) { return '<option' + (e === x.estado ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></label>' +
+      '<label>De dónde sale<textarea name="fuente" rows="2">' + esc(x.fuente || '') + '</textarea></label>' +
+      '<p class="p2-chico p2-tenue">Los productos no tienen columna de prueba: al guardar cambian las ventas de todas las versiones, y lo puedes deshacer enseguida.</p>' +
+      '<div class="p2-acciones"><button class="p2-btn oro" type="submit">Guardar</button><button class="p2-btn suave" type="button" data-accion="cerrar">Cancelar</button></div></form>');
+  }
+  function dialogoEsquema() {
+    var rp = estado.plan.reparto || {}, P = rp.parametros || [], R = rp.resultados || [], nombres = (P[0] || []).slice(1, 6), el = Number(rp.esquema) || 0;
+    var dueno = (R[6] || []).slice(1, 6), vec = (R[7] || []).slice(1, 6);
+    abrirDialogo('<div class="p2-sobre">Reparto · con el flujo de la V' + esc(rp.version || estado.version) + '</div><h2>Esquema de reparto</h2>' +
+      '<p class="p2-tenue">Lo que recibiría el dueño con cada esquema (lo calcula el libro, pestaña Reparto).</p><form class="p2-form" data-form="esquema">' +
+      nombres.map(function (n, j) {
+        return '<label class="p2-opcion"><input type="radio" name="esquema" value="' + (j + 1) + '"' + (j + 1 === el ? ' checked' : '') + '> <span><b>' + esc(n) + '</b> · dueño ' + mdp(dueno[j]) + ' (' + veces(vec[j]) + ' su tierra)</span></label>';
+      }).join('') +
+      '<div class="p2-acciones"><button class="p2-btn oro" type="submit">Elegir</button><button class="p2-btn suave" type="button" data-accion="cerrar">Cancelar</button></div></form>');
+    lapiz.previo = { esquema: el };
+  }
+
   /* Una fecha del libro puede llegar como número de fecha de la hoja (días desde 1899-12-30): se enseña como fecha. */
   function fechaLibro(x) {
     if (typeof x !== 'number' || !(x > 20000 && x < 80000)) return x;
@@ -471,54 +830,9 @@
     var aMano = function () { var c = document.getElementById('p2LigaNueva'); if (c) { c.value = url; c.focus(); c.select(); } else window.prompt('Copia la liga:', url); };
     try { navigator.clipboard.writeText(url).then(listo, aMano); } catch (e) { aMano(); }
   }
-  function clave(t, cifra, sub, clase) {
-    return '<div class="p2-clave ' + (clase || '') + '"><div class="p2-sobre">' + esc(t) + '</div><span class="p2-cifra">' + cifra + '</span><span class="p2-tenue p2-chico">' + esc(sub || '') + '</span></div>';
-  }
   function pest(id, texto) {
-    return '<a href="#/plan/' + esc(estado.planId) + '/' + id + '"' + (estado.pestana === id ? ' aria-current="page"' : '') + '>' + esc(texto) + '</a>';
-  }
-
-  /* gráfica: dinero ajeno en uso y caja del proyecto, mes a mes */
-  function grafica() {
-    var s = ((estado.plan.series || {})[estado.version]) || null, v = ver();
-    if (!s || !s.ajeno) return '';
-    var ult = 1;
-    for (var i = 0; i < s.mes.length; i++) if (Math.abs(s.ajeno[i]) > 0.01 || Math.abs(s.cobranza[i]) > 0.01 || Math.abs(s.egresos[i]) > 0.01) ult = i + 1;
-    ult = Math.min(s.mes.length, ult + 2);
-    var ancho = (raiz && raiz.clientWidth) || 760;
-    var A = Math.max(340, Math.min(760, ancho - 40)), H = A < 520 ? 210 : 230, iz = 40, de = 10, ar = 16, ab = 30;
-    var max = 1;
-    for (var j = 0; j < ult; j++) max = Math.max(max, s.ajeno[j], s.caja[j]);
-    max = Math.ceil(max / 50) * 50;
-    var x = function (m) { return iz + (A - iz - de) * (m - 0.5) / ult; };
-    var y = function (val) { return ar + (H - ar - ab) * (1 - val / max); };
-    var area = 'M' + x(1) + ',' + y(0);
-    var linea = '';
-    for (var m = 1; m <= ult; m++) {
-      area += ' L' + x(m).toFixed(1) + ',' + y(Math.max(0, s.ajeno[m - 1])).toFixed(1);
-      linea += (m === 1 ? 'M' : ' L') + x(m).toFixed(1) + ',' + y(Math.max(0, s.caja[m - 1])).toFixed(1);
-    }
-    area += ' L' + x(ult) + ',' + y(0) + ' Z';
-    var rejilla = '';
-    for (var k = 0; k <= 4; k++) {
-      var val = max * k / 4;
-      rejilla += '<line x1="' + iz + '" x2="' + (A - de) + '" y1="' + y(val) + '" y2="' + y(val) + '" stroke="#e1dacb" stroke-width="1"/>' +
-        '<text x="' + (iz - 6) + '" y="' + (y(val) + 4) + '" text-anchor="end" font-size="11" fill="#766f62">' + Math.round(val) + '</text>';
-    }
-    var marcas = '', fila = 0;
-    [[num(v.obra_inicio), 'obra'], [num(v.fin_obra), 'fin de obra'], [num(v.mes_reparto), 'reparto']].forEach(function (mk) {
-      if (mk[0] === null || mk[0] < 1 || mk[0] > ult) return;
-      var tx = x(mk[0]) + 4, derecha = tx > A - 110;
-      marcas += '<line x1="' + x(mk[0]) + '" x2="' + x(mk[0]) + '" y1="' + ar + '" y2="' + (H - ab) + '" stroke="#9a7b3f" stroke-dasharray="3 4" stroke-width="1"/>' +
-        '<text x="' + (derecha ? x(mk[0]) - 4 : tx) + '" y="' + (ar + 10 + 13 * (fila++ % 3)) + '" font-size="11" fill="#9a7b3f"' + (derecha ? ' text-anchor="end"' : '') + '>' + mk[1] + ' · mes ' + mk[0] + '</text>';
-    });
-    var ejes = '';
-    for (var t = A < 520 ? 12 : 6; t <= ult; t += A < 520 ? 12 : 6) ejes += '<text x="' + x(t) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="11" fill="#766f62">' + t + '</text>';
-    return '<section class="p2-grafica" aria-label="Cómo se mueve el dinero"><div class="p2-sobre">Cómo se mueve el dinero · V' + estado.version + ' (MDP por mes)</div>' +
-      '<svg viewBox="0 0 ' + A + ' ' + H + '" role="img" aria-label="Dinero ajeno en uso y caja del proyecto por mes">' + rejilla +
-      '<path d="' + area + '" fill="#9a7b3f" fill-opacity=".22" stroke="#9a7b3f" stroke-width="1.5"/>' +
-      '<path d="' + linea + '" fill="none" stroke="#39744b" stroke-width="2.2"/>' + marcas + ejes + '</svg>' +
-      '<div class="p2-leyenda"><span><i style="background:#9a7b3f55;border:1px solid #9a7b3f"></i>Dinero ajeno en uso (banco, capital y respaldo)</span><span><i style="background:#39744b"></i>Caja del proyecto</span><span>Meses desde el arranque</span></div></section>';
+    var abierta = estado.pestana === id;
+    return '<a href="#/plan/' + esc(estado.planId) + (abierta ? '' : '/' + id) + '"' + (abierta ? ' aria-current="page" title="Cerrar"' : '') + '>' + esc(texto) + '</a>';
   }
 
   /* pestaña: versiones y reparto */
@@ -847,8 +1161,11 @@
   }
 
   /* ───────── acciones ───────── */
+  var focoPrevio = null;      // al cerrar un diálogo, el foco vuelve a lo que lo abrió (el lápiz de un cuadro, por ejemplo)
   function abrirDialogo(html) {
+    var previo = document.activeElement;
     cerrarDialogo();
+    focoPrevio = previo;
     var d = document.createElement('div');
     d.className = 'p2-dialogo'; d.id = 'p2Dialogo';
     d.innerHTML = '<div class="p2-caja" role="dialog" aria-modal="true">' + html + '</div>';
@@ -856,7 +1173,13 @@
     var primero = d.querySelector('input,textarea,select,button');
     if (primero) primero.focus();
   }
-  function cerrarDialogo() { var d = document.getElementById('p2Dialogo'); if (d) d.remove(); }
+  function cerrarDialogo() {
+    var d = document.getElementById('p2Dialogo');
+    if (!d) return;
+    d.remove();
+    if (focoPrevio && document.contains(focoPrevio) && focoPrevio.focus) { try { focoPrevio.focus({ preventScroll: true }); } catch (e) { } }
+    focoPrevio = null;
+  }
 
   function enviar(cuerpo, mensaje, ms, espera) {
     if (estado.ocupado) return Promise.resolve();
@@ -940,8 +1263,18 @@
 
   document.addEventListener('click', function (ev) {
     var b = ev.target.closest('[data-accion]');
-    if (!b || !raiz.contains(b) && !b.closest('.p2-dialogo')) return;
+    if (!b || !raiz.contains(b) && !b.closest('.p2-dialogo') && !b.closest('#vzModal')) return;
     var a = b.getAttribute('data-accion');
+    if (a === 'lapiz') { abrirLapiz(b.getAttribute('data-e')); return; }
+    if (a === 'lapiz-probar') { probarLapiz(b); return; }
+    if (a === 'ir') {
+      var adonde = b.getAttribute('data-a');
+      cierraHojaY(function () {
+        location.hash = '#/plan/' + estado.planId + '/' + adonde;
+        setTimeout(function () { var el = document.getElementById('p2Pestana'); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' }); }, 60);
+      });
+      return;
+    }
     if (a === 'entrar') { if (window.YODPortero && window.YODPortero.entrar) window.YODPortero.entrar(); else location.reload(); return; }
     if (a === 'reintentar') { estado.vivero = null; ruta(); return; }
     if (a === 'refrescar') {
@@ -1038,6 +1371,7 @@
   });
 
   document.addEventListener('change', function (ev) {
+    if (ev.target.matches && ev.target.matches('#p2Dialogo input[name="donde"]')) { dondeCambia(); return; }
     var i = ev.target.closest('input[data-palanca]');
     if (!i) return;
     var unidad = i.getAttribute('data-unidad'), n = aNumero(i.value, unidad);
@@ -1067,10 +1401,52 @@
       return;
     }
     if (tipo === 'candado') { enviar({ tipo: 'ppp2-candado', id: f.getAttribute('data-id'), estado: d.get('estado'), evidencia: d.get('evidencia') }); return; }
+    if (tipo === 'lapiz') { guardarLapiz(f); return; }
+    if (tipo === 'producto') {
+      var campos = {}, previo = (lapiz.previo || {}).campos || {}, mal = false;
+      ['unidades', 'm2', 'precio_m2'].forEach(function (c) {
+        var n = aNumero(d.get(c), c === 'm2' ? 'm²' : '');
+        if (n === null) return;
+        if (isNaN(n) || n < 0) { mal = true; return; }
+        if (n !== previo[c]) campos[c] = n;
+      });
+      if (mal) { toast('Escribe números positivos.'); return; }
+      if (d.get('estado') !== previo.estado) campos.estado = d.get('estado');
+      if (String(d.get('fuente') || '') !== String(previo.fuente || '')) campos.fuente = d.get('fuente');
+      if (!Object.keys(campos).length) { cerrarDialogo(); return; }
+      var atras = {};
+      Object.keys(campos).forEach(function (c) { atras[c] = previo[c] === undefined || previo[c] === null ? '' : previo[c]; });
+      var fila = Number(f.getAttribute('data-fila')), nom = ((estado.plan.productos || [])[fila - 1] || {}).nombre || 'Producto';
+      enviar({ tipo: 'ppp2-producto', fila: fila, campos: campos }, 'Guardado: el libro recalculó las ventas.').then(function (r) {
+        if (r && r.ok) ofrecerDeshacer(nom + ': ' + Object.keys(campos).join(', '), { tipo: 'ppp2-producto', fila: fila, campos: atras });
+      });
+      return;
+    }
+    if (tipo === 'esquema') {
+      var nuevo = Number(d.get('esquema')), antes = (lapiz.previo || {}).esquema;
+      if (!nuevo || nuevo === antes) { cerrarDialogo(); return; }
+      enviar({ tipo: 'ppp2-reparto', esquema: nuevo }, 'Esquema elegido: el libro recalculó lo que recibe cada parte.').then(function (r) {
+        if (r && r.ok && antes) ofrecerDeshacer('Esquema de reparto', { tipo: 'ppp2-reparto', esquema: antes });
+      });
+      return;
+    }
     if (tipo === 'aprobar') { enviar({ tipo: 'ppp2-version', version: Number(f.getAttribute('data-v')), campos: { estado: 'vigente' }, razon: d.get('razon') }, 'Versión vigente aprobada.'); }
   });
 
   document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') cerrarDialogo(); });
+  /* Un diálogo abierto encima de la hoja de un cuadro: Esc cierra sólo el diálogo y el foco no se va a la hoja de atrás. */
+  document.addEventListener('keydown', function (ev) {
+    var dlg = document.getElementById('p2Dialogo');
+    if (!dlg) return;
+    if (ev.key === 'Escape') { ev.stopPropagation(); ev.preventDefault(); cerrarDialogo(); return; }
+    if (ev.key !== 'Tab') return;
+    ev.stopPropagation();
+    var f = Array.prototype.filter.call(dlg.querySelectorAll('button, [href], input, select, textarea'), function (x) { return !x.disabled && x.offsetParent !== null; });
+    if (!f.length) return;
+    var i = f.indexOf(document.activeElement);
+    if (ev.shiftKey && i <= 0) { ev.preventDefault(); f[f.length - 1].focus(); }
+    else if (!ev.shiftKey && (i < 0 || i === f.length - 1)) { ev.preventDefault(); f[0].focus(); }
+  }, true);
   /* Si el Portero rechaza la sesión (lo avisa el cargador), lo que vi se borra y, si estaba a la vista, se pide entrar. */
   window.addEventListener('yodcargador:sesion-rechazada', function () {
     olvidaTodo();
