@@ -446,6 +446,9 @@ function doGet(e) {
     if (r === 'ppp2-visor') {                               // sólo lectura, por liga (Visor.gs): no pasa por el Portero
       try { return out_(visor_get_(p)); } catch (x) { return out_({ ok: false, error: 'interno' }); }   // a una liga no se le cuenta por qué falló
     }
+    if (r === 'ppp2-historial' || r === 'ppp2-chat' || r === 'ppp2-archivos' || r === 'ppp2-archivo') {   // pestañas del visor (Visor.gs): sólo lectura, misma puerta
+      try { return out_(pestana_get_(r, p)); } catch (x) { return out_({ ok: false, error: 'interno' }); }
+    }
     var s = canje_(p.k);
     if (!s.ok) return out_({ ok: false, error: s.error });
     if (r === 'ppp2-vivero') return out_(vivero_get_(s));

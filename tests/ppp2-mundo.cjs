@@ -150,6 +150,13 @@ const PLAN = 'p2ejemplo001';
 const POTENCIALES = 'potenciales00000000000001';
 const FOTO_CAB = ['caso_id', 'tipo', 'escenario_id', 'escenario_nombre', 'estado', 'elegida', 'elegida_por', 'elegida_fecha', 'orden',
   'motor_commit', 'huella_entradas', 'calculado', 'origen', 'conciliacion', 'visor_json'];
+/* La hoja de historial de mentira (pestañas Proyectos, Eventos, Pendientes y Chat). Su id llega por Config
+   (`historial_id`); `op.historial` trae sus pestañas como { nombre: [encabezado, ...renglones] }. */
+const HISTORIAL = 'historial00000000000000000001';
+/* Drive de mentira para las pestañas del visor: `op.drive` = { carpetas: {id: {nombre, padres, papelera}},
+   archivos: {id: {nombre, tipo, padres, tamano, fecha, contenido, papelera, exporta}} }. `exporta` (bytes del PDF
+   o 'falla') es para los archivos de Google; un archivo sin `contenido` tiene `tamano` bytes de relleno. */
+const TOKEN_DRIVE = 'token-de-prueba';
 const SESIONES = {
   syadmin00000000000000000: { ok: true, rol: 'admin', boards: '*', nombre: 'Admin Prueba', correo: 'admin@ejemplo.mx' },
   syeditor0000000000000000: { ok: true, rol: 'editor', boards: 'PT,MK', nombre: 'Editora Prueba', correo: 'editora@ejemplo.mx' },
@@ -160,6 +167,43 @@ function mundo(opciones) {
   const op = opciones || {};
   const libros = { 'libro-ejemplo': libroDeAccesorio(op.idioma, 'libro-ejemplo'), 'libro-plantilla': libroDeAccesorio(op.idioma, 'libro-plantilla') };
   if (op.fotos) libros[POTENCIALES] = new Libro(op.sinPestanaFotos ? {} : { PPP_VISOR: new Hoja('PPP_VISOR', [FOTO_CAB].concat(op.fotos)) }, POTENCIALES);
+  if (op.historial) libros[HISTORIAL] = new Libro(Object.fromEntries(Object.entries(op.historial).map(([n, filas]) => [n, new Hoja(n, filas)])), HISTORIAL);
+  const drive = { carpetas: (op.drive && op.drive.carpetas) || {}, archivos: (op.drive && op.drive.archivos) || {} };
+  const driveVistas = [];        // carpetas cuyo contenido pidió el servidor (recorrerlas es lo que tarda)
+  const drivePedidos = [];       // pedidos a la API de Drive (trozos de un archivo)
+  const driveBlobs = [];         // archivos que el servidor leyó enteros con getBlob
+  const contenidoDe = (a) => {
+    if (a._buf) return a._buf;
+    if (a.contenido !== undefined) a._buf = Buffer.isBuffer(a.contenido) ? a.contenido : Buffer.from(String(a.contenido), 'utf8');
+    else { a._buf = Buffer.alloc(a.tamano || 0); for (let i = 0; i < a._buf.length; i++) a._buf[i] = (i * 7 + 3) % 251; }
+    return a._buf;
+  };
+  const iterador = (xs) => { let i = 0; return { hasNext: () => i < xs.length, next: () => xs[i++] }; };
+  const padresDe = (x) => iterador((x.padres || []).filter((p) => drive.carpetas[p]).map((p) => carpetaDoble(p)));
+  function carpetaDoble(id) {
+    const c = drive.carpetas[id];
+    return {
+      getId: () => id, getName: () => c.nombre, getMimeType: () => 'application/vnd.google-apps.folder', isTrashed: () => !!c.papelera, getParents: () => padresDe(c),
+      getFiles: () => { driveVistas.push(id); return iterador(Object.keys(drive.archivos).filter((k) => (drive.archivos[k].padres || []).includes(id)).map((k) => archivoDoble(k))); },
+      getFolders: () => iterador(Object.keys(drive.carpetas).filter((k) => (drive.carpetas[k].padres || []).includes(id)).map((k) => carpetaDoble(k)))
+    };
+  }
+  function archivoDoble(id) {
+    const a = drive.archivos[id];
+    return {
+      getId: () => id, getName: () => a.nombre, getMimeType: () => a.tipo || 'application/octet-stream', isTrashed: () => !!a.papelera, getParents: () => padresDe(a),
+      getSize: () => (a.tamano !== undefined ? a.tamano : contenidoDe(a).length),
+      getLastUpdated: () => new Date(a.fecha || '2026-11-01T10:00:00Z'),
+      getBlob: () => { driveBlobs.push(id); return new Blob(contenidoDe(a), a.tipo); },
+      getAs: (mime) => {
+        if (mime !== 'application/pdf' || !String(a.tipo).startsWith('application/vnd.google-apps.')) throw new Error('no se puede exportar');
+        if (a.exporta === 'falla') throw new Error('Exceeded maximum export size');
+        if (typeof a.exporta === 'number' && a.exporta > 40 * 1024 * 1024) return { getBytes: () => ({ length: a.exporta }) };   // sin apartar 40 MB de verdad
+        const base = Buffer.from('%PDF-1.4 exportado de ' + a.nombre + '\n', 'utf8'), n = typeof a.exporta === 'number' ? a.exporta : base.length;
+        return new Blob(n > base.length ? Buffer.concat([base, Buffer.alloc(n - base.length, 32)]) : base, 'application/pdf');
+      }
+    };
+  }
   const aperturas = {};          // cuántas veces el servidor abrió cada libro (leerlo es lo que tarda)
   let flushes = 0;
   const vivero = new Libro({
@@ -175,7 +219,7 @@ function mundo(opciones) {
     ].concat(op.config || [])),
     'Bitácora': new Hoja('Bitácora', [['fecha', 'actor', 'accion', 'plan_id', 'detalle', 'request_id', 'resultado', 'nota']])
   });
-  if (op.ligas) vivero.hojas.Ligas = new Hoja('Ligas', [['liga', 'plan_id', 'para', 'estado', 'vence', 'versiones', 'etiquetas', 'creada', 'nota']].concat(op.ligas));
+  if (op.ligas) vivero.hojas.Ligas = new Hoja('Ligas', [op.ligasCab || ['liga', 'plan_id', 'para', 'estado', 'vence', 'versiones', 'etiquetas', 'creada', 'nota']].concat(op.ligas));
   if (op.aperturas) vivero.hojas.Aperturas = new Hoja('Aperturas', [['fecha', 'liga', 'para', 'plan_id', 'equipo']]);
   const llamadas = [];
   const revocados = new Set();   // sesiones que el Portero dejó de aceptar a media prueba
@@ -222,6 +266,15 @@ function mundo(opciones) {
       },
       fetch: (url, params) => {
         if (/^https:\/\/api\.(anthropic|openai)\.com\//.test(url)) return respuestaIA(url, params || {});
+        const md = /^https:\/\/www\.googleapis\.com\/drive\/v3\/files\/([^?/]+)\?alt=media/.exec(url);
+        if (md) {                // la API de Drive: un trozo de un archivo con la credencial del dueño del script
+          const id = decodeURIComponent(md[1]), h = (params && params.headers) || {}, a = drive.archivos[id];
+          drivePedidos.push({ url, metodo: String((params && params.method) || 'get').toLowerCase(), headers: h, payload: params && params.payload });
+          if (!a || h.Authorization !== 'Bearer ' + TOKEN_DRIVE) return { getResponseCode: () => 404, getContent: () => [] };
+          const buf = contenidoDe(a), r = op.driveSinRango ? null : /^bytes=(\d+)-(\d+)$/.exec(h.Range || '');
+          const trozo = r ? buf.subarray(Number(r[1]), Number(r[2]) + 1) : buf;
+          return { getResponseCode: () => (r ? 206 : 200), getContent: () => Array.from(trozo, (b) => (b > 127 ? b - 256 : b)) };
+        }
         llamadas.push(url);
         const t = decodeURIComponent((/[?&]t=([^&]+)/.exec(url) || [])[1] || '');
         if (op.originalCaido && url.includes('ORIGINAL123')) return { getResponseCode: () => 503, getContentText: () => 'caído' };
@@ -254,23 +307,29 @@ function mundo(opciones) {
       DigestAlgorithm: { SHA_256: 'sha256' }
     },
     DriveApp: {
-      getFileById: (id) => ({
-        makeCopy: () => { const nuevo = 'libro-copia-' + (++copias); libros[nuevo] = libroDeAccesorio(undefined, nuevo); return { getId: () => nuevo }; },
-        getLastUpdated: () => {
-          if (op.driveCaido) throw new Error('Drive no contesta');
-          if (!libros[id]) throw new Error('no existe ' + id);
-          return op.driveTarda ? new Date(1.7e12) : ultimoCambio(libros[id]);     // driveTarda: Drive todavía no se entera de ningún cambio
-        }
-      }),
-      getFolderById: () => ({})
+      getFileById: (id) => {
+        if (drive.archivos[id]) return archivoDoble(id);
+        if (drive.carpetas[id]) return carpetaDoble(id);        // como Drive: una carpeta también se abre por su id
+        return {
+          makeCopy: () => { const nuevo = 'libro-copia-' + (++copias); libros[nuevo] = libroDeAccesorio(undefined, nuevo); return { getId: () => nuevo }; },
+          getLastUpdated: () => {
+            if (op.driveCaido) throw new Error('Drive no contesta');
+            if (!libros[id]) throw new Error('no existe ' + id);
+            return op.driveTarda ? new Date(1.7e12) : ultimoCambio(libros[id]);     // driveTarda: Drive todavía no se entera de ningún cambio
+          }
+        };
+      },
+      getFolderById: (id) => (drive.carpetas[id] ? carpetaDoble(id) : {})
     },
+    ScriptApp: { getOAuthToken: () => TOKEN_DRIVE },
     Logger: { log: () => {} }
   };
   vm.createContext(ctx);
   vm.runInContext(CODIGO, ctx, { filename: 'PPP2.gs' });
   const get = (p) => JSON.parse(ctx.doGet({ parameter: p }).contenido);
   const post = (b) => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(b) } }).contenido);
-  return { ctx, libros, vivero, llamadas, iaPedidos, propiedades, cache, aperturas, revocados, get, post, libro: libros['libro-ejemplo'] };
+  return { ctx, libros, vivero, llamadas, iaPedidos, propiedades, cache, aperturas, revocados, get, post, libro: libros['libro-ejemplo'],
+    drive, driveVistas, drivePedidos, driveBlobs };
 }
 const ADMIN = 'syadmin00000000000000000';
 const EDITOR = 'syeditor0000000000000000';
@@ -452,4 +511,4 @@ function enConsejo(opciones) {
   return w;
 }
 
-module.exports = { mundo, PLAN, POTENCIALES, FOTO_CAB, ADMIN, EDITOR, LECTOR, filaDe, CODIGO, juguete, jugueteConCiclo, cicloDe, libroReal, REJILLA, jueces, JUECES, enConsejo, RAZON_PRUEBA };
+module.exports = { mundo, PLAN, POTENCIALES, FOTO_CAB, HISTORIAL, TOKEN_DRIVE, ADMIN, EDITOR, LECTOR, filaDe, CODIGO, juguete, jugueteConCiclo, cicloDe, libroReal, REJILLA, jueces, JUECES, enConsejo, RAZON_PRUEBA };

@@ -141,6 +141,52 @@ logo tarda hasta seis horas en verse; de nombres, dos minutos.
 Con `pausa` = `sí` el visor sigue abriendo (sólo lee). Para cerrarlo todo de golpe: apagar los
 renglones de `Ligas`.
 
+### Las pestañas del visor: historial y archivos
+
+Las pestañas Historial y Archivos del visor se atienden con `ppp2-historial`, `ppp2-chat`, `ppp2-archivos` y
+`ppp2-archivo` (`Visor.gs`, sección «pestañas del visor»; contrato y reglas en `docs/ppp2.md`, «Pestañas del
+visor»). Sólo leen: no escriben en ninguna hoja ni en ningún libro, y en Drive no cambian ningún permiso ni
+hacen nada público. No piden autorización nueva: usan los mismos permisos de siempre (hojas, Drive y llamadas
+externas). Sin lo de abajo, el visor sigue igual y esas pestañas salen vacías.
+
+**Lo que hay que agregar antes de publicar (una sola vez):**
+
+1. `Config` del vivero: renglón nuevo con clave `historial_id` y, de valor, el id de la hoja de historial (el de
+   su dirección, entre `/d/` y `/edit`). La cuenta que ejecuta el servidor debe poder abrirla. Un cambio en
+   `Config` tarda hasta dos minutos en notarse.
+2. `Ligas`: columna nueva `audiencia`. `equipo` = ve todo el historial (también la conversación del grupo y los
+   pendientes) y todos los archivos del expediente; en blanco o `externo` = sólo lo marcado para externos y lo
+   que esté en «Para compartir». Puede ir en cualquier lugar de la hoja (se lee por encabezado). Las ligas que
+   ya existen quedan como `externo` hasta que se les escriba `equipo`.
+3. Hoja de historial:
+   - `Proyectos`: columnas `planes` (los `plan_id` del proyecto separados por coma: `p2…` o
+     `ppp:<caso_id>[:<escenario_id>]`) y `carpeta` (el id o la dirección de la carpeta de Drive del expediente).
+   - `Eventos`: columnas `archivos` (ids o direcciones de Drive ligados al evento, separados por coma) y
+     `para_externos` (`sí` o vacío).
+   - Pestaña nueva `Chat`, con encabezados `id | fecha | hora | quien | texto | adjuntos | adjuntos_ids |
+     proyectos | visible | origen` (un renglón por mensaje; `fecha` AAAA-MM-DD, `hora` HH:MM; `proyectos` vacío =
+     general de la alianza; `visible` = `no` lo oculta en todo visor).
+   - `Pendientes` y `Tipos` se leen como ya están. Lo marcado `solo_direccion` nunca sale.
+4. En Drive, dentro de la carpeta de cada expediente, una subcarpeta llamada «Para compartir» (justo abajo de la
+   del proyecto; mayúsculas, acentos y un número al frente, como «00 Para compartir», dan igual) con lo que
+   puede ver un dueño de terreno. No hace falta compartir ninguna carpeta con nadie: el servidor la lee con la
+   cuenta que lo ejecuta. Las subcarpetas pueden llevar número al frente («04 Presentaciones»): el grupo se
+   reconoce por la palabra (ver `docs/ppp2.md`, «Pestañas del visor», las raíces de cada grupo).
+
+**Publicar:** pegar `Visor.gs` y `PPP2.gs` (trae las cuatro rutas nuevas en `doGet`) y publicar **Versión
+nueva** sobre la implementación de siempre (nunca «Nueva implementación»).
+
+**Comprobar** (son GET de sólo lectura; nunca POST): `…/exec?recurso=ppp2-historial&liga=<liga>` debe traer
+`"ok":true` con `audiencia`, `dias` y `versiones`; `…&recurso=ppp2-archivos&liga=<liga>`, `"ok":true` con sus
+`grupos`. Con una liga apagada, `"error":"liga"`.
+
+**Límites que conviene saber:** cada parte de un archivo pesa hasta 3 MB y un archivo hasta 40 MB (uno más
+grande sale en la lista con `vista` = `no` y no se entrega). Docs, Hojas, Presentaciones y Dibujos de Google se
+entregan exportados a PDF en cada pedido (Google no exporta los muy grandes). La lista de archivos y el
+historial tardan hasta cinco minutos en reflejar un cambio; la primera vez que se pide la lista de una carpeta
+grande puede tardar varios segundos (recorre hasta 600 archivos y 200 carpetas en 20 s; si no alcanza, la
+lista sale marcada `incompleta`).
+
 ## La clave de la API (el consejo y la investigación)
 
 El consejo de planes y la investigación corren en este servidor, por la API de IA. Sin clave, la
