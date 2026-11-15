@@ -319,7 +319,9 @@
     function grafica(grande) {
       var R = grande ? regla(N) : reglaPan(N, 48, 182), p = [], f = [];
       if (oi) {
-        var tx = clamp(R.X(oi), R.x0 + 2, R.x1 - 48);
+        /* a lo largo, el rótulo va dentro del recorte de la gráfica: no puede empezar antes del eje */
+        var wA = ancho('arranca la obra · ' + (prev === null ? 'mes ' + oi : pct(prev) + ' vendido'), 7.5);
+        var tx = clamp(R.X(oi), R.vista ? R.x0 + wA / 2 + 1 : R.x0 + 2, R.x1 - 48);
         p.push('<line x1="' + f1(R.X(oi)) + '" y1="12" x2="' + f1(R.X(oi)) + '" y2="78" stroke="' + TIE + '" stroke-width="0.9" stroke-dasharray="2 2"></line>' +
           '<text' + T('Arranque de obra', [['Mes de arranque', 'mes ' + oi], ['Preventa firmada al arrancar', pct(prev)], ['Mínimo para arrancar', pct(pmin, 0)]], L('Versiones', 'obra_inicio y rv_preventa')) +
           ' x="' + f1(tx) + '" y="8.5" text-anchor="middle" font-size="7.5" fill="' + ORO + '">arranca la obra · <tspan font-weight="700"' + (corto ? ' fill="' + BADT + '"' : '') + '>' + (prev === null ? 'mes ' + oi : pct(prev) + ' vendido') + '</tspan></text>');
@@ -359,7 +361,7 @@
       svgG: d.flujo && d.flujo.meses && (vi || oi || rep) ? grafica(true) + o.join('') : sinDatos(184, 'Aún no hay calendario calculado'),
       aria: 'Tiempo: ventas del mes ' + vi + ' al ' + vf + ', obra del ' + oi + ' al ' + of + ', reparto en el mes ' + rep,
       detalle: [{ h: 'Calendario (meses del plan)', filas: [
-        ['Ventas', vi ? 'mes ' + vi + ' a ' + vf : '—', mesesVenta + ' meses · ' + L('Flujo', 'unidades que se firman')],
+        ['Ventas', vi ? 'mes ' + vi + ' a ' + vf : '—', (mesesVenta ? mesesVenta + ' meses · ' : '') + L('Flujo', 'unidades que se firman')],
         ['Obra', oi ? 'mes ' + oi + ' a ' + of : '—', L('Versiones', 'obra_inicio y fin_obra')],
         ['Escrituras', ei ? 'mes ' + ei + ' a ' + ef : '—', L('Flujo', 'saldos al escriturar')],
         ['Banco liquidado', num(v.banco_mes) ? 'mes ' + v.banco_mes : '—', L('Versiones', 'banco_mes')],
@@ -367,7 +369,7 @@
         ['Reparto', rep ? 'mes ' + rep : '—', L('Versiones', 'mes_reparto')]
       ] }, { h: 'Ritmo', filas: [
         ['Preventa al arrancar la obra', pct(prev), 'mínimo ' + pct(pmin, 0) + ' · ' + L('Versiones', 'rv_preventa')],
-        ['Unidades por mes', mesesVenta && unidades ? f1(unidades / mesesVenta) : '—', ent(unidades) + ' unidades ÷ ' + mesesVenta + ' meses']
+        ['Unidades por mes', mesesVenta && unidades ? f1(unidades / mesesVenta) : '—', mesesVenta && unidades ? ent(unidades) + ' unidades ÷ ' + mesesVenta + ' meses' : L('Flujo', 'unidades que se firman')]
       ] }]
     };
   }
@@ -950,6 +952,9 @@
       firmas = ahora;
       Object.keys(pans).forEach(function (id) { var card = caja.querySelector('[data-card="' + id + '"]'); if (card) panea(card, 0, pans[id]); });
       ajusta();
+      /* con muchas versiones el selector de Dirección se recorre de lado: que la buena quede a la vista */
+      var eb = caja.querySelector('.vz-elige-op.vz-buena'), eo = eb && eb.parentNode;
+      if (eo && eo.scrollWidth > eo.clientWidth) eo.scrollLeft = Math.max(0, eb.offsetLeft - eo.firstElementChild.offsetLeft - 12);
       Array.prototype.forEach.call(caja.querySelectorAll('.vz-marcas img'), function (im) { if (!im.complete) im.addEventListener('load', ajusta); });
       if (abierto()) abre(abierto(), true);
     }

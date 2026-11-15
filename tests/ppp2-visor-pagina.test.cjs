@@ -224,6 +224,9 @@ test('fotos del PPP de siempre: Dinero sin saldo acumulado, una sola casa, prueb
   const ti = visor.pinta(unDato, null).cuadros.find((x) => x.id === 'tiempo');
   assert.match(visible(ti), /Ventas[\s\S]*Obra sin dato[\s\S]*Escrituras sin dato/);
   assert.doesNotMatch(visible(ti), /—|NaN|undefined|arranca/);
+  const sinFirmas = conHuecos(); sinFirmas.flujo.filas.firmas = sinFirmas.flujo.filas.cobranza.map(() => 0);
+  const hoja = visor.detalleHtml(visor.pinta(sinFirmas, null).cuadros.find((x) => x.id === 'tiempo'));
+  assert.doesNotMatch(hoja, /\b0 meses|÷ 0 meses|— unidades/, 'sin firmas, la hoja no inventa «0 meses»');
 });
 
 const largo = (n) => {
@@ -257,6 +260,15 @@ test('horizontes largos (hasta 153 meses): el cuadro conserva la escala de 60 me
       const rg = rotulosDe(c.svgG, yG);
       assert.ok(rg.some((r) => r.t === 'año') && rg.some((r) => r.t === 'mes ' + n), id + ' ' + n + ': la hoja, por años');
       assert.ok(rg.length <= 9); sinEncimar(rg, id + ' ' + n + ' (hoja)');
+    }
+    // a lo largo, «arranca la obra» va dentro del recorte de la gráfica (que empieza en x = 47): no se corta por la izquierda
+    for (const oi of [2, 9, Math.round(n * 0.2)]) {
+      const dd = largo(n); dd.v.obra_inicio = oi;
+      const t = visor.pinta(dd, null).cuadros.find((c) => c.id === 'tiempo').svg;
+      const m = /x="([\d.]+)" y="8.5" text-anchor="middle" font-size="7.5"[^>]*>(arranca la obra · )<tspan[^>]*>([^<]+)<\/tspan>/.exec(t);
+      assert.ok(m, 'tiempo ' + n + ': el rótulo del arranque');
+      const w = (m[2] + m[3]).length * 7.5 * 0.52;
+      assert.ok(+m[1] - w / 2 >= 47, 'tiempo ' + n + ', arranque en el mes ' + oi + ': el rótulo empieza dentro del recorte');
     }
     const d = cs.find((c) => c.id === 'dinero').svg;
     assert.equal(ancho(d), ancho(normal), 'un mes mide lo mismo que en un plan de 60 meses (misma escala)');
