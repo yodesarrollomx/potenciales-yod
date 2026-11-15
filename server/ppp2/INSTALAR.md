@@ -171,7 +171,10 @@ externas). Sin lo de abajo, el visor sigue igual y esas pestañas salen vacías.
    del proyecto; mayúsculas, acentos y un número al frente, como «00 Para compartir», dan igual) con lo que
    puede ver un dueño de terreno. No hace falta compartir ninguna carpeta con nadie: el servidor la lee con la
    cuenta que lo ejecuta. Las subcarpetas pueden llevar número al frente («04 Presentaciones»): el grupo se
-   reconoce por la palabra (ver `docs/ppp2.md`, «Pestañas del visor», las raíces de cada grupo).
+   reconoce por la palabra (ver `docs/ppp2.md`, «Pestañas del visor», las raíces de cada grupo). Lo que nadie
+   deba ver desde el visor —tampoco el equipo— va en una subcarpeta cuyo nombre lleve «privado», «privada»,
+   «restringido», «restringida» o «solo dirección» (a cualquier profundidad): ni ella ni lo de adentro sale en
+   Archivos ni se entrega. Ojo con «Privada Residencial…» como nombre de carpeta: también queda fuera.
 
 **Publicar:** pegar `Visor.gs` y `PPP2.gs` (trae las cuatro rutas nuevas en `doGet`) y publicar **Versión
 nueva** sobre la implementación de siempre (nunca «Nueva implementación»).

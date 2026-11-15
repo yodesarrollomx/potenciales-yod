@@ -591,6 +591,10 @@ var PESTANAS = {
   SUBIR_MAX: 20,                     // niveles que se suben para saber de qué carpeta cuelga un archivo
   LISTA_MS: 20000,                   // tiempo para recorrer las carpetas; si no alcanza, la lista sale incompleta
   COMPARTIR: /^([0-9]+ )?para compartir$/,   // «Para compartir», también con número al frente («00 Para compartir»)
+  /* La válvula de Dirección: una subcarpeta del expediente cuyo nombre (sin mayúsculas ni acentos) contenga
+     «privado», «privada», «restringido», «restringida» o «solo dirección» no sale en el visor para nadie
+     —tampoco para el equipo ni con la sesión de la ficha—, ni lo que tenga dentro, a cualquier profundidad. */
+  PRIVADA: /privad[oa]|restringid[oa]|solo ?direccion/,
   CARPETA: 'application/vnd.google-apps.folder',
   ATAJO: 'application/vnd.google-apps.shortcut',
   GOOGLE: 'application/vnd.google-apps.',
@@ -847,7 +851,13 @@ function recorre_(raices, aud, fuera) {
       }
       if (x.d < PESTANAS.PROFUNDIDAD) {
         var ds = x.c.getFolders();
-        while (ds.hasNext()) { var c = ds.next(); if (!c.isTrashed()) cola.push({ c: c, ruta: x.ruta.concat([txt_(c.getName(), 120)]), d: x.d + 1 }); }
+        while (ds.hasNext()) {
+          var c = ds.next();
+          if (c.isTrashed()) continue;
+          var nc = String(c.getName() || '');
+          if (privada_(nc)) continue;                      // una carpeta privada no se recorre: ni ella ni lo de adentro se listan
+          cola.push({ c: c, ruta: x.ruta.concat([txt_(nc, 120)]), d: x.d + 1 });
+        }
       }
     } catch (e) { inc = true; }
   }
@@ -870,22 +880,28 @@ function grupoArchivo_(x) {
   for (var i = 0; i < x.r.length; i++) { var g = claseDe_(x.r[i]); if (g) return g; }
   return claseDe_(x.n) || 'Otros';                                          // el nombre lleva su extensión (.kmz)
 }
+function privada_(nombre) { return PESTANAS.PRIVADA.test(normaliza_(nombre)); }
 /* Si un archivo cuelga, por su cadena de carpetas, de una carpeta permitida. Se sube en vivo, de padre en padre
    (los atajos no tienen padres que cuenten: el que se revisa es el archivo pedido). Externo: la carpeta de justo
-   abajo de la del proyecto debe ser «Para compartir». */
+   abajo de la del proyecto debe ser «Para compartir». Una cadena que pasa por una carpeta privada (PESTANAS.PRIVADA)
+   entre el archivo y la del proyecto no cuenta; una privada de más arriba que la del proyecto, sí cuenta (no es del
+   expediente). Cada carpeta se visita a lo más dos veces (con y sin privada abajo): así no hay ciclos. */
 function cuelga_(f, raices, aud) {
   var vistos = {}, pila = [];
-  try { var it = f.getParents(); while (it.hasNext()) pila.push({ c: it.next(), d: 1, hijo: null }); } catch (e) { return false; }
+  try { var it = f.getParents(); while (it.hasNext()) pila.push({ c: it.next(), d: 1, hijo: null, priv: false }); } catch (e) { return false; }
   while (pila.length) {
     var x = pila.pop(), id = '';
     try { id = String(x.c.getId()); if (x.c.isTrashed()) continue; } catch (e) { continue; }
-    if (raices.indexOf(id) >= 0) {
+    if (raices.indexOf(id) >= 0 && !x.priv) {
       if (aud === 'equipo') return true;
       try { if (x.hijo && PESTANAS.COMPARTIR.test(normaliza_(x.hijo.getName()))) return true; } catch (e) { }
     }
-    if (vistos[id] || x.d >= PESTANAS.SUBIR_MAX) continue;
-    vistos[id] = 1;
-    try { var ps = x.c.getParents(); while (ps.hasNext()) pila.push({ c: ps.next(), d: x.d + 1, hijo: x.c }); } catch (e) { }
+    var priv = x.priv;
+    if (!priv) { try { priv = privada_(x.c.getName()); } catch (e) { priv = true; } }   // un nombre que no se puede leer cuenta como privado
+    var k = priv ? id + '|p' : id;
+    if (vistos[k] || x.d >= PESTANAS.SUBIR_MAX) continue;
+    vistos[k] = 1;
+    try { var ps = x.c.getParents(); while (ps.hasNext()) pila.push({ c: ps.next(), d: x.d + 1, hijo: x.c, priv: priv }); } catch (e) { }
   }
   return false;
 }

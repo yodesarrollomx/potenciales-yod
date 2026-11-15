@@ -623,3 +623,49 @@ test('con liga y sesión a la vez manda la audiencia de la liga; `audiencia` se 
   assert.equal(pide(w, 'ppp2-historial', 'ligaequipoconespacios000000001').audiencia, 'equipo');
   assert.equal(pide(w, 'ppp2-historial', 'ligaaudienciadudosa0000000001').audiencia, 'externo');
 });
+
+test('carpetas privadas: lo que esté dentro de una subcarpeta «privado», «restringida» o «solo dirección» no sale para nadie, a cualquier profundidad', () => {
+  const PRIV = 'carpeta-privada-de-direccion-1', HONDA = 'carpeta-honda-dentro-privada1', RESTR = 'carpeta-restringida-en-comp-01', SOLO = 'carpeta-solo-direccion-000001';
+  const OCULTOS = { 'archivo-en-la-privada-0000001': PRIV, 'archivo-hondo-en-privada-0001': HONDA, 'archivo-restringido-comp-0001': RESTR, 'archivo-solo-direccion-000001': SOLO };
+  const h = historial();
+  h.Eventos = h.Eventos.concat([ev({ evento_id: 'EV-P1', fecha: '2026-11-09', hora: '10:00', tipo: 'documento', titulo: 'Con un archivo reservado', archivos: 'archivo-en-la-privada-0000001,' + D.plano })]);
+  h.Chat = h.Chat.concat([msj({ id: 'M-P', fecha: '2026-11-09', hora: '10:05', quien: 'Persona Uno', texto: 'Ahí va', adjuntos: 'Oferta.pdf', adjuntos_ids: 'archivo-en-la-privada-0000001' })]);
+  const w = conPestanas({ mundo: { historial: h } });
+  Object.assign(w.drive.carpetas, {
+    [PRIV]: { nombre: '07 Información PRIVADA', padres: [D.proyecto] },
+    [HONDA]: { nombre: 'Escrituras', padres: [PRIV] },
+    [RESTR]: { nombre: 'Restringidos', padres: [D.compartir] },
+    [SOLO]: { nombre: 'Sólo_Dirección', padres: [D.terreno] }
+  });
+  for (const [id, padre] of Object.entries(OCULTOS)) w.drive.archivos[id] = { nombre: 'Reservado ' + id.slice(8, 14) + '.pdf', tipo: 'application/pdf', padres: [padre], contenido: '%PDF-1.4 reservado' };
+  const ocultos = Object.keys(OCULTOS);
+  for (const l of [LIGA_EQ, LIGA_EX]) {
+    const r = pide(w, 'ppp2-archivos', l);
+    assert.doesNotMatch(JSON.stringify(r), /Reservado/, l);
+    for (const id of ocultos) assert.deepEqual(fotoDe(w, l, id), { ok: false, error: 'plan' }, l + ' ' + id);
+  }
+  // tampoco con la sesión del Portero (la ficha se ve como equipo)
+  assert.ok(!idsDe(w.get({ recurso: 'ppp2-archivos', k: LECTOR, plan: PLAN })).some((id) => ocultos.includes(id)));
+  for (const id of ocultos) assert.deepEqual(w.get({ recurso: 'ppp2-archivo', k: LECTOR, plan: PLAN, id }), { ok: false, error: 'plan' }, id);
+  // ni como archivo de un evento ni como adjunto que se pueda abrir; el evento sí sale (lo decide su visibilidad)
+  const dia = pide(w, 'ppp2-historial', LIGA_EQ).dias.find((d) => d.fecha === '2026-11-09');
+  assert.deepEqual(dia.items.map((i) => [i.titulo, i.archivos.map((a) => a.id)]), [['Con un archivo reservado', [D.plano]]]);
+  assert.deepEqual(pide(w, 'ppp2-chat', LIGA_EQ, { dia: '2026-11-09' }).mensajes[0].adjuntos, [{ nombre: 'Oferta.pdf' }]);
+  // lo demás del expediente sigue igual
+  assert.equal(fotoDe(w, LIGA_EQ, D.plano).ok, true);
+  assert.equal(fotoDe(w, LIGA_EX, D.pdfComp).ok, true);
+  assert.deepEqual(pide(w, 'ppp2-archivos', LIGA_EX).grupos.flatMap((g) => g.archivos.map((a) => a.id)), [D.pdfComp, D.mediano]);
+  // una carpeta privada de más arriba que la del proyecto no es del expediente: no esconde nada
+  const a = conPestanas();
+  a.drive.carpetas['carpeta-privada-arriba-raiz01'] = { nombre: 'Privado', padres: [D.raiz] };
+  a.drive.carpetas[D.proyecto].padres = ['carpeta-privada-arriba-raiz01'];
+  assert.equal(fotoDe(a, LIGA_EQ, D.plano).ok, true);
+  assert.equal(fotoDe(a, LIGA_EX, D.pdfComp).ok, true);
+  assert.ok(idsDe(pide(a, 'ppp2-archivos', LIGA_EQ)).includes(D.plano));
+  // el nombre, sin mayúsculas, acentos, guiones ni número del frente
+  const { ctx } = mundo();
+  for (const n of ['Privado', 'privadas', '07 Información PRIVADA', 'Restringido', 'RESTRINGIDAS', 'Sólo Dirección', 'solo_direccion', 'SoloDirección', 'Docs (sólo dirección)'])
+    assert.equal(ctx.privada_(n), true, n);
+  for (const n of ['Para compartir', 'Privacidad', 'Presentaciones', 'Solo para el equipo', 'Dirección de obra', '04 Presentaciones'])
+    assert.equal(ctx.privada_(n), false, n);
+});

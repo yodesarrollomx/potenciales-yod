@@ -489,6 +489,15 @@ Con la sesión del Portero (la ficha del plan) se ve como `equipo`. Lo marcado `
 (eventos y pendientes) **no sale nunca**, en ningún visor, ni los pendientes que nacieron de un evento así (su
 `evento_id`), aunque ellos digan otra cosa; un mensaje con `visible` = `no`, tampoco.
 
+**Carpetas privadas (la válvula de Dirección):** lo que esté dentro de una subcarpeta del expediente cuyo nombre
+contenga «privado», «privada», «restringido», «restringida» o «solo dirección» (sin importar mayúsculas, acentos,
+guiones ni el número del frente: «07 Información PRIVADA», «Sólo_Dirección», «Restringidos»), a cualquier
+profundidad —también dentro de «Para compartir»—, **no sale en Archivos ni se entrega a nadie**: ni al externo, ni
+al equipo, ni con la sesión de la ficha (`PESTANAS.PRIVADA`). Un archivo así tampoco sale como archivo de un evento
+ni como adjunto que se pueda abrir. Sólo cuentan las subcarpetas de la del proyecto: si la carpeta del proyecto
+vive dentro de una que se llama «Privado», eso no esconde el expediente. Ojo: «privada» también nombra un tipo de
+desarrollo («Privada Residencial…»); una subcarpeta con ese nombre queda fuera del visor, aunque no se quisiera.
+
 **Los recursos** (todos por GET):
 
 1. `?recurso=ppp2-historial&liga=…&plan=…[&si=llave]` → `{ ok, llave, audiencia, proyectos:[{id, nombre}],
@@ -554,8 +563,9 @@ Con la sesión del Portero (la ficha del plan) se ve como `equipo`. Lo marcado `
   a la izquierda). Uno mal formado no se busca.
 - Un archivo se entrega sólo si su cadena de carpetas sube —en vivo, en cada pedido, hasta 20 niveles— a la
   carpeta (`carpeta`) de un proyecto **de ese plan**; para un externo, la carpeta de justo abajo debe ser
-  «Para compartir». La lista guardada no autoriza nada: un archivo que se saca de la carpeta deja de
-  entregarse en ese momento.
+  «Para compartir». Una cadena que pasa por una carpeta privada (ver «Carpetas privadas», arriba) entre el archivo
+  y la del proyecto no cuenta, para ninguna audiencia. La lista guardada no autoriza nada: un archivo que se saca
+  de la carpeta, o que se mete a una privada, deja de entregarse en ese momento.
 - Los atajos no se siguen ni se entregan: un atajo dentro de «Para compartir» no abre lo que apunta (se revisa
   la cadena real del archivo pedido). Lo que está en la papelera, tampoco.
 - Nunca salen el libro de ningún plan (`Planes!libro_id`), el vivero, la hoja de historial, el libro de las
@@ -587,12 +597,14 @@ cinco segundos. Los bytes de un archivo **nunca** se guardan. Nada de esto calcu
 - Pestaña nueva `Chat`: `id | fecha | hora | quien | texto | adjuntos | adjuntos_ids | proyectos | visible |
   origen`, un renglón por mensaje (`adjuntos` separados por coma, en el mismo orden que `adjuntos_ids`).
 - En Drive, dentro de cada carpeta de expediente, una subcarpeta «Para compartir» con lo que puede ver un
-  dueño de terreno. La cuenta que ejecuta el servidor debe poder abrir las carpetas; no hace falta
-  compartirlas con nadie.
+  dueño de terreno y, si hace falta, una «Privado» (o «Restringido», «Solo dirección») con lo que nadie debe ver
+  desde el visor. La cuenta que ejecuta el servidor debe poder abrir las carpetas; no hace falta compartirlas
+  con nadie.
 
 Pruebas: `node --test tests/ppp2-pestanas.test.cjs` (historial por audiencia, `solo_direccion`, conversación
-oculta, proyecto sin carpeta, archivo fuera de la carpeta, «Para compartir», atajos, partes y límites, ids mal
-formados, liga apagada, caché sin bytes y que `ppp2-visor` responde igual).
+oculta, proyecto sin carpeta, archivo fuera de la carpeta, «Para compartir», carpetas privadas, atajos, ciclos,
+varios padres, partes y límites, tipos que un navegador ejecuta, ids mal formados, liga apagada, caché sin bytes
+y que `ppp2-visor` responde igual).
 
 ### Fotos de casos del PPP de siempre (15-nov-2026)
 
