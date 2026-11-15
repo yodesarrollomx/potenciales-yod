@@ -54,6 +54,11 @@
     sriWorker: 'sha384-sS8B4COeBqzQV9DaPpp5cbpF+xz2jPcFbN3L8FL3/dx0RMC6WLUwTUOFm0iFb1lw'
   };
   var PARTES_MAX = 20;          // 40 MB en partes de hasta 3 MB
+  /* Los tipos que un navegador no ejecuta (los mismos de PESTANAS.PASIVO en server/ppp2/Visor.gs). La página no se
+     fía del tipo que llega: lo que no está aquí se arma como application/octet-stream, no se abre aparte y sólo se
+     guarda; así un HTML o un SVG del expediente nunca corre en este origen, donde vive la sesión del Portero. */
+  var PASIVO = /^(application\/pdf|image\/(png|jpeg|gif|webp|bmp|tiff|heic|heif)|video\/[a-z0-9.+-]+|audio\/[a-z0-9.+-]+|application\/(zip|x-zip-compressed|rtf|msword|vnd\.ms-[a-z0-9.+-]+|vnd\.openxmlformats-officedocument\.[a-z0-9.+-]+|vnd\.oasis\.opendocument\.[a-z0-9.+-]+|vnd\.google-earth\.kmz))$/;
+  var VE_IMAGEN = /^image\/(png|jpeg|gif|webp)$/;   // lo que se enseña dentro de la página como imagen (como `vista` = imagen)
   var FRESCO_MS = 60000;        // lo leído de una pestaña se vuelve a preguntar al regresar a ella después de esto
 
   /* ───────────────────────── íconos (un solo sprite por página) ───────────────────────── */
@@ -99,8 +104,9 @@
   function mayus1(t) { t = String(t || ''); return t.charAt(0).toUpperCase() + t.slice(1); }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function hoyISO(f) { f = f || new Date(); return f.getFullYear() + '-' + pad2(f.getMonth() + 1) + '-' + pad2(f.getDate()); }
+  /* Sólo una fecha AAAA-MM-DD completa y real: lo que no lo es no entra a la línea de tiempo ni a un atributo. */
   function partesFecha(iso) {
-    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
     if (!m) return null;
     var y = +m[1], mo = +m[2], d = +m[3], t = new Date(Date.UTC(y, mo - 1, d));
     return t.getUTCMonth() === mo - 1 && t.getUTCDate() === d ? { y: y, m: mo, d: d, s: t.getUTCDay() } : null;
@@ -124,6 +130,7 @@
     return (b / 1048576).toFixed(b < 10485760 ? 1 : 0) + ' MB';
   }
   function plural(n, uno, varios) { return n + ' ' + (n === 1 ? uno : varios); }
+  function tipoSeguro(t) { t = String(t || '').toLowerCase().split(';')[0].trim(); return PASIVO.test(t) ? t : 'application/octet-stream'; }
   /* El nombre con que se guarda un archivo, sin acentos ni signos raros: hay sistemas (Chromium en Linux, por ejemplo)
      que descartan el nombre entero si no lo pueden escribir, y el archivo queda como «download», sin extensión. */
   function nombreGuardar(n) {
@@ -168,8 +175,8 @@
 
   /* ───────────────────────── respuestas: qué pasó ───────────────────────── */
   /* ok · liga (apagada: el sondeo del plan lo confirma) · plan (no está en esta liga) · interno · grande (archivo
-     de más de 40 MB) · red (sin respuesta) · sin (el servidor todavía no tiene este recurso: hoy contesta
-     `sin_sesion`, `recurso` o `clave`). */
+     de más de 40 MB) · red (sin respuesta) · tarda (no contestó a tiempo: la conexión puede estar bien) · sin (el
+     servidor todavía no tiene este recurso: hoy contesta `sin_sesion`, `recurso` o `clave`). */
   function clase(j) {
     if (!j || typeof j !== 'object') return 'red';
     if (j.ok) return 'ok';
@@ -183,6 +190,7 @@
       sin: ['historial', 'Aún no hay historial en esta liga', 'Aquí verás, día por día, las reuniones, las versiones del plan, los archivos que se compartieron y los pendientes.'],
       plan: ['historial', 'Este plan todavía no tiene historial', 'Cuando el equipo registre reuniones, versiones o archivos de este plan, aparecerán aquí, día por día.'],
       interno: ['alerta', 'No pude abrir el historial', 'Vuelve a intentar en un momento.', 1],
+      tarda: ['historial', 'Está tardando más de lo normal', 'La primera lectura del expediente puede tardar. Vuelve a intentar en un momento: ya habrá avanzado.', 1],
       red: ['nube', 'Sin conexión', 'Revisa tu conexión y vuelve a intentar.', 1],
       liga: ['llave', 'Esta liga ya no está activa', 'Pide una nueva a quien te la compartió.']
     },
@@ -190,6 +198,7 @@
       sin: ['archivos', 'Aún no hay archivos en esta liga', 'Aquí estarán las presentaciones, las propuestas, los estudios y los planos del proyecto, ordenados por tipo.'],
       plan: ['archivos', 'Todavía no hay archivos para esta liga', 'Cuando el equipo comparta documentos de este proyecto, aparecerán aquí.'],
       interno: ['alerta', 'No pude abrir los archivos', 'Vuelve a intentar en un momento.', 1],
+      tarda: ['archivos', 'Está tardando más de lo normal', 'La primera lectura de las carpetas puede tardar. Vuelve a intentar en un momento: ya habrá avanzado.', 1],
       red: ['nube', 'Sin conexión', 'Revisa tu conexión y vuelve a intentar.', 1],
       liga: ['llave', 'Esta liga ya no está activa', 'Pide una nueva a quien te la compartió.']
     },
@@ -197,6 +206,7 @@
       sin: ['chat', 'La conversación todavía no está disponible', 'Pronto podrás leer aquí lo que dijo el equipo ese día.'],
       plan: ['chat', 'La conversación no está disponible en esta liga', 'Sólo el equipo de la alianza puede leerla.'],
       interno: ['alerta', 'No pude abrir la conversación', 'Vuelve a intentar en un momento.', 1],
+      tarda: ['chat', 'Está tardando más de lo normal', 'Vuelve a intentar en un momento.', 1],
       red: ['nube', 'Sin conexión', 'Revisa tu conexión y vuelve a intentar.', 1],
       liga: ['llave', 'Esta liga ya no está activa', 'Pide una nueva a quien te la compartió.']
     },
@@ -205,6 +215,7 @@
       plan: ['documento', 'Este archivo no está disponible en esta liga', 'Puede que se haya movido o que no sea para compartir.'],
       grande: ['documento', 'Este archivo no se puede abrir aquí', 'Es muy grande (más de 40 MB) o no se pudo convertir a PDF. Pídelo al equipo.'],
       interno: ['alerta', 'No pude abrir el archivo', 'Vuelve a intentar en un momento.', 1],
+      tarda: ['documento', 'Está tardando más de lo normal', 'El archivo es grande o el servidor está ocupado. Vuelve a intentar en un momento.', 1],
       red: ['nube', 'Sin conexión', 'Revisa tu conexión y vuelve a intentar.', 1],
       liga: ['llave', 'Esta liga ya no está activa', 'Pide una nueva a quien te la compartió.']
     }
@@ -250,10 +261,25 @@
     if (equipo && dia.chat > 0 && !vistos.whatsapp) out.push('whatsapp');
     return out.sort(function (a, b) { return TIPOS[b].p - TIPOS[a].p; });
   }
-  /* Los días de la línea de tiempo, del más viejo (izquierda) al más reciente (derecha). */
+  /* Lo que una liga que no es de equipo nunca ve, aunque el servidor lo mandara por error: eventos de chat o de
+     pendiente, ni la fuente o la liga de un evento (el servidor ya no se los manda; esto es la red de abajo). */
+  function itemsVisibles(items, equipo) {
+    return (Array.isArray(items) ? items : []).filter(function (it) { return it && (equipo || (it.tipo !== 'whatsapp' && it.tipo !== 'pendiente')); })
+      .map(function (it) {
+        if (equipo) return it;
+        var c = {};
+        for (var k in it) if (Object.prototype.hasOwnProperty.call(it, k) && k !== 'fuente' && k !== 'url') c[k] = it[k];
+        return c;
+      });
+  }
+  /* Los días de la línea de tiempo, del más viejo (izquierda) al más reciente (derecha). De fuera: sin
+     conversación, y un día que se queda sin nada que enseñar no sale. */
   function diasOrdenados(h) {
+    var equipo = !!h && h.audiencia === 'equipo';
     return (h && Array.isArray(h.dias) ? h.dias : []).filter(function (x) { return x && partesFecha(x.fecha); })
-      .slice().sort(function (a, b) { return a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0; });
+      .map(function (x) { return { fecha: x.fecha, items: itemsVisibles(x.items, equipo), chat: equipo && x.chat > 0 ? x.chat : 0 }; })
+      .filter(function (x) { return x.items.length || x.chat; })
+      .sort(function (a, b) { return a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0; });
   }
   function cuentaTipo(dias, tipo) { var n = 0; dias.forEach(function (d) { (d.items || []).forEach(function (it) { if (it.tipo === tipo) n++; }); }); return n; }
   function etiquetaDia(dia, equipo) {
@@ -270,7 +296,7 @@
       var rotMes = mes !== mesAnt ? '<span class="vzp-dia-mes">' + MES[p.m - 1] + (partesFecha(hoy || hoyISO()).y === p.y ? '' : ' ' + String(p.y).slice(2)) + '</span>' : '<span class="vzp-dia-mes" aria-hidden="true"></span>';
       mesAnt = mes;
       var fuerte = tipos.some(function (t) { return t === 'reunion' || t === 'version' || t === 'decision'; });
-      return '<li><button type="button" class="vzp-dia' + (si ? ' vzp-dia-on' : '') + (fuerte ? ' vzp-dia-fuerte' : '') + '" data-dia="' + d.fecha + '"' + (si ? ' aria-current="date"' : '') +
+      return '<li><button type="button" class="vzp-dia' + (si ? ' vzp-dia-on' : '') + (fuerte ? ' vzp-dia-fuerte' : '') + '" data-dia="' + esc(d.fecha) + '"' + (si ? ' aria-current="date"' : '') +
         ' aria-label="' + esc(mayus1(fechaLarga(d.fecha, hoy)) + ': ' + etiquetaDia(d, equipo)) + '">' + rotMes +
         '<span class="vzp-dia-sem">' + DIA3[p.s] + '</span><span class="vzp-dia-num">' + p.d + '</span><span class="vzp-dia-punto" aria-hidden="true"></span>' +
         '<span class="vzp-dia-ics" aria-hidden="true">' + tipos.slice(0, 3).map(function (t) { return '<span style="color:' + TIPOS[t].c + '">' + ico(TIPOS[t].ic) + '</span>'; }).join('') +
@@ -324,11 +350,11 @@
   }
   function versionesHtml(lista, hoy) {
     if (!lista || !lista.length) return '';
-    return '<section class="vzp-seccion" aria-labelledby="vzpVerTit"><h3 class="vzp-sec-tit" id="vzpVerTit">Versiones del plan <span>' + lista.length + '</span></h3><ul class="vzp-vers">' + lista.map(function (x) {
+    return '<section class="vzp-seccion" id="vzpVersiones" aria-labelledby="vzpVerTit"><h3 class="vzp-sec-tit" id="vzpVerTit">Versiones del plan <span>' + lista.length + '</span></h3><ul class="vzp-vers">' + lista.map(function (x) {
       var f = partesFecha(x.fecha) ? x.fecha : '', nom = 'V' + esc(x.v) + (x.nombre ? ' · ' + esc(x.nombre) : '');
       var dentro = '<span class="vzp-vers-ic">' + ico('version') + '</span><span class="vzp-vers-n"><b>' + nom + '</b><small>' + (f ? esc(fechaCorta(f, hoy)) : 'sin fecha') + '</small></span>' +
         (x.estado === 'vigente' ? '<span class="vzp-chip vzp-chip-ok">' + ico('paloma', 'vzp-ic-chico') + 'vigente</span>' : (x.estado ? '<span class="vzp-chip">' + esc(x.estado) + '</span>' : ''));
-      return '<li>' + (f ? '<button type="button" class="vzp-vers-b" data-dia="' + f + '">' + dentro + '</button>' : '<div class="vzp-vers-b">' + dentro + '</div>') + '</li>';
+      return '<li>' + (f ? '<button type="button" class="vzp-vers-b" data-dia="' + esc(f) + '">' + dentro + '</button>' : '<div class="vzp-vers-b">' + dentro + '</div>') + '</li>';
     }).join('') + '</ul></section>';
   }
   /* El historial completo: «lo más importante» (reuniones, versiones, pendientes), la línea de tiempo, el día
@@ -336,7 +362,8 @@
   function historialHtml(h, op) {
     op = op || {};
     var equipo = h && h.audiencia === 'equipo', hoy = op.hoy || hoyISO(), dias = diasOrdenados(h);
-    var pend = equipo && Array.isArray(h.pendientes) ? h.pendientes : [], vers = Array.isArray(h && h.versiones) ? h.versiones : [];
+    var pend = (equipo && Array.isArray(h.pendientes) ? h.pendientes : []).filter(function (p) { return p && p.tarea; });
+    var vers = (Array.isArray(h && h.versiones) ? h.versiones : []).filter(function (x) { return x && x.v !== undefined && x.v !== null && x.v !== ''; });
     if (!dias.length && !pend.length && !vers.length) return estadoHtml('historial', 'plan');
     var sel = op.sel && dias.some(function (d) { return d.fecha === op.sel; }) ? op.sel : (dias.length ? dias[dias.length - 1].fecha : '');
     var reun = cuentaTipo(dias, 'reunion'), nv = vers.length || cuentaTipo(dias, 'version');
@@ -365,12 +392,15 @@
     if (cur.length) out.push(cur);
     return out;
   }
-  /* Con las alturas reales de cada burbuja (medidas en la pantalla), cada captura lleva lo que cabe a la vista. */
-  function agrupa(alturas, capacidad, max) {
+  /* Con las alturas reales de cada burbuja (medidas en la pantalla), cada captura lleva lo que cabe a la vista.
+     `alturas`: con el nombre arriba (la primera de cada captura o tras otra persona); `sinNombre` y `quienes`, si
+     llegan: la altura sin el nombre, para la que sigue a otra de la misma persona dentro de la misma captura. */
+  function agrupa(alturas, capacidad, max, sinNombre, quienes) {
     var out = [], cur = [], suma = 0;
     (alturas || []).forEach(function (a, i) {
-      if (cur.length && (cur.length >= (max || 10) || suma + a > capacidad)) { out.push(cur); cur = []; suma = 0; }
-      cur.push(i); suma += a;
+      var h = cur.length && sinNombre && quienes && quienes[i] === quienes[i - 1] ? sinNombre[i] : a;
+      if (cur.length && (cur.length >= (max || 10) || suma + h > capacidad)) { out.push(cur); cur = []; suma = 0; h = a; }
+      cur.push(i); suma += h;
     });
     if (cur.length) out.push(cur);
     return out;
@@ -406,7 +436,8 @@
 
   /* ───────────────────────── Archivos ───────────────────────── */
   function grupoOrdenado(r) {
-    var gs = (r && Array.isArray(r.grupos) ? r.grupos : []).filter(function (g) { return g && Array.isArray(g.archivos) && g.archivos.length; });
+    var gs = (r && Array.isArray(r.grupos) ? r.grupos : []).map(function (g) { return g && Array.isArray(g.archivos) ? { nombre: String(g.nombre || 'Otros'), archivos: g.archivos.filter(function (a) { return a && a.id; }) } : null; })
+      .filter(function (g) { return g && g.archivos.length; });
     return gs.slice().sort(function (a, b) {
       var ia = GRUPOS.indexOf(a.nombre), ib = GRUPOS.indexOf(b.nombre);
       return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
@@ -517,7 +548,14 @@
       muestraPanel(actual, true);
     }
     function marcasBarra() { var d = pagina.datos(); return d && d.elige && d.elige.versiones && d.elige.versiones.length ? { opciones: 'Sólo tú: aquí escoges la versión que ven todos' } : {}; }
-    function pintaBarra() { if (barra) barra.innerHTML = barraHtml(actual, marcasBarra()); }
+    /* Se vuelve a dibujar la barra; si el foco estaba en ella (teclado, lector de pantalla), regresa a la pestaña
+       elegida en lugar de perderse en el cuerpo de la página. */
+    function pintaBarra() {
+      if (!barra) return;
+      var enBarra = barra.contains(doc.activeElement);
+      barra.innerHTML = barraHtml(actual, marcasBarra());
+      if (enBarra) { var b = doc.getElementById('vzpTab-' + actual); if (b) { try { b.focus({ preventScroll: true }); } catch (e) { b.focus(); } } }
+    }
     function cuerpo(k) { return paneles[k] && paneles[k].querySelector('.vzp-cuerpo'); }
     function cabezas() {
       var d = pagina.datos();
@@ -551,19 +589,23 @@
     }
 
     /* ── la red: GET, con la liga del visor y el plan que se ve; sin `k` (la liga basta) ── */
+    /* Si no contesta a tiempo, falla con { c: 'tarda' } (no es «sin conexión»: el servidor puede seguir leyendo y
+       dejarlo en su caché para el siguiente intento). */
     function pide(recurso, extra, ms, ctl) {
       var q = '?recurso=' + recurso + '&liga=' + encodeURIComponent(pagina.liga()) + (pagina.plan() ? '&plan=' + encodeURIComponent(pagina.plan()) : '') + (extra || '');
-      var ab = win.AbortController ? new win.AbortController() : null, t = setTimeout(function () { if (ab) ab.abort(); }, ms || 45000);
+      var vencio = false, ab = win.AbortController ? new win.AbortController() : null, t = setTimeout(function () { vencio = true; if (ab) ab.abort(); }, ms || 45000);
       if (ctl) ctl.abortar = function () { if (ab) ab.abort(); };
       return win.fetch(pagina.ENDPOINT + q, { credentials: 'omit', redirect: 'follow', referrerPolicy: 'no-referrer', signal: ab ? ab.signal : undefined })
-        .then(function (r) { return r.json(); }).then(function (j) { clearTimeout(t); return j; }, function (e) { clearTimeout(t); throw e; });
+        .then(function (r) { return r.json(); }).then(function (j) { clearTimeout(t); return j; }, function (e) { clearTimeout(t); throw vencio ? { c: 'tarda' } : e; });
     }
     /* Historial y Archivos: se piden al abrir la pestaña (y en fondo, poco después de abrir el plan). Si ya hay algo,
        se enseña mientras llega lo nuevo; si lo nuevo falla, se queda lo que había. */
+    /* Devuelve la promesa de la lectura (o null si no hizo falta pedir): así la lectura en fondo de Archivos espera a
+       la de Historial y la primera vez no recorren las mismas carpetas de Drive dos veces a la vez. */
     function asegura(k, fuerza) {
       var plan = pagina.plan(), e = cache[k];
-      if (!plan || apagado) return;
-      if (!fuerza && e && e.plan === plan && (e.estado === 'cargando' || Date.now() - e.t < FRESCO_MS)) { pinta(k); return; }
+      if (!plan || apagado) return null;
+      if (!fuerza && e && e.plan === plan && (e.estado === 'cargando' || Date.now() - e.t < FRESCO_MS)) { pinta(k); return e.p || null; }
       var previo = e && e.plan === plan && e.r ? e.r : null;
       e = cache[k] = { plan: plan, estado: 'cargando', r: previo, t: Date.now() };
       pinta(k);
@@ -571,16 +613,18 @@
         var t = cache[k] === e && e.estado === 'cargando' && cuerpo(k) && cuerpo(k).querySelector('.vzp-espera-t');
         if (t) t.textContent = ESPERA_LARGA;
       }, 5000);
-      pide('ppp2-' + k, k === 'historial' && previo && previo.llave ? '&si=' + encodeURIComponent(previo.llave) : '').then(function (j) {
+      e.p = pide('ppp2-' + k, k === 'historial' && previo && previo.llave ? '&si=' + encodeURIComponent(previo.llave) : '').then(function (j) {
         if (cache[k] !== e) return;
         var c = clase(j);
         if (c === 'ok') { if (!(j.igual && e.r)) e.r = j; e.estado = 'ok'; }
+        else if (c === 'interno' && e.r) e.estado = 'ok';                     // se queda lo que ya se veía
         else { e.estado = c; if (c === 'liga') pagina.confirma(); }
         e.t = Date.now(); pinta(k);
-      }, function () {
+      }, function (falla) {
         if (cache[k] !== e) return;
-        e.estado = e.r ? 'ok' : 'red'; e.t = e.r ? Date.now() : 0; pinta(k);
+        e.estado = e.r ? 'ok' : (falla && falla.c === 'tarda' ? 'tarda' : 'red'); e.t = e.r ? Date.now() : 0; pinta(k);
       });
+      return e.p;
     }
     function pinta(k) {
       var c = cuerpo(k), e = cache[k];
@@ -754,19 +798,27 @@
           var c = clase(j);
           if (c !== 'ok') { h.cuerpo.innerHTML = estadoHtml('chat', c, 'chat'); if (c === 'liga') pagina.confirma(); return; }
           h.cuerpo.innerHTML = chatHtml(j, hoy());
-          /* medir: con todos los nombres (lo más alto que puede quedar) y partir por lo que cabe a la vista */
+          /* medir cada burbuja con su nombre arriba y sin él, y partir por lo que cabe a la vista: lo que deja la
+             captura (su alto máximo en esta pantalla) menos su encabezado y sus márgenes */
           var ms = mensajesDe(j);
           if (ms.length > 1) {
+            var real = h.cuerpo.querySelector('.vzp-captura'), cab = real && real.querySelector('.vzp-cap-cab'), maxH = NaN;
+            try { maxH = real ? parseFloat(win.getComputedStyle(real).maxHeight) : NaN; } catch (x) { maxH = NaN; }
             h.cuerpo.insertAdjacentHTML('beforeend', '<div class="vzp-midiendo" aria-hidden="true">' + chatHtml(j, hoy(), { todos: true }) + '</div>');
-            var bs = h.cuerpo.querySelectorAll('.vzp-midiendo .vzp-msj'), alt = [];
-            for (var i = 0; i < bs.length; i++) alt.push(i + 1 < bs.length ? bs[i + 1].offsetTop - bs[i].offsetTop : bs[i].offsetHeight + 8);
-            var capacidad = Math.max(220, Math.min(620, Math.round(win.innerHeight * 0.92 - 330)));
-            if (alt.length === ms.length && alt.every(function (x) { return x > 0; })) h.cuerpo.innerHTML = chatHtml(j, hoy(), { grupos: agrupa(alt, capacidad, 10) });
+            var bs = h.cuerpo.querySelectorAll('.vzp-midiendo .vzp-msj'), con = [], sin = [];
+            for (var i = 0; i < bs.length; i++) {
+              var alto = bs[i].offsetHeight, nb = bs[i].firstElementChild && bs[i].firstElementChild.tagName === 'B' ? bs[i].firstElementChild : null;
+              con.push(alto + 11);                                         // + su margen de arriba (7) y el hueco entre burbujas (4)
+              sin.push(alto - (nb ? nb.offsetHeight + 1 : 0) + 4);
+            }
+            var capacidad = maxH > 0 && cab && cab.offsetHeight > 0 ? Math.round(maxH - cab.offsetHeight - 32) : Math.round(win.innerHeight * 0.92 - 330);
+            capacidad = Math.max(160, Math.min(900, capacidad));
+            if (con.length === ms.length && con.every(function (x) { return x > 11; })) h.cuerpo.innerHTML = chatHtml(j, hoy(), { grupos: agrupa(con, capacidad, 10, sin, ms.map(function (m) { return String(m.quien || ''); })) });
             else { var m0 = h.cuerpo.querySelector('.vzp-midiendo'); if (m0) m0.parentNode.removeChild(m0); }
           }
           var car = h.cuerpo.querySelector('.vzp-capturas');
           if (car) car.addEventListener('scroll', function () { posCaptura(h); }, { passive: true });
-        }, function () { if (pila.indexOf(h) >= 0) { h.cuerpo.removeAttribute('aria-busy'); h.cuerpo.innerHTML = estadoHtml('chat', 'red', 'chat'); } });
+        }, function (falla) { if (pila.indexOf(h) >= 0) { h.cuerpo.removeAttribute('aria-busy'); h.cuerpo.innerHTML = estadoHtml('chat', falla && falla.c === 'tarda' ? 'tarda' : 'red', 'chat'); } });
       };
       h.reintenta = carga;
       carga();
@@ -794,6 +846,9 @@
       for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
       return u;
     }
+    /* Una parte tras otra, nunca en paralelo (el servidor reexporta un Doc de Google en cada parte). Si a media
+       bajada cambia el número de partes o llega otra parte, el archivo cambió entre una y otra: no se pegan
+       pedazos de dos versiones; se dice que falló y se puede volver a intentar. */
     function bajaArchivo(id, alAvanzar, ctl) {
       var trozos = [], meta = null, recibido = 0;
       var parte = function (n) {
@@ -803,8 +858,10 @@
           if (c !== 'ok') throw { c: c };
           var total = Math.max(1, Math.floor(Number(j.partes) || 1));
           if (total > PARTES_MAX) throw { c: 'grande' };
-          if (!meta) meta = { nombre: String(j.nombre || ''), tipo: String(j.tipo || 'application/octet-stream'), partes: total };
-          var u = deBase64(j.datos);
+          if (!meta) meta = { nombre: String(j.nombre || ''), tipo: String(j.tipo || ''), partes: total };
+          if (total !== meta.partes || (j.parte !== undefined && Number(j.parte) !== n) || typeof j.datos !== 'string') throw { c: 'interno' };
+          var u;
+          try { u = deBase64(j.datos); } catch (x) { throw { c: 'interno' }; }
           trozos.push(u); recibido += u.length;
           alAvanzar(n + 1, total, recibido);
           return n + 1 < total ? parte(n + 1) : { trozos: trozos, nombre: meta.nombre, tipo: meta.tipo };
@@ -834,12 +891,13 @@
           if (txt) txt.textContent = (total > 1 ? 'Parte ' + n + ' de ' + total + ' · ' : '') + mb;
         }, ctl).then(function (r) {
           if (pila.indexOf(h) < 0) return;
-          var tipo = r.tipo || a.tipo || 'application/octet-stream', nombre = r.nombre || a.nombre || 'archivo';
+          /* el tipo con que se arma el archivo es el de los bytes (ppp2-archivo), revisado aquí: nunca el de la lista */
+          var tipo = tipoSeguro(r.tipo), nombre = r.nombre || a.nombre || 'archivo', pasivo = tipo !== 'application/octet-stream';
           var blob = new win.Blob(r.trozos, { type: tipo }), url = win.URL.createObjectURL(blob);
           urls.push(url);
-          h.acciones.innerHTML = '<a class="vzp-acc" href="' + url + '" target="_blank" rel="noopener" aria-label="Abrir aparte">' + ico('abrir') + '<span>Abrir aparte</span></a>' +
+          h.acciones.innerHTML = (pasivo ? '<a class="vzp-acc" href="' + url + '" target="_blank" rel="noopener" aria-label="Abrir aparte">' + ico('abrir') + '<span>Abrir aparte</span></a>' : '') +
             '<a class="vzp-acc" href="' + url + '" download="' + esc(nombreGuardar(nombre)) + '" aria-label="Guardar el archivo">' + ico('guardar') + '<span>Guardar</span></a>';
-          var vista = String(a.vista || ''), esPdf = /pdf/i.test(tipo) || vista === 'pdf', esImg = /^image\//i.test(tipo) || vista === 'imagen';
+          var esPdf = tipo === 'application/pdf', esImg = VE_IMAGEN.test(tipo);
           if (esImg) { h.cuerpo.innerHTML = '<figure class="vzp-prev-img"><img src="' + url + '" alt="' + esc(nombre) + '"></figure>'; return; }
           if (esPdf) { pintaPdf(h, r.trozos, url, nombre, ctl, urls); return; }
           h.cuerpo.innerHTML = '<div class="vzp-prev-otro">' + iconoArchivo(tipo, nombre) + '<p><b>' + esc(nombre) + '</b><small>' + esc(k.n + (blob.size ? ' · ' + tamano(blob.size) : '')) + '</small></p>' +
@@ -895,7 +953,12 @@
       cargaPdfjs().then(function (lib) {
         if (ctl.cancelado) return null;
         var tarea = lib.getDocument({ data: datos, isEvalSupported: false, disableAutoFetch: true, disableStream: true });
-        return tarea.promise;
+        /* si pdf.js no termina de abrirlo (un worker que no contesta, un PDF que no sabe leer), no se queda en
+           «Preparando…»: a los 45 s se suelta y el PDF se abre aparte */
+        return new Promise(function (ok, mal) {
+          var t = setTimeout(function () { try { tarea.destroy(); } catch (e) { } mal(new Error('tiempo')); }, 45000);
+          tarea.promise.then(function (pdf) { clearTimeout(t); ok(pdf); }, function (e) { clearTimeout(t); mal(e); });
+        });
       }).then(function (pdf) {
         if (!pdf) return;
         if (ctl.cancelado || pila.indexOf(h) < 0) { pdf.destroy(); return; }
@@ -904,7 +967,7 @@
           var vp = p1.getViewport({ scale: 1 }), n = pdf.numPages, proporcion = vp.height / vp.width;
           var caja = h.cuerpo.querySelector('.vzp-pdf');
           caja.removeAttribute('aria-busy');
-          caja.setAttribute('aria-label', esc(nombre) + ', ' + plural(n, 'página', 'páginas'));
+          caja.setAttribute('aria-label', nombre + ', ' + plural(n, 'página', 'páginas'));   // setAttribute no interpreta marcado: va tal cual
           var html = '';
           for (var i = 1; i <= n; i++) html += '<figure class="vzp-pag" data-n="' + i + '" style="aspect-ratio:' + (1 / proporcion).toFixed(4) + '"><figcaption>' + i + ' / ' + n + '</figcaption></figure>';
           caja.innerHTML = html;
@@ -966,6 +1029,7 @@
             if (s === 'pendientes') { var pe = doc.getElementById('vzpPendientes'); if (pe) baja(pe); return; }
             var e2 = cache.historial, ds = e2 && e2.r ? diasOrdenados(e2.r).filter(function (d) { return (d.items || []).some(function (it) { return it.tipo === s; }); }) : [];
             if (ds.length) escogeDia(ds[ds.length - 1].fecha, true);
+            else if (s === 'version') { var ve = doc.getElementById('vzpVersiones'); if (ve) baja(ve); }   // versiones sin fecha: a su lista
             return;
           }
           if ((x = cerca('.vzp-mas'))) { var p = x.previousElementSibling, ab = x.getAttribute('aria-expanded') === 'true'; if (p) p.classList.toggle('vzp-corto', ab); x.setAttribute('aria-expanded', ab ? 'false' : 'true'); x.textContent = ab ? 'Ver más' : 'Ver menos'; return; }
@@ -1059,9 +1123,13 @@
           if (actual === 'historial' || actual === 'archivos') asegura(actual, true);
         }
         if (primera) {
-          /* en fondo, poco después de abrir el plan: así Historial y Archivos abren al instante */
-          setTimeout(function () { if (!doc.hidden && !apagado) asegura('historial'); }, 1200);
-          setTimeout(function () { if (!doc.hidden && !apagado) asegura('archivos'); }, 2600);
+          /* en fondo, poco después de abrir el plan: así Historial y Archivos abren al instante. Uno tras otro: el
+             historial ya deja en la caché del servidor la lista de carpetas que Archivos vuelve a necesitar. */
+          setTimeout(function () {
+            if (doc.hidden || apagado) return;
+            var p = asegura('historial'), sigue = function () { setTimeout(function () { if (!doc.hidden && !apagado) asegura('archivos'); }, 400); };
+            if (p && p.then) p.then(sigue, sigue); else sigue();
+          }, 1200);
         }
       },
       apaga: function () {
@@ -1081,6 +1149,7 @@
     monta: monta, PESTANAS: PESTANAS, GRUPOS: GRUPOS, TIPOS: TIPOS, PDFJS: PDFJS,
     pestanaDe: pestanaDe, hashCon: hashCon, clase: clase, estadoHtml: estadoHtml, barraHtml: barraHtml,
     historialHtml: historialHtml, diaHtml: diaHtml, lineaHtml: lineaHtml, pendientesHtml: pendientesHtml, capturas: capturas, agrupa: agrupa, chatHtml: chatHtml,
+    diasOrdenados: diasOrdenados, tipoSeguro: tipoSeguro,
     archivosHtml: archivosHtml, tipoArchivo: tipoArchivo, tamano: tamano, fechaLarga: fechaLarga, fechaCorta: fechaCorta,
     resumenOpcion: resumenOpcion, opcionesHtml: opcionesHtml, colorNombre: colorNombre, nombreGuardar: nombreGuardar
   };

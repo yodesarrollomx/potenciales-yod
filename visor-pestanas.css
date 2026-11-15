@@ -154,7 +154,9 @@ div.vzp-vers-b { cursor: default; }
 .vzp-arch-n small { font-size: 13px; color: var(--mudo); }
 .vzp-arch-acc { flex: none; display: inline-flex; align-items: center; gap: 1px; font-size: 13px; font-weight: 600; color: #6a5013; }
 .vzp-arch-no { cursor: default; }
-.vzp-arch-no .vzp-tipo, .vzp-arch-no .vzp-arch-n { opacity: .62; }
+/* lo que no se puede abrir aquí: el ícono se apaga, pero el nombre, la fecha y el tamaño se siguen leyendo (AA) */
+.vzp-arch-no .vzp-tipo { opacity: .55; }
+.vzp-arch-no .vzp-arch-n b { color: var(--cuerpo); }
 .vzp-arch-no .vzp-arch-acc { max-width: 90px; color: var(--mudo); font-weight: 500; font-size: 12px; text-align: right; }
 @media (hover: hover) { .vzp-arch:not(.vzp-arch-no):hover, .vzp-adj:not(.vzp-adj-no):hover { background: #f8f3e8; } }
 .vzp-arch:not(.vzp-arch-no):active, .vzp-adj:not(.vzp-adj-no):active { background: #f3ecdd; }

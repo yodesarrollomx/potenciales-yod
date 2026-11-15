@@ -11,6 +11,7 @@ const path = require('node:path');
 const http = require('node:http');
 const { mundo, PLAN, ADMIN } = require('./ppp2-mundo.cjs');
 const D = require('./visor-pestanas-dobles.cjs');
+const M = require('./visor-pestanas-mundo.cjs');
 
 const RAIZ = path.join(__dirname, '..');
 const FOTOS = process.env.PPP_SCREENSHOTS || '';
@@ -35,10 +36,13 @@ function elMundo(op) {
   if (varios) { w.vivero.getSheetByName('Planes').appendRow([OTRO, 'Otro Ejemplo', 'libro-plantilla', 'activo', '2026-01-15', 'Pruebas', '', 'ppp2-libro-v1', '']); w.cache.delete('planes'); }
   return w;
 }
-/* op: { nuevo (contesta los recursos de las pestañas), audiencia, ancho, alto, dpr, sesion, transforma, demora:{recurso: ms}, error:{recurso: código}, direccion } */
+/* op: { nuevo (los dobles del contrato contestan los recursos de las pestañas), real (los contesta el servidor de main,
+   Visor.gs, con la hoja de historial y el Drive de tests/visor-pestanas-mundo.cjs), audiencia, ancho, alto, dpr, sesion,
+   transforma, demora:{recurso: ms}, error:{recurso: código}, direccion }. Sin `nuevo` ni `real`, el servidor publicado
+   hoy: a esos recursos contesta `sin_sesion`. */
 async function abre(navegador, base, op) {
   op = op || {};
-  const w = elMundo(op), pedidos = [], escrituras = [];
+  const w = op.real ? M.mundoReal({ liga: LIGA, audiencia: op.audiencia }) : elMundo(op), pedidos = [], escrituras = [], vuelo = { ahora: 0, max: 0 };
   const movil = (op.ancho || 390) < 700;
   const ctx = await navegador.newContext({ viewport: { width: op.ancho || 390, height: op.alto || 844 }, deviceScaleFactor: op.dpr || 1, hasTouch: movil, isMobile: movil });
   await ctx.route('**/*', async (route) => {
@@ -56,9 +60,14 @@ async function abre(navegador, base, op) {
       }
       const p = Object.fromEntries(new URL(url).searchParams);
       pedidos.push(p);
-      if (op.demora && op.demora[p.recurso]) await new Promise((r) => setTimeout(r, op.demora[p.recurso]));
-      const doble = op.nuevo ? D.contesta(p, { audiencia: op.audiencia, malEducado: op.audiencia === 'externo', error: op.error, tamParte: op.tamParte }) : null;
-      if (doble) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(doble) });
+      if (p.recurso === 'ppp2-archivo') { vuelo.ahora++; vuelo.max = Math.max(vuelo.max, vuelo.ahora); }
+      try {
+        if (op.demora && op.demora[p.recurso]) await new Promise((r) => setTimeout(r, op.demora[p.recurso]));
+        else if (p.recurso === 'ppp2-archivo') await new Promise((r) => setTimeout(r, 30));     // que una parte tarde algo: así se nota si se piden dos a la vez
+        if (!op.nuevo && !op.real && D.RECURSOS.indexOf(p.recurso) >= 0) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'sin_sesion' }) });
+        const doble = op.nuevo ? D.contesta(p, { audiencia: op.audiencia, malEducado: op.audiencia === 'externo', error: op.error, tamParte: op.tamParte }) : null;
+        if (doble) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(doble) });
+      } finally { if (p.recurso === 'ppp2-archivo') vuelo.ahora--; }
       const q = Object.assign({}, p); delete q.k;
       let j = JSON.parse(w.ctx.doGet({ parameter: q }).contenido);
       if (j.ok && j.menu && j.menu.plan === OTRO && j.v) { j.v.ventas = 312.4; j.v.ganancia = 31.8; j.v.dueno_recibe = 36.2; j.v.dueno_veces = 1.61; j.datos['terreno.m2'] = { valor: 2164, estado: 'confirmado' }; }
@@ -74,7 +83,7 @@ async function abre(navegador, base, op) {
   if (process.env.PESTANAS_CONSOLA) page.on('console', (m) => console.log('  consola: ' + m.text()));
   await page.goto(base + '/visor.html' + (op.direccion === undefined || typeof op.direccion === 'boolean' ? '#l=' + LIGA : '') + (op.hash || ''));
   await page.locator('.vz-card').first().waitFor({ state: 'attached' });
-  return { w, ctx, page, pedidos, escrituras, errores };
+  return { w, ctx, page, pedidos, escrituras, errores, vuelo };
 }
 const pestana = async (page, t) => { await page.locator('#vzpTab-' + t).click(); await page.locator('#vzpPanel-' + t).waitFor({ state: 'visible' }); };
 const sinDesborde = (page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 0.5);
@@ -102,6 +111,14 @@ const sinDesborde = (page) => page.evaluate(() => document.documentElement.scrol
       assert.equal(await page.locator('.vzp-comparar').count(), 0);
       await pestana(page, 'plan');
       assert.equal(await page.locator('.vz-card').count(), 7, 'el plan sigue ahí: un recurso que no existe no apaga la liga');
+      // con el teclado: Enter (o Espacio) en una pestaña la abre y el foco se queda en ella, no se pierde en la página
+      await page.locator('#vzpTab-historial').focus();
+      await page.keyboard.press('Enter');
+      await page.locator('#vzpPanel-historial').waitFor({ state: 'visible' });
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'vzpTab-historial');
+      await page.keyboard.press('ArrowLeft');
+      await page.locator('#vzpPanel-plan').waitFor({ state: 'visible' });
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'vzpTab-plan');
       assert.ok(pedidos.some((p) => p.recurso === 'ppp2-historial') && pedidos.some((p) => p.recurso === 'ppp2-archivos'));
       assert.ok(pedidos.filter((p) => /ppp2-(historial|archivos)/.test(p.recurso)).every((p) => p.liga === LIGA && p.plan === PLAN && !p.k), 'con la liga y el plan, sin sesión');
       assert.deepEqual(escrituras, []);
@@ -182,8 +199,90 @@ const sinDesborde = (page) => page.evaluate(() => document.documentElement.scrol
       assert.equal(await page.locator('[data-chat]').count(), 0);
       assert.equal(await page.locator('#vzpPendientes').count(), 0);
       assert.equal(await page.locator('.vzp-res[data-salta="pendientes"]').count(), 0);
-      assert.doesNotMatch(await page.locator('#vzpPanel-historial').innerText(), /No debe verse|Chat del equipo/);
+      assert.doesNotMatch(await page.locator('#vzpPanel-historial').innerText(), /No debe verse|Chat del equipo|Fuente interna/);
+      assert.equal(await page.locator('#vzpPanel-historial a[href*="ejemplo.test/interna"]').count(), 0, 'ni la liga de un evento');
       assert.equal(pedidos.filter((p) => p.recurso === 'ppp2-chat').length, 0);
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
+    await caso('contra el servidor de main (Visor.gs de verdad), liga de equipo: historial, conversación, un PDF de tres partes una tras otra, un HTML que nunca se abre como página y los errores', async () => {
+      const { ctx, page, pedidos, errores, vuelo } = await abre(navegador, base, { real: true, audiencia: 'equipo', ancho: 375, alto: 667, dpr: 2 });
+      const sinHuecos = async (sel) => assert.doesNotMatch(await page.locator(sel).innerText(), /\bundefined\b|\bNaN\b|\bnull\b|\[object/, sel);
+      await pestana(page, 'historial');
+      await page.locator('.vzp-dia-on').waitFor({ timeout: 15000 });
+      await sinHuecos('#vzpPanel-historial');
+      assert.match(await page.locator('#vzpPanel-historial').innerText(), /Reunión con el dueño del terreno[\s\S]*Decisiones: Preparar la versión/);
+      assert.doesNotMatch(await page.locator('#vzpPanel-historial').innerText(), /Decisión sólo de Dirección|Pendiente de una decisión de Dirección/);
+      // las versiones del libro de prueba no tienen fecha: el botón «versiones» lleva a su lista (no se queda muerto)
+      await page.locator('.vzp-res[data-salta="version"]').click();
+      await page.waitForFunction(() => {
+        const r = document.getElementById('vzpVersiones').getBoundingClientRect(), barra = document.getElementById('vzBarra').getBoundingClientRect().top;
+        const alFondo = scrollY >= document.documentElement.scrollHeight - innerHeight - 1;
+        return scrollY > 0 && r.top >= 0 && (r.top < innerHeight / 2 || (alFondo && r.top < barra - 40));
+      }, null, { timeout: 3000 });
+      // la conversación del día: cada captura cabe a la vista y lleva varios mensajes
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.locator('[data-chat]').first().click();
+      const hoja = page.locator('.vzp-hoja-chat');
+      await hoja.locator('.vzp-captura').first().waitFor();
+      await page.waitForTimeout(200);
+      const caps = await page.evaluate(() => [...document.querySelectorAll('.vzp-hoja-chat .vzp-captura')].map((c) => { const m = c.querySelector('.vzp-cap-msjs'); return { n: c.querySelectorAll('.vzp-msj').length, cabe: m.scrollHeight <= m.clientHeight + 2 }; }));
+      assert.equal(caps.reduce((s, c) => s + c.n, 0), 14, 'los catorce mensajes, una sola vez');
+      assert.ok(caps.every((c) => c.cabe), 'cada captura cabe sin desplazarse por dentro: ' + JSON.stringify(caps));
+      assert.ok(caps.length <= 6, 'en 375×667, catorce mensajes caben en pocas capturas: ' + caps.length);
+      await sinHuecos('.vzp-hoja-chat');
+      await page.keyboard.press('Escape');
+      await hoja.waitFor({ state: 'detached' });
+      // Archivos: el servidor de verdad, sus grupos y lo que no sale
+      await pestana(page, 'archivos');
+      await page.locator('.vzp-grupo').first().waitFor({ timeout: 15000 });
+      await sinHuecos('#vzpPanel-archivos');
+      assert.doesNotMatch(await page.locator('#vzpPanel-archivos').innerText(), /Secreto de Dirección/);
+      // un PDF de 7 MB: tres partes, desde la 0, una tras otra (nunca dos a la vez), pegadas y dibujadas
+      await page.locator('[data-archivo="' + M.A.larga + '"]').click();
+      const prev = page.locator('.vzp-hoja-archivo');
+      await prev.locator(PDFJS ? '.vzp-pag img' : '.vzp-prev-otro, .vzp-pdf-marco').first().waitFor({ timeout: 30000 });
+      assert.deepEqual(pedidos.filter((p) => p.recurso === 'ppp2-archivo' && p.id === M.A.larga).map((p) => p.parte), ['0', '1', '2']);
+      assert.equal(vuelo.max, 1, 'las partes se piden de una en una');
+      if (PDFJS) assert.equal(await prev.locator('.vzp-pag').count(), 2, 'las dos páginas del PDF, ya pegadas sus tres partes');
+      assert.equal(await prev.locator('.vzp-acc[aria-label="Abrir aparte"]').count(), 1);
+      await page.keyboard.press('Escape');
+      await prev.waitFor({ state: 'detached' });
+      // un HTML del expediente: el servidor lo manda sin tipo y la pantalla no lo abre aparte; sólo se guarda
+      await page.locator('[data-archivo="' + M.A.pagina + '"]').click();
+      const guardar = prev.locator('.vzp-prev-otro a[download]');
+      await guardar.waitFor({ timeout: 10000 });
+      assert.equal(await prev.locator('.vzp-acc[aria-label="Abrir aparte"]').count(), 0, 'lo que un navegador ejecuta no se ofrece para abrir aparte');
+      assert.equal(await guardar.getAttribute('download'), 'Pagina del desarrollo.html');
+      assert.equal(await guardar.evaluate((a) => fetch(a.href).then((r) => r.blob()).then((b) => b.type)), 'application/octet-stream', 'se arma como bytes sin tipo');
+      assert.equal(await page.evaluate(() => typeof window.HTML_EJECUTADO), 'undefined');
+      await page.keyboard.press('Escape');
+      await prev.waitFor({ state: 'detached' });
+      // un Doc de Google que no se pudo exportar: «grande», sin reintentar
+      await page.locator('[data-archivo="' + M.A.enorme + '"]').click();
+      await page.getByText('Este archivo no se puede abrir aquí').waitFor({ timeout: 10000 });
+      assert.equal(await prev.locator('[data-reintenta]').count(), 0);
+      await page.keyboard.press('Escape');
+      assert.ok(await sinDesborde(page));
+      assert.deepEqual(errores, []);
+      await ctx.close();
+    });
+
+    await caso('contra el servidor de main (Visor.gs de verdad), liga de fuera: sin conversación, pendientes ni fuentes; en Archivos sólo «Para compartir»', async () => {
+      const { ctx, page, pedidos, errores } = await abre(navegador, base, { real: true, audiencia: '' });
+      await pestana(page, 'historial');
+      await page.locator('.vzp-dia-on').waitFor({ timeout: 15000 });
+      const t = await page.locator('#vzpPanel-historial').innerText();
+      assert.match(t, /Reunión con el dueño del terreno/);
+      assert.doesNotMatch(t, /Aviso en el grupo|Levantamiento topográfico|Videollamada|Decisiones:|Pendientes abiertos/);
+      assert.equal(await page.locator('[data-chat], #vzpPendientes, .vzp-res[data-salta="pendientes"]').count(), 0);
+      await pestana(page, 'archivos');
+      await page.locator('.vzp-grupo').first().waitFor({ timeout: 15000 });
+      assert.deepEqual(await page.locator('#vzpPanel-archivos .vzp-arch-n b').allInnerTexts(), ['Presentación para el dueño.pdf']);
+      await page.locator('[data-archivo="' + M.A.dueno + '"]').click();
+      await page.locator('.vzp-hoja-archivo').locator(PDFJS ? '.vzp-pag img' : '.vzp-prev-otro, .vzp-pdf-marco').first().waitFor({ timeout: 20000 });
+      assert.equal(pedidos.filter((p) => p.recurso === 'ppp2-chat').length, 0, 'nunca pide la conversación');
       assert.deepEqual(errores, []);
       await ctx.close();
     });

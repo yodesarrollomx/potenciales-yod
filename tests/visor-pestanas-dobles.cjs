@@ -79,7 +79,10 @@ function historial(op) {
   for (let k = 0; k < 14; k++) dias.push({ fecha: d(50 + k * 3), chat: k % 3 ? 2 : 0, items: k % 2 ? [{ tipo: 'documento', hora: '10:00', titulo: 'Archivo del expediente ' + (k + 1), resumen: '', fuente: 'Expediente', archivos: [] }] : [] });
   const r = {
     ok: true, llave: 'vh_prueba_' + (op.llave || '1'), audiencia: equipo ? 'equipo' : 'externo', proyectos: [{ id: 'proyecto-a', nombre: 'Proyecto Ejemplo' }],
-    dias: dias.map((x) => equipo ? x : { fecha: x.fecha, items: x.items.filter((it) => it.tipo !== 'pendiente').map((it) => Object.assign({}, it, { fuente: '' })), chat: 0 }).filter((x) => x.items.length || x.chat),
+    /* de fuera, como el servidor: sin eventos de chat ni de pendiente, sin fuente, sin liga y sin «Decisiones: …» (las versiones sí llevan su fuente) */
+    dias: dias.map((x) => equipo ? x : { fecha: x.fecha, items: x.items.filter((it) => it.tipo !== 'pendiente' && it.tipo !== 'whatsapp').map((it) => {
+      const c = Object.assign({}, it, { fuente: it.tipo === 'version' ? it.fuente : '', resumen: String(it.resumen || '').split('\n\nDecisiones: ')[0] }); delete c.url; return c;
+    }), chat: 0 }).filter((x) => x.items.length || x.chat),
     pendientes: equipo ? [
       { tarea: 'Enviar el levantamiento topográfico al banco', responsable: 'Arquitectura', compromiso: d(5), estado: 'abierto' },
       { tarea: 'Confirmar el precio de salida con el área comercial', responsable: 'Comercial', compromiso: d(-6), estado: 'en curso' },
@@ -89,7 +92,15 @@ function historial(op) {
   };
   /* «la pantalla no debe asumir lo contrario»: un servidor que por error mandara la conversación o los pendientes a
      una liga de fuera no debe hacerlos aparecer */
-  if (op.malEducado) { r.dias.forEach((x) => { x.chat = 7; }); r.pendientes = [{ tarea: 'No debe verse', responsable: 'Nadie', compromiso: '', estado: 'abierto' }]; }
+  if (op.malEducado) {
+    r.dias.forEach((x) => {
+      x.chat = 7;
+      x.items.forEach((it) => { it.fuente = 'Fuente interna'; it.url = 'https://ejemplo.test/interna'; });
+      x.items.push({ tipo: 'whatsapp', hora: '23:00', titulo: 'No debe verse: un evento del chat', resumen: '', fuente: 'Grupo', archivos: [] },
+        { tipo: 'pendiente', hora: '23:10', titulo: 'No debe verse: un pendiente', resumen: '', fuente: 'Minuta', archivos: [] });
+    });
+    r.pendientes = [{ tarea: 'No debe verse', responsable: 'Nadie', compromiso: '', estado: 'abierto' }];
+  }
   if (op.vacio) { r.dias = []; r.pendientes = []; r.versiones = []; }
   return r;
 }
@@ -133,7 +144,9 @@ function archivos(op) {
     { nombre: 'Propuestas', archivos: [{ id: ARCH.propuesta, nombre: 'Propuesta de reparto.pdf', fecha: f(30), tipo: 'application/pdf', tamano: 310000, vista: 'pdf' }] },
     { nombre: 'Otros', archivos: [
       { id: ARCH.video, nombre: 'Video del recorrido.mp4', fecha: f(15), tipo: 'video/mp4', tamano: 62000000, vista: 'no' },
-      { id: ARCH.grande, nombre: 'Planos completos.pdf', fecha: f(25), tipo: 'application/pdf', tamano: 39000000, vista: 'pdf' },
+      /* como en el servidor: un archivo de más de 40 MB sale con `vista` = no; `grande` le pasa a uno de Google
+         que no se pudo exportar a PDF (en la lista dice `pdf`: se sabe hasta pedirlo) */
+      { id: ARCH.grande, nombre: 'Planos completos', fecha: f(25), tipo: 'application/vnd.google-apps.presentation', tamano: null, vista: 'pdf' },
       { id: ARCH.ajeno, nombre: 'Archivo que ya no está.pdf', fecha: f(26), tipo: 'application/pdf', tamano: 1000, vista: 'pdf' }
     ] }
   ] };

@@ -9,6 +9,7 @@ const path = require('node:path');
 const P = require('../visor-pestanas.js');
 const V = require('../visor.js');
 const D = require('./visor-pestanas-dobles.cjs');
+const M = require('./visor-pestanas-mundo.cjs');
 const { mundo, PLAN } = require('./ppp2-mundo.cjs');
 
 const RAIZ = path.join(__dirname, '..');
@@ -44,14 +45,19 @@ test('qué pasó con un recurso: el servidor de hoy no los tiene y eso no es una
   assert.equal(P.clase({ ok: false, error: 'portero' }), 'interno');
   assert.equal(P.clase({ ok: false, error: 'grande' }), 'grande');
   assert.equal(P.clase(null), 'red');
-  const hoy = mundo({ ligas: [[LIGA, PLAN, 'Grupo', 'activa', '', '', '', '2026-01-01', '']] });
-  for (const r of D.RECURSOS) assert.equal(P.clase(hoy.get({ recurso: r, liga: LIGA, plan: PLAN, dia: HOY, id: D.ARCH.foto, parte: '0' })), 'sin', r + ': el servidor de hoy contesta «todavía no»');
+  /* El servidor publicado hoy no conoce estos recursos: doGet los manda al canje del Portero sin `k` y contesta
+     `sin_sesion`. (El mundo de pruebas ya corre el servidor de main, que sí los tiene: ver la prueba siguiente.) */
+  for (const r of D.RECURSOS) assert.equal(P.clase({ ok: false, error: 'sin_sesion' }), 'sin', r + ': el servidor de hoy contesta «todavía no»');
+  const sinHistorial = mundo({ ligas: [[LIGA, PLAN, 'Grupo', 'activa', '', '', '', '2026-01-01', '']] });
+  assert.equal(P.clase(sinHistorial.get({ recurso: 'ppp2-archivos', liga: LIGA, plan: PLAN })), 'ok', 'el servidor de main sin hoja de historial: una lista vacía, no un error');
+  assert.match(texto(P.archivosHtml(sinHistorial.get({ recurso: 'ppp2-archivos', liga: LIGA, plan: PLAN }))), /Todavía no hay archivos para esta liga/);
   const sin = texto(P.estadoHtml('historial', 'sin'));
   assert.match(sin, /Aún no hay historial en esta liga/);
   assert.match(texto(P.estadoHtml('archivos', 'sin')), /Aún no hay archivos en esta liga/);
   assert.doesNotMatch(P.estadoHtml('historial', 'sin'), /data-reintenta/, 'lo que todavía no existe no se reintenta');
   assert.match(P.estadoHtml('historial', 'interno'), /data-reintenta="historial"/, 'una falla se puede reintentar');
   assert.match(P.estadoHtml('archivos', 'red'), /Sin conexión[\s\S]*data-reintenta/);
+  for (const r of ['historial', 'archivos', 'chat', 'archivo']) assert.match(texto(P.estadoHtml(r, 'tarda', r)), /Está tardando más de lo normal[\s\S]*Volver a intentar/, r + ': no contestar a tiempo no es «sin conexión»');
   const grande = P.estadoHtml('archivo', 'grande');
   assert.match(texto(grande), /no se puede abrir aquí[\s\S]*40 MB/);
   assert.doesNotMatch(grande, /data-reintenta/, '«grande» no se reintenta');
@@ -92,6 +98,87 @@ test('Historial de fuera: nunca conversación ni pendientes, aunque llegaran; un
   assert.match(t, /2 reuniones/);
   const vacio = texto(P.historialHtml(D.historial({ vacio: true }), { hoy: HOY }));
   assert.match(vacio, /Este plan todavía no tiene historial/);
+});
+
+test('contra el servidor de main (Visor.gs de verdad): cada recurso trae la forma que la pantalla espera y se pinta sin huecos', () => {
+  const sinHuecos = (html, que) => assert.doesNotMatch(texto(html), /\bundefined\b|\bNaN\b|\bnull\b|\[object/, que);
+  // equipo
+  const eq = M.mundoReal({ hoy: T_HOY, audiencia: 'equipo' }), pide = (w, recurso, extra) => w.get(Object.assign({ recurso, liga: M.LIGA, plan: M.PLAN }, extra || {}));
+  const h = pide(eq, 'ppp2-historial');
+  assert.equal(P.clase(h), 'ok'); assert.equal(h.audiencia, 'equipo');
+  const html = P.historialHtml(h, { hoy: HOY }), t = texto(html);
+  sinHuecos(html, 'historial de equipo');
+  assert.match(t, /Reunión con el dueño del terreno[\s\S]*Decisiones: Preparar la versión con preventa lenta/);
+  assert.match(html, /data-archivo="archivoMinutaDeLaReunion0001"[\s\S]*Abrir el documento/, 'la minuta de la reunión se abre por Archivos');
+  assert.match(html, /data-chat="2026-11-14"/);
+  assert.match(t, /Pendientes abiertos 2[\s\S]*venció el 9 nov/);
+  assert.doesNotMatch(t, /Decisión sólo de Dirección|Pendiente de una decisión de Dirección|Ya se hizo/, 'solo_direccion y lo hecho no salen');
+  const dias = [...html.matchAll(/class="vzp-dia[^"]*" data-dia="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(dias, h.dias.map((d) => d.fecha).reverse(), 'el servidor manda lo más reciente primero; la línea va del más viejo al más reciente');
+  const c = pide(eq, 'ppp2-chat', { dia: h.dias[0].fecha }), ch = P.chatHtml(c, HOY);
+  sinHuecos(ch, 'conversación');
+  assert.equal((ch.match(/class="vzp-msj[ "]/g) || []).length, 14, 'los catorce mensajes visibles, sin el oculto');
+  assert.doesNotMatch(ch, /Mensaje oculto/);
+  assert.match(ch, /data-archivo="archivoPresentacionSocios001"/);
+  assert.match(texto(ch), /Nota de voz\.opus aún no está en el expediente/);
+  const a = pide(eq, 'ppp2-archivos'), ah = P.archivosHtml(a, { hoy: HOY });
+  sinHuecos(ah, 'archivos de equipo');
+  assert.deepEqual([...ah.matchAll(/id="vzpG\d+">([^<]+) </g)].map((m) => m[1]), ['Presentaciones', 'Modelos financieros', 'Terreno y polígonos', 'Reuniones y minutas', 'Otros']);
+  assert.doesNotMatch(ah, /Secreto de Dirección/, 'lo de la carpeta privada no sale');
+  assert.match(ah, /<div class="vzp-arch vzp-arch-no"[^>]*>[\s\S]*?Video del recorrido\.mov/, 'pasa de 40 MB: sin botón');
+  assert.match(ah, /data-archivo="archivoPaginaHtmlDelExpedi01"[^>]*data-vista="descarga"/);
+  // un archivo: partes desde 0, una a una, con el tipo de los bytes
+  const p0 = pide(eq, 'ppp2-archivo', { id: M.A.larga, parte: '0' });
+  assert.equal(p0.partes, 3); assert.equal(p0.parte, 0); assert.equal(P.tipoSeguro(p0.tipo), 'application/pdf');
+  assert.equal(P.clase(pide(eq, 'ppp2-archivo', { id: M.A.larga, parte: '3' })), 'plan', 'no hay parte 3 de 3');
+  assert.equal(P.tipoSeguro(pide(eq, 'ppp2-archivo', { id: M.A.pagina, parte: '0' }).tipo), 'application/octet-stream', 'un HTML llega como bytes sin tipo');
+  assert.equal(P.clase(pide(eq, 'ppp2-archivo', { id: M.A.enorme, parte: '0' })), 'grande', 'un Doc de Google que no se puede exportar');
+  assert.equal(P.clase(pide(eq, 'ppp2-archivo', { id: M.A.secreto, parte: '0' })), 'plan');
+  // de fuera: sin conversación, pendientes, fuente ni liga de un evento; sólo «Para compartir»
+  const ex = M.mundoReal({ hoy: T_HOY, audiencia: '' }), hx = pide(ex, 'ppp2-historial'), xhtml = P.historialHtml(hx, { hoy: HOY });
+  assert.equal(hx.audiencia, 'externo');
+  sinHuecos(xhtml, 'historial de fuera');
+  assert.doesNotMatch(xhtml, /data-chat|vzpPendientes|Aviso en el grupo|Levantamiento topográfico|Videollamada|Ver la fuente/);
+  assert.equal(P.clase(pide(ex, 'ppp2-chat', { dia: hx.dias[0].fecha })), 'plan');
+  assert.deepEqual(pide(ex, 'ppp2-archivos').grupos.map((g) => g.archivos.map((x) => x.nombre)), [['Presentación para el dueño.pdf']]);
+});
+
+test('lo que llega no se vuelve marcado ni se abre como página: fechas completas y tipos que un navegador no ejecuta', () => {
+  // una fecha que no es AAAA-MM-DD exacta no entra a la línea de tiempo (ni a un atributo)
+  const h = { ok: true, audiencia: 'equipo', dias: [{ fecha: '2026-11-14" onmouseover="alert(1)', items: [{ tipo: 'reunion', titulo: 'x' }], chat: 0 }, { fecha: '2026-11-13', items: [{ tipo: 'reunion', titulo: 'buena' }], chat: 0 }], pendientes: [], versiones: [{ v: 1, nombre: 'a', fecha: '2026-11-12"><b>', estado: '' }] };
+  const html = P.historialHtml(h, { hoy: HOY });
+  assert.doesNotMatch(html, /onmouseover|2026-11-14|2026-11-12/);
+  assert.deepEqual(P.diasOrdenados(h).map((d) => d.fecha), ['2026-11-13']);
+  assert.match(html, /V1 · a[\s\S]*sin fecha/, 'una versión con fecha rota se enseña sin fecha');
+  // los tipos: sólo lo pasivo conserva el suyo
+  for (const [t, esperado] of [['application/pdf', 'application/pdf'], ['IMAGE/PNG; charset=binary', 'image/png'], ['image/jpeg', 'image/jpeg'], ['video/mp4', 'video/mp4'],
+    ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'], ['application/vnd.google-earth.kmz', 'application/vnd.google-earth.kmz'],
+    ['text/html', 'application/octet-stream'], ['image/svg+xml', 'application/octet-stream'], ['application/xhtml+xml', 'application/octet-stream'], ['text/xml', 'application/octet-stream'],
+    ['application/javascript', 'application/octet-stream'], ['text/plain', 'application/octet-stream'], ['', 'application/octet-stream'], [undefined, 'application/octet-stream']]) assert.equal(P.tipoSeguro(t), esperado, String(t));
+  // el mismo juego de tipos que el servidor (PESTANAS.PASIVO de Visor.gs)
+  const src = fs.readFileSync(path.join(RAIZ, 'visor-pestanas.js'), 'utf8'), gs = fs.readFileSync(path.join(RAIZ, 'server/ppp2/Visor.gs'), 'utf8');
+  assert.equal(/var PASIVO = (\/\^.*\$\/);/.exec(src)[1], /PASIVO: (\/\^.*\$\/),/.exec(gs)[1], 'la pantalla y el servidor dejan pasar los mismos tipos');
+  // de fuera: aunque llegara, un evento de chat o de pendiente no sale, ni la fuente o la liga de un evento
+  const fuera = { ok: true, audiencia: 'externo', dias: [{ fecha: '2026-11-13', chat: 9, items: [{ tipo: 'whatsapp', titulo: 'chat que no' }, { tipo: 'pendiente', titulo: 'pendiente que no' }, { tipo: 'reunion', titulo: 'sí', fuente: 'interna', url: 'https://ejemplo.test/x' }] }, { fecha: '2026-11-12', chat: 3, items: [{ tipo: 'whatsapp', titulo: 'otro chat que no' }] }], pendientes: [], versiones: [] };
+  const fx = P.historialHtml(fuera, { hoy: HOY });
+  assert.doesNotMatch(fx, /chat que no|pendiente que no|interna|ejemplo\.test|data-chat/);
+  assert.deepEqual(P.diasOrdenados(fuera).map((d) => [d.fecha, d.items.length, d.chat]), [['2026-11-13', 1, 0]], 'un día que se queda sin nada que enseñar no sale');
+  // renglones rotos o vacíos no tumban la pestaña ni dejan «undefined»
+  const roto = P.historialHtml({ ok: true, audiencia: 'equipo', dias: [null, { fecha: '2026-11-13', items: [null, { tipo: 'reunion', titulo: 'x' }], chat: 0 }], pendientes: [null, { tarea: 'una tarea' }, {}], versiones: [null, { v: 1 }, {}] }, { hoy: HOY });
+  assert.doesNotMatch(texto(roto), /undefined|null|NaN/);
+  assert.match(texto(roto), /Pendientes abiertos 1[\s\S]*una tarea[\s\S]*Versiones del plan 1/);
+  const archRotos = P.archivosHtml({ ok: true, grupos: [null, { nombre: 'Otros', archivos: [null, {}, { id: 'archivoPrueba000000000000uno01', nombre: 'uno.pdf', tipo: 'application/pdf', vista: 'pdf' }] }] }, { hoy: HOY });
+  assert.match(texto(archRotos), /1 archivo del proyecto[\s\S]*uno\.pdf/);
+  assert.doesNotMatch(texto(archRotos), /undefined|NaN/);
+});
+
+test('las capturas de la conversación: con el nombre sólo donde se ve, caben más mensajes sin partir ninguno', () => {
+  // A, A, B, B: con nombre, 100; sin nombre, 80. Capacidad 290: A+A(sin)+B = 280 → caben tres.
+  assert.deepEqual(P.agrupa([100, 100, 100, 100], 290, 10, [80, 80, 80, 80], ['A', 'A', 'B', 'B']), [[0, 1, 2], [3]]);
+  // sin los datos del nombre, como antes: todas con nombre
+  assert.deepEqual(P.agrupa([100, 100, 100, 100], 290, 10), [[0, 1], [2, 3]]);
+  // la primera de una captura siempre lleva su nombre, aunque sea de la misma persona que la anterior
+  assert.deepEqual(P.agrupa([100, 100, 100], 190, 10, [80, 80, 80], ['A', 'A', 'A']), [[0, 1], [2]]);
 });
 
 test('el día: eventos con su tipo, hora, resumen largo que se abre, adjuntos y fuente; lo escrito no se vuelve marcado', () => {
@@ -274,7 +361,7 @@ test('el archivo de las pestañas sólo lee, no calcula, carga pdf.js fijo y ver
   assert.match(src, /sriWorker: 'sha384-[A-Za-z0-9+/=]{64}'/);
   assert.match(src, /isEvalSupported: false/, 'pdf.js sin eval (CVE-2024-4367)');
   assert.doesNotMatch(src + css, /#25d366|#128c7e|#075e54|#34b7f1|#dcf8c6/i, 'sin los colores de la marca de WhatsApp: la burbuja es un ícono genérico propio');
-  for (const f of ['visor-pestanas.js', 'visor-pestanas.css', 'tests/visor-pestanas-dobles.cjs', 'tests/visor-pestanas.test.cjs', 'tests/visor-pestanas-browser.cjs']) {
+  for (const f of ['visor-pestanas.js', 'visor-pestanas.css', 'tests/visor-pestanas-dobles.cjs', 'tests/visor-pestanas-mundo.cjs', 'tests/visor-pestanas.test.cjs', 'tests/visor-pestanas-browser.cjs']) {
     const t = fs.readFileSync(path.join(RAIZ, f), 'utf8').replace(/assert\.doesNotMatch\([^\n]*\n/g, '');
     assert.doesNotMatch(t, /Mor[eé]o|Avermont|Morelos|Puebla Arquitectos|@aurumarquitectos|docs\.google\.com\/|drive\.google\.com\//i, f);
   }
