@@ -84,6 +84,9 @@ jobs:
         run: |
           npm ci --prefix mcp --ignore-scripts --no-fund
           npm run --prefix mcp check
+          node --check mcp-conectar.js
+          node --check mcp/src/connection.mjs
+          node --check mcp/src/cli.mjs
           npm test --prefix mcp
           npm audit --prefix mcp --omit=dev --audit-level=high
       - name: Instalar navegadores
@@ -109,6 +112,7 @@ jobs:
           PPP_MAP_ASSETS: ${{ runner.temp }}/ppp-map-assets
           PPP_PDFJS_DIR: ${{ runner.temp }}/pdfjs/package/legacy/build
         run: |
+          node tests/mcp-conectar-browser.cjs
           node tests/ppp-version-bridge-browser.cjs
           node tests/ppp-navigation-browser.cjs
           node tests/ppp-presentation-browser.cjs

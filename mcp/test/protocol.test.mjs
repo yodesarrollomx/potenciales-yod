@@ -28,9 +28,10 @@ test('stdio se inicializa con SDK real sin credenciales ni datos de producción'
   const transport=new StdioClientTransport({command:process.execPath,args:[new URL('../src/stdio.mjs',import.meta.url).pathname],env:{PATH:process.env.PATH},stderr:'pipe'});
   try {
     await client.connect(transport);
-    assert.equal((await client.listTools()).tools.length,4);
+    assert.equal((await client.listTools()).tools.length,10);
     const r=await client.callTool({name:'yod_capacidades',arguments:{}});
     assert.equal(r.structuredContent.transporte,'stdio');assert.equal(r.structuredContent.adaptadores[0].lectura_privada,false);
+    assert.equal((await client.callTool({name:'ppp_listar_planes',arguments:{}})).isError,true);
     assert.equal((await client.readResource({uri:'yod://contrato'})).contents.length,1);
   } finally {await client.close();}
 });

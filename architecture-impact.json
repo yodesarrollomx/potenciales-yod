@@ -1,22 +1,23 @@
 {
-  "model_revision": "2026-11-15.mcp-ppp.1",
-  "proposal_id": "CHG-PPP2-20261112",
-  "summary": "PPP 2 · Visor 2.0, lado de la pantalla (seguimiento de CHG-PPP2-20261112). visor.html gana una barra de pestañas fija abajo, estilo teléfono y con área segura —Plan · Historial · Archivos · Opciones—, en dos archivos nuevos que sólo carga el visor (visor-pestanas.js y visor-pestanas.css; la ficha del plan no los carga). Plan son los siete cuadros de siempre. Historial lee por GET ppp2-historial y ppp2-chat: lo más importante (reuniones, versiones, pendientes), una línea de tiempo por días deslizable, el día escogido con sus eventos y archivos, la conversación del equipo en capturas y los pendientes abiertos; una liga que no es de equipo nunca ve conversación ni pendientes aunque llegaran. Archivos lee ppp2-archivos y ppp2-archivo (partes desde 0, barra de avance real): grupos del contrato, vista previa de imagen y de PDF dentro de la página con pdf.js 3.11.174 cargado sólo al abrir un PDF, desde jsDelivr con huella SRI e isEvalSupported false, y guardar lo demás. Opciones: una tarjeta por terreno y versión de la liga con tres cifras que el servidor ya da (ventas, ganancia, lo que recibe el dueño), la vigente, «Comparar todas» hacia visor-comparar.html y, para quien aprueba, el selector de la versión buena que ya existía (mismo POST ppp2-elige, ahora en esta pestaña y fuera de la pantalla que se enseña). La pestaña se recuerda en el hash (#l=…&t=…) sin romper las ligas repartidas. visor.js: la leyenda y la hoja dicen «deducido de …» donde la respuesta trae deducido; el cuadro Dinero sin saldo acumulado o con sólo totales enseña lo que sí llegó (antes quedaba vacío); cada hoja abre con una frase llana; chips más fáciles de tocar; se corrige el primer toque perdido tras bajar la hoja con el dedo en Chromium (el gesto dejaba un fling y la capa seguía atrapando toques) y dos carreras al reabrir una hoja. Contra el servidor publicado hoy, que a los recursos nuevos contesta sin_sesion, cada pestaña dice que todavía no hay y el plan sigue igual: ninguna respuesta de las pestañas apaga la liga. Sólo lectura (la única escritura sigue siendo ppp2-elige), sin fórmulas financieras, sin datos reales en el repo. Sube la etiqueta de caché de los archivos de este repo para todas las páginas (también accesos.html, por eso se declara SYS-CONTROL). No cambian el servidor PPP 2, los libros, el Portero ni los motores. Revisión independiente: la pantalla arma cada archivo con el tipo de sus bytes revisado contra la misma lista de tipos pasivos que el servidor (PESTANAS.PASIVO; una prueba las compara): HTML, SVG, XML o scripts se arman como application/octet-stream, no se abren aparte y sólo se guardan; si a media bajada cambia el número de partes no se pegan pedazos de dos versiones; una liga de fuera tampoco ve eventos de chat o de pendiente ni la fuente o la liga de un evento aunque llegaran; las fechas sólo entran completas (AAAA-MM-DD) y escapadas; no contestar en 45 s dice «Está tardando más de lo normal» (no «Sin conexión»); en fondo, Archivos se lee después de Historial para no recorrer dos veces las mismas carpetas; el foco del teclado se queda en la pestaña; las capturas de la conversación caben mejor en teléfonos chicos; y las pruebas corren también contra el servidor de main de verdad (tests/visor-pestanas-mundo.cjs).",
+  "model_revision": "2026-11-15.mcp-operativo.1",
+  "proposal_id": "CHG-YOD-MCP-OPERATIVO-20261115",
+  "summary": "Conexión local de asistentes con planes seleccionados desde YOD, diagnóstico y recibos nativos; implementación y prueba productiva diferenciadas.",
   "components": [
+    "SYS-YOD-MCP",
     "SYS-POTENCIALES",
     "SYS-PPP2",
     "GAS-PPP2",
     "SHEET-PPP2",
+    "GAS-PORTERO",
+    "SYS-YOD-OS",
     "SYS-CONTROL"
   ],
   "tests": [
-    "node --test tests/visor-pestanas.test.cjs (15: dirección y pestaña en el hash, estados contra el servidor de hoy y «tarda», historial de equipo y de fuera (también con un servidor que mandara de más), lo que pinta con las respuestas del servidor de main de verdad, fechas completas y escapadas, tipos pasivos iguales a los del servidor, capturas con y sin nombre, el día y su escapado, la conversación, archivos por grupos del contrato, opciones con tres cifras del servidor, «deducido de …», Dinero sin saldo acumulado o con sólo totales, la barra accesible, y que el archivo sólo lee, no calcula, fija pdf.js con SRI y no trae marcas ni datos de terceros)",
-    "node tests/visor-pestanas-browser.cjs (14 recorridos: servidor de hoy y teclado en la barra, historial y conversación, liga de fuera, dos contra el servidor de main de verdad —liga de equipo con un PDF de tres partes pedidas una a una, un HTML que sólo se guarda y un Doc que no se exporta; liga de fuera con sólo «Para compartir»—, archivos con partes y errores, espera paciente, reintento, opciones con dos terrenos y tres versiones, Dirección, deducido, primer toque tras bajar una hoja, teléfonos de 375, 390 y 430 px y escritorio, liga apagada con una hoja abierta; con PPP_PDFJS_DIR también el PDF dibujado por pdf.js)",
-    "node --test tests/ppp2-visor.test.cjs tests/ppp2-visor-pagina.test.cjs tests/ppp2-pestanas.test.cjs y node tests/ppp2-visor-browser.cjs (el selector de Dirección se busca en «Opciones»; Dinero sin saldo acumulado ya no es un hueco)",
-    "node --test tests/visor-compara.test.cjs y node tests/visor-compara-browser.cjs",
+    "npm --prefix mcp test",
+    "node tests/mcp-conectar-browser.cjs",
     "node --test tests/*.test.cjs",
     "node scripts/versiones.cjs --check",
-    "verificar-impacto contra el atlas fijado"
+    "git diff --check"
   ],
-  "rollback": "Revertir el PR: el visor vuelve a ser una sola pantalla con el selector de Dirección arriba del plan, sin leyenda de deducido y con Dinero vacío en las fotos sin saldo acumulado. No hay nada que revertir en el servidor, en las hojas ni en los libros (los recursos de las pestañas, si ya están publicados, simplemente dejan de pedirse)."
+  "rollback": "Revertir propuesta y conexión; conservar datos, fórmulas, procesos y recibos."
 }
