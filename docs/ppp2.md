@@ -481,21 +481,31 @@ recursos de Historial y Archivos lo documenta el servidor en «Pestañas del vis
   adjuntos tocables, en capturas que se recorren de lado y que se parten con la altura real de cada
   burbuja para que cada una quepa a la vista. Al final, los pendientes abiertos (lo vencido en rojo) y las
   versiones del plan. **Una liga que no es de equipo nunca ve la conversación ni los pendientes**, aunque
-  llegaran: la pantalla sólo los enseña con `audiencia` = `equipo` y nunca pide `ppp2-chat` sin ella.
+  llegaran: la pantalla sólo los enseña con `audiencia` = `equipo` y nunca pide `ppp2-chat` sin ella; tampoco
+  enseña a una liga de fuera eventos de chat o de pendiente, ni la fuente o la liga de un evento, aunque el
+  servidor (que ya no se los manda) se equivocara. Si las versiones no tienen fecha, el botón «versiones» de
+  arriba lleva a su lista. Las capturas de la conversación se parten con lo que de veras cabe en la pantalla:
+  la altura de cada burbuja con y sin el nombre de quien escribe (sólo lleva nombre la primera de una captura o
+  la que sigue a otra persona).
 - **Archivos** (`ppp2-archivos`): los siete grupos en el orden del contrato con su número, cada archivo con
   un ícono por tipo (PDF, XLS, PPT, DOC, KMZ, JPG…), fecha y tamaño (los de Google dicen qué son); `vista` =
   `no` se enseña sin botón («Sólo en el expediente»); `incompleta`, con una nota discreta. Tocar uno lo baja
   con `ppp2-archivo` **por partes, desde la 0 y en orden**, con barra de avance real (parte y MB) y lo
   enseña en una hoja: la imagen tal cual; el PDF, página por página dentro de la página (abajo); lo demás,
-  listo para guardar. Siempre hay «Abrir aparte» y «Guardar» (el nombre al guardar va sin acentos: hay
-  sistemas que si no lo pueden escribir lo cambian por «download», sin extensión). `grande` dice que no se
-  puede abrir aquí, sin reintentar.
+  listo para guardar. Siempre hay «Guardar» (el nombre al guardar va sin acentos: hay sistemas que si no lo
+  pueden escribir lo cambian por «download», sin extensión). **La pantalla no se fía del tipo que llega:** arma
+  el archivo con el tipo de los bytes (`ppp2-archivo`, nunca el de la lista) revisado contra la misma lista de
+  tipos pasivos del servidor (`PASIVO`, igual que `PESTANAS.PASIVO`; una prueba las compara); lo demás —HTML,
+  SVG, XML, scripts— se arma como `application/octet-stream`, no se ofrece «Abrir aparte» y sólo se guarda. Si a
+  media bajada cambia el número de partes (el archivo cambió entre una parte y otra), no pega pedazos de dos
+  versiones: dice que no pudo y se puede volver a intentar. `grande` dice que no se puede abrir aquí, sin
+  reintentar.
 - **PDF dentro de la página:** con pdf.js 3.11.174 (build `legacy`, Mozilla, Apache-2.0), que se carga sólo
   al abrir un PDF, desde jsDelivr y con su huella SRI (el script y el *worker*, que se arma desde un
   `fetch` con `integrity`), con `isEvalSupported: false`. Cada página se dibuja al acercarse a la vista y se
   vuelve imagen. Por qué no un `<iframe>`: Safari del iPhone enseña sólo la primera página de un PDF
-  incrustado (WebKit 253671) y Chrome de Android no lo enseña. Si pdf.js no carga: en escritorio, el visor
-  de PDF del navegador; en el teléfono, «Abrir el PDF» aparte.
+  incrustado (WebKit 253671) y Chrome de Android no lo enseña. Si pdf.js no carga, o no termina de abrir el
+  PDF en 45 s: en escritorio, el visor de PDF del navegador; en el teléfono, «Abrir el PDF» aparte.
 - **Opciones:** una tarjeta por opción de la liga (cada terreno y cada versión que la liga deja ver; con
   varios terrenos y varias versiones, agrupadas por terreno) con tres cifras que el servidor ya da —ventas,
   ganancia y lo que recibe el dueño (y cuántas veces su tierra)—, su terreno, la marca «vigente» y «viendo
@@ -514,7 +524,11 @@ recursos de Historial y Archivos lo documenta el servidor en «Pestañas del vis
   totales, dos barras (entra y sale) con su cifra; sin nada, «Aún no hay flujo calculado» y por qué.
 - **Cada hoja abre con una frase llana** de qué es el cuadro (para quien no es financiero).
 - **Estados dignos:** mientras llega, un esqueleto con «Reuniendo el expediente…» (la primera lectura puede
-  tardar unos 20 s; a los 5 s dice que la primera vez tarda) y nunca un error por tiempo (45 s). Contra el
+  tardar unos 20 s; a los 5 s dice que la primera vez tarda). Si a los 45 s no ha contestado, dice «Está
+  tardando más de lo normal» con «Volver a intentar» (no «Sin conexión»: el servidor sigue y deja lo leído en su
+  caché, así que el segundo intento abre rápido). En fondo, poco después de abrir el plan, se lee Historial y,
+  cuando termina, Archivos (no a la vez: la primera vez recorrerían dos veces las mismas carpetas de Drive). Si
+  una lectura de repaso falla con `interno`, se queda lo que ya se veía. Contra el
   servidor de hoy, que a estos recursos contesta `sin_sesion`, cada pestaña dice que todavía no hay
   («Aún no hay historial en esta liga»…) y el plan sigue igual: **ninguna respuesta de las pestañas apaga la
   liga**; si una dice `liga`, se pregunta en seguida al plan y es él quien lo confirma. `plan`, `interno` y
@@ -538,9 +552,14 @@ recursos de Historial y Archivos lo documenta el servidor en «Pestañas del vis
 
 Pruebas: `node --test tests/visor-pestanas.test.cjs` (dirección, estados contra el servidor de hoy,
 historial de equipo y de fuera, el día, la conversación, archivos, opciones, «deducido de …», Dinero sin
-saldo acumulado, la barra y que el archivo sólo lee y no calcula) y `node tests/visor-pestanas-browser.cjs`
-(12 recorridos con los dobles del contrato de `tests/visor-pestanas-dobles.cjs`; con `PPP_PDFJS_DIR`
-apuntando a `pdfjs-dist@3.11.174/legacy/build`, también el PDF dibujado por pdf.js con su huella SRI).
+saldo acumulado, la barra, que el archivo sólo lee y no calcula, y lo que pinta con las respuestas del
+servidor de main de verdad) y `node tests/visor-pestanas-browser.cjs` (14 recorridos con los dobles del
+contrato de `tests/visor-pestanas-dobles.cjs` y, en dos, con el servidor de main de verdad —`Visor.gs` en el
+mundo de pruebas, con la hoja de historial y el Drive inventados de `tests/visor-pestanas-mundo.cjs`—: una
+liga de equipo y una de fuera, un PDF de tres partes pedidas una a una, un HTML que sólo se guarda, un Doc que
+no se exporta; con `PPP_PDFJS_DIR` apuntando a `pdfjs-dist@3.11.174/legacy/build`, también el PDF dibujado por
+pdf.js con su huella SRI). Contra el servidor publicado hoy, los recorridos le contestan `sin_sesion` a estos
+recursos, como él.
 
 ### Los mismos cuadros, en la ficha del plan
 
