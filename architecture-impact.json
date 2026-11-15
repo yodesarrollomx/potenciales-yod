@@ -1,20 +1,19 @@
 {
   "model_revision": "2026-11-15.mcp-ppp.1",
-  "proposal_id": "CHG-YOD-MCP-20261115",
-  "summary": "MCP YOD OS sobre PPP existente: lector visor HTTP, cliente interno stdio y edición controlada con recibos. Sin cambios en Apps Script, visor ni fórmulas.",
+  "proposal_id": "CHG-PPP2-20261112",
+  "summary": "PPP 2 · opciones y comparativo del visor en vivo (seguimiento de CHG-PPP2-20261112). Página nueva visor-comparar.html (con visor-compara.js y visor-comparar.css) que, con la misma liga del visor, pide por GET al recurso ppp2-visor todas las opciones que la liga deja ver (sus planes y, si el renglón lo permite, sus versiones) y las pone lado a lado: columnas = opciones, renglones = factores agrupados como los siete cuadros, con la cifra, una barrita por factor, flecha verde en la mejor y flecha roja sólo donde la opción queda más allá del umbral declarado del factor. Un encabezado cuenta en cuántos factores es la mejor cada opción y en cuáles; «Descargar PDF» imprime en carta horizontal con la fecha de los datos, las marcas de Config y el aviso de confidencialidad. No calcula finanzas: cada factor es una cifra que el libro ya dio; la página sólo redondea como enseña, compara y cuenta marcas; lo ausente sale «no aplica». La tabla de factores (sentido y umbral) está en el código y en docs/ppp2.md, y una prueba las compara. Sólo la primera pregunta lleva abre=1 (un renglón en Aperturas, como el visor). No cambian visor.html, visor.js, visor.css, el servidor PPP 2, los libros, el Portero ni los motores; no cambia versiones.json (la página nueva lleva la etiqueta vigente). CI corre sus pruebas y comprueba sus archivos publicados.",
   "components": [
-    "SYS-YOD-MCP",
     "SYS-POTENCIALES",
     "SYS-PPP2",
     "GAS-PPP2",
-    "SHEET-PPP2",
-    "SYS-YOD-OS"
+    "SHEET-PPP2"
   ],
   "tests": [
-    "npm --prefix mcp test",
-    "node --test tests/*.test.cjs",
+    "node --test tests/visor-compara.test.cjs (13: tabla de factores contra docs, mejor y rojo con umbrales y bordes, empates a la precisión mostrada, ausentes, datos sin marca, revisión para fondos, encabezado sin adjetivos, escapado y texto alternativo, una sola opción, juntar opciones con el servidor real, liga apagada y fallas, sólo GET y hoja de impresión)",
+    "node tests/visor-compara-browser.cjs (5 recorridos: teléfono de 430 px con la tabla deslizándose y factores fijos, escritorio, Descargar PDF con PDF carta horizontal, una sola opción, liga apagada o sin liga)",
+    "node --test tests/*.test.cjs y node tests/ppp2-visor-browser.cjs",
     "node scripts/versiones.cjs --check",
-    "verificar-impacto contra atlas MCP"
+    "verificar-impacto contra el atlas fijado"
   ],
-  "rollback": "Revertir propuesta; no se modifican datos, identidades ni fórmulas."
+  "rollback": "Revertir el PR: la página del comparativo deja de existir en Pages y nada más cambia (el visor no la enlaza todavía). No hay nada que revertir en el servidor ni en los libros."
 }
