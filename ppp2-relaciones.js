@@ -3,7 +3,7 @@
    (tests/ppp2-lapiz.test.cjs lo vigila). Sólo nombres y ligas entre celdas: ninguna cifra. */
 window.PPP2_RELACIONES = {
  "esquema": "ppp2-libro-v2",
- "huella": "892168a15c99547dadb68a413044722f387f75b883ae8f9b9dde58ae9aae867d",
+ "huella": "074f89528204c5b476f34a3c690ede58e9a3114ff3c4f88f791a315c970570dd",
  "cuadros": {
   "terreno": [
    "dato:terreno.m2",
@@ -218,7 +218,7 @@ window.PPP2_RELACIONES = {
    "dato": "lamina.m2_construidos",
    "concepto": "Construcción sobre el terreno",
    "unidad": "m²",
-   "nota": "Si no se escribe, sale de la huella por los niveles.",
+   "nota": "Sin sótano. Si no se escribe, sale de la huella en cada nivel (en planta baja, sólo lo cerrado).",
    "pasa_por": [
     "Obra directa",
     "Indirectos",
@@ -1931,7 +1931,7 @@ window.PPP2_RELACIONES = {
    "concepto": "Niveles sobre el terreno",
    "unidad": "niveles",
    "dato": "prog.niveles",
-   "nota": "",
+   "nota": "Con la planta baja.",
    "dato_otros": true,
    "dato_pasa_por": [
     "Obra directa",
@@ -2167,15 +2167,98 @@ window.PPP2_RELACIONES = {
    "unidad": "m²",
    "dato": "prog.planta_baja",
    "nota": "Si hay cajones bajo los edificios, es menos que la huella. Si no se escribe, se toma la huella.",
-   "pasa_por": [
+   "dato_otros": true,
+   "dato_pasa_por": [
+    "Obra directa",
+    "Indirectos",
+    "Imprevistos",
+    "Costo sin tierra",
+    "Costo con tierra",
+    "Mes desde el que se cobran los saldos",
+    "Saldos por cobrar al individualizar",
+    "Línea del banco",
+    "Caja mínima",
+    "Tierra más capital entre costo con tierra",
+    "Firmadas antes de los saldos · producto 1",
+    "Firmadas antes de los saldos · producto 2",
+    "Firmadas antes de los saldos · producto 3",
+    "Firmadas antes de los saldos · producto 4",
+    "Firmadas antes de los saldos · producto 5",
+    "Firmadas antes de los saldos · producto 6",
+    "Construcción sobre el terreno (la de los datos, a escala de la huella y los niveles de esta versión)",
+    "Obra directa por partes (con el programa de esta versión)",
+    "Obra directa por partes con el programa de los datos",
     "Área libre en planta baja (para cajones a nivel)",
+    "Intensidad de construcción (veces el terreno)",
+    "Reglas de la norma que no se cumplen",
+    "Qué no cumple"
+   ],
+   "dato_mueve": [
+    "Costo sin tierra",
+    "Capital",
+    "Banco (saldo máximo)",
+    "Dinero ajeno máximo",
+    "Dinero que faltaría",
+    "Costo del dinero",
+    "Ganancia real",
+    "Margen",
+    "Lo que recibe el dueño",
+    "Cuándo recibe lo último",
+    "Lo que recibe la alianza",
+    "Mes de reparto",
+    "Revisión para fondos",
+    "Lo que cumple de la norma"
+   ],
+   "pasa_por": [
+    "Obra directa",
+    "Indirectos",
+    "Imprevistos",
+    "Costo sin tierra",
+    "Costo con tierra",
+    "Mes desde el que se cobran los saldos",
+    "Saldos por cobrar al individualizar",
+    "Línea del banco",
+    "Caja mínima",
+    "Tierra más capital entre costo con tierra",
+    "Firmadas antes de los saldos · producto 1",
+    "Firmadas antes de los saldos · producto 2",
+    "Firmadas antes de los saldos · producto 3",
+    "Firmadas antes de los saldos · producto 4",
+    "Firmadas antes de los saldos · producto 5",
+    "Firmadas antes de los saldos · producto 6",
+    "Construcción sobre el terreno (la de los datos, a escala de la huella y los niveles de esta versión)",
+    "Obra directa por partes (con el programa de esta versión)",
+    "Área libre en planta baja (para cajones a nivel)",
+    "Intensidad de construcción (veces el terreno)",
     "Reglas de la norma que no se cumplen",
     "Qué no cumple"
    ],
    "mueve": [
+    "Costo sin tierra",
+    "Capital",
+    "Banco (saldo máximo)",
+    "Dinero ajeno máximo",
+    "Dinero que faltaría",
+    "Costo del dinero",
+    "Ganancia real",
+    "Margen",
+    "Lo que recibe el dueño",
+    "Cuándo recibe lo último",
+    "Lo que recibe la alianza",
+    "Mes de reparto",
+    "Revisión para fondos",
     "Lo que cumple de la norma"
    ],
-   "revision": [],
+   "revision": [
+    "línea del banco entre ventas",
+    "línea del banco entre costo",
+    "tierra y capital entre costo",
+    "preventa antes del primer desembolso",
+    "cobertura del banco",
+    "margen sobre costo",
+    "meses de crédito",
+    "dinero que faltaría"
+   ],
    "cuadro": "terreno"
   },
   "palanca:predesarrollo": {
@@ -2659,5 +2742,5 @@ window.PPP2_RELACIONES = {
   }
  },
  "sobran": [],
- "firma": "a421f0f97d1ed8d998d6606bd7ec59448271b03c6820367c32152844a3058d69"
+ "firma": "1a3c8908c89f6335cfed9853dfb433a8719339f5b276bbab9fc7fa71fdae2870"
 };

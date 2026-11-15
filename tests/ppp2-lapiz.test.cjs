@@ -104,6 +104,21 @@ test('el % pagado durante la obra, probado como dato de Productos, no mueve a la
   assert.equal(v.cambios.length, 1);
 });
 
+test('una palanca cuyo dato está vacío sigue siendo palanca (Sheets enseña vacía su columna Datos), y el uso se lee en minúsculas', () => {
+  const w = mundo();
+  const mod = w.libro.getSheetByName('Modelo'), f = filaDe(mod, 'planta_baja');
+  assert.match(mod.getRange(f, 4).getFormula(), /^=Datos!\$C\$\d+$/);
+  mod.v[f - 1][3] = '';            // como la lee Sheets cuando el dato está vacío
+  w.libro.getSheetByName('Productos').getRange(5, 10).setValue(' Vivienda ');
+  const r = w.get({ recurso: 'ppp2-plan', plan: PLAN, k: EDITOR });
+  assert.equal(r.ok, true, JSON.stringify(r).slice(0, 200));
+  const pb = r.palancas.find((x) => x.clave === 'planta_baja');
+  assert.ok(pb, 'la palanca sale en la lista');
+  assert.equal(pb.calculado, false, 'tiene fórmula en su columna Datos: se puede editar con el lápiz');
+  assert.equal(r.palancas.find((x) => x.clave === 'obra').calculado, true, 'la obra sí es calculada');
+  assert.equal(r.productos[0].uso, 'vivienda');
+});
+
 test('el encabezado del Modelo no es una palanca: ni se prueba ni se escribe', () => {
   const w = mundo();
   const mod = w.libro.getSheetByName('Modelo'), e4 = mod.getRange(4, 5).getValue();

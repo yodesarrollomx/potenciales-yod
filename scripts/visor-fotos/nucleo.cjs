@@ -58,7 +58,7 @@ const CLAVES_V = ['nombre', 'estado', 'que_cambia', 'fecha_aprobacion', 'dueno_a
   'pagos_obra', 'max_ajeno', 'capital', 'banco_max', 'respaldo', 'costo_dinero', 'rend_capital', 'caja_cierre', 'ganancia', 'margen',
   'resultado_repartir', 'banco_mes', 'capital_mes', 'respaldo_mes', 'ultimo_cobro', 'mes_reparto', 'rv_linea_ventas', 'rv_linea_costo',
   'rv_aportacion', 'rv_preventa', 'rv_preventa_banco', 'rv_cobertura', 'rv_margen', 'rv_meses_credito', 'rv_falta', 'rv_resultado',
-  'ck_flujo', 'ck_cobranza', 'ck_unidades', 'capital_sobre_tope', 'norma_alertas', 'norma_texto', 'niveles', 'construidos', 'cos_usado',
+  'ck_flujo', 'ck_cobranza', 'ck_unidades', 'capital_sobre_tope', 'fuera_horizonte', 'norma_alertas', 'norma_texto', 'niveles', 'construidos', 'cos_usado',
   'cus_usado', 'cajones', 'cajones_pide', 'huella'];
 /* Unidad de cada clave `v.*` numérica, como la escribe el libro: MDP (millones), fracción (0.25 = 25 %),
    meses, veces, años o unidades. Las de texto no aparecen. */
@@ -70,7 +70,7 @@ const UNIDAD_V = {
   rv_preventa: 'fraccion', rv_preventa_banco: 'fraccion', rv_margen: 'fraccion', rv_cobertura: 'veces', dueno_veces: 'veces',
   dueno_meses: 'mes', obra_inicio: 'mes', fin_obra: 'mes', mes_saldos: 'mes', banco_mes: 'mes', capital_mes: 'mes', respaldo_mes: 'mes',
   ultimo_cobro: 'mes', mes_reparto: 'mes', rv_meses_credito: 'mes', dueno_anos: 'anos', ck_flujo: 'MDP', ck_unidades: 'unidades',
-  norma_alertas: 'unidades', niveles: 'unidades', construidos: 'unidades', cos_usado: 'fraccion', cus_usado: 'veces', cajones: 'unidades',
+  fuera_horizonte: 'unidades', norma_alertas: 'unidades', niveles: 'unidades', construidos: 'unidades', cos_usado: 'fraccion', cus_usado: 'veces', cajones: 'unidades',
   cajones_pide: 'unidades'
 };
 /* Claves de `datos` (VISOR.DATOS) y su unidad en el libro. */

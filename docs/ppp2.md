@@ -853,7 +853,8 @@ versión dice si su programa cumple. Esquema `ppp2-libro-v2` (pestaña Resumen, 
   niveles máximos, cajones por vivienda y de visitas, y metros por cajón para comercio y oficinas.
 - *Programa*: niveles, huella en planta baja (cuenta para la ocupación), planta baja cerrada (si hay cajones
   bajo los edificios es menos que la huella; los cajones a nivel tienen que caber en lo que queda libre),
-  construcción sobre el terreno (si no se escribe, sale de huella × niveles), área vendible (sale de la suma de los productos), cajones que se construyen, cuántos en
+  construcción sobre el terreno, sin sótano (si no se escribe, sale de la huella en cada nivel y, en planta
+  baja, sólo lo cerrado), área vendible (sale de la suma de los productos), cajones que se construyen, cuántos en
   sótano y metros por cajón con su circulación. Y el frente del terreno, que sólo se enseña.
 - *Costo de obra por partes*: pesos por m² construido, por m² de sótano y por m² de cajones a nivel, y
   obras exteriores. La obra directa sale de ahí (`=PARTES`); si hay presupuesto, se escribe encima y entonces
@@ -861,7 +862,8 @@ versión dice si su programa cumple. Esquema `ppp2-libro-v2` (pestaña Resumen, 
 - *Ritmo de ventas* (unidades por mes): los meses de comercialización salen de ahí (`=RITMO`); si se
   escriben, manda lo escrito.
 - En Productos, la columna J dice el **uso** de cada producto (vivienda, comercio, oficina u otro): con eso
-  se cuentan los cajones que pide la norma.
+  se cuentan los cajones que pide la norma. La hoja rechaza otro valor; el servidor lo lee en minúsculas y la
+  página conserva un valor que no esté en la lista (y dice que no cuenta) en vez de borrarlo al guardar otro campo.
 
 **Lo que se quitó** (la ingeniería inversa desde el visor): ventas, costo total, utilidad y pago al dueño
 «de la lámina» (eran para cuadrar y no llegaban a ningún resultado), el precio `=CUADRAR` y la palanca de
@@ -872,7 +874,10 @@ en el Modelo) y el libro calcula, por versión: construcción (la de los datos a
 niveles), obra por partes, viviendas, m² de comercio y oficinas, cajones que pide la norma y los que faltan,
 m² de cajones a nivel, área libre, ocupación e intensidad usadas, y **cuántas reglas de la norma no cumple y
 cuáles** (`norma_alertas`, `norma_texto`, en palabras: «Faltan 10 cajones: la norma pide 130.»). Una regla
-sin sus datos no avisa. Las alertas entran a la huella de la versión, así que una prueba o un voto del
+sin sus datos no avisa; un 0 escrito sí es un dato (una versión con 0 cajones avisa que faltan). Los cajones
+en sótano no pueden ser más que los que se construyen. Y si la venta, con su ritmo, no cabe en los 60 meses
+que calcula el libro, la versión lo dice (`fuera_horizonte`: unidades que no se alcanzan a firmar) y la ficha
+lo avisa: el libro no recorta la venta en silencio. Las alertas entran a la huella de la versión, así que una prueba o un voto del
 consejo sobre una versión que deja de cumplir dejan de contar.
 
 **En la ficha**: si la versión que se ve no cumple, debajo de los cuadros sale el aviso con lo que no cumple

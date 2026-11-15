@@ -97,8 +97,11 @@ def anchos(ws, d):
         ws.column_dimensions[col].width = w
 
 
-def lista(ws, rango, opciones):
+def lista(ws, rango, opciones, estricta=False):
     dv = DataValidation(type="list", formula1='"' + ",".join(opciones) + '"', allow_blank=True)
+    if estricta:
+        dv.showErrorMessage, dv.errorStyle = True, "stop"
+        dv.error = "Escoge un valor de la lista: " + ", ".join(opciones) + "."
     dv.add(rango)
     ws.add_data_validation(dv)
 
@@ -127,10 +130,10 @@ DATOS = [
     ("norma.m2_cajon_comercio", "Comercio: un cajón por cada", "m² por cajón", ENT, False, 50, "Metros de área de venta o atención por cajón."),
     ("norma.m2_cajon_oficina", "Oficinas: un cajón por cada", "m² por cajón", ENT, False, 45, "Metros de área de trabajo por cajón."),
     ("§", "Programa: lo que dibuja el arquitecto"),
-    ("prog.niveles", "Niveles sobre el terreno", "niveles", ENT, False, None, ""),
+    ("prog.niveles", "Niveles sobre el terreno", "niveles", ENT, False, None, "Con la planta baja."),
     ("prog.desplante", "Huella en planta baja (desplante)", "m²", ENT, False, None, "La proyección de los edificios sobre el terreno: cuenta para la ocupación."),
     ("prog.planta_baja", "Planta baja cerrada (locales, vestíbulos, servicios)", "m²", ENT, False, None, "Si hay cajones bajo los edificios, es menos que la huella. Si no se escribe, se toma la huella."),
-    ("lamina.m2_construidos", "Construcción sobre el terreno", "m²", ENT, False, "=CONSTRUIDOS", "Si no se escribe, sale de la huella por los niveles."),
+    ("lamina.m2_construidos", "Construcción sobre el terreno", "m²", ENT, False, "=CONSTRUIDOS", "Sin sótano. Si no se escribe, sale de la huella en cada nivel (en planta baja, sólo lo cerrado)."),
     ("lamina.m2_vendibles", "Área vendible total", "m²", ENT, False, "=VENDIBLES", "Sale de la suma de los productos; si se escribe, manda lo escrito."),
     ("prog.cajones", "Cajones que se construyen", "cajones", ENT, False, None, ""),
     ("prog.cajones_sotano", "De esos, en sótano", "cajones", ENT, False, 0, "Los demás van a nivel, en el área libre del terreno."),
@@ -285,10 +288,16 @@ PARTES_DATO = {"construidos": "lamina.m2_construidos", "cajones": "prog.cajones"
 def partes(ref):
     """Obra directa por partes (MDP): construcción por su costo, sótano y cajones a nivel por el suyo, más urbanización.
     `ref(nombre)` da la celda de cada parte: una columna del Modelo (el programa de una versión) o los Datos (el base)."""
-    nivel = f"MAX(0,N({ref('cajones')})-N({ref('cajones_sotano')}))*N({ref('m2_cajon')})"
+    sotano = sotano_efectivo(ref)
+    nivel = f"MAX(0,N({ref('cajones')})-{sotano})*N({ref('m2_cajon')})"
     return (f"IF(AND(N({ref('costo_m2')})>0,N({ref('construidos')})>0),(N({ref('construidos')})*{ref('costo_m2')}"
-            f"+N({ref('cajones_sotano')})*N({ref('m2_cajon')})*N({ref('costo_m2_sotano')})"
+            f"+{sotano}*N({ref('m2_cajon')})*N({ref('costo_m2_sotano')})"
             f"+{nivel}*N({ref('costo_m2_superficie')}))/1000000+N({ref('urbanizacion')}),\"\")")
+
+
+def sotano_efectivo(ref):
+    """Los cajones en sótano no pueden ser más que los que se construyen (si se dijo cuántos se construyen)."""
+    return f"IF(ISNUMBER({ref('cajones')}),MIN(N({ref('cajones_sotano')}),N({ref('cajones')})),N({ref('cajones_sotano')}))"
 
 
 def obra_por_partes():
@@ -296,12 +305,18 @@ def obra_por_partes():
     return "=IFERROR(" + partes(lambda k: D(PARTES_DATO[k])) + ",\"\")"
 
 
+def construccion(desp, niv, pb):
+    """Construcción sobre el terreno: la huella en cada nivel; si se dijo la planta baja cerrada, en planta baja sólo eso."""
+    return f"IF(N({pb})>0,N({desp})*(N({niv})-1)+N({pb}),N({desp})*N({niv}))"
+
+
 def construidos_derivado():
-    return f"=IFERROR(IF(AND(N({D('prog.desplante')})>0,N({D('prog.niveles')})>0),{D('prog.desplante')}*{D('prog.niveles')},\"\"),\"\")"
+    desp, niv, pb = D('prog.desplante'), D('prog.niveles'), D('prog.planta_baja')
+    return f"=IFERROR(IF(AND(N({desp})>0,N({niv})>0),{construccion(desp, niv, pb)},\"\"),\"\")"
 
 
 def meses_de_venta():
-    return f"=IFERROR(IF(N({D('cal.ritmo')})>0,ROUNDUP(Productos!$B${PT}/{D('cal.ritmo')},0),\"\"),\"\")"
+    return f"=IFERROR(IF(N({D('cal.ritmo')})>0,ROUNDUP(ROUND(Productos!$B${PT}/{D('cal.ritmo')},6),0),\"\"),\"\")"
 
 
 # ---------------------------------------------------------------- Productos
@@ -339,7 +354,7 @@ def hoja_productos(wb, plan):
     celda(ws, f"E{t}", f"=SUM(E{PROD_FILA0}:E{t - 1})", F_ENCABEZADO, fmt=MDP)
     celda(ws, f"A{t + 2}", "El uso de cada producto cuenta para los cajones que pide la norma (pestaña Modelo).", F_SUB)
     lista(ws, f"H{PROD_FILA0}:H{t - 1}", ESTADOS_DATO)
-    lista(ws, f"J{PROD_FILA0}:J{t - 1}", USOS_PRODUCTO)
+    lista(ws, f"J{PROD_FILA0}:J{t - 1}", USOS_PRODUCTO, estricta=True)
     anchos(ws, {"A": 26, "B": 10, "C": 12, "D": 12, "E": 12, "F": 12, "G": 14, "H": 14, "I": 46, "J": 18})
     ws.freeze_panes = "B5"
     return ws
@@ -549,9 +564,10 @@ def norma_formula(clave, col):
     terreno = D("terreno.m2")
     if clave == "construidos":
         # la construcción de los datos; si la versión cambia la huella o los niveles, crece o se encoge en la misma proporción
-        base, dn, dd = D("lamina.m2_construidos"), D("prog.niveles"), D("prog.desplante")
+        base, dn, dd, dp = D("lamina.m2_construidos"), D("prog.niveles"), D("prog.desplante"), D("prog.planta_baja")
+        version, datos = construccion(P('desplante'), P('niveles'), P('planta_baja')), construccion(dd, dn, dp)
         return (f"=IFERROR(IF(N({base})>0,IF(AND(N({P('niveles')})>0,N({P('desplante')})>0,N({dn})>0,N({dd})>0),"
-                f"{base}*{P('niveles')}*{P('desplante')}/({dn}*{dd}),{base}),\"\"),\"\")")
+                f"{base}*({version})/({datos}),{base}),\"\"),\"\")")
     if clave == "viviendas":
         return f"=SUMIF({prod('J')},\"vivienda\",{prod('B')})"
     if clave == "m2_comercio":
@@ -559,13 +575,13 @@ def norma_formula(clave, col):
     if clave == "m2_oficina":
         return f"=SUMIF({prod('J')},\"oficina\",{prod('C')})"
     if clave == "cajones_pide":
-        return (f"=IFERROR(ROUNDUP(N({P('viviendas')})*(N({P('cajon_vivienda')})+N({P('cajon_visitas')}))"
+        return (f"=IFERROR(ROUNDUP(ROUND(N({P('viviendas')})*(N({P('cajon_vivienda')})+N({P('cajon_visitas')}))"
                 f"+IF(N({P('m2_cajon_comercio')})>0,N({P('m2_comercio')})/{P('m2_cajon_comercio')},0)"
-                f"+IF(N({P('m2_cajon_oficina')})>0,N({P('m2_oficina')})/{P('m2_cajon_oficina')},0),0),\"\")")
+                f"+IF(N({P('m2_cajon_oficina')})>0,N({P('m2_oficina')})/{P('m2_cajon_oficina')},0),6),0),\"\")")
     if clave == "cajones_faltan":
-        return f"=IFERROR(IF(N({P('cajones')})>0,MAX(0,N({P('cajones_pide')})-{P('cajones')}),\"\"),\"\")"
+        return f"=IFERROR(IF(ISNUMBER({P('cajones')}),MAX(0,N({P('cajones_pide')})-N({P('cajones')})),\"\"),\"\")"
     if clave == "m2_estac_nivel":
-        return f"=IFERROR(MAX(0,N({P('cajones')})-N({P('cajones_sotano')}))*N({P('m2_cajon')}),\"\")"
+        return f"=IFERROR(MAX(0,N({P('cajones')})-{sotano_efectivo(P)})*N({P('m2_cajon')}),\"\")"
     if clave == "area_libre":
         # lo que queda libre en planta baja: el terreno menos lo cerrado (si no se dice, toda la huella)
         cerrado = f"IF(N({P('planta_baja')})>0,{P('planta_baja')},{P('desplante')})"
@@ -896,6 +912,7 @@ VER_FILAS = [
     ("ck_unidades", "Se firman todas las unidades (debe ser 0)", ENT, "ck_uni"),
     ("§", "AVISOS (se marcan, no cambian la revisión para fondos)"),
     ("capital_sobre_tope", "Capital por arriba del tope de 1/3 de las ventas (MDP; 0 = dentro)", MDP, "cap_tope"),
+    ("fuera_horizonte", "Unidades que no se alcanzan a firmar en los 60 meses que calcula el libro (debe ser 0)", ENT, "horizonte"),
     ("§", "NORMA (el programa de la versión contra el uso de suelo y el reglamento)"),
     ("norma_alertas", "Reglas de la norma que no se cumplen (debe ser 0)", ENT, "m:alertas_norma"),
     ("norma_texto", "Qué no cumple", None, "m:norma_texto"),
@@ -907,7 +924,7 @@ VER_FILAS = [
     ("cajones_pide", "Cajones que pide la norma", ENT, "m:cajones_pide"),
 ]
 # Claves de Versiones que llegaron después de los libros vivos: en el Resumen van al final (resumen_lista).
-VER_AL_FINAL = ("capital_sobre_tope", "norma_alertas", "norma_texto", "niveles", "construidos", "cos_usado", "cus_usado",
+VER_AL_FINAL = ("capital_sobre_tope", "fuera_horizonte", "norma_alertas", "norma_texto", "niveles", "construidos", "cos_usado", "cus_usado",
                 "cajones", "cajones_pide")
 VER_FILA = {}
 
@@ -1002,6 +1019,8 @@ def hoja_versiones(wb, plan):
                 val = f"=IFERROR({fl}!B16-{Pm('ventas')},\"\")"
             elif kind == "ck_uni":
                 val = f"=IFERROR({fl}!B11-Productos!$B${PT},\"\")"
+            elif kind == "horizonte":
+                val = f"=IFERROR(MAX(0,ROUND(Productos!$B${PT}-{fl}!B11,0)),\"\")"
             elif kind == "cap_tope":
                 val = f"=IFERROR(MAX(0,ROUND({Pm('capital')}-{D('din.capital')},3)),\"\")"
             celda(ws, f"{col}{r}", val, fmt=fmt)

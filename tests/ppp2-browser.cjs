@@ -397,16 +397,33 @@ async function foto(page, nombre) {
     await caso('plantilla v2: si el programa de la versión no cumple la norma, la ficha lo dice en palabras y lleva al cuadro Terreno', async () => {
       const w = mundo();
       const res = w.libro.getSheetByName('Resumen'), pon = (c, x) => { res.v[filaDe(res, c) - 1][1] = x; };
-      // lo que el libro calcularía si la V2 construyera menos cajones de los que pide la norma
-      pon('v2.norma_alertas', 1); pon('v2.norma_texto', 'Faltan 10 cajones: la norma pide 130.');
-      const { page, ctx, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN });
+      // lo que el libro calcularía si la V2 construyera menos cajones de los que pide la norma, y si su venta no cupiera en 60 meses
+      pon('v2.norma_alertas', 1); pon('v2.norma_texto', 'Faltan 10 cajones: la norma pide 130.'); pon('v2.fuera_horizonte', 24);
+      w.libro.getSheetByName('Productos').getRange(5, 10).setValue('Depto');      // un uso fuera de la lista
+      const { page, ctx, posts, errores } = await pagina(navegador, base, w, EDITOR, { hash: '#/plan/' + PLAN });
       const aviso = page.locator('#p2Cuadros ~ * .p2-norma, .p2-cuadros .p2-norma').first();
       await aviso.waitFor();
       assert.match(await aviso.textContent(), /Norma\s*Faltan 10 cajones: la norma pide 130\./);
+      assert.match(await page.locator('.p2-cuadros').textContent(), /24 unidades no se alcanzan a firmar en los 60 meses que calcula el libro/);
       await aviso.locator('[data-accion="abrir-cuadro"]').click();
       await page.locator('#vzModal .p2-mueve').waitFor();
       assert.ok(await page.locator('#vzModal .p2-lapiz[data-e="palanca:cajones"]').count() === 1, 'el cuadro Terreno trae el lápiz de los cajones');
       await page.locator('#vzModal .vz-x').click();
+      // el uso de un producto fuera de la lista se conserva: cambiar sólo el precio no lo borra
+      await page.locator('#p2Cuadros .vz-card[data-card="producto"]').click();
+      await page.locator('#vzModal .p2-lapiz[data-e="producto:1"]').click();
+      const dp = page.locator('#p2Dialogo');
+      assert.equal(await dp.locator('select[name="uso"]').inputValue(), 'depto', 'el servidor lo lee en minúsculas');
+      assert.match(await dp.locator('select[name="uso"] option:checked').textContent(), /no cuenta para los cajones/);
+      await dp.locator('input[name="precio_m2"]').fill('71000');
+      await dp.locator('button[type="submit"]').click();
+      await page.locator('#p2Deshacer:not([hidden])').waitFor();
+      const guardo = posts[posts.length - 1];
+      assert.equal(guardo.tipo, 'ppp2-producto');
+      assert.deepEqual(Object.keys(guardo.campos), ['precio_m2'], 'sólo manda lo que cambió');
+      assert.equal(w.libro.getSheetByName('Productos').getRange(5, 10).getValue(), 'Depto');
+      await page.waitForFunction(() => !window.PPP2.estado.ocupado);
+      if (await page.locator('#vzModal').isVisible()) await page.locator('#vzModal .vz-x').click();
       // la V1 cumple: sin aviso
       await page.locator('.p2-vbtn').first().click();
       await page.waitForFunction(() => window.PPP2.estado.version === 1);

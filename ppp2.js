@@ -380,7 +380,10 @@
     else if (v.estado) html = chip(v.estado, claseEstado(v.estado));
     var norma = num(v.norma_alertas) > 0 ? '<div class="p2-aviso p2-norma">' + chip('Norma', 'rojo') + '<span>' + esc(v.norma_texto || (v.norma_alertas + ' reglas de la norma no se cumplen.')) +
       ' <button type="button" class="p2-enlace" data-accion="abrir-cuadro" data-c="terreno">Ver en el cuadro Terreno</button></span></div>' : '';
-    return (html ? '<div class="p2-estado-v">' + html + '</div>' : '') + norma + avisoTope(v);
+    var fuera = num(v.fuera_horizonte) > 0 ? '<div class="p2-aviso p2-norma">' + chip('Plazo', 'rojo') + '<span>Con este ritmo de ventas, ' + fmt(v.fuera_horizonte, 0) +
+      (num(v.fuera_horizonte) === 1 ? ' unidad no se alcanza' : ' unidades no se alcanzan') + ' a firmar en los 60 meses que calcula el libro: sube el ritmo de ventas o empieza antes a vender. ' +
+      '<button type="button" class="p2-enlace" data-accion="abrir-cuadro" data-c="producto">Ver en el cuadro Producto</button></span></div>' : '';
+    return (html ? '<div class="p2-estado-v">' + html + '</div>' : '') + norma + fuera + avisoTope(v);
   }
   /* El expediente: lo que respalda a los cuadros. Cerrado por omisión; una sección se abre al pedirla y se cierra al volver a tocarla. */
   function expediente() {
@@ -581,7 +584,7 @@
     if (ident === 'reparto:esquema') { dialogoEsquema(); return; }
     if (!e) return;
     // el programa de una versión cambia lo que se construye y su costo; lo que se vende sale de los productos
-    if (e.palanca === 'niveles' || e.palanca === 'desplante') e = Object.assign({}, e, { nota: 'Cambia la construcción y su costo en esta versión. Lo que se vende sale de los productos: si cambia lo que cabe, ajústalos. ' + (e.nota || '') });
+    if (e.palanca === 'niveles' || e.palanca === 'desplante' || e.palanca === 'planta_baja') e = Object.assign({}, e, { nota: 'Si los datos del plan traen huella y niveles, cambia la construcción y su costo en esta versión (si no, escribe la construcción de la versión). Lo que se vende sale de los productos: si cambia lo que cabe, ajústalos. ' + (e.nota || '') });
     lapiz.e = e; lapiz.id = ident;
     var pa = e.tipo === 'palanca' ? palancaDe(e.palanca) : null, d = e.dato ? datoDe(e.dato) : null;
     var unidad = pa ? pa.unidad : (d ? d.unidad : e.unidad), hoy = pa ? pa.v[k - 1] : (d ? d.valor : null);
@@ -656,7 +659,7 @@
   function diferente(u, a, b) {
     if (a === undefined || b === undefined) return false;          // un libro de la plantilla v1 no trae el programa ni la norma
     if (num(a) === null || num(b) === null) return a !== b;
-    return Math.abs(a - b) >= (u === 'MDP' ? 0.05 : (u === '%' ? 0.0005 : 0.5));
+    return Math.abs(a - b) >= (u === 'MDP' ? 0.05 : (u === '%' ? 0.0005 : (u === 'veces' ? 0.005 : 0.5)));
   }
   /* Avisos con los mismos límites que dibuja el visor (los de la revisión para fondos del libro). */
   function avisosLapiz(antes, despues) {
@@ -806,7 +809,10 @@
   function dialogoProducto(i) {
     var x = (estado.plan.productos || [])[i - 1];
     if (!x) return;
-    lapiz.previo = { fila: i, campos: { unidades: x.unidades, m2: x.m2, precio_m2: x.precio_m2, estado: x.estado || '', fuente: x.fuente || '', uso: x.uso || '' } };
+    // el uso: sólo en libros de la plantilla v2 (cuenta para los cajones); lo que no está en la lista se conserva y se dice
+    var USOS = ['vivienda', 'comercio', 'oficina', 'otro'], usoN = String(x.uso || '').trim().toLowerCase();
+    var conUso = /ppp2-libro-v[2-9]/.test(String((estado.plan.resumen || {}).esquema || '')), raro = usoN && USOS.indexOf(usoN) < 0;
+    lapiz.previo = { fila: i, campos: { unidades: x.unidades, m2: x.m2, precio_m2: x.precio_m2, estado: x.estado || '', fuente: x.fuente || '', uso: raro ? String(x.uso) : usoN } };
     var R = entrada('productos');
     abrirDialogo('<div class="p2-sobre">Producto · todas las versiones</div><h2>' + esc(x.nombre) + '</h2>' +
       (R ? '<div class="p2-ligado"><div class="p2-sobre">Está ligado a</div>' + ligadoA(R) + '</div>' : '') +
@@ -814,8 +820,9 @@
       '<label>Unidades<input name="unidades" inputmode="decimal" value="' + esc(x.unidades == null ? '' : x.unidades) + '"></label>' +
       '<label>m² vendibles<input name="m2" inputmode="decimal" value="' + esc(x.m2 == null ? '' : x.m2) + '"></label>' +
       '<label>Precio por m² (pesos)<input name="precio_m2" inputmode="decimal" value="' + esc(x.precio_m2 == null ? '' : x.precio_m2) + '"></label>' +
-      '<label>Uso <span class="p2-tenue">(cuenta para los cajones que pide la norma)</span><select name="uso"><option value="">sin decir</option>' +
-        ['vivienda', 'comercio', 'oficina', 'otro'].map(function (u) { return '<option' + (u === x.uso ? ' selected' : '') + '>' + u + '</option>'; }).join('') + '</select></label>' +
+      (conUso ? '<label>Uso <span class="p2-tenue">(cuenta para los cajones que pide la norma)</span><select name="uso"><option value="">sin decir</option>' +
+        (raro ? '<option value="' + esc(x.uso) + '" selected>' + esc(x.uso) + ' (no cuenta para los cajones)</option>' : '') +
+        USOS.map(function (u) { return '<option' + (u === usoN ? ' selected' : '') + '>' + u + '</option>'; }).join('') + '</select></label>' : '') +
       '<label>Estado<select name="estado">' + ['confirmado', 'supuesto', 'por confirmar', 'en conflicto', 'derivado', 'falta'].map(function (e) { return '<option' + (e === x.estado ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></label>' +
       '<label>De dónde sale<textarea name="fuente" rows="2">' + esc(x.fuente || '') + '</textarea></label>' +
       '<p class="p2-chico p2-tenue">Los productos no tienen columna de prueba: al guardar cambian las ventas de todas las versiones, y lo puedes deshacer enseguida.</p>' +

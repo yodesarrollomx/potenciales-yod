@@ -341,11 +341,19 @@ function leePlan_(p, libro) {
   });
   var productos = libro.getSheetByName('Productos').getRange(5, 1, 6, 10).getValues().map(function (f, i) {
     f = f.map(limpio_);
-    return { fila: i + 1, nombre: f[0], unidades: f[1], m2: f[2], precio_m2: f[3], ventas: f[4], precio_unidad: f[5], durante_obra: f[6], estado: f[7], fuente: f[8], uso: f[9] || '' };
+    return { fila: i + 1, nombre: f[0], unidades: f[1], m2: f[2], precio_m2: f[3], ventas: f[4], precio_unidad: f[5], durante_obra: f[6], estado: f[7], fuente: f[8], uso: low_(f[9]) };
   });
-  var palancas = tabla_(libro, 'Modelo', 7, 12).filter(function (f) { return /^[a-z][a-z0-9_]*$/.test(String(f[0])); }).map(function (f) {
-    return { clave: f[0], concepto: f[1], unidad: f[2], base: f[3], v: [f[4], f[5], f[6]], cambia: [f[9] === 'cambia', f[10] === 'cambia', f[11] === 'cambia'], calculado: f[3] === '' || f[3] === null };
-  });
+  var hm = libro.getSheetByName('Modelo'), nm = hm.getLastRow() - 6, palancas = [];
+  if (nm > 0) {
+    var frmD = hm.getRange(7, 4, nm, 1).getFormulas();
+    hm.getRange(7, 1, nm, Math.min(12, hm.getMaxColumns())).getValues().forEach(function (f, i) {
+      f = f.map(limpio_);
+      while (f.length < 12) f.push('');
+      if (!/^[a-z][a-z0-9_]*$/.test(String(f[0]))) return;
+      palancas.push({ clave: f[0], concepto: f[1], unidad: f[2], base: f[3], v: [f[4], f[5], f[6]], cambia: [f[9] === 'cambia', f[10] === 'cambia', f[11] === 'cambia'],
+        calculado: !frmD[i][0] && (f[3] === '' || f[3] === null) });
+    });
+  }
   var versiones = [1, 2, 3].map(function (k) {
     var o = { numero: k }, pre = 'v' + k + '.';
     Object.keys(r).forEach(function (key) { if (key.indexOf(pre) === 0) o[key.slice(pre.length)] = r[key]; });
@@ -922,9 +930,9 @@ function espejos_(libro, mod) {
   return out;
 }
 function leeLapiz_(mod, pru, filas) {
-  var o = {};
+  var o = {}, h = mod.getRange(1, 8, Math.max(1, mod.getLastRow()), 1).getValues();
   LAPIZ.MODELO.forEach(function (k) {
-    var v = filas[k] ? limpio_(mod.getRange(filas[k], 8).getValue()) : null;
+    var v = filas[k] && h[filas[k] - 1] ? limpio_(h[filas[k] - 1][0]) : null;
     o[k] = typeof v === 'number' ? r3_(v) : (v === null || v === undefined ? null : txt_(v, 500));
   });
   var b = pru.getRange(6, 2, LAPIZ.PRUEBAS.length, 1).getValues();
@@ -964,7 +972,9 @@ function simular_(s, libro, b) {
   }
   if (!cambios.length) return { ok: true, hecho: 'simular', version: k, cambios: [], sin_efecto: sinEfecto };
   var renglones = {};
-  LAPIZ.MODELO.forEach(function (x) { renglones[x] = filaPorClave_(mod, x); });
+  var colA = mod.getRange(1, 1, Math.max(1, mod.getLastRow()), 1).getValues(), filaDe = {};
+  colA.forEach(function (r, i) { var c = String(r[0]).trim(); if (c && !(c in filaDe)) filaDe[c] = i + 1; });
+  LAPIZ.MODELO.forEach(function (x) { renglones[x] = filaDe[x] || 0; });
   sanarPrueba_(mod);           // si una corrida anterior murió a medias, la columna vuelve a ser fórmula
   var antesB4 = pru.getRange('B4').getFormula() || pru.getRange('B4').getValue(), filas = {}, antes, despues;
   var vuelveB4 = function () { if (String(antesB4).charAt(0) === '=') pru.getRange('B4').setFormula(antesB4); else pru.getRange('B4').setValue(antesB4); };
