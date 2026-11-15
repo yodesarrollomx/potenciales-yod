@@ -437,12 +437,14 @@ hecha para caber en la pantalla de un teléfono y se ve igual en todos los plane
   grande va completa, con el eje por años (rótulos cada uno, dos, tres o cinco años según quepan) y, en
   «Dinero», barras de seis meses pasados los seis años.
 - **Dirección escoge «la buena» desde el visor** (15-nov-2026, lado de la página; el servidor que lo
-  entiende se publica aparte). Si el navegador tiene la sesión del Portero (`pyod_clave_v1`), el visor
+  entiende ya está en `server/ppp2/Visor.gs` y se publica aparte). Si el navegador tiene la sesión del Portero (`pyod_clave_v1`), el visor
   la manda como `k` en sus lecturas: sólo la lee, nunca la borra ni la escribe. Si la respuesta trae
   `elige: { versiones: [{ v, nombre, buena }] }` (el servidor sólo lo manda a quien puede aprobar), arriba
-  sale un selector oscuro, «La versión que ven todos · sólo tú ves esto», con la buena marcada. Tocar otra
+  sale un selector oscuro, «La versión que ven todos · sólo tú ves esto», con una opción por versión
+  rotulada con su nombre y la buena marcada. `v` es el `escenario_id` (un texto, vacío en un caso sin
+  escenarios): la página lo devuelve tal cual y nunca lo convierte en número. Tocar otra
   manda `POST` (text/plain, JSON) `{ tipo: 'ppp2-elige', k, plan, v, request_id }` con un `request_id`
-  nuevo por toque; la pantalla de Dirección marca la nueva al instante y dice «Listo: todos ven ahora V…»;
+  nuevo por toque; la pantalla de Dirección marca la nueva al instante y dice «Listo: todos ven ahora» y el nombre;
   si el servidor responde error, el selector vuelve a la de antes y lo dice. Los demás no ven selector:
   su visor la sigue en el siguiente sondeo, con «Se actualizó». Los selectores de versiones y terrenos
   que la liga deja recorrer a cada quien siguen igual y son otra cosa. Contra el servidor de hoy (que

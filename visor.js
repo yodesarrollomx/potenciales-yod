@@ -822,7 +822,7 @@
     var v = d.v || {}, est = String(v.estado || ''), fa = fechaCorta(v.fecha_aprobacion), cambio = fechaCorta(d.cambio);
     return '<header class="vz-top"><div class="vz-l1"><span class="vz-marca">YoDesarrollo · Plan de Potencial</span>' +
       '<span class="vz-vivo" id="vzVivo" data-base="' + esc('En vivo' + (cambio ? ' · cambió ' + cambio : '')) + '"><i aria-hidden="true"></i><span>En vivo' + (cambio ? ' · cambió ' + esc(cambio) : '') + '</span></span></div>' +
-      '<div class="vz-l2"><h1>' + esc((d.plan && d.plan.nombre) || 'Plan de Potencial') + '</h1><span class="vz-ver">V' + d.version + (est ? ' ' + esc(est) : '') + (est === 'vigente' && fa ? ' · ' + fa : '') + '</span></div></header>';
+      '<div class="vz-l2"><h1>' + esc((d.plan && d.plan.nombre) || 'Plan de Potencial') + '</h1><span class="vz-ver">V' + esc(d.version) + (est ? ' ' + esc(est) : '') + (est === 'vigente' && fa ? ' · ' + fa : '') + '</span></div></header>';
   }
   function selector(d) {
     var planes = (d.menu && d.menu.planes) || [], vers = d.versiones || [], o = '';
@@ -830,22 +830,25 @@
       return '<button type="button" class="vz-chip' + (p.id === d.menu.plan ? ' vz-on' : '') + '" data-plan="' + esc(p.id) + '">' + esc(corta(p.etiqueta, 22)) + '</button>';
     }).join('') + '</div>';
     if (vers.length > 1) o += '<div class="vz-chips" role="group" aria-label="Versiones">' + vers.map(function (x) {
-      return '<button type="button" class="vz-chip' + (x.n === d.version ? ' vz-on' : '') + '" data-v="' + x.n + '" title="' + esc(x.nombre) + '">V' + x.n + ' · ' + esc(corta(x.nombre || x.estado, 20)) + (x.estado === 'vigente' ? ' ✓' : '') + '</button>';
+      return '<button type="button" class="vz-chip' + (x.n === d.version ? ' vz-on' : '') + '" data-v="' + esc(x.n) + '" title="' + esc(x.nombre) + '">V' + esc(x.n) + ' · ' + esc(corta(x.nombre || x.estado, 20)) + (x.estado === 'vigente' ? ' ✓' : '') + '</button>';
     }).join('') + '</div>';
     return o;
   }
   /* El selector de Dirección: sólo sale si el servidor lo manda (`elige`, a quien puede aprobar). Escoge
      cuál versión es «la buena», la que ven todos los que tienen la liga. No se confunde con los selectores
-     de arriba (versiones o terrenos que la liga deja recorrer a cada quien). */
+     de arriba (versiones o terrenos que la liga deja recorrer a cada quien). `v` es el id de la versión tal
+     como lo manda el servidor (un texto, a veces vacío): se devuelve igual, nunca se convierte en número. */
+  function idElige(x) { return x && x.v != null ? String(x.v) : ''; }
+  function nombreElige(x) { return String((x && (x.nombre || x.v)) || 'Base'); }
   function eligeHtml(d) {
     var vs = (d.elige && d.elige.versiones) || [];
     if (!vs.length) return '';
     return '<section class="vz-elige" aria-label="Dirección: la versión que ven todos">' +
       '<div class="vz-elige-cab"><span class="vz-elige-tit">La versión que ven todos</span><span class="vz-elige-solo">sólo tú ves esto</span></div>' +
       '<div class="vz-elige-ops" role="radiogroup" aria-label="Versión buena">' + vs.map(function (x) {
-        var n = Number(x.v) || 0;
-        return '<button type="button" class="vz-elige-op' + (x.buena ? ' vz-buena' : '') + '" role="radio" aria-checked="' + (x.buena ? 'true' : 'false') + '" data-elige="' + n + '" data-nombre="' + esc(x.nombre || '') + '">' +
-          '<b>V' + n + '</b><span>' + esc(corta(x.nombre || '', 22)) + '</span>' + (x.buena ? '<i>la buena</i>' : '') + '</button>';
+        var nom = nombreElige(x);
+        return '<button type="button" class="vz-elige-op' + (x.buena ? ' vz-buena' : '') + '" role="radio" aria-checked="' + (x.buena ? 'true' : 'false') + '" data-elige="' + esc(idElige(x)) + '" data-nombre="' + esc(nom) + '" title="' + esc(nom) + '">' +
+          '<b>' + esc(corta(nom, 24)) + '</b>' + (x.buena ? '<i>la buena</i>' : '') + '</button>';
       }).join('') + '</div><p class="vz-elige-msg" role="status" aria-live="polite"></p></section>';
   }
   function pieMarcas(marcas) {
@@ -1038,7 +1041,7 @@
       var chip = cerca(e, '.vz-chip'), card = cerca(e, '.vz-card'), otra = cerca(e, '.vz-otra');
       if (otra) { try { win.location.reload(); } catch (er) { } return; }
       var op1 = cerca(e, '.vz-elige-op');
-      if (op1) { if (!/vz-buena/.test(op1.className) && op.alElegir) op.alElegir({ v: Number(op1.getAttribute('data-elige')) || 0, nombre: op1.getAttribute('data-nombre') || '' }); return; }
+      if (op1) { if (!/vz-buena/.test(op1.className) && op.alElegir) op.alElegir({ v: op1.getAttribute('data-elige') || '', nombre: op1.getAttribute('data-nombre') || '' }); return; }
       if (chip) {
         Array.prototype.forEach.call(chip.parentNode.children, function (c) { c.classList.toggle('vz-on', c === chip); c.setAttribute('aria-pressed', c === chip ? 'true' : 'false'); });
         if (op.alEscoger) op.alEscoger(chip.getAttribute('data-plan') ? { plan: chip.getAttribute('data-plan') } : { v: Number(chip.getAttribute('data-v')) || 0 });
@@ -1238,16 +1241,16 @@
   }
   function marcaBuena(v) {
     Array.prototype.forEach.call(doc.querySelectorAll('.vz-elige-op'), function (b) {
-      var si = Number(b.getAttribute('data-elige')) === v;
+      var si = v !== null && b.getAttribute('data-elige') === v;
       b.classList.toggle('vz-buena', si); b.setAttribute('aria-checked', si ? 'true' : 'false');
       var i = b.querySelector('i'); if (si && !i) b.insertAdjacentHTML('beforeend', '<i>la buena</i>'); else if (!si && i) i.parentNode.removeChild(i);
     });
   }
   function elige(x) {
     var k = sesion(), d = estado.ultimo || {}, plan = estado.plan || (d.menu && d.menu.plan) || '';
-    if (!k || !plan || !x.v || estado.eligiendo) return;
+    if (!k || !plan || typeof x.v !== 'string' || estado.eligiendo) return;
     var antes = ((d.elige && d.elige.versiones) || []).filter(function (y) { return y.buena; })[0];
-    var etiqueta = 'V' + x.v + (x.nombre ? ' · ' + x.nombre : '');
+    var etiqueta = '«' + (x.nombre || 'Base') + '»';
     estado.eligiendo = true;
     estado.turno++;   // lo que traiga un sondeo que ya iba en camino ya no se pinta
     marcaBuena(x.v);
@@ -1268,8 +1271,8 @@
       .catch(function () {
         clearTimeout(t);
         estado.eligiendo = false;
-        marcaBuena(antes ? Number(antes.v) : 0);
-        avisoElige('No se pudo cambiar: todos siguen viendo ' + (antes ? 'V' + antes.v + (antes.nombre ? ' · ' + antes.nombre : '') : 'la versión de antes') + '. Intenta otra vez.', true);
+        marcaBuena(antes ? idElige(antes) : null);
+        avisoElige('No se pudo cambiar: todos siguen viendo ' + (antes ? '«' + nombreElige(antes) + '»' : 'la versión de antes') + '. Intenta otra vez.', true);
       });
   }
   function arranca() {

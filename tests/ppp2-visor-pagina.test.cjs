@@ -184,11 +184,16 @@ test('selector de Dirección: sólo con `elige`, con la buena marcada, sin confu
   const d = datos();
   assert.doesNotMatch(visor.pinta(d, null).html, /vz-elige/, 'sin `elige` (el servidor de hoy) no hay selector');
   const con = copia(d);
-  con.elige = { versiones: [{ v: 1, nombre: 'Base <b>', buena: false }, { v: 2, nombre: 'Con banco', buena: true }] };
+  // como lo manda el servidor (Visor.gs, eligeDe_): `v` es el escenario_id, un texto (vacío en un caso sin escenarios)
+  con.elige = { versiones: [{ v: 'ebase', nombre: 'Base <b>', buena: false }, { v: 'v2', nombre: 'Con banco', buena: true }, { v: 'x"><i>', nombre: '', buena: false }] };
   const h = visor.pinta(con, null).html;
-  assert.equal((h.match(/class="vz-elige-op[ "]/g) || []).length, 2);
-  assert.match(h, /class="vz-elige-op vz-buena" role="radio" aria-checked="true" data-elige="2"/);
-  assert.match(h, /data-elige="1" data-nombre="Base &lt;b&gt;"/, 'los nombres se escapan');
+  assert.equal((h.match(/class="vz-elige-op[ "]/g) || []).length, 3);
+  assert.match(h, /class="vz-elige-op vz-buena" role="radio" aria-checked="true" data-elige="v2"/);
+  assert.match(h, /data-elige="ebase" data-nombre="Base &lt;b&gt;"/, 'los nombres se escapan');
+  assert.match(h, /data-elige="x&quot;&gt;&lt;i&gt;"/, 'el id se escapa y no se convierte en número');
+  assert.doesNotMatch(h, /data-elige="0"/, 'un id de texto nunca se vuelve 0');
+  const unica = copia(d); unica.elige = { versiones: [{ v: '', nombre: 'Base', buena: true }] };
+  assert.match(visor.pinta(unica, null).html, /data-elige="" data-nombre="Base"/, 'la versión única de un caso sin escenarios');
   assert.doesNotMatch(h, /vz-chip/, 'no es un selector de los de la liga');
   assert.match(h, /sólo tú ves esto/);
   const src = fs.readFileSync(path.join(RAIZ, 'visor.js'), 'utf8');

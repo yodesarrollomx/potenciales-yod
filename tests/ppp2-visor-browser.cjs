@@ -165,7 +165,9 @@ async function pagina(navegador, base, w, opciones) {
     });
 
     /* Servidor simulado para el selector de Dirección: el de hoy ignora `k` y no manda `elige`; éste, con la
-       sesión de quien aprueba, manda `elige` y entiende `ppp2-elige`. Nada sale a la red. */
+       sesión de quien aprueba, manda `elige` y entiende `ppp2-elige`. Nada sale a la red. Como el de verdad
+       (Visor.gs, eligeDe_/elige_), `v` es un id de texto (el escenario_id), no un número: uno que no
+       coincide, o que llega como número, es error `version`. */
     const conDireccion = async (opciones) => {
       const op = opciones || {}, w = mundo({ ligas: [renglon({ versiones: 'todas' })], aperturas: true });
       const estadoSrv = { buena: 2, posts: [], gets: [] };
@@ -177,7 +179,8 @@ async function pagina(navegador, base, w, opciones) {
           if (req.method() === 'POST') {
             const b = JSON.parse(req.postData() || '{}'); estadoSrv.posts.push(b);
             if (op.falla || b.tipo !== 'ppp2-elige' || b.k !== ADMIN) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'permiso' }) });
-            estadoSrv.buena = b.v;
+            if (typeof b.v !== 'string' || !/^esc-\d$/.test(b.v)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'version' }) });
+            estadoSrv.buena = Number(b.v.slice(4));
             return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
           }
           const p = Object.fromEntries(new URL(url).searchParams); estadoSrv.gets.push(p);
@@ -186,7 +189,7 @@ async function pagina(navegador, base, w, opciones) {
           const q = Object.assign({}, p); delete q.k; delete q.si; if (!q.v) q.v = String(estadoSrv.buena);
           const j = JSON.parse(w.ctx.doGet({ parameter: q }).contenido);
           j.llave = llave;
-          if (p.k === ADMIN) j.elige = { versiones: (j.versiones || []).map((x) => ({ v: x.n, nombre: x.nombre, buena: x.n === estadoSrv.buena })) };
+          if (p.k === ADMIN) j.elige = { versiones: (j.versiones || []).map((x) => ({ v: 'esc-' + x.n, nombre: x.nombre, buena: x.n === estadoSrv.buena })) };
           return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(j) });
         }
         return route.fulfill({ status: 200, contentType: /\.css(\?|$)|fonts\.googleapis/.test(url) ? 'text/css' : 'text/javascript', body: '' });
@@ -210,7 +213,11 @@ async function pagina(navegador, base, w, opciones) {
       const dir = await abre(ADMIN);
       assert.ok(estadoSrv.gets.some((p) => p.k === ADMIN), 'con sesión, el visor la manda como k');
       await dir.page.locator('.vz-elige').waitFor();
-      assert.match(await dir.page.locator('.vz-elige-op.vz-buena').innerText(), /^V2/);
+      const nombre = async (v) => dir.page.locator('.vz-elige-op[data-elige="esc-' + v + '"]').getAttribute('data-nombre');
+      const n1 = await nombre(1), n2 = await nombre(2);
+      assert.ok(n1 && n2 && n1 !== n2, 'cada opción lleva el nombre de su versión');
+      assert.equal(await dir.page.locator('.vz-elige-op.vz-buena').getAttribute('data-elige'), 'esc-2');
+      assert.equal(await dir.page.locator('.vz-elige-op[data-elige="0"]').count(), 0, 'un id de texto nunca se vuelve 0');
       assert.equal(await dir.page.locator('.vz-elige-op[aria-checked="true"]').count(), 1);
       assert.equal(await dir.page.evaluate(() => localStorage.getItem('pyod_clave_v1')), ADMIN, 'la sesión no se toca');
       // otro navegador, sin sesión: sin selector de Dirección
@@ -219,20 +226,20 @@ async function pagina(navegador, base, w, opciones) {
       assert.ok(estadoSrv.gets.filter((p) => !p.k).length > 0, 'sin sesión, no manda k');
       await socio.page.locator('.vz-ver', { hasText: 'V2' }).waitFor();
       // Dirección toca V1
-      await dir.page.locator('.vz-elige-op[data-elige="1"]').click();
-      assert.match(await dir.page.locator('.vz-elige-op.vz-buena').innerText(), /^V1/, 'su pantalla cambia de inmediato');
-      await dir.page.locator('.vz-elige-msg', { hasText: 'Listo: todos ven ahora V1' }).waitFor({ timeout: 5000 });
+      await dir.page.locator('.vz-elige-op[data-elige="esc-1"]').click();
+      assert.equal(await dir.page.locator('.vz-elige-op.vz-buena').getAttribute('data-elige'), 'esc-1', 'su pantalla cambia de inmediato');
+      await dir.page.locator('.vz-elige-msg', { hasText: 'Listo: todos ven ahora «' + n1 + '»' }).waitFor({ timeout: 5000 });
       await dir.page.locator('.vz-ver', { hasText: 'V1' }).waitFor({ timeout: 5000 });
       const post = estadoSrv.posts[0];
       assert.deepEqual(Object.keys(post).sort(), ['k', 'plan', 'request_id', 'tipo', 'v']);
-      assert.equal(post.tipo, 'ppp2-elige'); assert.equal(post.k, ADMIN); assert.equal(post.plan, PLAN); assert.equal(post.v, 1);
+      assert.equal(post.tipo, 'ppp2-elige'); assert.equal(post.k, ADMIN); assert.equal(post.plan, PLAN); assert.equal(post.v, 'esc-1', 'el id viaja tal cual, como texto');
       // el socio la ve sola, con «Se actualizó»
       await socio.page.locator('.vz-ver', { hasText: 'V1' }).waitFor({ timeout: 5000 });
       assert.match(await socio.page.locator('#vzVivo').innerText(), /Se actualizó/);
       assert.equal(await socio.page.locator('.vz-elige').count(), 0);
       // otro toque, otro request_id
-      await dir.page.locator('.vz-elige-op[data-elige="2"]').click();
-      await dir.page.locator('.vz-elige-msg', { hasText: 'todos ven ahora V2' }).waitFor({ timeout: 5000 });
+      await dir.page.locator('.vz-elige-op[data-elige="esc-2"]').click();
+      await dir.page.locator('.vz-elige-msg', { hasText: 'todos ven ahora «' + n2 + '»' }).waitFor({ timeout: 5000 });
       assert.notEqual(estadoSrv.posts[1].request_id, estadoSrv.posts[0].request_id);
       assert.deepEqual(dir.errores.concat(socio.errores), []);
       await ctx.close();
@@ -241,10 +248,11 @@ async function pagina(navegador, base, w, opciones) {
     await caso('si el servidor no acepta el cambio de Dirección, el selector vuelve atrás y lo dice', async () => {
       const { ctx, estadoSrv, abre } = await conDireccion({ falla: true });
       const dir = await abre(ADMIN);
-      await dir.page.locator('.vz-elige-op[data-elige="1"]').click();
+      const n2 = await dir.page.locator('.vz-elige-op[data-elige="esc-2"]').getAttribute('data-nombre');
+      await dir.page.locator('.vz-elige-op[data-elige="esc-1"]').click();
       await dir.page.locator('.vz-elige-msg.vz-malo').waitFor({ timeout: 5000 });
-      assert.match(await dir.page.locator('.vz-elige-msg').innerText(), /No se pudo cambiar: todos siguen viendo V2/);
-      assert.match(await dir.page.locator('.vz-elige-op.vz-buena').innerText(), /^V2/);
+      assert.equal(await dir.page.locator('.vz-elige-msg').innerText(), 'No se pudo cambiar: todos siguen viendo «' + n2 + '». Intenta otra vez.');
+      assert.equal(await dir.page.locator('.vz-elige-op.vz-buena').getAttribute('data-elige'), 'esc-2');
       assert.equal(estadoSrv.posts.length, 1);
       assert.deepEqual(dir.errores, []);
       await ctx.close();
