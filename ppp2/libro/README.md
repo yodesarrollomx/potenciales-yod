@@ -52,6 +52,19 @@ Salen tres accesorios, siempre con el plan inventado:
 Cada accesorio guarda la huella de estos archivos (`huella_generador` en `generar.py`). Si cambias la
 plantilla, el plan de ejemplo o estos guiones y no regeneras, `tests/ppp2-libro.test.cjs` falla.
 
+## Lo que se genera del grafo de fórmulas
+
+Dos guiones recorren las fórmulas de la plantilla sin calcular nada y escriben archivos que carga la página (sólo
+nombres y ligas, ninguna cifra):
+
+```bash
+python3 ppp2/libro/relaciones.py   # ppp2-relaciones.js: qué mueve cada dato y palanca (el lápiz de la ficha)
+python3 ppp2/libro/explica.py      # visor-explica-grafo.js: de qué depende cada cifra del visor (hacia atrás)
+```
+
+Si cambias `generar.py`, corre los dos: `tests/ppp2-lapiz.test.cjs` y `tests/visor-explica.test.cjs` fallan si quedan
+viejos (comparan su huella con estos archivos y su firma con su contenido). No tocan los accesorios de pruebas.
+
 ## Google Sheets no es LibreOffice
 
 Los accesorios los calcula LibreOffice; los libros de verdad viven en Google Sheets. Diferencias que ya
