@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-15T20:12:48.338Z",
+ "generado": "2026-11-15T20:26:58.719Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -18,7 +18,7 @@
     "repo:yodesarrollomx/potenciales-yod"
    ],
    "desde": "2026-11-13T02:10:58Z",
-   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/9323fda555395841fb539cbd566d4a459a334311",
+   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/882eb852f7c9800106fd90a41985f7fce37890a8",
    "msg": "potenciales-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
