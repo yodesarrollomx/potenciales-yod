@@ -50,6 +50,7 @@ class Hoja {
     return 0;
   }
   ancho() { return this.v.reduce((m, r) => Math.max(m, r.length), 1); }
+  getLastColumn() { return this.getLastRow() ? this.ancho() : 0; }
   getMaxColumns() { return Math.max(26, this.ancho()); }
   insertColumnsAfter() { return this; }
   /* La cuadrícula tiene tope (en Sheets, 1000 renglones al nacer): getRange no la agranda y escribir fuera truena;
@@ -144,6 +145,11 @@ const bytes = (xs) => Buffer.from(Array.from(xs, (b) => b & 255));
 
 /* ── el mundo de cada prueba ── */
 const PLAN = 'p2ejemplo001';
+/* El otro libro («YOD - POTENCIALES» de mentira) con la pestaña de fotos del PPP 1 (PPP_VISOR). Su id llega por
+   Config (`potenciales_id`); `op.fotos` trae sus renglones (sin `op.fotos` ese libro no existe). */
+const POTENCIALES = 'potenciales00000000000001';
+const FOTO_CAB = ['caso_id', 'tipo', 'escenario_id', 'escenario_nombre', 'estado', 'elegida', 'elegida_por', 'elegida_fecha', 'orden',
+  'motor_commit', 'huella_entradas', 'calculado', 'origen', 'conciliacion', 'visor_json'];
 const SESIONES = {
   syadmin00000000000000000: { ok: true, rol: 'admin', boards: '*', nombre: 'Admin Prueba', correo: 'admin@ejemplo.mx' },
   syeditor0000000000000000: { ok: true, rol: 'editor', boards: 'PT,MK', nombre: 'Editora Prueba', correo: 'editora@ejemplo.mx' },
@@ -153,6 +159,7 @@ const SESIONES = {
 function mundo(opciones) {
   const op = opciones || {};
   const libros = { 'libro-ejemplo': libroDeAccesorio(op.idioma, 'libro-ejemplo'), 'libro-plantilla': libroDeAccesorio(op.idioma, 'libro-plantilla') };
+  if (op.fotos) libros[POTENCIALES] = new Libro(op.sinPestanaFotos ? {} : { PPP_VISOR: new Hoja('PPP_VISOR', [FOTO_CAB].concat(op.fotos)) }, POTENCIALES);
   const aperturas = {};          // cuántas veces el servidor abrió cada libro (leerlo es lo que tarda)
   let flushes = 0;
   const vivero = new Libro({
@@ -445,4 +452,4 @@ function enConsejo(opciones) {
   return w;
 }
 
-module.exports = { mundo, PLAN, ADMIN, EDITOR, LECTOR, filaDe, CODIGO, juguete, jugueteConCiclo, cicloDe, libroReal, REJILLA, jueces, JUECES, enConsejo, RAZON_PRUEBA };
+module.exports = { mundo, PLAN, POTENCIALES, FOTO_CAB, ADMIN, EDITOR, LECTOR, filaDe, CODIGO, juguete, jugueteConCiclo, cicloDe, libroReal, REJILLA, jueces, JUECES, enConsejo, RAZON_PRUEBA };

@@ -56,3 +56,6 @@ Conservar Portero, códigos y única URL existente del Apps Script. Leer el back
 - Repo yod-portal: arquitectura del marco y catálogo, sin duplicar cálculos ni datos.
 - Si se localiza un repositorio especializado adicional del ecosistema, enlazar esta decisión allí conservando su historia. La referencia control-maestro-yod de Sistemas no basta para afirmar que ese repo esté accesible.
 
+
+## Excepción autorizada: fotos del PPP 1 para el visor (15-nov-2026)
+Dirección autorizó una excepción, **sólo para el visor en vivo**, a «no rellenar un resultado calculado como constante». La pestaña `PPP_VISOR` de «YOD - POTENCIALES» guarda una foto fechada por cada versión de cada caso. La foto es lo que calcula el motor real de su tablero, cortado del HTML y corrido sin navegador (`scripts/visor-fotos/`). Cada foto lleva su procedencia: `motor_commit`, `huella_entradas`, `calculado`, `origen` y `conciliacion`. La versión activa se concilia contra el resumen del renglón y contra FLUJO, con tolerancia de 0.5 %; si se sale, queda `propuesta` y no se sirve. Ninguna foto es dato de entrada de nada: los motores siguen calculando como siempre y la migración a Sheets sigue pendiente. Detalle en docs/visor-ppp1.md.

@@ -1,20 +1,19 @@
 {
   "model_revision": "2026-11-13.folio-cartera.2",
   "proposal_id": "CHG-PPP2-20261112",
-  "summary": "PPP 2 · ajustes a la ficha del plan tras la unificación (seguimiento de CHG-PPP2-20261112). (1) La fecha en que se aprobó la versión vigente llega del libro como número de fecha de la hoja y la ficha la enseñaba tal cual: ahora se enseña como fecha. (2) El diálogo «Compartir visor» se volvía a pintar al llegar la lista de planes y borraba lo que la persona ya había escrito: ahora lo conserva. Sólo cambia ppp2.js y su recorrido de navegador; sube la etiqueta de caché de los archivos de este repo para todas las páginas (también accesos.html, por eso se declara SYS-CONTROL): sólo cambia el ?v= de sus recursos. No cambian el servidor, los libros, el visor, los motores ni el Portero.",
+  "summary": "PPP 2 · el visor en vivo también enseña los casos del PPP de siempre (seguimiento de CHG-PPP2-20261112). (1) Fotos: scripts/visor-fotos/ corre sin navegador el computar() real de cada motor (vertical con libro nativo copiado sin recalcular, macrolotes, residencial y unifamiliar) y produce una foto por versión con la forma ppp2-visor-v1, conciliada contra el resumen guardado (0.5 %); es una excepción autorizada al contrato del 30-sep, documentada en docs/visor-ppp1.md y ARQUITECTURA-SHEETS.md. (2) Servidor (Visor.gs, PPP2.gs): las ligas aceptan ppp:<caso>[:<escenario>] y sirven la foto elegida de la pestaña PPP_VISOR de YOD - POTENCIALES, sin calcular; Dirección (roles_aprobar) recibe elige.versiones y con POST ppp2-elige mueve la versión elegida, que todos los visores siguen en su siguiente sondeo. No cambian los motores, visor.js, ppp2.js, portero.js ni el Apps Script del Portero; ninguna página servida cambia, así que no sube la etiqueta ?v=.",
   "components": [
     "SYS-POTENCIALES",
     "SYS-PPP2",
     "GAS-PPP2",
-    "SHEET-PPP2",
-    "SYS-CONTROL"
+    "SHEET-PPP2"
   ],
   "tests": [
-    "node tests/ppp2-visor-browser.cjs (9 recorridos; el de compartir comprueba que lo escrito se conserva)",
-    "node tests/ppp2-browser.cjs",
+    "node --test tests/visor-fotos-nucleo.test.cjs tests/visor-fotos-vertical.test.cjs tests/visor-fotos-macrolotes.test.cjs tests/visor-fotos-residencial.test.cjs tests/visor-fotos-unifamiliar.test.cjs",
+    "node --test tests/ppp2-visor.test.cjs tests/ppp2-servidor.test.cjs tests/ppp2-cache.test.cjs (fotos, liga mixta, propuesta no servida, elección con y sin permiso, idempotencia)",
     "node --test tests/*.test.cjs",
     "node scripts/versiones.cjs --check",
     "verificar-impacto contra el atlas fijado"
   ],
-  "rollback": "Revertir el PR: la ficha vuelve a enseñar el número de fecha y el diálogo vuelve a borrar lo escrito al repintarse. No hay nada que revertir en el servidor ni en los libros."
+  "rollback": "Revertir el PR y volver a publicar la versión anterior de «PPP 2 · servidor» (Gestionar implementaciones, misma implementación): las ligas ppp: dejan de servirse y los planes con libro siguen igual. La pestaña PPP_VISOR y el renglón potenciales_id de Config pueden quedarse: sin el código nuevo nadie los lee."
 }
