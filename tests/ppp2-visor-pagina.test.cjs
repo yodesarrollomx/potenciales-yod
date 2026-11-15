@@ -197,6 +197,52 @@ test('selector de Dirección: sólo con `elige`, con la buena marcada, sin confu
   assert.equal(visor.CADA_MS, 3000, 'el sondeo pregunta cada 3 s');
 });
 
+test('fotos del PPP de siempre: Dinero sin saldo acumulado, una sola casa, pruebas sin número y un solo dato de tiempo', () => {
+  for (const vacio of [null, []]) {
+    const d = copia(datos()); d.origen = 'PPP · caso'; d.flujo.filas.flujo_acum = vacio;
+    const c = visor.pinta(d, null).cuadros.find((x) => x.id === 'dinero');
+    assert.doesNotMatch(visible(c), /a repartir|\+\$0\.0/, 'no inventa un cero');
+    assert.match(visible(c), /Aún no hay flujo calculado/);
+  }
+  const casa = (n) => { const d = copia(datos()); d.plan.tipo = 'Casa unifamiliar'; d.productos = [{ nombre: 'Casa', unidades: n, m2: 240 * n, precio_m2: 30000, ventas: 7.2 * n, precio_unidad: 7.2 }]; return visor.pinta(d, null).cuadros.find((x) => x.id === 'terreno').svg; };
+  assert.match(casa(1), /<rect x="18" y="26" width="54" height="40"><\/rect>/, 'una casa se ve como una sola casa');
+  assert.doesNotMatch(casa(1), /width="31" height="13"/);
+  assert.equal((casa(5).match(/width="31" height="13"/g) || []).length, 5, 'cinco unidades, cinco casas');
+  assert.equal((casa(40).match(/width="31" height="13"/g) || []).length, 12, 'muchas: el dibujo llega a doce');
+  const sinNumero = conHuecos(); for (const p of visor.PRUEBAS) sinNumero.v[p.k] = 'no aplica';
+  const r = visor.pinta(sinNumero, null).cuadros.find((x) => x.id === 'riesgo');
+  assert.match(visible(r), /Sin revisión para fondos/, 'pruebas sin número no son una revisión');
+  assert.doesNotMatch(visible(r), /no aplica/);
+  const unDato = conHuecos(); unDato.flujo.filas.firmas = unDato.flujo.filas.cobranza.map((x, i) => (i === 4 ? 1 : 0));
+  for (const k of ['obra_inicio', 'fin_obra', 'mes_reparto']) delete unDato.v[k];
+  unDato.flujo.filas.saldos = unDato.flujo.filas.saldos.map(() => 0);
+  const ti = visor.pinta(unDato, null).cuadros.find((x) => x.id === 'tiempo');
+  assert.match(visible(ti), /Ventas[\s\S]*Obra sin dato[\s\S]*Escrituras sin dato/);
+  assert.doesNotMatch(visible(ti), /—|NaN|undefined|arranca/);
+});
+
+test('horizontes largos (hasta 153 meses): el eje va por años y los rótulos no se enciman', () => {
+  for (const n of [80, 92, 153]) {
+    const d = copia(datos());
+    for (const c of Object.keys(d.flujo.filas)) { const s = d.flujo.filas[c], u = s[s.length - 1]; while (s.length < n) s.push(/saldo|acum|caja/.test(c) ? u : 0); }
+    Object.assign(d.v, { mes_reparto: n, dueno_meses: n, obra_inicio: Math.round(n * 0.2), fin_obra: Math.round(n * 0.7) }); d.flujo.meses = n;
+    const cs = visor.pinta(d, null).cuadros;
+    for (const [id, y] of [['tiempo', 89], ['dinero', 116]]) {
+      const svg = cs.find((c) => c.id === id).svg;
+      assert.doesNotMatch(svg, /NaN|undefined|Infinity/, id + ' ' + n);
+      const rotulos = [...svg.matchAll(new RegExp('<text x="([\\d.]+)" y="' + y + '"(?: text-anchor="(\\w+)")? font-size="7.2"[^>]*>([^<]+)</text>', 'g'))]
+        .map((m) => { const x = +m[1], w = m[3].length * 7.2 * 0.55, a = m[2] || 'start'; return { t: m[3], a: a === 'end' ? x - w : a === 'middle' ? x - w / 2 : x, b: a === 'end' ? x : a === 'middle' ? x + w / 2 : x + w }; })
+        .sort((p, q) => p.a - q.a);
+      assert.ok(rotulos.some((r) => r.t === 'mes ' + n), id + ' ' + n + ': dice el último mes');
+      assert.ok(rotulos.some((r) => r.t === 'año'), id + ' ' + n + ': marcas por año');
+      assert.ok(rotulos.length <= 9, id + ' ' + n + ': ' + rotulos.length + ' rótulos');
+      for (let i = 1; i < rotulos.length; i++) assert.ok(rotulos[i].a - rotulos[i - 1].b >= 2, id + ' ' + n + ': «' + rotulos[i - 1].t + '» y «' + rotulos[i].t + '» se enciman');
+    }
+    const barras = cs.find((c) => c.id === 'dinero').svg.match(/data-t="\{&quot;t&quot;:&quot;Meses \d+ a \d+/g) || [];
+    assert.equal(barras.length, Math.ceil(n / (n > 72 ? 6 : 3)), 'barras por semestre en planes largos');
+  }
+});
+
 test('lo que escribe una persona en el libro no se vuelve marcado en la página', () => {
   const d = copia(datos());
   d.plan.nombre = '<img src=x onerror=alert(1)>';

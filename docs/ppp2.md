@@ -426,6 +426,11 @@ hecha para caber en la pantalla de un teléfono y se ve igual en todos los plane
   pruebas de estrés) en lugar de anillos vacíos. Una serie o clave que no llegó (firmas por mes, reparto,
   flujo mensual, respaldo, banco, terreno) deja su cuadro en «Aún no hay…» o su renglón en «sin dato»:
   nunca un cero inventado, un guion suelto ni NaN. El servidor no cambia por esto.
+  Pruebas que llegan sin número (sólo texto) no cuentan como revisión. En «Terreno», un plan de casas se
+  dibuja con tantas casas como unidades (hasta doce; una sola, como una casa).
+- **Horizontes largos** (hay planes de más de 150 meses): con más de 48 meses el eje de «Tiempo» y de
+  «Dinero» va por años (marcas cada año; rótulos cada uno, dos, tres o cinco años según quepan, y el
+  último mes al final), y con más de 72 meses las barras de «Dinero» suman seis meses en lugar de tres.
 - **Dirección escoge «la buena» desde el visor** (15-nov-2026, lado de la página; el servidor que lo
   entiende se publica aparte). Si el navegador tiene la sesión del Portero (`pyod_clave_v1`), el visor
   la manda como `k` en sus lecturas: sólo la lee, nunca la borra ni la escribe. Si la respuesta trae

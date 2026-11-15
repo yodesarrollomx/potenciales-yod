@@ -96,7 +96,14 @@
     return 'Libro · ' + hoja + (clave ? ' · ' + clave : '');
   }
   function Ly(a, b) { return ORIGEN || a + ' y ' + b; }
-  function sinDatos(w, texto) { return '<text x="' + (w / 2) + '" y="70" text-anchor="middle" font-size="9" fill="' + MUTED + '">' + texto + '</text>'; }
+  /* Un cuadro sin sus datos se ve tranquilo, no como error: un círculo suave, la frase y, si hay, una nota. */
+  function sinDatos(w, texto, nota) {
+    var cx = w / 2;
+    return '<circle cx="' + cx + '" cy="50" r="14" fill="#f3eee4"></circle>' +
+      '<g fill="' + ORO + '"><circle cx="' + (cx - 5) + '" cy="50" r="1.5"></circle><circle cx="' + cx + '" cy="50" r="1.5"></circle><circle cx="' + (cx + 5) + '" cy="50" r="1.5"></circle></g>' +
+      '<text x="' + cx + '" y="80" text-anchor="middle" font-size="9.5" font-weight="600" fill="' + BODY + '">' + texto + '</text>' +
+      (nota ? '<text x="' + cx + '" y="92" text-anchor="middle" font-size="7.6" fill="' + MUTED + '">' + nota + '</text>' : '');
+  }
   /* Un dato que no llegó se dice «sin dato» (en gris), nunca un cero ni un guion suelto. */
   function falta(x) { return num(x) === null; }
   function SD(size) { return '<tspan font-size="' + (size || 8) + '" font-weight="400" fill="' + MUTED + '">sin dato</tspan>'; }
@@ -137,8 +144,10 @@
         '<path d="M91 ' + f1(tope) + ' H93.5 V92 H91" fill="none" stroke="' + ORO + '" stroke-width="1.1"></path><rect x="97.6" y="51.5" width="1.8" height="4" fill="#fffdf9"></rect><line x1="93.5" y1="53.5" x2="101" y2="53.5" stroke="' + ORO + '" stroke-width="1.1"></line>');
     } else if (clase === 'casas') {
       o.push('<g' + tipTerreno + '><rect x="0" y="96" width="90" height="14" fill="#ddd6c7"></rect><text x="4" y="106" font-size="7" fill="' + MUTED + '">calle</text><rect x="38" y="4" width="14" height="92" fill="#e6e0d2"></rect>');
-      var casas = '', verdes = '';
-      [5, 54].forEach(function (x) { for (var i = 0; i < 6; i++) { casas += '<rect x="' + x + '" y="' + (6 + 14 * i) + '" width="31" height="13"></rect>'; verdes += '<rect x="' + (x === 5 ? 21 : 55) + '" y="' + (8 + 14 * i) + '" width="14" height="9"></rect>'; } });
+      /* tantas casas como unidades tenga el plan (hasta doce en el dibujo); una sola casa se ve como una */
+      var casas = '', verdes = '', nU = Math.round(suma(P.map(function (p) { return p.unidades; }))) || 12, nC = Math.min(12, Math.max(1, nU));
+      if (nC === 1) { casas = '<rect x="18" y="26" width="54" height="40"></rect>'; verdes = '<rect x="18" y="70" width="54" height="16"></rect>'; }
+      else [[5, Math.ceil(nC / 2)], [54, Math.floor(nC / 2)]].forEach(function (c) { for (var i = 0; i < c[1]; i++) { casas += '<rect x="' + c[0] + '" y="' + (6 + 14 * i) + '" width="31" height="13"></rect>'; verdes += '<rect x="' + (c[0] === 5 ? 21 : 55) + '" y="' + (8 + 14 * i) + '" width="14" height="9"></rect>'; } });
       o.push('<g fill="#fffdf9" stroke="#cfc6b3" stroke-width="0.7">' + casas + '</g><g fill="' + CLI + '">' + verdes + '</g><line x1="38" y1="93" x2="52" y2="93" stroke="' + TIE + '" stroke-width="1.6"></line>' +
         '<rect x="3" y="4" width="84" height="88" fill="none" stroke="' + GRIS + '" stroke-width="0.8" stroke-dasharray="2 2"></rect></g>');
       o.push('<line x1="101" y1="13" x2="70" y2="13" stroke="' + MUTED + '" stroke-width="0.9"></line><circle cx="69.5" cy="13" r="1.4" fill="' + MUTED + '"></circle><line x1="101" y1="53.5" x2="85.5" y2="53.5" stroke="' + ORO + '" stroke-width="1.1"></line><circle cx="85" cy="53.5" r="1.4" fill="' + ORO + '"></circle>');
@@ -253,8 +262,23 @@
     cand.forEach(function (m) { if (m && m >= 1 && m <= N && out.indexOf(m) < 0) out.push(m); });
     return out.sort(function (a, b) { return a - b; });
   }
+  /* Horizontes largos (más de cuatro años, hay planes de más de 150 meses): marcas por año y rótulos cada
+     uno, dos, tres o cinco años según quepan; al final, el último mes. */
+  function ejeAnios(N, yLinea, yTexto, R) {
+    var o = '<line x1="' + R.x0 + '" y1="' + yLinea + '" x2="' + R.x1 + '" y2="' + yLinea + '" stroke="#cfc6b3" stroke-width="0.8"></line>', anios = Math.floor(N / 12), cada = 1;
+    [1, 2, 3, 5, 10].some(function (c) { cada = c; return 12 * c * R.pm >= 22; });
+    var finTxt = 'mes ' + N, finX = R.x1 - ancho(finTxt, 7.2) - 4, ult = R.x0 + 3 + ancho('año', 7.2);
+    o += '<text x="' + R.x0 + '" y="' + yTexto + '" font-size="7.2" fill="' + MUTED + '">año</text>';
+    for (var a = 1; a <= anios; a++) {
+      var x = R.XE(12 * a);
+      o += '<line x1="' + f1(x) + '" y1="' + (yLinea - 1.6) + '" x2="' + f1(x) + '" y2="' + (yLinea + 1.6) + '" stroke="#b9b1a1" stroke-width="0.7"></line>';
+      if (a % cada === 0 && x - ult > 8 && x + 6 < finX) { o += '<text x="' + f1(x) + '" y="' + yTexto + '" text-anchor="middle" font-size="7.2" fill="' + MUTED + '">' + a + '</text>'; ult = x + 4; }
+    }
+    return o + '<text x="' + R.x1 + '" y="' + yTexto + '" text-anchor="end" font-size="7.2" fill="' + MUTED + '">' + finTxt + '</text>';
+  }
   function ejeMeses(d, N, yLinea, yTexto, R) {
     R = R || regla(N);
+    if (N > 48) return ejeAnios(N, yLinea, yTexto, R);
     var o = '<line x1="' + R.x0 + '" y1="' + yLinea + '" x2="' + R.x1 + '" y2="' + yLinea + '" stroke="#cfc6b3" stroke-width="0.8"></line>', ms = marcasMes(d, N), ult = -99;
     ms.forEach(function (m, i) {
       var fin = i === ms.length - 1 && m === N, ini = i === 0 && m === 1 && R.x0 < 8, x = fin ? R.x1 : (ini ? R.x0 : R.X(m));
@@ -378,10 +402,11 @@
   }
 
   /* ───────────────────────── 5 · Dinero ───────────────────────── */
+  /* Sumas por trimestre (por semestre si el plan pasa de seis años, para que las barras se lean). */
   function trimestres(d, N) {
-    var q = [], n = Math.ceil(N / 3), s = function (c, i) { var a = fila(d, c); return (a[3 * i] || 0) + (a[3 * i + 1] || 0) + (a[3 * i + 2] || 0); };
+    var k = N > 72 ? 6 : 3, q = [], n = Math.ceil(N / k), s = function (c, i) { var a = fila(d, c), t = 0; for (var j = 0; j < k; j++) t += a[k * i + j] || 0; return t; };
     for (var i = 0; i < n; i++) q.push({
-      de: 3 * i + 1, a: Math.min(N, 3 * i + 3), cli: s('cobranza', i), ban: s('disposicion', i), cap: s('cap_aporta', i), res: s('respaldo', i),
+      de: k * i + 1, a: Math.min(N, k * i + k), cli: s('cobranza', i), ban: s('disposicion', i), cap: s('cap_aporta', i), res: s('respaldo', i),
       obra: s('egresos', i), costob: s('interes', i) + s('apertura', i), pagob: s('pago_banco', i), pagoc: s('pago_capital', i), pagor: s('pago_respaldo', i)
     });
     return q;
@@ -445,7 +470,7 @@
         if (t.costob + t.pagob > 0.05) f.push(['Sale al banco', mdp(t.costob + t.pagob)]);
         if (t.pagoc > 0.05) f.push(['Sale al capital', mdp(t.pagoc)]);
         if (t.pagor > 0.05) f.push(['Sale al respaldo', mdp(t.pagor)]);
-        o.push('<g' + T('Meses ' + t.de + ' a ' + t.a, f, L('Flujo', 'suma de tres meses')) + '><rect x="' + f1(x - 0.9) + '" y="5" width="' + f1(w + 1.8) + '" height="38" fill="#fffdf9" fill-opacity="0"></rect>' + cols + '</g>');
+        o.push('<g' + T('Meses ' + t.de + ' a ' + t.a, f, L('Flujo', N > 72 ? 'suma de seis meses' : 'suma de tres meses')) + '><rect x="' + f1(x - 0.9) + '" y="5" width="' + f1(w + 1.8) + '" height="38" fill="#fffdf9" fill-opacity="0"></rect>' + cols + '</g>');
       });
       o.push('<line x1="' + R.x0 + '" y1="' + AX + '" x2="' + R.x1 + '" y2="' + AX + '" stroke="' + INK + '" stroke-width="0.7"></line>');
       /* el valle: saldo acumulado, con el hoyo pintado por quién lo tapa */
@@ -600,7 +625,7 @@
     g.push('<text x="0" y="' + yo + '" font-size="6.6" fill="' + MUTED + '">Orden de cobro: ' + orden.join(' → ') + '</text>' +
       (num(v.dueno_meses) ? '<text x="0" y="' + (yo + 9.5) + '" font-size="6.6" fill="' + MUTED + '">El dueño cobra en el mes ' + v.dueno_meses + '</text>' : ''));
     return {
-      id: 'reparto', n: 6, titulo: 'Reparto', sub: esc(corta(rp.esquema || (d.plan && d.plan.esquema) || 'pones y recibes', 44)), svg: pone || recibe || alianza ? o.join('') : sinDatos(396, 'Aún no hay reparto calculado'), w: 396, doble: true,
+      id: 'reparto', n: 6, titulo: 'Reparto', sub: esc(corta(rp.esquema || (d.plan && d.plan.esquema) || 'pones y recibes', 44)), svg: pone || recibe || alianza ? o.join('') : sinDatos(396, 'Aún no hay reparto calculado', 'Cuando el plan tenga su esquema, aquí se verá quién pone y quién recibe.'), w: 396, doble: true,
       svgG: pone || recibe || alianza ? g.join('') : sinDatos(220, 'Aún no hay reparto calculado'), wG: 220, hG: pone || recibe || alianza ? yo + 13 : 136,
       aria: 'Reparto: el dueño pone ' + mdp(pone) + ' y recibe ' + mdp(recibe) + '; la alianza recibe ' + mdp(alianza),
       detalle: [{ h: 'Quién pone y quién recibe (MDP)', filas: [
@@ -718,7 +743,7 @@
     }
     /* Sin ninguna prueba de la revisión para fondos (un plan del PPP de siempre, por ejemplo) no se dibujan
        anillos vacíos: se dice que el plan no tiene esa revisión, y lo que sí haya del estado. */
-    var hayRevision = PRUEBAS.some(function (p) { var x = v[p.k]; return num(x) !== null || (typeof x === 'string' && x.trim() !== ''); });
+    var hayRevision = PRUEBAS.some(function (p) { return num(v[p.k]) !== null; });
     if (!hayRevision) {
       var hayEstado = !!edad || cand !== null || abiertos.length > 0;
       var vac = ['<g' + T('Revisión para fondos', [['Pruebas del banco', 'sin calcular']], L('Versiones', 'rv_resultado')) + '>' +
