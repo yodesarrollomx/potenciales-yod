@@ -209,7 +209,7 @@ const CASO = 'casoprueba01';
 const vista = (nombre, ventas, extra) => JSON.stringify(Object.assign({
   esquema: 'ppp2-visor-v1', plan: { nombre, edad: '', mostrada: 1 }, version: 1, versiones: [{ n: 1, nombre: 'Base', estado: 'vigente' }],
   v: { ventas, aprobada_por: 'Persona Prueba' }, datos: {}, productos: [], flujo: { meses: 0, filas: {}, total: {} }, reparto: null,
-  candados: [], pruebas: [], pruebas_viejas: 0, ultimo: null, cambio: '', origen: { v: 'Foto · lote' }
+  candados: [], pruebas: [], pruebas_viejas: 0, ultimo: null, cambio: '', origen: 'PPP · vertical · versión «Base» · foto del 1-feb-2026'
 }, extra || {}));
 const foto = (c) => FOTO_CAB.map((k) => (k in c ? c[k] : ({ caso_id: CASO, tipo: 'vertical', escenario_id: 'e1', escenario_nombre: 'Base', estado: 'lista',
   elegida: '', elegida_por: '', elegida_fecha: '', orden: 1, motor_commit: 'abc1234', huella_entradas: 'h1', calculado: '2026-02-01 10:00',
@@ -233,7 +233,9 @@ test('una liga con la foto de un caso del PPP 1 entrega su visor_json tal cual, 
   assert.equal(r.plan.nombre, 'Caso Ejemplo');
   assert.equal(r.version, 1);
   assert.equal(r.v.ventas, 100);
-  assert.deepEqual(r.origen, { v: 'Foto · lote' });
+  assert.equal(r.origen, 'PPP · vertical · versión vigente «Base» · foto del 1-feb-2026', 'la elegida se rotula vigente al servirla');
+  assert.equal(r.v.estado, 'vigente');
+  assert.deepEqual(r.versiones, [{ n: 1, nombre: 'Base', estado: 'vigente' }]);
   assert.deepEqual(r.menu, { plan: 'ppp:' + CASO, planes: [{ id: 'ppp:' + CASO, etiqueta: 'Base' }] });
   assert.equal(r.a_medias, false);
   assert.equal(r.elige, undefined, 'sin sesión de Dirección no hay selector');
@@ -257,7 +259,8 @@ test('sin escenario sirve la elegida y, si no hay, la de mayor orden; una versi�
   assert.equal(pide(conFotos(conElegida, { plan_id: 'ppp:' + CASO + ':e2' })).plan.nombre, 'Dos', 'la versión fija no sigue a la elegida');
   assert.equal(pide(conFotos(tres(), { plan_id: 'ppp:' + CASO + ':e4' })).error, 'plan', 'una propuesta no se sirve');
   const propuestaElegida = tres(); propuestaElegida[3][col('elegida')] = 'sí';
-  assert.equal(pide(conFotos(propuestaElegida)).plan.nombre, 'Tres', 'marcar una propuesta no la sirve');
+  assert.equal(pide(conFotos(propuestaElegida)).error, 'plan', 'marcar una propuesta no la sirve, y tampoco sirve otra en su lugar');
+  assert.equal(pide(conFotos(propuestaElegida, { plan_id: 'ppp:' + CASO + ':e2' })).plan.nombre, 'Dos', 'las versiones fijas siguen sirviéndose');
   assert.equal(pide(conFotos(tres().slice(3))).error, 'plan');
   assert.equal(conFotos(tres().slice(3)).get({ recurso: 'ppp2-visor', k: LECTOR, plan: 'ppp:' + CASO }).error, 'plan');
 });
@@ -408,4 +411,88 @@ test('ppp2-elige: sólo quien aprueba mueve la elegida; los visores la siguen; i
   hv.v = hv.v.map((f) => f.filter((x, i) => i !== col('elegida')));
   vieja.cache.delete('vf');
   assert.equal(vieja.post({ tipo: 'ppp2-elige', k: ADMIN, plan: 'ppp:' + CASO, v: 'e1' }).error, 'hoja');
+});
+
+test('un caso sin escenarios (escenario_id vacío) se sirve por su liga, y elegirlo no rompe nada', () => {
+  const w = conFotos([foto({ escenario_id: '', escenario_nombre: 'Base', elegida: 'sí' })]);
+  const r = pide(w);
+  assert.equal(r.ok, true, 'la foto única de un caso sin escenarios se sirve');
+  assert.equal(r.v.ventas, 100);
+  assert.equal(r.v.estado, 'vigente');
+  assert.deepEqual(pide(w, { k: ADMIN }).elige, { versiones: [{ v: '', nombre: 'Base', buena: true }] });
+  const hoja = hojaFotos(w), antes = JSON.stringify(hoja.v), filas = w.vivero.getSheetByName('Bitácora').v.length;
+  assert.equal(w.post({ tipo: 'ppp2-elige', k: ADMIN, plan: 'ppp:' + CASO, v: '' }).ok, true);
+  assert.equal(JSON.stringify(hoja.v), antes, 'elegir la que ya es la buena no escribe');
+  assert.equal(w.vivero.getSheetByName('Bitácora').v.length, filas);
+  assert.equal(pide(conFotos([foto({ escenario_id: '' })])).v.ventas, 100, 'sin elegida también');
+});
+
+test('manda la foto más reciente de cada versión: una vieja marcada no se sirve, y si la nueva quedó propuesta la versión no se sirve', () => {
+  const vieja = foto({ escenario_id: 'e1', orden: 1, elegida: 'sí', elegida_por: 'Admin Prueba', visor_json: vista('Vieja', 1) });
+  const nueva = foto({ escenario_id: 'e1', orden: 1, huella_entradas: 'h9', calculado: '2026-03-01 10:00', visor_json: vista('Nueva', 9) });
+  const otra = foto({ escenario_id: 'e2', orden: 2, huella_entradas: 'h2', visor_json: vista('Otra', 2) });
+  assert.equal(pide(conFotos([vieja, otra, nueva])).plan.nombre, 'Nueva', 'la elegida se sirve con su foto más reciente');
+  assert.equal(pide(conFotos([vieja, otra, nueva], { plan_id: 'ppp:' + CASO + ':e1' })).plan.nombre, 'Nueva');
+  const rota = foto({ escenario_id: 'e1', orden: 1, estado: 'propuesta', huella_entradas: 'h8', calculado: '2026-03-02 10:00', visor_json: vista('Rota', 8) });
+  const w = conFotos([vieja, otra, rota]);
+  assert.equal(pide(w).error, 'plan', 'la elegida ya no concilia: no se sirve una foto vieja ni otra versión');
+  assert.equal(pide(conFotos([vieja, otra, rota], { plan_id: 'ppp:' + CASO + ':e1' })).error, 'plan');
+  assert.deepEqual(w.get({ recurso: 'ppp2-visor', k: ADMIN, plan: 'ppp:' + CASO + ':e2' }).elige.versiones.map((x) => x.v), ['e2']);
+  assert.equal(w.post({ tipo: 'ppp2-elige', k: ADMIN, plan: 'ppp:' + CASO, v: 'e1' }).error, 'propuesta', 'no se elige una versión cuya foto más reciente es propuesta');
+  assert.equal(w.post({ tipo: 'ppp2-elige', k: ADMIN, plan: 'ppp:' + CASO, v: 'e2' }).ok, true);
+  const hoja = hojaFotos(w);
+  assert.deepEqual(hoja.v.slice(1).map((f) => [f[col('elegida')], f[col('elegida_por')]]), [['', ''], ['sí', 'Admin Prueba'], ['', '']], 'una sola marcada, sin quién en las demás');
+  assert.equal(pide(w).plan.nombre, 'Otra');
+  // sin ninguna marcada, la de mayor orden entre las que se pueden servir
+  assert.equal(pide(conFotos([foto({ escenario_id: 'e1', orden: 1, visor_json: vista('Uno', 1) }), foto({ escenario_id: 'e2', orden: 2, huella_entradas: 'h2', visor_json: vista('Dos', 2) }),
+    foto({ escenario_id: 'e2', orden: 2, estado: 'propuesta', huella_entradas: 'h3', visor_json: vista('Dos rota', 3) })])).plan.nombre, 'Uno');
+});
+
+test('la foto sólo entrega su forma, con sus tipos: no pisa campos del servidor ni mete marcado donde va un número', () => {
+  const malo = vista('<b>Caso</b>', '<img src=x onerror=alert(1)>', {
+    version: '<script>x</script>', versiones: [{ n: '<i>1</i>', nombre: 'a', estado: 'vigente' }, { n: 2, nombre: 'Otra versión', estado: null }],
+    elige: { versiones: [{ v: 'e1', nombre: 'x', buena: true }] }, puede: { compartir: true }, ligas: [1], a_medias: true, relleno: 'x',
+    plan: { nombre: '<b>Caso</b>', vigente: 7, mostrada: '<u>9</u>', edad: { a: 1 } },
+    datos: { 'terreno.m2': { valor: 3000, estado: 'ok' }, 'otra.cosa': { valor: 1 } },
+    productos: [{ nombre: 'Tipo A', unidades: '<i>10</i>', m2: 600, ventas: 18 }, { unidades: 3 }, 'texto'],
+    flujo: { meses: '<b>2</b>', filas: { cobranza: [1, '<b>', null, 2], inventada: [1] }, total: { cobranza: '3', caja: 4 } },
+    reparto: { esquema: 'B', parte_dueno: '0.5', paga_tierra: 'sí', otra: 1 }, candados: [{ candado: 'C1', estado: 'Abierto' }, 'x'],
+    pruebas_viejas: '<b>', ultimo: { fecha: '2026-01-01', accion: 'algo', quien: 'Persona Prueba' }, origen: { v: 'objeto' }
+  });
+  const w = conFotos([foto({ visor_json: malo })]);
+  const r = pide(w);
+  assert.equal(r.ok, true);
+  for (const k of ['puede', 'ligas', 'elige', 'relleno']) assert.equal(r[k], undefined, k);
+  assert.equal(r.a_medias, false);
+  assert.equal(r.version, 1, 'la versión la pone el servidor (= orden)');
+  assert.deepEqual(r.versiones, [{ n: 1, nombre: 'Base', estado: 'vigente' }], 'sólo la versión servida');
+  assert.equal(r.plan.nombre, '<b>Caso</b>', 'el texto viaja como texto (la página lo escapa)');
+  assert.equal(r.plan.mostrada, 1);
+  assert.equal(r.plan.vigente, 1);
+  assert.equal(r.plan.edad, null);
+  assert.equal(r.v.ventas, '<img src=x onerror=alert(1)>', 'en v un texto sigue siendo texto, como en el libro');
+  assert.equal(r.v.aprobada_por, undefined);
+  assert.deepEqual(Object.keys(r.datos), ['terreno.m2']);
+  assert.deepEqual(r.productos, [{ nombre: 'Tipo A', unidades: null, m2: 600, precio_m2: null, ventas: 18, precio_unidad: null }]);
+  assert.equal(r.flujo.meses, null);
+  assert.deepEqual(r.flujo.filas, { cobranza: [1, 0, 0, 2] });
+  assert.deepEqual(r.flujo.total, { cobranza: null, caja: 4 });
+  assert.deepEqual(r.reparto, { numero: null, esquema: 'B', tasa_capital: null, paga_tierra: null, parte_dueno: null, parte_alianza: null, parte_capital: null, honorarios_pct: null });
+  assert.deepEqual(r.candados, [{ candado: 'C1', estado: 'abierto' }]);
+  assert.equal(r.pruebas_viejas, null);
+  assert.deepEqual(r.ultimo, { fecha: '2026-01-01', accion: 'algo' });
+  assert.equal(r.origen, null);
+  assert.doesNotMatch(JSON.stringify(r), /Persona Prueba|Otra versión/);
+  // con la sesión de Dirección, `elige` lo arma el servidor, no la foto
+  assert.deepEqual(pide(w, { k: ADMIN }).elige, { versiones: [{ v: 'e1', nombre: 'Base', buena: true }] });
+});
+
+test('una versión fija que no es la elegida no se rotula vigente', () => {
+  const conElegida = tres(); conElegida[0][col('elegida')] = 'sí';
+  const r = pide(conFotos(conElegida, { plan_id: 'ppp:' + CASO + ':e2' }));
+  assert.equal(r.plan.nombre, 'Dos');
+  assert.equal(r.v.estado, null);
+  assert.equal(r.plan.vigente, null);
+  assert.deepEqual(r.versiones, [{ n: 2, nombre: 'Rápida', estado: null }]);
+  assert.equal(r.origen, 'PPP · vertical · versión «Base» · foto del 1-feb-2026');
 });

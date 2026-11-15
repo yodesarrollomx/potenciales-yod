@@ -35,8 +35,9 @@ const ESTADOS = ['propuesta', 'lista'];     // lista = se puede servir; propuest
 const SIN_REFERENCIA = 'sin referencia';
 const ORIGENES = ['lote', 'libro', 'guardar'];
 const CAMPOS_CONCILIA = ['ventas', 'costo_proyecto', 'utilidad'];
-/* Lo que arma el servidor alrededor de los cuadros: una foto no lo puede traer (VISOR.FOTO_RESERVADAS). */
-const RESERVADAS = ['ok', 'error', 'igual', 'llave', 'leido', 'menu', 'a_medias', 'puede', 'ligas', 'marcas', 'esquema'];
+/* Lo que arma el servidor alrededor de los cuadros: una foto no lo puede traer (el servidor sólo toma de la foto las
+   claves de la forma, con su tipo: `fotoLimpia_` de server/ppp2/Visor.gs). */
+const RESERVADAS = ['ok', 'error', 'igual', 'llave', 'leido', 'menu', 'a_medias', 'puede', 'ligas', 'marcas', 'esquema', 'elige'];
 const RE_CASO = /^[A-Za-z0-9_-]{3,64}$/;
 const RE_ESC = /^[A-Za-z0-9_-]{1,40}$/;
 

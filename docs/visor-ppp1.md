@@ -1,6 +1,6 @@
 # El visor en vivo con los casos del PPP de siempre (PPP 1)
 
-Decisiones de Dirección del 15-nov-2026. Estado: contrato y núcleo listos. Faltan los módulos por motor, el servidor publicado, la carga de `PPP_VISOR` y las ligas.
+Decisiones de Dirección del 15-nov-2026. Estado: contrato, núcleo, módulos por motor (vertical, macrolotes, residencial, unifamiliar) y servidor listos en el repo. Faltan publicar el servidor, cargar `PPP_VISOR` y dar las ligas.
 
 El visor (`visor.html`) nació para los planes con libro del PPP 2. Ahora también enseña los casos del PPP 1. Lo hace con **fotos**: un registro fechado de lo que el motor real de cada tablero calcula para cada versión de un caso. El servidor sirve esas fotos tal cual y no calcula nada.
 
@@ -35,7 +35,9 @@ Un renglón por (caso, versión). Columnas, en este orden (`COLUMNAS` del núcle
 | `conciliacion` | JSON: `{ok, nota?, tolerancia, resumen:{campos…}, flujo:{campos…}}`. `ok` es true, false o null; con null, `nota` = «sin referencia». |
 | `visor_json` | La forma `ppp2-visor-v1` más `origen`. Máximo 50 000 caracteres. |
 
-**Lo escribe un solo agente (P5) y sólo con el visto bueno de Dirección.** Nunca se borra un renglón: una foto nueva de la misma versión va abajo y el servidor toma la más reciente. `calculado` se escribe como texto. Si Sheets lo convierte en fecha, el servidor lo devuelve a la misma forma.
+**Lo escribe un solo agente (P5) y sólo con el visto bueno de Dirección.** Nunca se borra un renglón: una foto nueva de la misma versión va abajo y el servidor toma la más reciente. Si la más reciente quedó `propuesta`, esa versión deja de servirse (aunque haya una `lista` anterior); si era la elegida, el caso no se sirve por `ppp:<caso_id>` hasta que Dirección elija otra. `calculado` se escribe como texto. Si Sheets lo convierte en fecha, el servidor lo devuelve a la misma forma.
+
+**Al volver a fotografiar un caso,** quien escribe conserva la elección de Dirección: si una versión del caso trae `elegida_por`, la foto nueva de esa versión lleva `elegida` = `sí` y las demás van sin marcar. Si no, la marca por omisión del lote nuevo (la última) queda más abajo y es la que manda.
 
 ## Cómo se toma una foto
 
@@ -59,9 +61,9 @@ Los valores de un borrador en `localStorage` de quien abrió el caso no entran: 
 | `plan.edad`, `plan.candados_abiertos`, `plan.paso_texto`, `plan.esquema` | 7 · riesgo y estado | en el PPP 1, `null`: no existen |
 | `plan.vigente` | encabezado | siempre `null` en la foto: lo decide `elegida` |
 | `plan.mostrada`, `version` | encabezado | = `orden` |
-| `versiones` | botones de versión | todas las del caso: `{n: orden, nombre, estado: null}` |
+| `versiones` | botones de versión | todas las del caso: `{n: orden, nombre, estado: null}`. Al servir, el servidor deja sólo la versión servida; la lista completa la ve quien aprueba en `elige.versiones` |
 | `v.*` (claves de `Versiones` del libro, `CLAVES_V`) | 1 terreno, 3 tiempo, 4 costo y ganancia, 6 reparto, 7 | dinero en MDP, razones como fracción, meses enteros (`UNIDAD_V`) |
-| `v.estado` | encabezado | `null` en la foto; al servir la elegida, el servidor pone `vigente` |
+| `v.estado` | encabezado | `null` en la foto; al servir la elegida, el servidor pone `vigente` (y `plan.vigente` = su número; en `origen`, «versión vigente») |
 | `v.rv_*`, `v.ck_*` | 7 · revisión para fondos | `null`: el PPP 1 no tiene revisión para fondos |
 | `datos` (12 claves de `Datos`) | 1 terreno, 4, 5 | m², MDP o fracción (`DATOS`) |
 | `productos` (hasta 6) | 2 · producto | unidades, m², $/m²; ventas y precio por unidad en MDP |
@@ -83,6 +85,8 @@ node scripts/visor-fotos/nucleo.cjs ensayo <renglones.json> <fotos.json> [--fech
 La entrada es `{casos:[{tipo, renglon, flujo?, flujo_version?, libro?}]}`. La salida trae las fotos, los errores (por caso y por versión) y un resumen. El ensayo se niega a escribir dentro del repositorio: los datos reales no van a Git.
 
 Pruebas: `node --test tests/visor-fotos-nucleo.test.cjs`. Usan sólo datos inventados y los cinco HTML públicos, y comprueban que la forma coincide con `server/ppp2/Visor.gs` y con `ppp2/libro/generar.py`.
+
+El servidor no confía en la forma: toma del `visor_json` sólo las claves de `ppp2-visor-v1` (más `origen`), cada una con su tipo (`fotoLimpia_` de `Visor.gs`). Lo que la foto traiga de más no sale.
 
 ## Dudas que quedan escritas (para Dirección o el integrador)
 
