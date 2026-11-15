@@ -58,7 +58,7 @@ REVISION = [
 # Del visor hacia atrás: qué se edita en cada uno de los siete cuadros, en el orden en que se lee.
 CUADROS = {
     "terreno": ["dato:terreno.m2", "dato:terreno.frente", "palanca:tierra", "dato:lamina.m2_construidos", "palanca:niveles",
-                "palanca:desplante", "palanca:cajones", "palanca:cajones_sotano", "palanca:m2_cajon", "dato:norma.zona",
+                "palanca:desplante", "palanca:planta_baja", "palanca:cajones", "palanca:cajones_sotano", "palanca:m2_cajon", "dato:norma.zona",
                 "palanca:norma_cos", "palanca:norma_cus", "palanca:norma_niveles", "palanca:cajon_vivienda", "palanca:cajon_visitas",
                 "palanca:m2_cajon_comercio", "palanca:m2_cajon_oficina"],
     "producto": ["productos", "dato:lamina.m2_vendibles", "palanca:ajuste_precio", "palanca:comision", "dato:cal.ritmo"],

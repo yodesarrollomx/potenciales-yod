@@ -128,7 +128,8 @@ DATOS = [
     ("norma.m2_cajon_oficina", "Oficinas: un cajón por cada", "m² por cajón", ENT, False, 45, "Metros de área de trabajo por cajón."),
     ("§", "Programa: lo que dibuja el arquitecto"),
     ("prog.niveles", "Niveles sobre el terreno", "niveles", ENT, False, None, ""),
-    ("prog.desplante", "Huella en planta baja (desplante)", "m²", ENT, False, None, ""),
+    ("prog.desplante", "Huella en planta baja (desplante)", "m²", ENT, False, None, "La proyección de los edificios sobre el terreno: cuenta para la ocupación."),
+    ("prog.planta_baja", "Planta baja cerrada (locales, vestíbulos, servicios)", "m²", ENT, False, None, "Si hay cajones bajo los edificios, es menos que la huella. Si no se escribe, se toma la huella."),
     ("lamina.m2_construidos", "Construcción sobre el terreno", "m²", ENT, False, "=CONSTRUIDOS", "Si no se escribe, sale de la huella por los niveles."),
     ("lamina.m2_vendibles", "Área vendible total", "m²", ENT, False, "=VENDIBLES", "Sale de la suma de los productos; si se escribe, manda lo escrito."),
     ("prog.cajones", "Cajones que se construyen", "cajones", ENT, False, None, ""),
@@ -390,6 +391,7 @@ PALANCAS = [
     ("§", "Programa y norma"),
     ("niveles", "Niveles sobre el terreno", "niveles", ENT, D("prog.niveles")),
     ("desplante", "Huella en planta baja", "m²", ENT, D("prog.desplante")),
+    ("planta_baja", "Planta baja cerrada", "m²", ENT, D("prog.planta_baja")),
     ("cajones", "Cajones que se construyen", "cajones", ENT, D("prog.cajones")),
     ("cajones_sotano", "Cajones en sótano", "cajones", ENT, D("prog.cajones_sotano")),
     ("m2_cajon", "Metros por cajón, con su circulación", "m²", ENT, D("prog.m2_cajon")),
@@ -434,7 +436,7 @@ DERIVADOS = [
     ("cajones_pide", "Cajones que pide la norma", "cajones", ENT),
     ("cajones_faltan", "Cajones que faltan para la norma", "cajones", ENT),
     ("m2_estac_nivel", "m² de cajones a nivel", "m²", ENT),
-    ("area_libre", "Área libre del terreno (sin la huella)", "m²", ENT),
+    ("area_libre", "Área libre en planta baja (para cajones a nivel)", "m²", ENT),
     ("cos_usado", "Ocupación del terreno", "%", PCT),
     ("cus_usado", "Intensidad de construcción (veces el terreno)", "veces", '0.00'),
     ("alertas_norma", "Reglas de la norma que no se cumplen", "reglas", ENT),
@@ -565,7 +567,9 @@ def norma_formula(clave, col):
     if clave == "m2_estac_nivel":
         return f"=IFERROR(MAX(0,N({P('cajones')})-N({P('cajones_sotano')}))*N({P('m2_cajon')}),\"\")"
     if clave == "area_libre":
-        return f"=IFERROR(IF(AND(N({P('desplante')})>0,N({terreno})>0),MAX(0,{terreno}-{P('desplante')}),\"\"),\"\")"
+        # lo que queda libre en planta baja: el terreno menos lo cerrado (si no se dice, toda la huella)
+        cerrado = f"IF(N({P('planta_baja')})>0,{P('planta_baja')},{P('desplante')})"
+        return f"=IFERROR(IF(AND(N({cerrado})>0,N({terreno})>0),MAX(0,{terreno}-{cerrado}),\"\"),\"\")"
     if clave == "cos_usado":
         return f"=IFERROR(IF(AND(N({P('desplante')})>0,N({terreno})>0),{P('desplante')}/{terreno},\"\"),\"\")"
     if clave == "cus_usado":
@@ -579,7 +583,7 @@ def norma_formula(clave, col):
             f"\"Construye \"&ROUND(N({P('cus_usado')}),2)&\" veces el terreno y la norma permite \"&ROUND(N({P('norma_cus')}),2)&\". \"",
             f"\"Tiene \"&N({P('niveles')})&\" niveles y la norma permite \"&N({P('norma_niveles')})&\". \"",
             f"\"Faltan \"&N({P('cajones_faltan')})&\" cajones: la norma pide \"&N({P('cajones_pide')})&\". \"",
-            f"\"Los cajones a nivel (\"&ROUND(N({P('m2_estac_nivel')}),0)&\" m²) no caben en el área libre (\"&ROUND(N({P('area_libre')}),0)&\" m²). \"",
+            f"\"Los cajones a nivel (\"&ROUND(N({P('m2_estac_nivel')}),0)&\" m²) no caben en lo libre de la planta baja (\"&ROUND(N({P('area_libre')}),0)&\" m²). \"",
         ]
         return "=TRIM(" + "&".join(f"IF({x},{t},\"\")" for x, t in zip(c, textos)) + ")"
     raise KeyError(clave)

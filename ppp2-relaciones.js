@@ -3,7 +3,7 @@
    (tests/ppp2-lapiz.test.cjs lo vigila). Sólo nombres y ligas entre celdas: ninguna cifra. */
 window.PPP2_RELACIONES = {
  "esquema": "ppp2-libro-v2",
- "huella": "0645b18e2a5686e8601427a08ad7de4c9a3b148c75b970f7d07e7679e407a331",
+ "huella": "892168a15c99547dadb68a413044722f387f75b883ae8f9b9dde58ae9aae867d",
  "cuadros": {
   "terreno": [
    "dato:terreno.m2",
@@ -12,6 +12,7 @@ window.PPP2_RELACIONES = {
    "dato:lamina.m2_construidos",
    "palanca:niveles",
    "palanca:desplante",
+   "palanca:planta_baja",
    "palanca:cajones",
    "palanca:cajones_sotano",
    "palanca:m2_cajon",
@@ -316,7 +317,7 @@ window.PPP2_RELACIONES = {
    "unidad": "m²",
    "nota": "",
    "pasa_por": [
-    "Área libre del terreno (sin la huella)",
+    "Área libre en planta baja (para cajones a nivel)",
     "Ocupación del terreno",
     "Intensidad de construcción (veces el terreno)",
     "Reglas de la norma que no se cumplen",
@@ -1256,7 +1257,7 @@ window.PPP2_RELACIONES = {
    "concepto": "Huella en planta baja",
    "unidad": "m²",
    "dato": "prog.desplante",
-   "nota": "",
+   "nota": "La proyección de los edificios sobre el terreno: cuenta para la ocupación.",
    "dato_otros": true,
    "dato_pasa_por": [
     "Obra directa",
@@ -1278,7 +1279,7 @@ window.PPP2_RELACIONES = {
     "Construcción sobre el terreno (la de los datos, a escala de la huella y los niveles de esta versión)",
     "Obra directa por partes (con el programa de esta versión)",
     "Obra directa por partes con el programa de los datos",
-    "Área libre del terreno (sin la huella)",
+    "Área libre en planta baja (para cajones a nivel)",
     "Ocupación del terreno",
     "Intensidad de construcción (veces el terreno)",
     "Reglas de la norma que no se cumplen",
@@ -1319,7 +1320,7 @@ window.PPP2_RELACIONES = {
     "Firmadas antes de los saldos · producto 6",
     "Construcción sobre el terreno (la de los datos, a escala de la huella y los niveles de esta versión)",
     "Obra directa por partes (con el programa de esta versión)",
-    "Área libre del terreno (sin la huella)",
+    "Área libre en planta baja (para cajones a nivel)",
     "Ocupación del terreno",
     "Intensidad de construcción (veces el terreno)",
     "Reglas de la norma que no se cumplen",
@@ -2159,6 +2160,24 @@ window.PPP2_RELACIONES = {
    ],
    "cuadro": "tiempo"
   },
+  "palanca:planta_baja": {
+   "tipo": "palanca",
+   "palanca": "planta_baja",
+   "concepto": "Planta baja cerrada",
+   "unidad": "m²",
+   "dato": "prog.planta_baja",
+   "nota": "Si hay cajones bajo los edificios, es menos que la huella. Si no se escribe, se toma la huella.",
+   "pasa_por": [
+    "Área libre en planta baja (para cajones a nivel)",
+    "Reglas de la norma que no se cumplen",
+    "Qué no cumple"
+   ],
+   "mueve": [
+    "Lo que cumple de la norma"
+   ],
+   "revision": [],
+   "cuadro": "terreno"
+  },
   "palanca:predesarrollo": {
    "tipo": "palanca",
    "palanca": "predesarrollo",
@@ -2640,5 +2659,5 @@ window.PPP2_RELACIONES = {
   }
  },
  "sobran": [],
- "firma": "085fd89d1ab8a87c08200d7794df2ef67925be8c9da5aa4a30e9888f21bdcf06"
+ "firma": "a421f0f97d1ed8d998d6606bd7ec59448271b03c6820367c32152844a3058d69"
 };

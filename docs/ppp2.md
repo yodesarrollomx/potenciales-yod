@@ -851,8 +851,9 @@ versión dice si su programa cumple. Esquema `ppp2-libro-v2` (pestaña Resumen, 
 
 - *Norma*: zona del plan de desarrollo urbano (texto), ocupación máxima (COS), intensidad máxima (CUS),
   niveles máximos, cajones por vivienda y de visitas, y metros por cajón para comercio y oficinas.
-- *Programa*: niveles, huella en planta baja, construcción sobre el terreno (si no se escribe, sale de
-  huella × niveles), área vendible (sale de la suma de los productos), cajones que se construyen, cuántos en
+- *Programa*: niveles, huella en planta baja (cuenta para la ocupación), planta baja cerrada (si hay cajones
+  bajo los edificios es menos que la huella; los cajones a nivel tienen que caber en lo que queda libre),
+  construcción sobre el terreno (si no se escribe, sale de huella × niveles), área vendible (sale de la suma de los productos), cajones que se construyen, cuántos en
   sótano y metros por cajón con su circulación. Y el frente del terreno, que sólo se enseña.
 - *Costo de obra por partes*: pesos por m² construido, por m² de sótano y por m² de cajones a nivel, y
   obras exteriores. La obra directa sale de ahí (`=PARTES`); si hay presupuesto, se escribe encima y entonces
