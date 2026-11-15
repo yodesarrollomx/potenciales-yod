@@ -482,11 +482,12 @@ de la liga (sin `plan`, el primero), o la sesión del Portero con `plan` (la fic
 
 | `audiencia` | Historial | Archivos |
 |---|---|---|
-| `equipo` (la alianza y sus Master Brokers) | todo: eventos, la conversación del grupo, pendientes abiertos y versiones | todo el expediente: la carpeta de cada proyecto del plan, con sus subcarpetas |
+| `equipo` (la alianza y sus brokers) | todo: eventos, la conversación del grupo, pendientes abiertos y versiones | todo el expediente: la carpeta de cada proyecto del plan, con sus subcarpetas |
 | en blanco, `externo` o cualquier otra cosa | sólo los eventos con `para_externos` = sí; nunca la conversación, eventos de WhatsApp o de pendiente, pendientes, decisiones, ni la fuente o la liga de un evento; versiones, sí | sólo lo que cuelga de una subcarpeta «Para compartir» (también «00 Para compartir») que esté justo abajo de la carpeta del proyecto |
 
 Con la sesión del Portero (la ficha del plan) se ve como `equipo`. Lo marcado `visibilidad` = `solo_direccion`
-(eventos y pendientes) **no sale nunca**, en ningún visor; un mensaje con `visible` = `no`, tampoco.
+(eventos y pendientes) **no sale nunca**, en ningún visor, ni los pendientes que nacieron de un evento así (su
+`evento_id`), aunque ellos digan otra cosa; un mensaje con `visible` = `no`, tampoco.
 
 **Los recursos** (todos por GET):
 
@@ -501,6 +502,7 @@ Con la sesión del Portero (la ficha del plan) se ve como `equipo`. Lo marcado `
      hora, al final). Fecha y hora se leen del texto (`AAAA-MM-DD` o `D/M/AAAA`, `HH:MM`) o, si la celda guarda
      una fecha de Sheets, de su valor; una fecha mal escrita o más allá de hoy + 400 días no cuenta.
    - **`tipo`** sale de la columna `tipo` de `Eventos` (la pestaña `Tipos`): `reunion_agendada` → `cita`; uno
+     que lleve «whatsapp» escrito como sea («WhatsApp grupo») → `whatsapp` (así un externo nunca lo ve); uno
      desconocido → `documento`. Los demás de la lista del contrato pasan igual.
    - **Un evento** lleva `resumen` (para el equipo, con «Decisiones: …» al final si hay), `fuente` (sólo para el
      equipo) y `url` sólo para el equipo, si es `https`, no es de un espacio privado (documentos, carpetas o
@@ -537,7 +539,9 @@ Con la sesión del Portero (la ficha del plan) se ve como `equipo`. Lo marcado `
 4. `?recurso=ppp2-archivo&liga=…&plan=…&id=…&parte=n` → `{ ok, nombre, tipo, partes, parte, datos }`, con
    `datos` en base64 de hasta 3 MB. **Las partes se cuentan desde 0** (`0 … partes − 1`; sin `parte`, la 0). Los
    de Google se exportan a PDF en cada pedido (`tipo` = `application/pdf`, `nombre` con `.pdf`); lo demás —también
-   Word, Excel o PowerPoint— se entrega tal cual, con su tipo. Errores: `plan`
+   Word, Excel o PowerPoint— se entrega tal cual, con su tipo, salvo lo que un navegador ejecuta (HTML, SVG,
+   XML, scripts o un tipo desconocido): esos bytes salen con `tipo` = `application/octet-stream`
+   (`PESTANAS.PASIVO`). Errores: `plan`
    (id mal formado, que no existe, carpeta, atajo, en la papelera, fuera de las carpetas permitidas, el libro de
    un plan u otra hoja del sistema, o una parte que no existe), `grande` (más de 40 MB, o Google no lo pudo
    exportar) e `interno`. Cada parte se lee en su propio pedido (no hay caché de bytes): si el archivo cambia
@@ -560,6 +564,12 @@ Con la sesión del Portero (la ficha del plan) se ve como `equipo`. Lo marcado `
 - Drive sólo se lee, con los permisos del dueño del script: **no se cambia ningún permiso ni se hace nada
   público**. Una parte de un archivo de más de 3 MB se lee con la API de Drive por rango (GET con la credencial
   del dueño), sin cargar el archivo entero.
+- Un HTML, SVG o XML del expediente (lo puede subir cualquiera que edite la carpeta) nunca sale con su tipo:
+  sale como `application/octet-stream`, para que la página no lo abra como página en su propio origen, donde
+  vive la sesión del Portero. La pantalla enseña dentro de la página sólo `vista` = `pdf` o `imagen`; lo demás
+  lo descarga.
+- La lista guardada se vuelve a filtrar en cada pedido contra los libros y hojas del sistema: un libro que se
+  registra después de armada la lista deja de aparecer en ese momento.
 
 **Caché:** el historial y la conversación de un día, cinco minutos (la llave del historial es la huella de lo
 leído: preguntar con `si` no vuelve a leer nada); la lista de las carpetas, cinco minutos (la usa también el
