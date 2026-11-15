@@ -57,6 +57,7 @@ var VISOR = {
   FOTO_MAX: 50000,           // caracteres de visor_json (lo más que cabe en una celda de Sheets)
   FOTO_SIRVE: 'lista',       // estado de un renglón que se sirve; `propuesta` no
   FOTO_MESES: 600,           // tope de meses por serie del flujo de una foto
+  FOTO_DEDUCIDO: 400,        // tope de marcas «deducido de …» que se sirven de una foto
   FOTO_V: /^[a-z][a-z0-9_]{0,39}$/   // claves de `v` que se aceptan de una foto
 };
 
@@ -415,8 +416,20 @@ function fotoLimpia_(o, p) {
     pruebas_viejas: numero(o.pruebas_viejas),
     ultimo: ou ? { fecha: texto(ou.fecha, 40), accion: texto(ou.accion, 160) } : null,
     cambio: texto(o.cambio, 40) || f.calc || '',
-    origen: origen
+    origen: origen,
+    deducido: deducidoLimpio_(o.deducido)
   };
+}
+/* Las marcas de lo que el paso «completa» dedujo o corrigió (scripts/visor-fotos/completa.cjs): ruta del cuadro
+   (`v.rv_margen`, `flujo.total.obra`, `productos.0.ventas`…) → «de qué sale y cómo». Sólo texto corto con rutas
+   bien formadas; sin marcas, null. Sirven para que la leyenda diga «deducido de …». */
+function deducidoLimpio_(x) {
+  if (!x || typeof x !== 'object' || Array.isArray(x)) return null;
+  var out = {}, n = 0;
+  Object.keys(x).forEach(function (k) {
+    if (n < VISOR.FOTO_DEDUCIDO && /^[a-z][a-z0-9_]*(\.[a-z0-9_]+){1,3}$/.test(k) && k.length <= 60 && typeof x[k] === 'string' && x[k]) { out[k] = txt_(x[k], 240); n++; }
+  });
+  return n ? out : null;
 }
 /* Dirección escoge «la buena» de un caso del PPP 1 (POST tipo=ppp2-elige; doPost ya pone candado, pausa e
    idempotencia por request_id). Sólo mueve `elegida` en PPP_VISOR y anota quién y cuándo; no toca ningún libro.

@@ -283,6 +283,17 @@ test('sin foto, sin pestaña, sin renglón en Config o con un JSON roto: «sin p
   assert.equal(r.marcas, undefined);
 });
 
+test('las marcas «deducido de …» de una foto completada salen limpias: rutas bien formadas y texto corto', () => {
+  const marcas = { 'v.rv_margen': 'de ventas y costo', 'flujo.total.obra': 'del motor', 'productos.0.ventas': 'x'.repeat(500),
+    'Mal.ruta': 'no', 'v': 'sin punto', 'v.a.b.c.d.e': 'muy honda', 'v.vacia': '', 'v.numero': 3 };
+  const r = pide(conFotos([foto({ visor_json: vista('Con marcas', 100, { deducido: marcas }) })]));
+  assert.equal(r.ok, true);
+  assert.deepEqual(Object.keys(r.deducido).sort(), ['flujo.total.obra', 'productos.0.ventas', 'v.rv_margen']);
+  assert.equal(r.deducido['productos.0.ventas'].length, 240);
+  assert.equal(pide(conFotos([foto({})])).deducido, null, 'sin marcas, null');
+  assert.equal(pide(conFotos([foto({ visor_json: vista('Lista', 1, { deducido: ['v.x'] }) })])).deducido, null);
+});
+
 test('un id de foto mal formado no se busca', () => {
   const w = conFotos([foto({})]);
   for (const id of ['ppp:', 'ppp:ab', 'ppp:' + CASO + ':', 'ppp:' + CASO + ':e1:x', 'ppp:caso prueba', 'ppp:caso/../x', 'PPP:' + CASO, 'ppp:' + 'a'.repeat(65)]) {

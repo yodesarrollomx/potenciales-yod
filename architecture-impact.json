@@ -1,7 +1,7 @@
 {
   "model_revision": "2026-11-13.folio-cartera.2",
   "proposal_id": "CHG-PPP2-20261112",
-  "summary": "PPP 2 · el visor en vivo también enseña los casos del PPP de siempre (seguimiento de CHG-PPP2-20261112). (1) Fotos: scripts/visor-fotos/ corre sin navegador el computar() real de cada motor (vertical con libro nativo copiado sin recalcular, macrolotes, residencial y unifamiliar) y produce una foto por versión con la forma ppp2-visor-v1, conciliada contra el resumen guardado (0.5 %); es una excepción autorizada al contrato del 30-sep, documentada en docs/visor-ppp1.md y ARQUITECTURA-SHEETS.md. (2) Servidor (Visor.gs, PPP2.gs): las ligas aceptan ppp:<caso>[:<escenario>] y sirven la foto elegida de la pestaña PPP_VISOR de YOD - POTENCIALES, sin calcular; Dirección (roles_aprobar) recibe elige.versiones y con POST ppp2-elige mueve la versión elegida, que todos los visores siguen en su siguiente sondeo. No cambian los motores, visor.js, ppp2.js, portero.js ni el Apps Script del Portero; ninguna página servida cambia, así que no sube la etiqueta ?v=.",
+  "summary": "PPP 2 · visor con los casos del PPP de siempre: que ningún cuadro quede vacío y que cada plan cuadre (seguimiento de CHG-PPP2-20261112). (1) scripts/visor-fotos/completa.cjs corre después del módulo de cada motor: mapea lo que computar() o el libro nativo sí dan y no se habían llevado, y deduce de esas cifras, con las definiciones del libro del PPP 2, la revisión para fondos (9 pruebas con los límites de revision_formula), el calendario de firmas, el flujo acumulado, el respaldo y el reparto; cada deducción va marcada en visor_json.deducido y escrita en docs/visor-ppp1.md; lo que pediría un supuesto no se llena y queda listado. Corrige lo que no cuadraba (resultado a repartir con el capital adentro, mes del banco, alianza que contaba dos veces su capital, respaldo sólo al cierre). (2) Evalúa los criterios de Dirección y calcula, con el mismo motor y moviendo sólo entradas, una «Propuesta de reestructura» como versión nueva que nunca queda elegida por omisión. (3) Servidor (Visor.gs): fotoLimpia_ deja pasar las marcas deducido (rutas bien formadas, texto corto). Amplía la excepción del 30-sep (ARQUITECTURA-SHEETS.md). No cambian los motores, visor.js, ppp2.js, portero.js ni el Apps Script del Portero; ninguna página servida cambia, así que no sube la etiqueta ?v=.",
   "components": [
     "SYS-POTENCIALES",
     "SYS-PPP2",
@@ -9,11 +9,12 @@
     "SHEET-PPP2"
   ],
   "tests": [
-    "node --test tests/visor-fotos-nucleo.test.cjs tests/visor-fotos-vertical.test.cjs tests/visor-fotos-macrolotes.test.cjs tests/visor-fotos-residencial.test.cjs tests/visor-fotos-unifamiliar.test.cjs",
-    "node --test tests/ppp2-visor.test.cjs tests/ppp2-servidor.test.cjs tests/ppp2-cache.test.cjs (fotos, liga mixta, propuesta no servida, elección con y sin permiso, idempotencia)",
+    "node --test tests/visor-fotos-completa.test.cjs tests/visor-fotos-nucleo.test.cjs tests/visor-fotos-vertical.test.cjs tests/visor-fotos-macrolotes.test.cjs tests/visor-fotos-residencial.test.cjs tests/visor-fotos-unifamiliar.test.cjs",
+    "node --test tests/ppp2-visor.test.cjs tests/ppp2-visor-pagina.test.cjs tests/ppp2-servidor.test.cjs tests/ppp2-cache.test.cjs (marcas deducido limpias)",
+    "node tests/ppp2-visor-browser.cjs",
     "node --test tests/*.test.cjs",
     "node scripts/versiones.cjs --check",
     "verificar-impacto contra el atlas fijado"
   ],
-  "rollback": "Revertir el PR y volver a publicar la versión anterior de «PPP 2 · servidor» (Gestionar implementaciones, misma implementación): las ligas ppp: dejan de servirse y los planes con libro siguen igual. La pestaña PPP_VISOR y el renglón potenciales_id de Config pueden quedarse: sin el código nuevo nadie los lee."
+  "rollback": "Revertir el PR. Las fotos sin completar siguen sirviéndose igual; si ya se publicó el servidor con deducidoLimpio_, la versión anterior de «PPP 2 · servidor» (misma implementación) simplemente deja de servir las marcas."
 }
