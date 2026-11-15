@@ -249,15 +249,18 @@ function hechos(tipo, r, F, visor) {
       ventas: ing, costoConTierra: x('costoProyecto') === null || aportada === null ? null : x('costoProyecto') + aportada, tierraValor: valor, tierraAportada: aportada,
       tierraEfectivo: x('tierraPago'), capital: x('equityUsed'), linea: x('debtCap'), respaldo: x('fundingGap'), dueno: x('ownerTotal'),
       alianza: x('devDist') === null || x('equityUsed') === null ? null : x('devDist') - x('equityUsed'), inversion: 0,
+      /* El motor no tiene cierre de tierra. La regalía del dueño (modo 1) no es un costo de la tierra en el
+         sentido del visor (ahí la tierra va a su valor): es parte de lo que recibe el dueño, en el reparto. */
       costos: dir === null || ing === null ? null : {
         obra: dir, imprevistos: dir * (imp || 0),
         indirectos: dir * ((num(p.estudios) || 0) + (num(p.licencias) || 0) + (num(p.supervision) || 0)) + ing * ((num(p.legalPct) || 0) + (num(p.adminPct) || 0)),
-        comisiones: ing * ((num(p.comisionPct) || 0) + (num(p.mktPct) || 0)), cierre: modo1 ? (x('regaliaVenta') || 0) : 0
+        comisiones: ing * ((num(p.comisionPct) || 0) + (num(p.mktPct) || 0)), cierre: 0
       },
       regalia: modo1 ? x('regaliaVenta') : null, reconcilia: x('cashReconciliation'), cobranzaTotal: x('revTotal'),
       reparto: { tasa: 0, paga: (x('tierraPago') || 0) > 0, dueno: modo1 ? 0 : num(p.pctDueno), honorarios: 0, modo1 },
       cal: calendarioMacro(r, F)
     });
+    H.sentido = sentidoVisor(tipo, r, H);
   } else if (tipo === 'RESIDENCIAL') {
     const urb = x('urbanizacion');
     Object.assign(H, {
@@ -273,6 +276,7 @@ function hechos(tipo, r, F, visor) {
       reparto: { tasa: 0, honorarios: num(p.honorario), dueno: num(p.pctDueno) },
       cal: calendarioResidencial(r, F)
     });
+    H.sentido = sentidoVisor(tipo, r, H);
   } else if (tipo === 'UNIFAMILIAR') {
     const cajaFin = F.T ? F.caja[F.T - 1] : null;
     Object.assign(H, {
@@ -287,11 +291,62 @@ function hechos(tipo, r, F, visor) {
   return H;
 }
 
+/* ───────────── tierra y ganancia con el sentido del visor (macrolotes y residencial) ───────────── */
+/* En el visor (libro del PPP 2) `v.tierra` es el valor de la tierra del caso, se pague o se aporte, y
+   `v.ganancia` la ganancia real: después de la tierra a su valor, antes de impuestos (`v.margen` = ganancia ÷
+   ventas). Los módulos de macrolotes y residencial traían el sentido del PPP de siempre: la tierra pagada en
+   efectivo y la utilidad del motor, que es ANTES de la tierra que aporta el dueño. Aquí sólo se mapea:
+     · tierra: superficie × valor del m² que trae el motor (la misma cuenta con que el motor arma su tierra en
+       efectivo y el «×» del dueño); en residencial con aportación es su `tierraAportada`.
+     · ganancia: la salida del motor que ya tiene ese sentido, si la hay: su utilidad cuando toda la tierra es
+       costo a su valor (se compra en efectivo y no hay regalía), o en residencial su utilidad repartible cuando
+       repaga al dueño su tierra completa (100 %), sin honorario, sin modo histórico y sin quedarse corta. Si no
+       la hay, queda vacía con su razón (va a `conciliacion.vacios`): mejor vacía que con otro sentido. Aquí
+       nunca se calcula una ganancia. `margen` sigue a la ganancia: sólo el del motor cuando la ganancia es la suya.
+   Devuelve {tierra?, tierraTexto?, ganancia? (null = vacía), gananciaTexto?, margen? (null = vacío), porque};
+   lo que no viene no cambia. */
+function sentidoVisor(tipo, r, H) {
+  const p = r.p || {}, x = k => num(r[k]), out = { porque: {} };
+  const pago = x('tierraPago') || 0, aport = H.tierraAportada || 0, valor = H.tierraValor;
+  if (!(aport > PESO) && !(tipo === 'MACROLOTES' && (H.regalia || 0) > PESO)) return out;   // toda la tierra es costo a su valor: ya tiene el sentido del visor
+  if (aport > PESO && fin(valor)) {
+    out.tierra = valor;
+    out.tierraTexto = (tipo === 'RESIDENCIAL' && pago <= PESO ? 'valor de la tierra del caso: tierraAportada del motor (superficie × valor del m²)' : 'valor de la tierra del caso: superficie × valor del m² que trae el motor')
+      + (pago > PESO ? '; ' + N.r3(pago / valor * 100) + ' % se paga en efectivo en el mes 1 (va en egresos) y el resto lo aporta el dueño' : '; el dueño la aporta, no se paga en efectivo');
+  }
+  const SIN = ' No se calcula aquí: mejor vacía que con otro sentido.';
+  if (tipo === 'RESIDENCIAL') {
+    const completo = !p.interesesSoloDev && Math.abs((num(p.repagoPct) ?? 0) - 1) < 1e-9 && (x('honorarioDev') || 0) <= PESO;
+    const alcanza = fin(x('repagoTierra')) && fin(x('repagoObjetivo')) && x('repagoTierra') >= x('repagoObjetivo') - PESO;
+    if (completo && alcanza && fin(x('utilidadRepartible'))) {
+      out.ganancia = x('utilidadRepartible');
+      out.gananciaTexto = 'utilidad repartible del motor: ya le repagó al dueño su tierra a su valor (100 %) y no hay honorario de desarrollo; es la ganancia después de la tierra';
+      out.margen = null;
+      out.porque['v.margen'] = 'El motor no da su utilidad repartible entre ventas; su margen es el de la utilidad antes de la tierra aportada (otro sentido).' + SIN;
+      return out;
+    }
+    out.ganancia = null;
+    out.porque['v.ganancia'] = completo
+      ? 'La utilidad del motor no alcanza a repagar al dueño su tierra a su valor: el motor deja la utilidad repartible en cero y no da la ganancia después de la tierra (sería negativa).' + SIN
+      : 'Con honorario de desarrollo, modo histórico o repago parcial de la tierra, la utilidad repartible del motor no es la ganancia después de la tierra a su valor, y el motor no la da de otro modo.' + SIN;
+  } else {
+    out.ganancia = null;
+    out.porque['v.ganancia'] = (H.regalia || 0) > PESO
+      ? 'El motor resta la regalía del dueño (un % de cada venta), no la tierra a su valor: no da la ganancia después de la tierra a su valor.' + SIN
+      : 'La utilidad del motor es antes de la tierra que aporta el dueño (él cobra un % de esa utilidad): el motor no da la ganancia después de la tierra a su valor.' + SIN;
+  }
+  out.margen = null;
+  out.porque['v.margen'] = 'Es la ganancia del visor entre ventas; el margen del motor es el de su utilidad (otro sentido) y no da otro.' + SIN;
+  return out;
+}
+
 /* ───────────── la revisión para fondos ───────────── */
 /* rv_resultado con la misma regla del libro. Un texto (p. ej. «sin banco») en una prueba con ISNUMBER no falla;
    un null (no se pudo deducir) no se cuenta como aprobado: se dice cuántas quedaron sin dato. */
 function revision(v) {
-  if (!fin(v.ganancia)) return 'Falta calcular';
+  /* En el libro, «Falta calcular» es «la versión no tiene cifras». Una ganancia vacía a propósito (sin el sentido
+     del visor, ver sentidoVisor) no es eso: si hay resultado a repartir, la versión sí calculó. */
+  if (!fin(v.ganancia) && !fin(v.resultado_repartir)) return 'Falta calcular';
   let fallas = 0, sinDato = 0;
   PRUEBAS.forEach(p => {
     const x = v[p.k];
@@ -318,6 +373,22 @@ function llena(visor, H, F, extra) {
   function poner(ruta, valor) { const [a, b] = ruta.split(/\.(.+)/); if (a === 'v') v[b] = valor; else if (a === 'datos') d[b] = { valor, estado: d[b] ? d[b].estado : null }; else if (a === 'reparto') visor.reparto[b] = valor; else if (a === 'plan') visor.plan[b] = valor; }
   const vacio = ruta => { const x = leer(ruta); return x === null || x === undefined; };
   const M = N.mdp, T = F.T, ult = T ? T - 1 : 0, sinBanco = !(H.linea > 0);
+
+  /* 0 · tierra y ganancia con el sentido del visor (macrolotes y residencial; ver sentidoVisor). Lo que se deja
+     vacío lleva su razón en `sin_llenar` y en `vacios` (que va a la columna `conciliacion`). Va primero: la
+     revisión y lo demás leen ya estas claves. */
+  const vacios = {};
+  const anula = (ruta, porque) => { const antes = leer(ruta); if (antes !== null && antes !== undefined) { poner(ruta, null); corregidos[ruta] = { antes, despues: null }; } sinLlenar[ruta] = porque; vacios[ruta] = porque; };
+  const S = H.sentido;
+  if (S) {
+    if (fin(S.tierra)) {
+      corrige('v.tierra', M(S.tierra), S.tierraTexto);
+      if (H.tipo === 'MACROLOTES') corrige('datos.tierra.valor', M(S.tierra), S.tierraTexto);
+    }
+    if (S.ganancia === null) anula('v.ganancia', S.porque['v.ganancia']);
+    else if (fin(S.ganancia)) corrige('v.ganancia', M(S.ganancia), S.gananciaTexto);
+    if (S.margen === null) anula('v.margen', S.porque['v.margen']);
+  }
 
   /* 0 · encabezado y texto */
   if (vacio('v.huella')) mapea('v.huella', e.huella || null, 'huella_entradas del renglón');
@@ -482,7 +553,7 @@ function llena(visor, H, F, extra) {
   falta('plan.edad', 'La edad (semilla → fruto) sólo existe en el libro del PPP 2.');
   falta('plan.candados_abiertos', 'Los candados sólo existen en el libro del PPP 2.');
   falta('plan.paso_texto', 'El siguiente paso lo calcula el libro del PPP 2 con sus preguntas; el PPP de siempre no lo tiene.');
-  return { marca, sinLlenar, mapeados, corregidos, noAp };
+  return { marca, sinLlenar, mapeados, corregidos, noAp, vacios };
 }
 
 /* El flujo completo, armado otra vez desde las series del motor (las que ya había quedan idénticas, salvo lo
@@ -530,7 +601,7 @@ function flujoCompleto(visor, H, F, marca) {
   if (c) {
     const TEXTO = {
       VERTICAL: { obra: 'hard del motor', indirectos: 'indirect + legal del motor', imprevistos: 'cont del motor', comisiones: 'commission del motor', cierre: 'closing del motor' },
-      MACROLOTES: { obra: 'urbanización + construcción (directo)', indirectos: 'directo × (estudios + licencias + supervisión) + ingresos × (legal + administración)', imprevistos: 'directo × imprevistos', comisiones: 'ingresos × (comisión + marketing)', cierre: H.regalia ? 'regalía al dueño por su tierra: % de cada venta (el motor la resta de la utilidad)' : 'el motor no tiene costo de cierre' },
+      MACROLOTES: { obra: 'urbanización + construcción (directo)', indirectos: 'directo × (estudios + licencias + supervisión) + ingresos × (legal + administración)', imprevistos: 'directo × imprevistos', comisiones: 'ingresos × (comisión + marketing)', cierre: 'el motor no tiene cierre de tierra' + (H.regalia ? ' (la regalía del dueño, un % de cada venta, va en lo que él recibe: el reparto)' : '') },
       RESIDENCIAL: { obra: 'urbanización + casas + casa club', indirectos: 'urbanización × trámites + donación pagada + otros costos', imprevistos: 'urbanización × imprevistos', comisiones: 'costos blandos sobre ingresos: administración + comisiones + marketing (el motor los junta)', cierre: 'el motor no tiene costo de cierre' }
     }[H.tipo] || {};
     Object.keys(TEXTO).forEach(k => {
@@ -683,6 +754,13 @@ function completaFila(fila, ctx) {
   const json = JSON.stringify(visor);
   if (json.length > N.VISOR_MAX) throw new Error('visor_json completado mide ' + json.length + ' caracteres.');
   const out = Object.assign({}, fila, { visor_json: json });
+  /* Lo que se dejó vacío a propósito (ganancia sin el sentido del visor) lleva su razón en la conciliación;
+     la utilidad que se concilia contra el resumen guardado sigue siendo la del motor. */
+  if (Object.keys(ll.vacios).length) {
+    let c = null;
+    try { c = JSON.parse(fila.conciliacion || 'null'); } catch (e) { c = null; }
+    out.conciliacion = JSON.stringify(Object.assign(c && typeof c === 'object' && !Array.isArray(c) ? c : {}, { vacios: ll.vacios }));
+  }
   const despues = cuentaVacios(visor);
   out.aseo = {
     vacios_antes: antes, vacios_despues: despues.filter(k => !noAp[k]), no_aplica: noAp, series_modulo: seriesModulo, totales_modulo: totalesModulo, deducidos: Object.keys(ll.marca).length,

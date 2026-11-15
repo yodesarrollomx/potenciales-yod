@@ -32,7 +32,7 @@ Un renglón por (caso, versión). Columnas, en este orden (`COLUMNAS` del núcle
 | `huella_entradas` | `e1-` y 32 hexadecimales: la huella de las entradas con que se corrió el motor. |
 | `calculado` | `AAAA-MM-DD HH:mm`, hora de Hermosillo (la misma forma que `ahora_()` del servidor). |
 | `origen` | `lote` (el motor corrido en lote), `libro` (copia de un libro nativo) o `guardar` (después). |
-| `conciliacion` | JSON: `{ok, nota?, tolerancia, resumen:{campos…}, flujo:{campos…}}`. `ok` es true, false o null; con null, `nota` = «sin referencia». |
+| `conciliacion` | JSON: `{ok, nota?, tolerancia, resumen:{campos…}, flujo:{campos…}, vacios?}`. `ok` es true, false o null; con null, `nota` = «sin referencia». `vacios` (del paso «completa»): `ruta → razón` de lo que se dejó vacío a propósito porque el motor no lo da con el sentido del visor (p. ej. `v.ganancia`); la utilidad que se concilia sigue siendo la del motor. |
 | `visor_json` | La forma `ppp2-visor-v1` más `origen`. Máximo 50 000 caracteres. |
 
 **Lo escribe un solo agente (P5) y sólo con el visto bueno de Dirección.** Nunca se borra un renglón: una foto nueva de la misma versión va abajo y el servidor toma la más reciente. Si la más reciente quedó `propuesta`, esa versión deja de servirse (aunque haya una `lista` anterior); si era la elegida, el caso no se sirve por `ppp:<caso_id>` hasta que Dirección elija otra. `calculado` se escribe como texto. Si Sheets lo convierte en fecha, el servidor lo devuelve a la misma forma.
@@ -136,7 +136,7 @@ En pesos del motor; el visor recibe MDP, fracciones y meses (base 1), como siemp
 | `flujo.disposicion`, `flujo.pago_banco` | Δdeuda = interés capitalizado + desembolso + comisión − pago (identidad del motor). La disposición es lo que crece la deuda en el mes; así lo que entra y sale del banco cuadra con la caja |
 | `flujo.respaldo`, `flujo.pago_respaldo`, `flujo.saldo_respaldo` | Δcaja − Δdeuda − (cobranza − costo − interés − comisión + capital): cuando falta es respaldo, cuando sobra se cura |
 | `flujo.cap_acum`, `flujo.saldo_capital`, `flujo.flujo_acum`, `flujo.ajeno`, `flujo.apertura` | acumulados y la comisión del motor mes a mes |
-| `flujo.total.obra … cierre` | el desglose de costos del motor en totales (sin serie mensual), para que el cuadro 4 sume las ventas |
+| `flujo.total.obra … cierre` | el desglose de costos del motor en totales (sin serie mensual), para el cuadro 4. Macrolotes no tiene cierre de tierra (0): su regalía al dueño no es costo de la tierra, va en lo que él recibe |
 | `productos.*.ventas`, `precio_unidad`, `precio_m2` | vertical: ventas de vivienda × m² de la tipología ÷ m² de vivienda (el motor cobra el mismo $/m² a todas); promedio = ventas ÷ unidades o ÷ m² |
 | `v.que_cambia` | las entradas que cambian contra la versión anterior, con el nombre de su deslizante |
 
@@ -146,9 +146,15 @@ Antes de entregar, cada serie deducida se compara con los totales del propio mot
 
 Pocas cosas, anotadas en `deducido` como «corregido: …» y listadas en `aseo.corregidos`: `v.resultado_repartir` (no lleva el capital adentro ni resta ya la tierra), `v.banco_mes` (es el mes en que se liquida, no el del saldo máximo), `v.alianza_recibe` en macrolotes y residencial (sin su capital, que el visor ya pinta aparte), `v.respaldo` (el máximo pendiente, no sólo el del cierre), `v.rv_falta` (la suma) y `flujo.disposicion` del libro vertical (con la comisión y el interés capitalizado). Lo demás que ya traía la foto queda igual.
 
+**Tierra y ganancia con el sentido del visor (macrolotes y residencial).** En el visor, `v.tierra` es el valor de la tierra del caso, se pague o se aporte, y `v.ganancia` es la ganancia real después de la tierra a su valor (`v.margen` = ganancia ÷ ventas). Los módulos de esos dos motores traían el sentido del PPP de siempre (la tierra pagada en efectivo y la utilidad del motor, que es antes de la tierra que aporta el dueño). `sentidoVisor` sólo mapea, sin fórmula financiera nueva:
+
+- `v.tierra` (y en macrolotes también `datos.tierra.valor`) = superficie × valor del m² que trae el motor; en residencial con aportación es su `tierraAportada`. La marca dice qué parte se paga en efectivo en el mes 1 (va en egresos) y qué parte aporta el dueño. Si toda la tierra se compra en efectivo, `v.tierra` ya era su valor y no cambia.
+- `v.ganancia` = la utilidad del motor sólo cuando toda la tierra es costo a su valor (se compra en efectivo y no hay regalía); en residencial con aportación, su utilidad repartible cuando repaga al dueño la tierra completa (100 %), sin honorario, sin modo histórico y sin quedarse corta. Si no, **queda vacía** con su razón en `aseo.sin_llenar` y en `conciliacion.vacios`: mejor vacía que con otro sentido. `v.margen` sólo queda cuando la ganancia es la utilidad del motor.
+- Una ganancia vacía a propósito no vuelve «Falta calcular» la revisión para fondos: si hay resultado a repartir, la versión sí calculó.
+
 ### Lo que no se llena sin un supuesto
 
-Queda en `aseo.sin_llenar`, con el supuesto que haría falta: `v.fecha_aprobacion` (el PPP de siempre no aprueba versiones), `datos.din.tiie` y `din.sobretasa` (el motor sólo trae una tasa total), `datos.din.caja_pct` (el motor barre la caja a cero cada mes), `datos.din.preventa_minima` (fuera del vertical), un enganche único cuando cada producto cobra distinto, la comisión pura cuando el motor la junta con administración, `plan.edad`, `plan.candados_abiertos` y `plan.paso_texto` (sólo existen en el libro del PPP 2), `plan.ubicacion` si el renglón no la trae, y el calendario de firmas de un libro que escalona por edificio. Lo que el libro también deja en blanco (sin banco, sin respaldo) va en `aseo.no_aplica` y no cuenta como hueco.
+Queda en `aseo.sin_llenar`, con el supuesto que haría falta: `v.fecha_aprobacion` (el PPP de siempre no aprueba versiones), `datos.din.tiie` y `din.sobretasa` (el motor sólo trae una tasa total), `datos.din.caja_pct` (el motor barre la caja a cero cada mes), `datos.din.preventa_minima` (fuera del vertical), un enganche único cuando cada producto cobra distinto, la comisión pura cuando el motor la junta con administración, `plan.edad`, `plan.candados_abiertos` y `plan.paso_texto` (sólo existen en el libro del PPP 2), `plan.ubicacion` si el renglón no la trae, el calendario de firmas de un libro que escalona por edificio, y `v.ganancia` / `v.margen` cuando el motor no los da con el sentido del visor (arriba). Lo que el libro también deja en blanco (sin banco, sin respaldo) va en `aseo.no_aplica` y no cuenta como hueco.
 
 **Caja mínima:** los cinco motores del PPP de siempre usan cada peso en cuanto entra; por eso la regla de Dirección «la caja nunca baja de 5 % del costo de obra» no se puede cumplir moviendo entradas: hace falta una entrada nueva de caja mínima en el motor.
 

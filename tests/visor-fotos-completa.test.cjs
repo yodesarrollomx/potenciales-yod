@@ -81,6 +81,7 @@ test('revision(): los textos con ISNUMBER no fallan, lo vacío se cuenta como «
   assert.equal(C.revision(Object.assign({}, ok, { rv_preventa: null, rv_margen: 0 })), 'No pasa: 1 de 9 pruebas (1 sin dato)');
   assert.equal(C.revision(Object.assign({}, ok, { rv_aportacion: 'sin banco' })), 'Sin dato en 1 de 9 pruebas', 'sin ISNUMBER un texto no aprueba');
   assert.equal(C.revision(Object.assign({}, ok, { ganancia: null })), 'Falta calcular');
+  assert.equal(C.revision(Object.assign({}, ok, { ganancia: null, resultado_repartir: 5 })), 'Pasa (aportación justa)', 'una ganancia vacía a propósito no es «falta calcular»');
 });
 
 /* ── cada motor: llena, marca, no cambia lo que ya había y no inventa ceros ── */
@@ -95,8 +96,12 @@ function revisaCaso(caso) {
     assert.deepEqual(C.validaCompleta(b), [], f.escenario_nombre);
     assert.ok(f.aseo.vacios_despues.length < f.aseo.vacios_antes.length, 'llena huecos');
     assert.doesNotMatch(f.visor_json, /NaN|Infinity/);
-    /* lo que el módulo ya había puesto no cambia, salvo lo corregido (anotado) */
-    Object.keys(a.v).forEach(k => { if (a.v[k] !== null && k !== 'nombre') assert.ok(a.v[k] === b.v[k] || marcas['v.' + k], 'v.' + k + ' cambió sin marca'); });
+    /* lo que el módulo ya había puesto no cambia, salvo lo corregido (anotado) o lo que se deja vacío con su razón */
+    Object.keys(a.v).forEach(k => {
+      if (a.v[k] === null || k === 'nombre' || a.v[k] === b.v[k]) return;
+      if (b.v[k] === null) assert.ok(f.aseo.sin_llenar['v.' + k] && JSON.parse(f.conciliacion).vacios['v.' + k], 'v.' + k + ' quedó vacía sin razón');
+      else assert.ok(marcas['v.' + k], 'v.' + k + ' cambió sin marca');
+    });
     Object.keys(a.flujo.filas).forEach(k => assert.ok(b.flujo.filas[k], 'se perdió la serie ' + k));
     /* todo lo que se llenó trae su marca o viene del motor; en especial los ceros */
     f.aseo.vacios_antes.forEach(ruta => {
@@ -118,8 +123,18 @@ function revisaCaso(caso) {
 test('macrolotes: llena, marca y deja que el reparto sume (la alianza sin contar dos veces su capital)', () => {
   const r = revisaCaso(MACRO);
   r.fotos.forEach(f => {
-    const b = vis(f), c = f.aseo.criterios;
-    assert.equal(b.v.capital, N.mdp(C.resultado('MACROLOTES', require('../scripts/visor-fotos/macrolotes.cjs'), MACRO, N.versionesDeRenglon(MACRO.renglon)[f.orden - 1], motor('MACROLOTES')).r.equityUsed));
+    const b = vis(f), c = f.aseo.criterios, res = C.resultado('MACROLOTES', require('../scripts/visor-fotos/macrolotes.cjs'), MACRO, N.versionesDeRenglon(MACRO.renglon)[f.orden - 1], motor('MACROLOTES')).r;
+    assert.equal(b.v.capital, N.mdp(res.equityUsed));
+    /* con aportación: la tierra es su valor (superficie × valor del m²) y la ganancia del motor no tiene el sentido del visor */
+    assert.equal(res.tierraPago, 0);
+    assert.equal(b.v.tierra, N.mdp(res.superficie * res.p.valorTierraM2));
+    assert.equal(b.datos['tierra.valor'].valor, b.v.tierra);
+    assert.match(b.deducido['v.tierra'], /valor de la tierra del caso.*aporta/);
+    assert.equal(b.v.ganancia, null);
+    assert.equal(b.v.margen, null);
+    assert.match(JSON.parse(f.conciliacion).vacios['v.ganancia'], /antes de la tierra que aporta el dueño/);
+    assert.equal(b.flujo.total.cierre, 0, 'el motor no tiene cierre de tierra');
+    assert.doesNotMatch(b.v.rv_resultado, /Falta calcular/, 'una ganancia vacía a propósito no es «falta calcular»');
     assert.ok(b.deducido['v.alianza_recibe'] || b.v.alianza_recibe !== null);
     assert.equal(c.reparto_suma, true);
     assert.ok(Array.isArray(b.flujo.filas.firmas) && Math.abs(b.v.ck_unidades) < 0.001, 'se firman todas las unidades');
@@ -130,6 +145,21 @@ test('macrolotes: llena, marca y deja que el reparto sume (la alianza sin contar
 
 test('residencial: resultado a repartir, banco y reparto con las definiciones del libro', () => {
   const r = revisaCaso(RES), f = r.fotos[0], b = vis(f);
+  const res = C.resultado('RESIDENCIAL', require('../scripts/visor-fotos/residencial.cjs'), RES, N.versionesDeRenglon(RES.renglon)[0], motor('RESIDENCIAL')).r;
+  /* tierra = la que aporta el dueño, a su valor; ganancia = la utilidad repartible del motor (ya repagó la tierra completa) */
+  assert.equal(b.v.tierra, N.mdp(res.tierraAportada));
+  assert.ok(res.repagoTierra >= res.repagoObjetivo - 1 && res.honorarioDev === 0, 'el caso inventado repaga completa su tierra');
+  assert.equal(b.v.ganancia, N.mdp(res.utilidadRepartible));
+  assert.match(b.deducido['v.ganancia'], /utilidad repartible del motor/);
+  assert.equal(b.v.margen, null);
+  assert.ok(JSON.parse(f.conciliacion).vacios['v.margen']);
+  /* si la utilidad no alcanza a repagar la tierra, la ganancia queda vacía con su razón */
+  const CORTO = Object.assign({}, RES, { renglon: Object.assign({}, RES.renglon, { inValorTierraM2: 4000 }) });
+  const corto = completa(CORTO).fotos[0], rc = C.resultado('RESIDENCIAL', require('../scripts/visor-fotos/residencial.cjs'), CORTO, N.versionesDeRenglon(CORTO.renglon)[0], motor('RESIDENCIAL')).r;
+  assert.ok(rc.repagoTierra < rc.repagoObjetivo - 1, 'el caso inventado no alcanza a repagar su tierra');
+  assert.equal(vis(corto).v.ganancia, null);
+  assert.match(JSON.parse(corto.conciliacion).vacios['v.ganancia'], /no alcanza/);
+  assert.equal(vis(corto).v.tierra, N.mdp(rc.tierraAportada));
   assert.equal(b.v.dueno_veces, N.r6(f.aseo.criterios.dueno_veces));
   assert.equal(b.reparto.parte_alianza, N.r6(1 - b.reparto.parte_dueno));
   assert.equal(b.v.rend_capital, 0);
@@ -172,11 +202,18 @@ test('el dueño: con la tierra en efectivo cobra en el mes 1 (y «en años» dic
   assert.equal(casa.v.dueno_meses, 1);
   assert.equal(casa.v.dueno_anos, N.r3(1 / 12), 'años = dueno_meses ÷ 12, no el mes de reparto');
   const vende = { tipo: 'MACROLOTES', renglon: Object.assign({ caso_id: 'caso-de-prueba', nombre_caso: 'Caso de prueba', version: 1, escenarios_json: '' }, MACRO_BASE, { inAporteTierra: 0, inPctDueno: 20 }) };
-  const b = vis(completa(vende).fotos[0]);
+  const fv = completa(vende).fotos[0], b = vis(fv);
+  const res = C.resultado('MACROLOTES', require('../scripts/visor-fotos/macrolotes.cjs'), vende, N.versionesDeRenglon(vende.renglon)[0], motor('MACROLOTES')).r;
   assert.equal(b.v.dueno_aporta, 0);
   assert.ok(b.v.dueno_recibe > b.v.tierra + 0.001, 'cobra la tierra y una parte de la utilidad');
   assert.equal(b.v.dueno_meses, b.v.mes_reparto);
   assert.equal(b.v.dueno_anos, N.r3(b.v.mes_reparto / 12));
+  /* la tierra se compra en efectivo: ya es su valor y la utilidad del motor ya es después de la tierra; no cambian */
+  assert.equal(b.v.tierra, N.mdp(res.tierraPago));
+  assert.equal(b.v.ganancia, N.mdp(res.utilidadFinal));
+  assert.equal(b.v.margen, N.r6(res.margenFinal));
+  assert.equal(b.deducido['v.tierra'], undefined);
+  assert.equal(JSON.parse(fv.conciliacion).vacios, undefined);
 });
 
 /* ── la propuesta de reestructura ── */
