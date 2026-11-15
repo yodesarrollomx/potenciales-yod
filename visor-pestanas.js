@@ -479,7 +479,7 @@
       return '<section class="vzp-op-grupo" aria-labelledby="vzpOG' + i + '"><h3 class="vzp-sec-tit" id="vzpOG' + i + '">' + esc(et) + (conM2 ? ' <em>' + esc(ent(conM2.terreno)) + ' m²</em>' : '') + '</h3>' +
         '<ul class="vzp-ops">' + os.map(function (o) { return tarjeta(o, 'grupo'); }).join('') + '</ul></section>';
     }).join('') : '<ul class="vzp-ops">' + lista.map(function (o) { return tarjeta(o, planes.length > 1 || !varias ? 'plan' : 'version'); }).join('') + '</ul>';
-    return cuerpo +
+    return '<p class="vzp-nota vzp-unidades">Cifras en millones de pesos, como en el plan.</p>' + cuerpo +
       (varias ? '<a class="vzp-comparar" href="visor-comparar.html#l=' + encodeURIComponent(op.liga || '') + '">' + ico('comparar') + '<span><b>Comparar las ' + lista.length + ' opciones lado a lado</b><small>Factor por factor; se puede guardar en PDF</small></span>' + ico('flecha', 'vzp-ic-chico') + '</a>'
         : '<p class="vzp-nota vzp-una">Esta liga trae una sola opción del plan. Si se agregan otros terrenos o versiones, aquí podrás cambiar entre ellas y compararlas lado a lado.</p>');
   }

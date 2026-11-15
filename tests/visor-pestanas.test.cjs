@@ -169,6 +169,7 @@ test('Opciones: cada opción con tres cifras que el servidor ya dio, la vigente 
   assert.equal(una.terreno, d.datos['terreno.m2'].valor);
   const sola = P.opcionesHtml([Object.assign(una, { listo: true })], { plan: d.menu.plan, version: d.version, liga: LIGA }), ts = texto(sola);
   assert.match(ts, /Esta liga trae una sola opción del plan/);
+  assert.match(ts, /Cifras en millones de pesos/, 'quien entra directo a Opciones sabe en qué unidad van las cifras');
   assert.doesNotMatch(sola, /visor-comparar/, 'con una sola opción no hay nada que comparar');
   assert.match(sola, /viendo ahora/);
   const mdp = (x) => (x < 0 ? '−' : '') + '$' + Math.abs(x).toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g, ',');

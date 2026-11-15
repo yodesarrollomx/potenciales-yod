@@ -195,6 +195,7 @@ div.vzp-vers-b { cursor: default; }
 .vzp-comparar .vzp-ic { width: 24px; height: 24px; color: #e6cf98; }
 .vzp-comparar .vzp-ic-chico { width: 17px; height: 17px; }
 .vzp-una { margin-top: 14px; }
+.vzp-unidades { margin: 0 2px 12px; font-size: 13px; }
 @media (min-width: 700px) { .vzp-ops { grid-template-columns: repeat(2, minmax(0, 1fr)); } .vzp-ops > li:only-child { grid-column: 1 / -1; } }
 
 /* ── las hojas que suben desde abajo ── */
