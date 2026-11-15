@@ -466,6 +466,147 @@ cuántas veces se abrió y se apaga o se vuelve a encender. Es `POST tipo=ppp2-l
 `apagar` o `activar`): escribe sólo en la hoja `Ligas` del vivero (la crea, con `Aperturas`, la primera
 vez), deja renglón en la bitácora del vivero sin copiar la liga completa y **no toca ningún libro**.
 
+### Pestañas del visor: historial, archivos y opciones (15-nov-2026)
+
+Dirección pidió cuatro pestañas abajo del visor: **Plan · Historial · Archivos · Opciones**. Plan son los
+siete cuadros de siempre (`ppp2-visor`). **Opciones** no necesita nada nuevo del servidor: usa lo que ya trae
+`ppp2-visor` (`menu.planes`, `versiones` y, para Dirección, `elige`) y el comparativo
+`visor-comparar.html#l=<liga>` (ver «Opciones y comparativo», abajo). **Historial** y **Archivos** tienen
+cuatro recursos de sólo lectura en
+`server/ppp2/Visor.gs` («pestañas del visor»), con la misma puerta que `ppp2-visor`: liga viva y `plan` dentro
+de la liga (sin `plan`, el primero), o la sesión del Portero con `plan` (la ficha). Errores: `liga`, `plan` e
+`interno` (con sesión, los del canje, como en `ppp2-visor`). Un servidor anterior contesta a estos recursos
+`sin_sesion` o `recurso`, y la página enseña un estado digno.
+
+**Quién ve qué: la columna `audiencia` de la liga** (hoja `Ligas`):
+
+| `audiencia` | Historial | Archivos |
+|---|---|---|
+| `equipo` (la alianza y sus brokers) | todo: eventos, la conversación del grupo, pendientes abiertos y versiones | todo el expediente: la carpeta de cada proyecto del plan, con sus subcarpetas |
+| en blanco, `externo` o cualquier otra cosa | sólo los eventos con `para_externos` = sí; nunca la conversación, eventos de WhatsApp o de pendiente, pendientes, decisiones, ni la fuente o la liga de un evento; versiones, sí | sólo lo que cuelga de una subcarpeta «Para compartir» (también «00 Para compartir») que esté justo abajo de la carpeta del proyecto |
+
+Con la sesión del Portero (la ficha del plan) se ve como `equipo`. Lo marcado `visibilidad` = `solo_direccion`
+(eventos y pendientes) **no sale nunca**, en ningún visor, ni los pendientes que nacieron de un evento así (su
+`evento_id`), aunque ellos digan otra cosa; un mensaje con `visible` = `no`, tampoco.
+
+**Carpetas privadas (la válvula de Dirección):** lo que esté dentro de una subcarpeta del expediente cuyo nombre
+contenga «restringido/a» o «solo dirección», o que se llame o termine en «privado/a» (sin importar mayúsculas,
+acentos, guiones ni el número del frente: «Privado», «07 Información PRIVADA», «Documentos privados»,
+«Sólo_Dirección», «Restringidos»), a cualquier profundidad —también dentro de «Para compartir»—, **no sale en
+Archivos ni se entrega a nadie**: ni al externo, ni al equipo, ni con la sesión de la ficha (`PESTANAS.PRIVADA`). Un
+archivo así tampoco sale como archivo de un evento ni como adjunto que se pueda abrir. Sólo cuentan las subcarpetas
+de la del proyecto: si la carpeta del proyecto vive dentro de una que se llama «Privado», eso no esconde el
+expediente. «Privada» al principio del nombre no cuenta, porque nombra desarrollos («Privada Residencial…»): esa
+subcarpeta sí se ve.
+
+**Los recursos** (todos por GET):
+
+1. `?recurso=ppp2-historial&liga=…&plan=…[&si=llave]` → `{ ok, llave, audiencia, proyectos:[{id, nombre}],
+   dias:[{fecha, items:[{tipo, hora, titulo, resumen, fuente, url?, archivos:[{id, nombre, tipo}]}], chat}],
+   pendientes:[{tarea, responsable, compromiso, estado}], versiones:[{v, nombre, fecha, estado}] }`. Con `si`
+   igual a la llave: `{ ok, igual: true, llave }`.
+   - **Los días.** Un día entra si ese día hubo algo del plan: un evento de sus proyectos que esa audiencia
+     puede ver, un mensaje etiquetado con uno de sus proyectos o una versión con fecha. Su `chat` cuenta los
+     mensajes visibles de ese día: los del plan y los generales de la alianza (`proyectos` vacío); un día con
+     sólo mensajes generales no entra. Más reciente primero, hasta 365 días y 60 eventos por día, por hora (sin
+     hora, al final). Fecha y hora se leen del texto (`AAAA-MM-DD` o `D/M/AAAA`, `HH:MM`) o, si la celda guarda
+     una fecha de Sheets, de su valor; una fecha mal escrita o más allá de hoy + 400 días no cuenta.
+   - **`tipo`** sale de la columna `tipo` de `Eventos` (la pestaña `Tipos`): `reunion_agendada` → `cita`; uno
+     que lleve «whatsapp» escrito como sea («WhatsApp grupo») → `whatsapp` (así un externo nunca lo ve); uno
+     desconocido → `documento`. Los demás de la lista del contrato pasan igual.
+   - **Un evento** lleva `resumen` (para el equipo, con «Decisiones: …» al final si hay), `fuente` (sólo para el
+     equipo) y `url` sólo para el equipo, si es `https`, no es de un espacio privado (documentos, carpetas o
+     reuniones de Google, chats con asistentes, WhatsApp) y no lleva una liga, sesión o clave. Los documentos de
+     Drive de su columna `archivos` o de `fuente_url` salen en `archivos` sólo si están en una carpeta
+     permitida para esa audiencia (y entonces se abren con `ppp2-archivo`).
+   - **`pendientes`**: los de los proyectos del plan con estado distinto de `hecho`, por `fecha_compromiso`
+     (`compromiso`; sin fecha, al final).
+   - **`versiones`**: de un plan con libro, las que la liga deja ver (la misma regla del visor), con
+     `fecha` = su aprobación (`v{n}.fecha_aprobacion`) y su estado; de una foto del PPP de siempre, sólo la
+     versión servida, con la fecha en que se calculó (`calculado`) y `vigente` si es la elegida. Cada versión
+     con fecha es además un evento `version` de ese día.
+2. `?recurso=ppp2-chat&liga=…&plan=…&dia=AAAA-MM-DD` → `{ ok, dia, mensajes:[{hora, quien, texto,
+   adjuntos:[{nombre, id?}]}] }`. Sólo audiencia `equipo` (si no, `plan`). Los mensajes del plan y los generales
+   de ese día, por hora. Un adjunto lleva `id` sólo si el archivo está en una carpeta permitida.
+3. `?recurso=ppp2-archivos&liga=…&plan=…` → `{ ok, grupos:[{nombre, archivos:[{id, nombre, fecha, tipo,
+   tamano, vista}]}] }`, y `incompleta: true` si no alcanzó a recorrer todo (más de 600 archivos, 200 carpetas,
+   8 niveles o 20 s).
+   - `tipo` es el tipo MIME (los de Google conservan el suyo); `tamano`, bytes (`null` en los de Google);
+     `fecha`, la última modificación (`AAAA-MM-DD HH:mm`); `vista`: `pdf` (PDF, y Docs, Hojas, Presentaciones y
+     Dibujos de Google, que se entregan como PDF), `imagen` (PNG, JPG, GIF, WebP), `descarga` o `no` (pasa de
+     40 MB, o es de Google y no se exporta, como un formulario).
+   - Grupos, en este orden: Presentaciones · Propuestas · Modelos financieros · Terreno y polígonos ·
+     Reuniones y minutas · Estudios y oficios · Otros (los vacíos no salen). Cada archivo va al grupo de la
+     primera de sus carpetas —de arriba abajo— cuyo nombre lleve una de estas raíces y, si ninguna (un archivo
+     suelto, o uno de «Para compartir»), al de su propio nombre; lo demás, a Otros. Sin mayúsculas ni acentos y
+     sin importar el número del frente; se prueban en este orden (`PESTANAS.CLASES`):
+     `present` → Presentaciones; `propuest`, `cotiz` → Propuestas; `modelo`, `financ`, `flujo`, `corrida`, `ppp` →
+     Modelos financieros; `terreno`, `poligon`, `legal`, `escritur`, `predio`, `kmz`, `plano` → Terreno y
+     polígonos; `minuta`, `reuni`, `acuerdo`, `transcrip` → Reuniones y minutas; `estudio`, `mercado`, `referenc`,
+     `oficio`, `dictamen`, `factib` → Estudios y oficios. Así, las subcarpetas de un expediente («01 Terreno y
+     legales», «02 Mercado y referencias», «03 Modelo financiero», «04 Presentaciones», «05 Minutas y
+     acuerdos», «06 Propuestas») caen cada una en su grupo. Dentro de cada grupo, lo más reciente primero.
+4. `?recurso=ppp2-archivo&liga=…&plan=…&id=…&parte=n` → `{ ok, nombre, tipo, partes, parte, datos }`, con
+   `datos` en base64 de hasta 3 MB. **Las partes se cuentan desde 0** (`0 … partes − 1`; sin `parte`, la 0). Los
+   de Google se exportan a PDF en cada pedido (`tipo` = `application/pdf`, `nombre` con `.pdf`); lo demás —también
+   Word, Excel o PowerPoint— se entrega tal cual, con su tipo, salvo lo que un navegador ejecuta (HTML, SVG,
+   XML, scripts o un tipo desconocido): esos bytes salen con `tipo` = `application/octet-stream`
+   (`PESTANAS.PASIVO`). Errores: `plan`
+   (id mal formado, que no existe, carpeta, atajo, en la papelera, fuera de las carpetas permitidas, el libro de
+   un plan u otra hoja del sistema, o una parte que no existe), `grande` (más de 40 MB, o Google no lo pudo
+   exportar) e `interno`. Cada parte se lee en su propio pedido (no hay caché de bytes): si el archivo cambia
+   entre una parte y otra, las partes ya no casan.
+
+**Cómo se protege un archivo:**
+
+- Cada parámetro se valida con una expresión estricta: ids de Drive (`[A-Za-z0-9_-]{20,80}`), `plan` (las
+  mismas formas que el registro y las fotos), `dia` (una fecha real `AAAA-MM-DD`) y `parte` (0 a 99, sin ceros
+  a la izquierda). Uno mal formado no se busca.
+- Un archivo se entrega sólo si su cadena de carpetas sube —en vivo, en cada pedido, hasta 20 niveles— a la
+  carpeta (`carpeta`) de un proyecto **de ese plan**; para un externo, la carpeta de justo abajo debe ser
+  «Para compartir». Una cadena que pasa por una carpeta privada (ver «Carpetas privadas», arriba) entre el archivo
+  y la del proyecto no cuenta, para ninguna audiencia. La lista guardada no autoriza nada: un archivo que se saca
+  de la carpeta, o que se mete a una privada, deja de entregarse en ese momento.
+- Los atajos no se siguen ni se entregan: un atajo dentro de «Para compartir» no abre lo que apunta (se revisa
+  la cadena real del archivo pedido). Lo que está en la papelera, tampoco.
+- Nunca salen el libro de ningún plan (`Planes!libro_id`), el vivero, la hoja de historial, el libro de las
+  fotos ni la plantilla, aunque estén en una carpeta de proyecto (así se cumple «ni el identificador ni la
+  dirección del libro» también aquí).
+- Drive sólo se lee, con los permisos del dueño del script: **no se cambia ningún permiso ni se hace nada
+  público**. Una parte de un archivo de más de 3 MB se lee con la API de Drive por rango (GET con la credencial
+  del dueño), sin cargar el archivo entero.
+- Un HTML, SVG o XML del expediente (lo puede subir cualquiera que edite la carpeta) nunca sale con su tipo:
+  sale como `application/octet-stream`, para que la página no lo abra como página en su propio origen, donde
+  vive la sesión del Portero. La pantalla enseña dentro de la página sólo `vista` = `pdf` o `imagen`; lo demás
+  lo descarga.
+- La lista guardada se vuelve a filtrar en cada pedido contra los libros y hojas del sistema: un libro que se
+  registra después de armada la lista deja de aparecer en ese momento.
+
+**Caché:** el historial y la conversación de un día, cinco minutos (la llave del historial es la huella de lo
+leído: preguntar con `si` no vuelve a leer nada); la lista de las carpetas, cinco minutos (la usa también el
+historial para saber qué adjuntos se pueden abrir); la última modificación de la hoja de historial se comparte
+cinco segundos. Los bytes de un archivo **nunca** se guardan. Nada de esto calcula cifras.
+
+**Antes de publicar, en las hojas** (nada de esto va al repo; detalle en `server/ppp2/INSTALAR.md`):
+
+- `Config` del vivero: renglón `historial_id` con el id de la hoja de historial.
+- `Ligas`: columna `audiencia` (`equipo` o `externo`; en blanco = `externo`). Puede ir en cualquier lugar: el
+  servidor la lee por encabezado y «Compartir visor» escribe cada dato en su columna (la nueva queda en blanco).
+- Hoja de historial, `Proyectos`: columnas `planes` (CSV de `plan_id`: `p2…` o `ppp:<caso>[:<esc>]`; una foto
+  casa con cualquier versión del mismo caso) y `carpeta` (el id o la dirección de la carpeta del expediente).
+- `Eventos`: columnas `archivos` (CSV de ids o direcciones de Drive) y `para_externos` (`sí` o vacío).
+- Pestaña nueva `Chat`: `id | fecha | hora | quien | texto | adjuntos | adjuntos_ids | proyectos | visible |
+  origen`, un renglón por mensaje (`adjuntos` separados por coma, en el mismo orden que `adjuntos_ids`).
+- En Drive, dentro de cada carpeta de expediente, una subcarpeta «Para compartir» con lo que puede ver un
+  dueño de terreno y, si hace falta, una «Privado» (o «Restringido», «Solo dirección») con lo que nadie debe ver
+  desde el visor. La cuenta que ejecuta el servidor debe poder abrir las carpetas; no hace falta compartirlas
+  con nadie.
+
+Pruebas: `node --test tests/ppp2-pestanas.test.cjs` (historial por audiencia, `solo_direccion`, conversación
+oculta, proyecto sin carpeta, archivo fuera de la carpeta, «Para compartir», carpetas privadas, atajos, ciclos,
+varios padres, partes y límites, tipos que un navegador ejecuta, ids mal formados, liga apagada, caché sin bytes
+y que `ppp2-visor` responde igual).
+
 ### Fotos de casos del PPP de siempre (15-nov-2026)
 
 El mismo visor enseña también casos del PPP de siempre (PPP 1), **sin calcular nada y sin abrir sus

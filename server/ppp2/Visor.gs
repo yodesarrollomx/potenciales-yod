@@ -23,6 +23,8 @@
  *  - Una liga (o la ficha) también puede pedir la FOTO de un caso del PPP de siempre: `ppp:<caso_id>` o
  *    `ppp:<caso_id>:<escenario_id>` (pestaña PPP_VISOR, ver «fotos del PPP 1»). Se sirve su visor_json tal
  *    cual; la llave es su huella_entradas + calculado. Dirección escoge cuál versión es «la buena» (ppp2-elige).
+ *  - Las pestañas del visor (Historial y Archivos) tienen sus propios recursos de sólo lectura, con la misma
+ *    puerta: ppp2-historial, ppp2-chat, ppp2-archivos y ppp2-archivo (ver «pestañas del visor», al final).
  */
 var VISOR = {
   ESQUEMA: 'ppp2-visor-v1',
@@ -151,7 +153,13 @@ function liga_(s, b, rid) {
     var liga = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '').slice(0, 40);
     h = hojaVisor_('Ligas', VISOR.LIGAS_CAB);            // las hojas nacen con la primera liga
     hojaVisor_('Aperturas', VISOR.APERTURAS_CAB);
-    h.appendRow(fila_([liga, ids.join(','), txt_(b.para, 80), 'activa', vence, regla, ids.length > 1 ? etiquetas.join('|') : '', hoyISO_(), txt_(b.nota, 200)]));
+    // Por encabezado: una columna agregada a mano (p. ej. `audiencia`, en cualquier lugar) queda en blanco y no
+    // recorre las demás. Si a la hoja le falta alguna de las de siempre, se escribe en el orden de siempre.
+    var valores = { liga: liga, plan_id: ids.join(','), para: txt_(b.para, 80), estado: 'activa', vence: vence, versiones: regla,
+      etiquetas: ids.length > 1 ? etiquetas.join('|') : '', creada: hoyISO_(), nota: txt_(b.nota, 200) };
+    var cabL = h.getRange(1, 1, 1, Math.max(1, h.getLastColumn())).getValues()[0].map(low_);
+    if (VISOR.LIGAS_CAB.some(function (c) { return cabL.indexOf(c) < 0; })) cabL = VISOR.LIGAS_CAB;
+    h.appendRow(fila_(cabL.map(function (c) { return Object.prototype.hasOwnProperty.call(valores, c) ? valores[c] : ''; })));
     cache.remove('ligas');
     bitacoraVivero_(s, 'liga-crear', p.plan_id, 'para ' + (txt_(b.para, 80) || '—') + ' · ' + liga.slice(0, 6) + '…' + (ids.length > 1 ? ' · ' + ids.length + ' planes' : ''), rid);
     return { ok: true, liga: liga, ligas: ligasDe_(p.plan_id) };
@@ -536,4 +544,587 @@ function visor_get_(q) {
     if (sd && sd.ok && puede_(sd, 'aprobar')) out.elige = eligeDe_(p);
   }
   return out;
+}
+
+/* ───────────────────────── pestañas del visor: historial y archivos ─────────────────────────
+   Cuatro recursos de sólo lectura, con la misma puerta que ppp2-visor (liga viva y plan dentro de la liga, o la
+   sesión del Portero con `plan`, como la ficha):
+     ppp2-historial  línea de tiempo por días (eventos, conversación del grupo, versiones) y pendientes abiertos
+     ppp2-chat       la conversación de un día (sólo audiencia `equipo`)
+     ppp2-archivos   los archivos de las carpetas de los proyectos del plan, por grupos
+     ppp2-archivo    un archivo, en partes de hasta 3 MB en base64 (Docs, Hojas, Presentaciones y Dibujos de
+                     Google, exportados a PDF)
+   De dónde sale: la hoja de historial (su id llega por el renglón `historial_id` de Config; nunca va en el repo):
+   pestañas Proyectos (proyecto_id, nombre, planes, carpeta), Eventos, Pendientes y Chat; y las carpetas de Drive de
+   cada proyecto del plan (`carpeta`).
+   Quién ve qué: la columna `audiencia` de la liga. `equipo` ve todo el historial (también la conversación del grupo
+   y los pendientes) y todos los archivos del expediente. En blanco —o cualquier otra cosa— es `externo`: sólo los
+   eventos marcados `para_externos`, nunca la conversación, eventos de WhatsApp ni pendientes, ni la fuente interna
+   de un evento; y en Archivos sólo lo que cuelga de una subcarpeta «Para compartir» de la carpeta del proyecto. Lo
+   marcado `solo_direccion` no sale nunca, para nadie. Con sesión del Portero (la ficha del plan) se ve como `equipo`.
+   Drive: sólo con los permisos del dueño del script. Aquí no se cambia ningún permiso ni se hace nada público. Un
+   archivo se entrega sólo si su cadena de carpetas sube hasta una carpeta permitida para esa liga y ese plan, y eso
+   se revisa en vivo en cada pedido. Los atajos no se siguen ni se entregan. El libro de un plan, el vivero y las
+   demás hojas del sistema nunca salen por aquí aunque estén en una carpeta de proyecto. La lista y el historial se
+   guardan unos minutos; los bytes de los archivos, nunca. Nada de esto calcula cifras. */
+var PESTANAS = {
+  CACHE: 'pestanas-1',               // forma de lo guardado: si cambia lo que se lee, se sube
+  ID_DRIVE: /^[A-Za-z0-9_-]{20,80}$/,
+  PLAN: /^(p2[a-z0-9]{6,20}|ppp:[A-Za-z0-9_-]{3,64}(:[A-Za-z0-9_-]{1,40})?)$/,   // las mismas formas que planPorId_ y VISOR.FOTO_RE
+  DIA: /^(\d{4})-(\d{2})-(\d{2})$/,
+  PARTE: /^(0|[1-9][0-9]?)$/,        // las partes se cuentan desde 0
+  PROYECTO: /^[a-z0-9_-]{1,64}$/,
+  HIST_S: 300,                       // historial y conversación de un día: cinco minutos
+  LISTA_S: 300,                      // lo que hay en las carpetas: cinco minutos
+  SELLO_S: 5,                        // la última modificación de la hoja de historial se comparte unos segundos
+  DIAS_MAX: 365,
+  FUTURO_DIAS: 400,                  // una fecha más lejana que esto es un error de captura
+  ITEMS_DIA: 60,
+  ARCHIVOS_ITEM: 20,
+  MENSAJES_DIA: 1000,
+  PENDIENTES_MAX: 150,
+  PARTE_B: 3145728,                  // 3 MB por parte
+  ARCHIVO_MAX: 41943040,             // 40 MB por archivo
+  LISTA_MAX: 600,                    // archivos por lista
+  CARPETAS_MAX: 200,                 // carpetas que se recorren por lista
+  PROFUNDIDAD: 8,                    // niveles de subcarpetas bajo la del proyecto
+  SUBIR_MAX: 20,                     // niveles que se suben para saber de qué carpeta cuelga un archivo
+  LISTA_MS: 20000,                   // tiempo para recorrer las carpetas; si no alcanza, la lista sale incompleta
+  COMPARTIR: /^([0-9]+ )?para compartir$/,   // «Para compartir», también con número al frente («00 Para compartir»)
+  /* La válvula de Dirección: una subcarpeta del expediente cuyo nombre (sin mayúsculas ni acentos) contenga
+     «restringido/a» o «solo dirección», o que se llame o termine en «privado/a» («Privado», «07 Información
+     privada»), no sale en el visor para nadie —tampoco para el equipo ni con la sesión de la ficha—, ni lo que
+     tenga dentro, a cualquier profundidad. «Privada» al principio no cuenta: nombra desarrollos («Privada
+     Residencial…»). */
+  PRIVADA: /restringid[oa]s?|solo ?direccion|(?:^|\s)privad[oa]s?$/,
+  CARPETA: 'application/vnd.google-apps.folder',
+  ATAJO: 'application/vnd.google-apps.shortcut',
+  GOOGLE: 'application/vnd.google-apps.',
+  A_PDF: ['application/vnd.google-apps.document', 'application/vnd.google-apps.spreadsheet', 'application/vnd.google-apps.presentation', 'application/vnd.google-apps.drawing'],
+  IMAGEN: /^image\/(png|jpeg|gif|webp)$/,
+  /* Lo que ppp2-archivo entrega con su tipo: lo que un navegador no ejecuta (PDF, imagen, audio, video, Office,
+     OpenDocument, zip). Lo demás —HTML, SVG, XML, scripts o un tipo desconocido— sale como
+     application/octet-stream: así la página nunca lo abre como página dentro de su propio origen, donde vive la
+     sesión del Portero. Los bytes son los mismos; en la lista, `tipo` sigue siendo el original. */
+  PASIVO: /^(application\/pdf|image\/(png|jpeg|gif|webp|bmp|tiff|heic|heif)|video\/[a-z0-9.+-]+|audio\/[a-z0-9.+-]+|application\/(zip|x-zip-compressed|rtf|msword|vnd\.ms-[a-z0-9.+-]+|vnd\.openxmlformats-officedocument\.[a-z0-9.+-]+|vnd\.oasis\.opendocument\.[a-z0-9.+-]+|vnd\.google-earth\.kmz))$/,
+  GRUPOS: ['Presentaciones', 'Propuestas', 'Modelos financieros', 'Terreno y polígonos', 'Reuniones y minutas', 'Estudios y oficios', 'Otros'],
+  /* Cómo se acomoda un archivo: por la primera de sus carpetas (de arriba abajo) cuyo nombre lleva una de estas
+     raíces y, si ninguna, por su propio nombre; lo demás va a Otros. Sin mayúsculas ni acentos y sin importar el
+     número del frente («03 Modelo financiero»). Se prueban en este orden (el de la pantalla). Son las de las
+     subcarpetas de los expedientes: «01 Terreno y legales», «02 Mercado y referencias», «03 Modelo financiero»,
+     «04 Presentaciones», «05 Minutas y acuerdos», «06 Propuestas» (y «Para compartir», que no es grupo). */
+  CLASES: [
+    ['Presentaciones', /\bpresent/],
+    ['Propuestas', /\b(propuest|cotiz)/],
+    ['Modelos financieros', /\b(modelo|financ|flujo|corrida|ppp)/],
+    ['Terreno y polígonos', /\b(terreno|poligon|legal|escritur|predio|kmz|plano)/],
+    ['Reuniones y minutas', /\b(minuta|reuni|acuerdo|transcrip)/],
+    ['Estudios y oficios', /\b(estudio|mercado|referenc|oficio|dictamen|factib)/]
+  ],
+  /* El `tipo` de un evento (pestaña Tipos de la hoja de historial) en los del visor. Uno que no está aquí sale
+     como documento. */
+  TIPOS: {
+    whatsapp: 'whatsapp', comentario_whatsapp: 'whatsapp', chat: 'whatsapp', mensaje: 'whatsapp',
+    reunion: 'reunion', junta: 'reunion', sesion: 'reunion', videollamada: 'reunion', meet: 'reunion',
+    minuta: 'minuta', acta: 'minuta', presentacion: 'presentacion', ppp: 'presentacion',
+    documento: 'documento', archivo: 'documento', decision: 'decision', acuerdo: 'decision',
+    pendiente: 'pendiente', tarea: 'pendiente', chinche: 'pendiente',
+    cita: 'cita', reunion_agendada: 'cita', agenda: 'cita', llamada: 'llamada', telefono: 'llamada', version: 'version'
+  },
+  /* Ligas de evento que no se entregan: espacios privados (documentos, carpetas y reuniones de Google —un documento
+     de Drive se abre por Archivos, si está en la carpeta—, chats con asistentes, invitaciones de WhatsApp) y
+     cualquier dirección que lleve una liga, una sesión o una clave. */
+  SIN_URL: /(^|\.)((docs|drive|script|sheets|slides|forms|meet|mail|calendar|sites|photos|keep|chat)\.google\.com|googleusercontent\.com|claude\.ai|anthropic\.com|chatgpt\.com|openai\.com|whatsapp\.com|whatsapp\.net|wa\.me)$/,
+  CON_LLAVE: /[#?&;](l|liga|sesion|k|t|token|key|clave|open)=/i
+};
+
+/* ── utilidades ── */
+function hay_(o, k) { return !!o && Object.prototype.hasOwnProperty.call(o, k); }
+function normaliza_(v) {
+  return String(v == null ? '' : v).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+function clave_(v) { return normaliza_(v).replace(/ /g, '_'); }
+function partes_(s) { return String(s == null ? '' : s).split(/[,;|\s]+/).filter(function (x) { return x; }); }
+function siPestana_(v) { return ['si', 'x', '1', 'true', 'yes', 'verdadero'].indexOf(normaliza_(v)) >= 0; }
+function noVisible_(v) { return ['no', 'n', 'false', 'falso', '0', 'oculto'].indexOf(normaliza_(v)) >= 0; }
+function soloDireccion_(v) { return clave_(v) === 'solo_direccion'; }
+function esFecha_(x) { return Object.prototype.toString.call(x) === '[object Date]' && !isNaN(x.getTime()); }
+function diaValido_(s) {
+  var m = PESTANAS.DIA.exec(String(s == null ? '' : s));
+  if (!m) return false;
+  var y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]), t = new Date(Date.UTC(y, mo - 1, d));
+  return y >= 2000 && y <= 2100 && t.getUTCFullYear() === y && t.getUTCMonth() === mo - 1 && t.getUTCDate() === d;
+}
+/* Una fecha de la hoja como AAAA-MM-DD (texto AAAA-MM-DD o D/M/AAAA, fecha de Sheets o número de serie); '' si no. */
+function fechaISO_(x) {
+  if (esFecha_(x)) x = limpio_(x);
+  if (typeof x === 'number') {
+    if (!(x > 20000 && x < 80000)) return '';
+    var t = new Date(Math.round((x - 25569) * 86400000)).toISOString().slice(0, 10);
+    return diaValido_(t) ? t : '';
+  }
+  var s = String(x == null ? '' : x).trim(), f = '', m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?![0-9])/.exec(s);
+  if (m) f = m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
+  else if ((m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?![0-9])/.exec(s))) f = m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+  return diaValido_(f) ? f : '';
+}
+function horaHM_(x) {
+  if (esFecha_(x)) return Utilities.formatDate(x, PPP2.TZ, 'HH:mm');
+  var s = String(x == null ? '' : x).trim(), m = /^(\d{1,2}):(\d{2})(?![0-9])/.exec(s);
+  if (!m) return '';
+  var h = Number(m[1]), resto = s.slice(m[0].length).replace(/^:\d{2}/, '');
+  if (/^\s*p\.?\s*m/i.test(resto) && h < 12) h += 12;
+  else if (/^\s*a\.?\s*m/i.test(resto) && h === 12) h = 0;
+  return h < 24 && Number(m[2]) < 60 ? ('0' + h).slice(-2) + ':' + m[2] : '';
+}
+function topeFuturo_() {
+  var m = PESTANAS.DIA.exec(hoyISO_());
+  var t = m ? Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : Date.now();
+  return new Date(t + PESTANAS.FUTURO_DIAS * 86400000).toISOString().slice(0, 10);
+}
+/* El id de Drive de un texto: un id tal cual, o la dirección de un archivo o carpeta de Drive o Docs. */
+function idDrive_(x) {
+  x = String(x == null ? '' : x).trim();
+  if (PESTANAS.ID_DRIVE.test(x)) return x;
+  if (!/^https:\/\/(docs|drive)\.google\.com\//.test(x)) return '';
+  var m = /\/(?:d|folders)\/([A-Za-z0-9_-]{20,80})(?![A-Za-z0-9_-])/.exec(x) || /[?&]id=([A-Za-z0-9_-]{20,80})(?![A-Za-z0-9_-])/.exec(x);
+  return m ? m[1] : '';
+}
+function urlSegura_(u) {
+  u = String(u == null ? '' : u).trim();
+  var m = /^https:\/\/([A-Za-z0-9.-]+)(?::\d{2,5})?(?:[\/?#][^\s<>"'`\\]*)?$/.exec(u);
+  if (!m || u.length > 500 || PESTANAS.CON_LLAVE.test(u)) return '';
+  return PESTANAS.SIN_URL.test(m[1].toLowerCase()) ? '' : u;
+}
+
+/* ── la puerta: la misma de ppp2-visor ── */
+function puertaPestana_(q) {
+  var p = null, aud = 'equipo', regla = 'todas', pedido = String(q.plan == null ? '' : q.plan);
+  if (String(q.liga || '') || !String(q.k || '')) {
+    var l = ligaViva_(q.liga);
+    if (!l) return { ok: false, error: 'liga' };
+    var ids = String(l.plan_id || '').split(/[,;| ]+/).filter(function (x) { return x; });
+    if (pedido && (!PESTANAS.PLAN.test(pedido) || ids.indexOf(pedido) < 0)) return { ok: false, error: 'plan' };     // sólo un plan que la liga trae
+    var cand = pedido ? [pedido] : ids;
+    for (var i = 0; i < cand.length && !p; i++) p = planVisor_(cand[i]);
+    aud = low_(l.audiencia) === 'equipo' ? 'equipo' : 'externo';                       // en blanco (o cualquier otra cosa): externo
+    regla = String(l.versiones == null ? '' : l.versiones);
+  } else {                                   // la ficha del plan: con la sesión del Portero
+    var s = canje_(q.k);
+    if (!s.ok) return { ok: false, error: s.error };
+    p = PESTANAS.PLAN.test(pedido) ? planVisor_(pedido) : null;
+  }
+  if (!p) return { ok: false, error: 'plan' };
+  return { ok: true, p: p, foto: !!p.foto, aud: aud, regla: p.foto ? '' : regla, cfg: config_() };
+}
+
+/* ── la hoja de historial ── */
+function historial_(cfg) {
+  var id = String(cfg.historial_id || '').trim(), h = { id: PESTANAS.ID_DRIVE.test(id) ? id : '', sello: '', libro: undefined };
+  if (h.id) h.sello = selloHistorial_(h.id);
+  return h;
+}
+/* Su última modificación en Drive, compartida unos segundos entre quienes preguntan. */
+function selloHistorial_(id) {
+  var cache = CacheService.getScriptCache(), ck = 'hs_' + id, hit = null;
+  try { hit = cache.get(ck); } catch (e) { }
+  if (hit) return hit;
+  var m = '';
+  try { m = String(DriveApp.getFileById(id).getLastUpdated().getTime()); } catch (e) { return ''; }
+  try { cache.put(ck, m, PESTANAS.SELLO_S); } catch (e) { }
+  return m;
+}
+function libroHist_(h) {
+  if (h.libro === undefined) {
+    h.libro = null;
+    if (h.id) { try { h.libro = SpreadsheetApp.openById(h.id); } catch (e) { h.libro = null; } }
+  }
+  return h.libro;
+}
+/* Una pestaña leída como se ve (texto), por encabezado: el orden de las columnas no importa. Una fecha o una hora
+   se toma del texto («AAAA-MM-DD», «D/M/AAAA», «HH:MM»); si la celda guarda una fecha de Sheets con otro formato,
+   del valor, en la zona horaria de la propia hoja. */
+function tablaHist_(libro, nombre) {
+  var hoja = null, tz = PPP2.TZ;
+  try { hoja = libro ? libro.getSheetByName(nombre) : null; } catch (e) { hoja = null; }
+  if (!hoja || hoja.getLastRow() < 2) return null;
+  try { tz = libro.getSpreadsheetTimeZone() || PPP2.TZ; } catch (e) { tz = PPP2.TZ; }
+  var rango = hoja.getDataRange(), vals = rango.getDisplayValues(), crudos = rango.getValues(), cab = vals[0].map(clave_);
+  var col = function (f, n) { var i = cab.indexOf(n); return i < 0 ? '' : String(f.v[i] == null ? '' : f.v[i]).trim(); };
+  var crudo = function (f, n) { var i = cab.indexOf(n); return i < 0 || !f.c ? '' : f.c[i]; };
+  return {
+    filas: vals.slice(1).map(function (v, k) { return { v: v, c: crudos[k + 1] }; }),
+    col: col,
+    fecha: function (f, n) {
+      var s = fechaISO_(col(f, n)), x;
+      if (s) return s;
+      x = crudo(f, n);
+      if (esFecha_(x)) { try { s = Utilities.formatDate(x, tz, 'yyyy-MM-dd'); } catch (e) { s = ''; } return diaValido_(s) ? s : ''; }
+      return typeof x === 'number' ? fechaISO_(x) : '';
+    },
+    hora: function (f, n) {
+      var s = horaHM_(col(f, n)), x;
+      if (s) return s;
+      x = crudo(f, n);
+      if (esFecha_(x)) { try { return horaHM_(Utilities.formatDate(x, tz, 'HH:mm')); } catch (e) { return ''; } }
+      if (typeof x === 'number' && x >= 0 && x < 1) { var m = Math.round(x * 1440) % 1440; return ('0' + Math.floor(m / 60)).slice(-2) + ':' + ('0' + (m % 60)).slice(-2); }
+      return '';
+    }
+  };
+}
+function proyectosHist_(libro) {
+  var t = tablaHist_(libro, 'Proyectos'), out = [];
+  if (t) t.filas.forEach(function (f) {
+    var id = low_(t.col(f, 'proyecto_id'));
+    if (!PESTANAS.PROYECTO.test(id)) return;
+    out.push({ id: id, nombre: txt_(t.col(f, 'nombre'), 120) || id, planes: partes_(t.col(f, 'planes')), carpeta: idDrive_(partes_(t.col(f, 'carpeta'))[0]) });
+  });
+  return out;
+}
+/* Un plan es de un proyecto si su `planes` lo nombra; una foto del PPP de siempre, si nombra el mismo caso. */
+function mismoPlan_(a, b) {
+  if (a === b) return true;
+  var ma = VISOR.FOTO_RE.exec(a), mb = VISOR.FOTO_RE.exec(b);
+  return !!(ma && mb && ma[1] === mb[1]);
+}
+function proyectosPlan_(h, planId) {
+  var todos = null, cache = CacheService.getScriptCache(), ck = h.id && h.sello ? 'hp_' + hash_([PESTANAS.CACHE, h.id, h.sello].join('|')) : '';
+  if (ck) { var hit = null; try { hit = cache.get(ck); } catch (e) { } if (hit) { try { todos = JSON.parse(hit); } catch (e) { todos = null; } } }
+  if (!todos) {
+    todos = proyectosHist_(libroHist_(h));
+    if (ck) { try { cache.put(ck, JSON.stringify(todos), PESTANAS.HIST_S); } catch (e) { } }
+  }
+  return todos.filter(function (x) { return x.planes.some(function (t) { return mismoPlan_(t, planId); }); });
+}
+function raices_(proys) {
+  var r = [];
+  proys.forEach(function (x) { if (x.carpeta && r.indexOf(x.carpeta) < 0) r.push(x.carpeta); });
+  return r;
+}
+/* Lo que nunca sale por aquí aunque esté en una carpeta de proyecto: los libros de los planes, el vivero y las
+   hojas del sistema (historial, fotos, plantilla). */
+function excluidos_(cfg) {
+  var x = {};
+  [cfg.historial_id, cfg.potenciales_id, cfg.plantilla_id].forEach(function (id) { id = String(id || '').trim(); if (id) x[id] = 1; });
+  try { x[String(vivero_().getId())] = 1; } catch (e) { }
+  try { planes_(true).forEach(function (p) { if (p.libro_id) x[String(p.libro_id)] = 1; }); } catch (e) { }
+  return x;
+}
+
+/* ── las carpetas ── */
+function fechaArchivo_(f) { try { return Utilities.formatDate(f.getLastUpdated(), PPP2.TZ, 'yyyy-MM-dd HH:mm'); } catch (e) { return ''; } }
+/* Lo que hay en las carpetas permitidas para una audiencia: { a: {id: {n, t, f, z, r}}, o: [ids], inc }. `r` son
+   las carpetas de abajo de la del proyecto (sin «Para compartir»), para acomodarlo. Se guarda unos minutos. */
+function indice_(raices, aud, fuera) {
+  if (!raices.length) return { a: {}, o: [], inc: false };
+  var ck = 'pi_' + hash_([PESTANAS.CACHE, aud, raices.join(',')].join('|')), hit = cacheLee_(ck);
+  if (hit) { try { var x = JSON.parse(hit); if (x && x.a && x.o) return x; } catch (e) { } }
+  var idx = recorre_(raices, aud, fuera);
+  cacheGuarda_(ck, JSON.stringify(idx), PESTANAS.LISTA_S);
+  return idx;
+}
+function recorre_(raices, aud, fuera) {
+  var t0 = Date.now(), a = {}, o = [], vistas = {}, inc = false, cola = [], carpetas = 0;
+  raices.forEach(function (id) {
+    try {
+      var r = DriveApp.getFolderById(id);
+      if (r.isTrashed()) return;
+      if (aud === 'equipo') { cola.push({ c: r, ruta: [], d: 0 }); return; }
+      var it = r.getFolders();                     // externo: sólo las subcarpetas «Para compartir» de la del proyecto
+      while (it.hasNext()) { var c = it.next(); if (!c.isTrashed() && PESTANAS.COMPARTIR.test(normaliza_(c.getName()))) cola.push({ c: c, ruta: [], d: 1 }); }
+    } catch (e) { }                                  // una carpeta que no existe o no se puede abrir: no aporta nada
+  });
+  while (cola.length) {
+    if (o.length >= PESTANAS.LISTA_MAX || carpetas >= PESTANAS.CARPETAS_MAX || Date.now() - t0 > PESTANAS.LISTA_MS) { inc = true; break; }
+    var x = cola.shift(), cid = '';
+    try { cid = x.c.getId(); } catch (e) { continue; }
+    if (vistas[cid]) continue;
+    vistas[cid] = 1;
+    carpetas++;
+    try {
+      var fs = x.c.getFiles();
+      while (fs.hasNext()) {
+        // el tiempo se cuida también dentro de una carpeta: una sola con cientos de archivos no se come el pedido
+        if (o.length >= PESTANAS.LISTA_MAX || Date.now() - t0 > PESTANAS.LISTA_MS) { inc = true; break; }
+        var f = fs.next(), id = String(f.getId()), tipo = String(f.getMimeType() || '');
+        if (hay_(a, id) || hay_(fuera, id) || tipo === PESTANAS.ATAJO || tipo === PESTANAS.CARPETA || f.isTrashed()) continue;
+        a[id] = { n: txt_(f.getName(), 200), t: tipo, f: fechaArchivo_(f), z: tipo.indexOf(PESTANAS.GOOGLE) === 0 ? null : (Number(f.getSize()) || 0), r: x.ruta };
+        o.push(id);
+      }
+      if (x.d < PESTANAS.PROFUNDIDAD) {
+        var ds = x.c.getFolders();
+        while (ds.hasNext()) {
+          var c = ds.next();
+          if (c.isTrashed()) continue;
+          var nc = String(c.getName() || '');
+          if (privada_(nc)) continue;                      // una carpeta privada no se recorre: ni ella ni lo de adentro se listan
+          cola.push({ c: c, ruta: x.ruta.concat([txt_(nc, 120)]), d: x.d + 1 });
+        }
+      }
+    } catch (e) { inc = true; }
+  }
+  return { a: a, o: o, inc: inc };
+}
+/* Cómo se puede ver: 'pdf' (también lo que se exporta a PDF), 'imagen', 'descarga' o 'no' (pasa de 40 MB, o es de
+   Google y no se puede exportar). */
+function vistaArchivo_(tipo, z) {
+  if (PESTANAS.A_PDF.indexOf(tipo) >= 0) return 'pdf';
+  if (tipo.indexOf(PESTANAS.GOOGLE) === 0 || z > PESTANAS.ARCHIVO_MAX) return 'no';
+  if (tipo === 'application/pdf') return 'pdf';
+  return PESTANAS.IMAGEN.test(tipo) ? 'imagen' : 'descarga';
+}
+function claseDe_(texto) {
+  var s = normaliza_(texto);
+  for (var i = 0; i < PESTANAS.CLASES.length; i++) if (PESTANAS.CLASES[i][1].test(s)) return PESTANAS.CLASES[i][0];
+  return '';
+}
+function grupoArchivo_(x) {
+  for (var i = 0; i < x.r.length; i++) { var g = claseDe_(x.r[i]); if (g) return g; }
+  return claseDe_(x.n) || 'Otros';                                          // el nombre lleva su extensión (.kmz)
+}
+function privada_(nombre) { return PESTANAS.PRIVADA.test(normaliza_(nombre)); }
+/* Si un archivo cuelga, por su cadena de carpetas, de una carpeta permitida. Se sube en vivo, de padre en padre
+   (los atajos no tienen padres que cuenten: el que se revisa es el archivo pedido). Externo: la carpeta de justo
+   abajo de la del proyecto debe ser «Para compartir». Una cadena que pasa por una carpeta privada (PESTANAS.PRIVADA)
+   entre el archivo y la del proyecto no cuenta; una privada de más arriba que la del proyecto, sí cuenta (no es del
+   expediente). Cada carpeta se visita a lo más dos veces (con y sin privada abajo): así no hay ciclos. */
+function cuelga_(f, raices, aud) {
+  var vistos = {}, pila = [];
+  try { var it = f.getParents(); while (it.hasNext()) pila.push({ c: it.next(), d: 1, hijo: null, priv: false }); } catch (e) { return false; }
+  while (pila.length) {
+    var x = pila.pop(), id = '';
+    try { id = String(x.c.getId()); if (x.c.isTrashed()) continue; } catch (e) { continue; }
+    if (raices.indexOf(id) >= 0 && !x.priv) {
+      if (aud === 'equipo') return true;
+      try { if (x.hijo && PESTANAS.COMPARTIR.test(normaliza_(x.hijo.getName()))) return true; } catch (e) { }
+    }
+    var priv = x.priv;
+    if (!priv) { try { priv = privada_(x.c.getName()); } catch (e) { priv = true; } }   // un nombre que no se puede leer cuenta como privado
+    var k = priv ? id + '|p' : id;
+    if (vistos[k] || x.d >= PESTANAS.SUBIR_MAX) continue;
+    vistos[k] = 1;
+    try { var ps = x.c.getParents(); while (ps.hasNext()) pila.push({ c: ps.next(), d: x.d + 1, hijo: x.c, priv: priv }); } catch (e) { }
+  }
+  return false;
+}
+/* Un pedazo de un archivo (bytes [desde, hasta)) con la API de Drive y la credencial del dueño del script: sólo
+   lee (GET) y trae sólo ese pedazo, sin cargar el archivo entero. */
+function trozoDrive_(id, desde, hasta) {
+  try {
+    var r = UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id) + '?alt=media&supportsAllDrives=true', {
+      method: 'get', headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken(), Range: 'bytes=' + desde + '-' + (hasta - 1) },
+      muteHttpExceptions: true, followRedirects: true
+    });
+    var c = r.getResponseCode(), b = r.getContent();
+    if (c === 200 && b.length > hasta - desde) b = b.slice(desde, hasta);   // Drive no hizo caso del rango
+    else if (c !== 206 && c !== 200) return null;
+    return b.length === hasta - desde ? b : null;
+  } catch (e) { return null; }
+}
+
+/* ── historial ── */
+function resumenPlan_(p) {
+  try {
+    var clave = llavePlan_(p), hit = clave ? cacheLee_(clave) : null;     // lo que ya se leyó de su libro, si no cambió
+    if (hit) { var b = JSON.parse(hit); if (b && b.plan_id === p.plan_id && b.resumen) return b.resumen; }
+  } catch (e) { }
+  return resumen_(libro_(p));
+}
+/* Las versiones que la liga deja ver, con su fecha: la aprobación en el libro o, de una foto, cuándo se calculó.
+   De una foto, sólo la versión servida (la lista completa sólo la ve quien aprueba, en `elige`). */
+function versionesHist_(g) {
+  var lista = [], items = [];
+  if (g.foto) {
+    var f = g.p.foto, n = f.orden >= 1 ? Math.floor(f.orden) : 1, fecha = fechaISO_(f.calc), buena = !!g.p.esBuena;
+    lista.push({ v: n, nombre: f.nombre || '', fecha: fecha, estado: buena ? 'vigente' : '' });
+    if (fecha) items.push({ fecha: fecha, item: { tipo: 'version', hora: horaHM_(String(f.calc || '').slice(11)), titulo: 'Versión «' + (f.nombre || n) + '»',
+      resumen: 'Foto del PPP de siempre, calculada con su motor' + (buena ? '; es la que rige.' : '.'), fuente: 'PPP de siempre', archivos: [] } });
+    return { lista: lista, items: items };
+  }
+  var r = null;
+  try { r = resumenPlan_(g.p); } catch (e) { r = null; }
+  if (!r) return { lista: lista, items: items };
+  versionesVisor_(r, g.regla).lista.forEach(function (k) {
+    var nombre = txt_(r['v' + k + '.nombre'], 80), estado = low_(r['v' + k + '.estado']), fecha = fechaISO_(r['v' + k + '.fecha_aprobacion']);
+    lista.push({ v: k, nombre: nombre, fecha: fecha, estado: estado });
+    if (fecha) items.push({ fecha: fecha, item: { tipo: 'version', hora: '', titulo: 'V' + k + (nombre ? ' · ' + nombre : ''),
+      resumen: 'Aprobada por Dirección' + (estado === 'vigente' ? '; es la que rige.' : estado ? '; hoy está ' + estado + '.' : '.'), fuente: 'Libro del plan', archivos: [] } });
+  });
+  return { lista: lista, items: items };
+}
+function archivosDe_(ids, idx, fuera) {
+  var out = [], vistos = {};
+  ids.forEach(function (id) {
+    if (!id || hay_(vistos, id) || hay_(fuera, id) || !hay_(idx.a, id) || out.length >= PESTANAS.ARCHIVOS_ITEM) return;
+    vistos[id] = 1;
+    out.push({ id: id, nombre: idx.a[id].n, tipo: idx.a[id].t });
+  });
+  return out;
+}
+/* Los adjuntos de un mensaje: nombres (separados por coma) y, en el mismo orden, sus ids de Drive cuando ya están
+   subidos. El id sólo sale si el archivo está en una carpeta permitida (así se puede abrir por Archivos). */
+function adjuntos_(nombres, ids, idx, fuera) {
+  var ns = String(nombres == null ? '' : nombres).split(',').map(function (s) { return txt_(s, 200); }), is = partes_(ids).map(idDrive_), out = [];
+  for (var i = 0; i < Math.max(ns.length, is.length) && out.length < PESTANAS.ARCHIVOS_ITEM; i++) {
+    var id = is[i] && !hay_(fuera, is[i]) && hay_(idx.a, is[i]) ? is[i] : '', nombre = ns[i] || (id ? idx.a[id].n : '');
+    if (!nombre) continue;
+    var a = { nombre: nombre };
+    if (id) a.id = id;
+    out.push(a);
+  }
+  return out;
+}
+function mensaje_(ch, f, idx, fuera) {
+  var texto = txt_(ch.col(f, 'texto'), 4000), adj = adjuntos_(ch.col(f, 'adjuntos'), ch.col(f, 'adjuntos_ids'), idx, fuera);
+  return texto || adj.length ? { hora: ch.hora(f, 'hora'), quien: txt_(ch.col(f, 'quien'), 80), texto: texto, adjuntos: adj } : null;
+}
+/* Los mensajes que tocan al plan: los de sus proyectos y los generales de la alianza (`proyectos` vacío). */
+function delGrupo_(texto, ids) {
+  var ps = partes_(low_(texto));
+  return ps.length ? (ps.some(function (x) { return ids.indexOf(x) >= 0; }) ? 'plan' : '') : 'general';
+}
+function enOrden_(lista, hora) {
+  return lista.map(function (x, i) { return { x: x, i: i, h: hora(x) || '99:99' }; })
+    .sort(function (a, b) { return a.h < b.h ? -1 : a.h > b.h ? 1 : a.i - b.i; }).map(function (o) { return o.x; });
+}
+/* Un día entra en la línea de tiempo si ese día hubo algo del plan: un evento que esta audiencia puede ver, un
+   mensaje de uno de sus proyectos o una versión. Su `chat` cuenta además los mensajes generales de ese día. */
+function leeHistorial_(g, h) {
+  var equipo = g.aud === 'equipo', proys = proyectosPlan_(h, g.p.plan_id), ids = proys.map(function (x) { return x.id; });
+  var fuera = excluidos_(g.cfg), idx = indice_(raices_(proys), g.aud, fuera), tope = topeFuturo_(), dias = {}, generales = {}, pendientes = [];
+  var dia = function (f) { return dias[f] || (dias[f] = { fecha: f, items: [], chat: 0 }); };
+  var libro = ids.length ? libroHist_(h) : null, privados = {};
+  var ev = tablaHist_(libro, 'Eventos');
+  if (ev) ev.filas.forEach(function (f) {
+    // un evento solo_direccion no sale, y tampoco los pendientes que nacieron de él (por su evento_id)
+    if (soloDireccion_(ev.col(f, 'visibilidad'))) { partes_(ev.col(f, 'evento_id')).forEach(function (x) { privados[x] = 1; }); return; }
+    var fecha = ev.fecha(f, 'fecha');
+    if (!fecha || fecha > tope || delGrupo_(ev.col(f, 'proyectos'), ids) !== 'plan') return;
+    var tipo = tipoEvento_(ev.col(f, 'tipo'));
+    if (!equipo && (!siPestana_(ev.col(f, 'para_externos')) || tipo === 'whatsapp' || tipo === 'pendiente')) return;
+    var resumen = ev.col(f, 'resumen'), dec = equipo ? ev.col(f, 'decisiones') : '', url = equipo ? urlSegura_(ev.col(f, 'fuente_url')) : '';
+    if (dec) resumen = (resumen ? resumen + '\n\n' : '') + 'Decisiones: ' + dec;
+    var item = { tipo: tipo, hora: ev.hora(f, 'hora'), titulo: txt_(ev.col(f, 'titulo'), 200), resumen: txt_(resumen, 2000), fuente: equipo ? txt_(ev.col(f, 'fuente'), 120) : '' };
+    if (url) item.url = url;
+    item.archivos = archivosDe_(partes_(ev.col(f, 'archivos')).map(idDrive_).concat([idDrive_(ev.col(f, 'fuente_url'))]), idx, fuera);
+    dia(fecha).items.push(item);
+  });
+  var ch = equipo ? tablaHist_(libro, 'Chat') : null;
+  if (ch) ch.filas.forEach(function (f) {
+    var fecha = ch.fecha(f, 'fecha'), de = fecha && fecha <= tope && !noVisible_(ch.col(f, 'visible')) ? delGrupo_(ch.col(f, 'proyectos'), ids) : '';
+    if (!de || !mensaje_(ch, f, idx, fuera)) return;
+    if (de === 'plan') dia(fecha).chat++;
+    else generales[fecha] = (generales[fecha] || 0) + 1;
+  });
+  var pe = equipo ? tablaHist_(libro, 'Pendientes') : null;
+  if (pe) pe.filas.forEach(function (f) {
+    var est = normaliza_(pe.col(f, 'estado')), tarea = txt_(pe.col(f, 'tarea') || pe.col(f, 'pendiente'), 500);
+    if (!tarea || est === 'hecho' || est === 'hecha' || soloDireccion_(pe.col(f, 'visibilidad')) || delGrupo_(pe.col(f, 'proyectos'), ids) !== 'plan') return;
+    if (partes_(pe.col(f, 'evento_id')).some(function (x) { return hay_(privados, x); })) return;
+    pendientes.push({ tarea: tarea, responsable: txt_(pe.col(f, 'responsable'), 80), compromiso: pe.fecha(f, 'fecha_compromiso') || pe.fecha(f, 'compromiso'), estado: txt_(pe.col(f, 'estado'), 40) });
+  });
+  var vs = versionesHist_(g);
+  vs.items.forEach(function (x) { if (x.fecha <= tope) dia(x.fecha).items.push(x.item); });
+  var lista = Object.keys(dias).sort().reverse().slice(0, PESTANAS.DIAS_MAX).map(function (k) {
+    var d = dias[k];
+    return { fecha: k, items: enOrden_(d.items, function (x) { return x.hora; }).slice(0, PESTANAS.ITEMS_DIA), chat: equipo ? d.chat + (generales[k] || 0) : 0 };
+  });
+  pendientes = enOrden_(pendientes, function (x) { return x.compromiso ? x.compromiso : '9999-99-99'; }).slice(0, PESTANAS.PENDIENTES_MAX);
+  return { proyectos: proys.map(function (x) { return { id: x.id, nombre: x.nombre }; }), dias: lista, pendientes: pendientes, versiones: vs.lista };
+}
+function tipoEvento_(v) {
+  var k = clave_(v);
+  if (hay_(PESTANAS.TIPOS, k)) return PESTANAS.TIPOS[k];
+  if (/whats/.test(k)) return 'whatsapp';            // «WhatsApp grupo», «aviso_whatsapp»…: escrito como sea, un externo nunca lo ve
+  return /^reunion/.test(k) ? 'reunion' : 'documento';
+}
+
+/* ── entradas ── */
+function historial_get_(q) {
+  var g = puertaPestana_(q);
+  if (!g.ok) return g;
+  var h = historial_(g.cfg), sv = g.foto ? llaveFoto_(g.p) : llaveVisor_(g.p);
+  var ck = 'ph_' + hash_([PESTANAS.CACHE, g.p.plan_id, g.aud, g.regla, h.id, h.sello, sv].join('|')), base = null, hit = cacheLee_(ck);
+  if (hit) { try { base = JSON.parse(hit); } catch (e) { base = null; } }
+  if (!base || !base.llave) {
+    base = leeHistorial_(g, h);
+    base.llave = 'vh_' + hash_(JSON.stringify(base));           // la llave es lo leído: si nada cambió, sale la misma
+    cacheGuarda_(ck, JSON.stringify(base), PESTANAS.HIST_S);
+  }
+  if (String(q.si || '') === base.llave) return { ok: true, igual: true, llave: base.llave };
+  return { ok: true, llave: base.llave, audiencia: g.aud, proyectos: base.proyectos, dias: base.dias, pendientes: base.pendientes, versiones: base.versiones };
+}
+function chat_get_(q) {
+  var g = puertaPestana_(q);
+  if (!g.ok) return g;
+  if (g.aud !== 'equipo') return { ok: false, error: 'plan' };          // la conversación sólo la ve el equipo
+  var d = String(q.dia || '');
+  if (!diaValido_(d)) return { ok: false, error: 'plan' };
+  var h = historial_(g.cfg), ck = 'pc_' + hash_([PESTANAS.CACHE, g.p.plan_id, d, h.id, h.sello].join('|')), hit = cacheLee_(ck);
+  if (hit) { try { var o = JSON.parse(hit); if (o && o.ok) return o; } catch (e) { } }
+  var proys = proyectosPlan_(h, g.p.plan_id), ids = proys.map(function (x) { return x.id; }), fuera = excluidos_(g.cfg), mensajes = [];
+  var ch = ids.length ? tablaHist_(libroHist_(h), 'Chat') : null;
+  if (ch) {
+    var idx = indice_(raices_(proys), 'equipo', fuera);
+    ch.filas.forEach(function (f) {
+      if (noVisible_(ch.col(f, 'visible')) || ch.fecha(f, 'fecha') !== d || !delGrupo_(ch.col(f, 'proyectos'), ids)) return;
+      var m = mensaje_(ch, f, idx, fuera);
+      if (m) mensajes.push(m);
+    });
+  }
+  var out = { ok: true, dia: d, mensajes: enOrden_(mensajes, function (m) { return m.hora; }).slice(0, PESTANAS.MENSAJES_DIA) };
+  cacheGuarda_(ck, JSON.stringify(out), PESTANAS.HIST_S);
+  return out;
+}
+function archivos_get_(q) {
+  var g = puertaPestana_(q);
+  if (!g.ok) return g;
+  var fuera = excluidos_(g.cfg), idx = indice_(raices_(proyectosPlan_(historial_(g.cfg), g.p.plan_id)), g.aud, fuera), grupos = {}, out = [];
+  idx.o.forEach(function (id) {
+    if (hay_(fuera, id)) return;                     // la lista guardada pudo armarse antes de que ese libro se registrara
+    var x = idx.a[id], n = grupoArchivo_(x);
+    (grupos[n] = grupos[n] || []).push({ id: id, nombre: x.n, fecha: x.f, tipo: x.t, tamano: x.z, vista: vistaArchivo_(x.t, x.z) });
+  });
+  PESTANAS.GRUPOS.forEach(function (n) {
+    if (!grupos[n]) return;
+    out.push({ nombre: n, archivos: grupos[n].sort(function (a, b) { return a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : a.nombre.localeCompare(b.nombre, 'es'); }) });
+  });
+  var r = { ok: true, grupos: out };
+  if (idx.inc) r.incompleta = true;                                         // no se alcanzó a recorrer todo
+  return r;
+}
+function archivo_get_(q) {
+  var g = puertaPestana_(q);
+  if (!g.ok) return g;
+  var id = String(q.id == null ? '' : q.id), pt = String(q.parte == null || q.parte === '' ? '0' : q.parte);
+  if (!PESTANAS.ID_DRIVE.test(id) || !PESTANAS.PARTE.test(pt)) return { ok: false, error: 'plan' };
+  var parte = Number(pt), raices = raices_(proyectosPlan_(historial_(g.cfg), g.p.plan_id));
+  if (!raices.length || hay_(excluidos_(g.cfg), id)) return { ok: false, error: 'plan' };
+  var f = null, tipo = '';
+  try { f = DriveApp.getFileById(id); tipo = String(f.getMimeType() || ''); if (f.isTrashed()) f = null; } catch (e) { f = null; }
+  // un id ajeno, una carpeta, un atajo o algo de otra carpeta se contestan igual: como si no existiera
+  if (!f || tipo === PESTANAS.CARPETA || tipo === PESTANAS.ATAJO || !cuelga_(f, raices, g.aud)) return { ok: false, error: 'plan' };
+  var nombre = txt_(f.getName(), 200), bytes = null, partes = 1;
+  if (PESTANAS.A_PDF.indexOf(tipo) >= 0) {                                 // de Google: se exporta a PDF en cada pedido
+    try { bytes = f.getAs('application/pdf').getBytes(); } catch (e) { return { ok: false, error: 'grande' }; }
+    if (bytes.length > PESTANAS.ARCHIVO_MAX) return { ok: false, error: 'grande' };
+    partes = Math.max(1, Math.ceil(bytes.length / PESTANAS.PARTE_B));
+    if (parte >= partes) return { ok: false, error: 'plan' };
+    return { ok: true, nombre: /\.pdf$/i.test(nombre) ? nombre : nombre + '.pdf', tipo: 'application/pdf', partes: partes, parte: parte,
+      datos: Utilities.base64Encode(bytes.slice(parte * PESTANAS.PARTE_B, (parte + 1) * PESTANAS.PARTE_B)) };
+  }
+  if (tipo.indexOf(PESTANAS.GOOGLE) === 0) return { ok: false, error: 'plan' };   // formularios, sitios…: no se pueden entregar
+  var z = Number(f.getSize()) || 0;
+  if (z > PESTANAS.ARCHIVO_MAX) return { ok: false, error: 'grande' };
+  partes = Math.max(1, Math.ceil(z / PESTANAS.PARTE_B));
+  if (parte >= partes) return { ok: false, error: 'plan' };
+  bytes = partes === 1 ? f.getBlob().getBytes() : trozoDrive_(id, parte * PESTANAS.PARTE_B, Math.min(z, (parte + 1) * PESTANAS.PARTE_B));
+  if (!bytes) return { ok: false, error: 'interno' };
+  return { ok: true, nombre: nombre, tipo: PESTANAS.PASIVO.test(tipo) ? tipo : 'application/octet-stream', partes: partes, parte: parte, datos: Utilities.base64Encode(bytes) };
+}
+function pestana_get_(r, q) {
+  if (r === 'ppp2-historial') return historial_get_(q);
+  if (r === 'ppp2-chat') return chat_get_(q);
+  if (r === 'ppp2-archivos') return archivos_get_(q);
+  return archivo_get_(q);
 }
