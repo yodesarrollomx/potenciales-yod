@@ -7,9 +7,20 @@
     "plan.objetivo": {"valor": "Probar el libro de PPP 2", "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
     "terreno.m2": {"valor": 3000, "estado": "por confirmar", "fuente": "Dato inventado", "quien": "Pruebas"},
     "tierra.valor": {"valor": 30, "estado": "en conflicto", "fuente": "Dato inventado: dos cifras", "quien": "Pruebas"},
-    "lamina.ventas": {"valor": 500, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
-    "lamina.costo_total": {"valor": 410, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
-    "costo.obra_directa": {"valor": "=OBRA", "estado": "derivado", "fuente": "Derivado de la lámina inventada", "quien": "Modelo"},
+    "terreno.frente": {"valor": 40, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "norma.zona": {"valor": "Corredor de ejemplo", "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "norma.cos": {"valor": 0.7, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "norma.cus": {"valor": 4.2, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "norma.niveles": {"valor": 6, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "norma.cajon_visitas": {"valor": 0.1, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "prog.niveles": {"valor": 5, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "prog.desplante": {"valor": 2000, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "prog.cajones": {"valor": 130, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "prog.cajones_sotano": {"valor": 100, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "costo.m2_obra": {"valor": 27074, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "costo.m2_sotano": {"valor": 9000, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "costo.m2_superficie": {"valor": 1500, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
+    "costo.urbanizacion": {"valor": 2.0116949152542, "estado": "supuesto", "fuente": "Dato inventado (cuadra la obra directa del ejemplo de siempre)", "quien": "Pruebas"},
     "cal.ventas_meses": {"valor": 24, "estado": "supuesto", "fuente": "Dato inventado", "quien": "Pruebas"},
     "cal.obra_inicio": {"valor": 8, "estado": "por confirmar", "fuente": "Dato inventado", "quien": "Pruebas"},
     "cal.obra_duracion": {"valor": 20, "estado": "por confirmar", "fuente": "Dato inventado", "quien": "Pruebas"},
@@ -17,9 +28,9 @@
     "din.tiie": {"valor": 0.07, "estado": "por confirmar", "fuente": "Dato inventado", "quien": "Pruebas"}
   },
   "productos": [
-    {"nombre": "Producto A", "unidades": 40, "m2": 3000, "precio_m2": 70000, "durante_obra": 0, "estado": "supuesto", "fuente": "Inventado"},
-    {"nombre": "Producto B", "unidades": 60, "m2": 4000, "precio_m2": 50000, "durante_obra": 0, "estado": "supuesto", "fuente": "Inventado"},
-    {"nombre": "Producto C", "unidades": 10, "m2": 1000, "precio_m2": "=CUADRAR", "durante_obra": 0, "estado": "derivado", "fuente": "Cuadra la lámina inventada"}
+    {"nombre": "Producto A", "unidades": 40, "m2": 3000, "precio_m2": 70000, "durante_obra": 0, "estado": "supuesto", "fuente": "Inventado", "uso": "vivienda"},
+    {"nombre": "Producto B", "unidades": 60, "m2": 4000, "precio_m2": 50000, "durante_obra": 0, "estado": "supuesto", "fuente": "Inventado", "uso": "vivienda"},
+    {"nombre": "Producto C", "unidades": 10, "m2": 1000, "precio_m2": 90000, "durante_obra": 0, "estado": "supuesto", "fuente": "Inventado", "uso": "comercio"}
   ],
   "versiones": [
     {"nombre": "Base", "estado": "base", "que_cambia": "Lo que dicen los datos, sin banco.", "propuesta_por": "Pruebas", "palancas": {"usa_banco": 0, "caja_pct": 0, "devolver_con_obra": 0}},

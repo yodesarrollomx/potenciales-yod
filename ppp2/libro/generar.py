@@ -22,7 +22,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter as L
 from openpyxl.worksheet.datavalidation import DataValidation
 
-ESQUEMA = "ppp2-libro-v1"
+ESQUEMA = "ppp2-libro-v2"
 MESES = 60
 C1 = 3  # columna del mes 1 (C)
 NP = 6  # productos posibles
@@ -69,6 +69,7 @@ ESTADOS_PREGUNTA = ["abierta", "respondida", "no se sabe", "investigando", "en c
 ESTADOS_CANDADO = ["abierto", "en revisión", "cerrado", "no aplica"]
 VOTOS = ["aprueba", "regresa", "veto"]
 ESTADOS_HALLAZGO = ["propuesto", "aceptado", "descartado"]
+USOS_PRODUCTO = ["vivienda", "comercio", "oficina", "otro"]   # para contar los cajones que pide la norma
 
 
 def celda(ws, ref, valor=None, font=None, fmt=None, fill=None, align=None):
@@ -96,8 +97,11 @@ def anchos(ws, d):
         ws.column_dimensions[col].width = w
 
 
-def lista(ws, rango, opciones):
+def lista(ws, rango, opciones, estricta=False):
     dv = DataValidation(type="list", formula1='"' + ",".join(opciones) + '"', allow_blank=True)
+    if estricta:
+        dv.showErrorMessage, dv.errorStyle = True, "stop"
+        dv.error = "Escoge un valor de la lista: " + ", ".join(opciones) + "."
     dv.add(rango)
     ws.add_data_validation(dv)
 
@@ -113,26 +117,44 @@ DATOS = [
     ("plan.caso_ppp", "Caso en el PPP actual (si existe)", "texto", None, False, None, ""),
     ("§", "Terreno y tierra"),
     ("terreno.m2", "Superficie del terreno", "m²", ENT, False, None, ""),
+    ("terreno.frente", "Frente del terreno", "m", '#,##0.0', False, None, "Metros sobre la calle principal."),
     ("tierra.valor", "Valor de la tierra", "MDP", MDP, True, None, "Lo que vale la tierra que aporta el dueño."),
     ("acuerdo.firmado", "¿Ya hay acuerdo firmado con el dueño? (sí/no)", "texto", None, False, "no", ""),
-    ("§", "Lo que dice la lámina o el anteproyecto"),
-    ("lamina.ventas", "Ventas proyectadas", "MDP", MDP, True, None, "Total de ventas del anteproyecto; sirve para cuadrar."),
-    ("lamina.costo_total", "Costo total con terreno", "MDP", MDP, True, None, "Total de costos del anteproyecto, incluida la tierra."),
-    ("lamina.utilidad", "Utilidad del anteproyecto", "MDP", MDP, False, None, "Referencia."),
-    ("lamina.pago_dueno", "Pago total al dueño en la oferta", "MDP", MDP, False, None, "Referencia: tierra más utilidad ofrecida."),
-    ("lamina.m2_construidos", "Construcción total", "m²", ENT, False, None, ""),
-    ("lamina.m2_vendibles", "Área vendible total", "m²", ENT, False, None, ""),
+    ("§", "Norma: lo que permiten el uso de suelo y el reglamento"),
+    ("norma.zona", "Zona o corredor del plan de desarrollo urbano", "texto", None, False, None, "Como aparece en la carta urbana; la constancia de zonificación lo confirma."),
+    ("norma.cos", "Ocupación máxima del terreno (COS)", "%", PCT, False, None, "Huella en planta baja entre la superficie del terreno."),
+    ("norma.cus", "Intensidad máxima de construcción (CUS)", "veces", '0.00', False, None, "Metros construidos sobre el terreno entre la superficie del terreno."),
+    ("norma.niveles", "Niveles máximos", "niveles", ENT, False, None, ""),
+    ("norma.cajon_vivienda", "Cajones por vivienda", "por vivienda", '0.00', False, 1, "Lo que pide el reglamento por cada vivienda."),
+    ("norma.cajon_visitas", "Cajones de visitas por vivienda", "por vivienda", '0.00', False, 0, "Si el reglamento pide cajones de visitas (por ejemplo 0.1 por vivienda)."),
+    ("norma.m2_cajon_comercio", "Comercio: un cajón por cada", "m² por cajón", ENT, False, 50, "Metros de área de venta o atención por cajón."),
+    ("norma.m2_cajon_oficina", "Oficinas: un cajón por cada", "m² por cajón", ENT, False, 45, "Metros de área de trabajo por cajón."),
+    ("§", "Programa: lo que dibuja el arquitecto"),
+    ("prog.niveles", "Niveles sobre el terreno", "niveles", ENT, False, None, "Con la planta baja."),
+    ("prog.desplante", "Huella en planta baja (desplante)", "m²", ENT, False, None, "La proyección de los edificios sobre el terreno: cuenta para la ocupación."),
+    ("prog.planta_baja", "Planta baja cerrada (locales, vestíbulos, servicios)", "m²", ENT, False, None, "Si hay cajones bajo los edificios, es menos que la huella. Si no se escribe, se toma la huella."),
+    ("lamina.m2_construidos", "Construcción sobre el terreno", "m²", ENT, False, "=CONSTRUIDOS", "Sin sótano. Si no se escribe, sale de la huella en cada nivel (en planta baja, sólo lo cerrado)."),
+    ("lamina.m2_vendibles", "Área vendible total", "m²", ENT, False, "=VENDIBLES", "Sale de la suma de los productos; si se escribe, manda lo escrito."),
+    ("prog.cajones", "Cajones que se construyen", "cajones", ENT, False, None, ""),
+    ("prog.cajones_sotano", "De esos, en sótano", "cajones", ENT, False, 0, "Los demás van a nivel, en el área libre del terreno."),
+    ("prog.m2_cajon", "Metros por cajón, con su circulación", "m²", ENT, False, 30, "Para saber cuánto ocupan los cajones."),
     ("§", "Costos (proporciones)"),
     ("costo.indirectos", "Indirectos sobre obra directa", "%", PCT, True, 0.12, "Referencia del oficio: PPP vertical."),
     ("costo.imprevistos", "Imprevistos sobre obra directa", "%", PCT, True, 0.06, "Referencia del oficio: PPP vertical."),
     ("costo.comision", "Comisión sobre ventas", "%", PCT, True, 0.047, "Referencia del oficio: PPP vertical."),
     ("costo.cierre", "Cierre sobre el valor de la tierra", "%", PCT, True, 0.04, "Referencia del oficio: PPP vertical."),
     ("costo.ind_predesarrollo", "Parte de los indirectos que se gasta en predesarrollo", "%", PCT, True, 0.3, ""),
-    ("costo.obra_directa", "Obra directa", "MDP", MDP, True, "=OBRA", "Se deriva de la lámina: costo total menos tierra, comisiones y cierre, entre 1 + indirectos + imprevistos. Si hay presupuesto, se escribe aquí."),
+    ("§", "Costo de obra por partes"),
+    ("costo.m2_obra", "Obra directa por m² construido", "$/m²", ENT, False, None, "Pesos por cada m² de construcción sobre el terreno."),
+    ("costo.m2_sotano", "Sótano, por m²", "$/m²", ENT, False, None, "Pesos por cada m² de estacionamiento en sótano."),
+    ("costo.m2_superficie", "Estacionamiento a nivel, por m²", "$/m²", ENT, False, None, "Pesos por cada m² de cajones a nivel (pavimento y obra exterior)."),
+    ("costo.urbanizacion", "Obras exteriores y urbanización", "MDP", MDP, False, 0, ""),
+    ("costo.obra_directa", "Obra directa", "MDP", MDP, True, "=PARTES", "Sale del costo por partes. Si hay presupuesto, se escribe aquí: entonces las versiones sólo suman o restan lo que cambie su programa."),
     ("§", "Calendario"),
     ("cal.predesarrollo", "Predesarrollo", "meses", ENT, True, 6, "Proyecto, permisos y estudios."),
     ("cal.ventas_inicio", "Ventas: mes de inicio", "mes", ENT, True, 3, ""),
-    ("cal.ventas_meses", "Ventas: meses de comercialización", "meses", ENT, True, None, ""),
+    ("cal.ritmo", "Ritmo de ventas", "unidades por mes", '0.0', False, None, "Cuántas unidades se firman al mes."),
+    ("cal.ventas_meses", "Ventas: meses de comercialización", "meses", ENT, True, "=RITMO", "Sale del ritmo de ventas; si se escribe, manda lo escrito."),
     ("cal.obra_inicio", "Obra: mes de inicio", "mes", ENT, True, None, ""),
     ("cal.obra_duracion", "Obra: duración", "meses", ENT, True, None, ""),
     ("cal.campana", "Curva de obra: desviación (% de la duración)", "%", PCT, True, 0.2, "Pico a mitad de plazo."),
@@ -211,10 +233,22 @@ def hoja_datos(wb, plan):
             pregunta = d.get("pregunta", "")
             if d.get("nota"):
                 ws[f"J{r}"].value = d["nota"]
-        if valor == "=OBRA":
-            valor = obra_derivada()
+        if valor in ("=PARTES", "=OBRA"):        # «=OBRA» era la obra derivada de la lámina (v1); en v2 sale de las partes
+            valor = obra_por_partes()
             estado = estado if d is not None else "derivado"
-            fuente = fuente if d is not None else "Derivado de la lámina"
+            fuente = fuente if d is not None else "Costo de obra por partes"
+        if valor == "=CONSTRUIDOS":
+            valor = construidos_derivado()
+            estado = estado if d is not None else "derivado"
+            fuente = fuente if d is not None else "Huella por niveles"
+        if valor == "=VENDIBLES":
+            valor = f"=IFERROR(IF(N(Productos!$C${PT})>0,Productos!$C${PT},\"\"),\"\")"
+            estado = estado if d is not None else "derivado"
+            fuente = fuente if d is not None else "Suma de los productos"
+        if valor == "=RITMO":
+            valor = meses_de_venta()
+            estado = estado if d is not None else "derivado"
+            fuente = fuente if d is not None else "Unidades entre el ritmo de ventas"
         if valor == "=TOPE":
             valor = tope_capital()
             estado = estado if d is not None else "derivado"
@@ -245,10 +279,44 @@ def tope_capital():
     return f"=IFERROR(ROUND(Productos!$E${PT}/3,2),\"\")"
 
 
-def obra_derivada():
-    return ("=IFERROR(({ct}-{t}-{com}*{v}-{ci}*{t})/(1+{ind}+{imp}),\"\")").format(
-        ct=D("lamina.costo_total"), t=D("tierra.valor"), com=D("costo.comision"), v=D("lamina.ventas"),
-        ci=D("costo.cierre"), ind=D("costo.indirectos"), imp=D("costo.imprevistos"))
+# De qué dato sale cada parte del costo de obra cuando se calcula con el programa base.
+PARTES_DATO = {"construidos": "lamina.m2_construidos", "cajones": "prog.cajones", "cajones_sotano": "prog.cajones_sotano",
+               "m2_cajon": "prog.m2_cajon", "costo_m2": "costo.m2_obra", "costo_m2_sotano": "costo.m2_sotano",
+               "costo_m2_superficie": "costo.m2_superficie", "urbanizacion": "costo.urbanizacion"}
+
+
+def partes(ref):
+    """Obra directa por partes (MDP): construcción por su costo, sótano y cajones a nivel por el suyo, más urbanización.
+    `ref(nombre)` da la celda de cada parte: una columna del Modelo (el programa de una versión) o los Datos (el base)."""
+    sotano = sotano_efectivo(ref)
+    nivel = f"MAX(0,N({ref('cajones')})-{sotano})*N({ref('m2_cajon')})"
+    return (f"IF(AND(N({ref('costo_m2')})>0,N({ref('construidos')})>0),(N({ref('construidos')})*{ref('costo_m2')}"
+            f"+{sotano}*N({ref('m2_cajon')})*N({ref('costo_m2_sotano')})"
+            f"+{nivel}*N({ref('costo_m2_superficie')}))/1000000+N({ref('urbanizacion')}),\"\")")
+
+
+def sotano_efectivo(ref):
+    """Los cajones en sótano no pueden ser más que los que se construyen (si se dijo cuántos se construyen)."""
+    return f"IF(ISNUMBER({ref('cajones')}),MIN(N({ref('cajones_sotano')}),N({ref('cajones')})),N({ref('cajones_sotano')}))"
+
+
+def obra_por_partes():
+    """La obra directa de los datos: la de las partes con el programa base."""
+    return "=IFERROR(" + partes(lambda k: D(PARTES_DATO[k])) + ",\"\")"
+
+
+def construccion(desp, niv, pb):
+    """Construcción sobre el terreno: la huella en cada nivel; si se dijo la planta baja cerrada, en planta baja sólo eso."""
+    return f"IF(N({pb})>0,N({desp})*(N({niv})-1)+N({pb}),N({desp})*N({niv}))"
+
+
+def construidos_derivado():
+    desp, niv, pb = D('prog.desplante'), D('prog.niveles'), D('prog.planta_baja')
+    return f"=IFERROR(IF(AND(N({desp})>0,N({niv})>0),{construccion(desp, niv, pb)},\"\"),\"\")"
+
+
+def meses_de_venta():
+    return f"=IFERROR(IF(N({D('cal.ritmo')})>0,ROUNDUP(ROUND(Productos!$B${PT}/{D('cal.ritmo')},6),0),\"\"),\"\")"
 
 
 # ---------------------------------------------------------------- Productos
@@ -259,7 +327,7 @@ def hoja_productos(wb, plan):
     ws = wb.create_sheet("Productos")
     celda(ws, "A1", "Productos: lo que se vende", F_TITULO)
     celda(ws, "A2", "Hasta seis productos. Las ventas y el precio por unidad se calculan; lo amarillo se captura.", F_SUB)
-    enc = ["Producto", "Unidades", "m² vendibles", "Precio $/m²", "Ventas MDP", "Precio por unidad MDP", "% pagado durante la obra (base)", "Estado", "Fuente"]
+    enc = ["Producto", "Unidades", "m² vendibles", "Precio $/m²", "Ventas MDP", "Precio por unidad MDP", "% pagado durante la obra (base)", "Estado", "Fuente", "Uso (vivienda, comercio, oficina u otro)"]
     for i, t in enumerate(enc):
         celda(ws, f"{L(i + 1)}4", t, F_ENCABEZADO, align=ENVOLVER).border = BORDE
     prods = (plan or {}).get("productos", [])
@@ -267,10 +335,8 @@ def hoja_productos(wb, plan):
         r = PROD_FILA0 + i
         p = prods[i] if i < len(prods) else {}
         precio = p.get("precio_m2")
-        if isinstance(precio, str) and precio.startswith("=CUADRAR"):
-            # precio que cuadra las ventas de la lámina: lámina menos los otros productos
-            otros = "-".join(f"C{PROD_FILA0 + j}*D{PROD_FILA0 + j}" for j in range(NP) if j != i)
-            precio = f"=IFERROR(({D('lamina.ventas')}*1000000-{otros})/C{r},\"\")"
+        if isinstance(precio, str) and precio.startswith("="):
+            raise ValueError("Productos: el precio por m² se escribe como cifra (la plantilla v2 ya no cuadra con la lámina)")
         celda(ws, f"A{r}", p.get("nombre"), fill=FILL_DATO)
         celda(ws, f"B{r}", p.get("unidades"), fmt=ENT, fill=FILL_DATO)
         celda(ws, f"C{r}", p.get("m2"), fmt=ENT, fill=FILL_DATO)
@@ -280,15 +346,16 @@ def hoja_productos(wb, plan):
         celda(ws, f"G{r}", p.get("durante_obra", 0), fmt=PCT, fill=FILL_DATO)
         celda(ws, f"H{r}", p.get("estado", ""), fill=FILL_DATO)
         celda(ws, f"I{r}", p.get("fuente", ""), fill=FILL_DATO, align=ENVOLVER)
+        celda(ws, f"J{r}", p.get("uso", ""), fill=FILL_DATO)
     t = PROD_FILA0 + NP
     celda(ws, f"A{t}", "Total", F_ENCABEZADO)
     celda(ws, f"B{t}", f"=SUM(B{PROD_FILA0}:B{t - 1})", F_ENCABEZADO, fmt=ENT)
     celda(ws, f"C{t}", f"=SUM(C{PROD_FILA0}:C{t - 1})", F_ENCABEZADO, fmt=ENT)
     celda(ws, f"E{t}", f"=SUM(E{PROD_FILA0}:E{t - 1})", F_ENCABEZADO, fmt=MDP)
-    celda(ws, f"A{t + 2}", "Cuadre con la lámina (ventas de la lámina menos ventas de los productos)", F_SUB)
-    celda(ws, f"E{t + 2}", f"=IFERROR({D('lamina.ventas')}-E{t},\"\")", fmt=MDP)
+    celda(ws, f"A{t + 2}", "El uso de cada producto cuenta para los cajones que pide la norma (pestaña Modelo).", F_SUB)
     lista(ws, f"H{PROD_FILA0}:H{t - 1}", ESTADOS_DATO)
-    anchos(ws, {"A": 26, "B": 10, "C": 12, "D": 12, "E": 12, "F": 12, "G": 14, "H": 14, "I": 46})
+    lista(ws, f"J{PROD_FILA0}:J{t - 1}", USOS_PRODUCTO, estricta=True)
+    anchos(ws, {"A": 26, "B": 10, "C": 12, "D": 12, "E": 12, "F": 12, "G": 14, "H": 14, "I": 46, "J": 18})
     ws.freeze_panes = "B5"
     return ws
 
@@ -336,7 +403,25 @@ PALANCAS = [
     ("banco_pct_costo", "Banco: tope sobre costo con terreno", "%", PCT, D("din.banco_pct_costo")),
     ("banco_pct_ventas", "Banco: tope sobre ventas", "%", PCT, D("din.banco_pct_ventas")),
     ("caja_pct", "Caja mínima (% del costo sin tierra)", "%", PCT, D("din.caja_pct")),
-    ("preventa_minima", "Preventa mínima para arrancar obra", "%", PCT, D("din.preventa_minima")),
+    ("§", "Programa y norma"),
+    ("niveles", "Niveles sobre el terreno", "niveles", ENT, D("prog.niveles")),
+    ("desplante", "Huella en planta baja", "m²", ENT, D("prog.desplante")),
+    ("planta_baja", "Planta baja cerrada", "m²", ENT, D("prog.planta_baja")),
+    ("cajones", "Cajones que se construyen", "cajones", ENT, D("prog.cajones")),
+    ("cajones_sotano", "Cajones en sótano", "cajones", ENT, D("prog.cajones_sotano")),
+    ("m2_cajon", "Metros por cajón, con su circulación", "m²", ENT, D("prog.m2_cajon")),
+    ("norma_cos", "Norma: ocupación máxima", "%", PCT, D("norma.cos")),
+    ("norma_cus", "Norma: intensidad máxima", "veces", '0.00', D("norma.cus")),
+    ("norma_niveles", "Norma: niveles máximos", "niveles", ENT, D("norma.niveles")),
+    ("cajon_vivienda", "Norma: cajones por vivienda", "por vivienda", '0.00', D("norma.cajon_vivienda")),
+    ("cajon_visitas", "Norma: cajones de visitas por vivienda", "por vivienda", '0.00', D("norma.cajon_visitas")),
+    ("m2_cajon_comercio", "Norma: comercio, metros por cajón", "m² por cajón", ENT, D("norma.m2_cajon_comercio")),
+    ("m2_cajon_oficina", "Norma: oficinas, metros por cajón", "m² por cajón", ENT, D("norma.m2_cajon_oficina")),
+    ("§", "Costo de obra por partes"),
+    ("costo_m2", "Obra directa por m² construido", "$/m²", ENT, D("costo.m2_obra")),
+    ("costo_m2_sotano", "Sótano, por m²", "$/m²", ENT, D("costo.m2_sotano")),
+    ("costo_m2_superficie", "Estacionamiento a nivel, por m²", "$/m²", ENT, D("costo.m2_superficie")),
+    ("urbanizacion", "Obras exteriores y urbanización", "MDP", MDP, D("costo.urbanizacion")),
 ]
 DERIVADOS = [
     ("ventas", "Ventas", "MDP", MDP),
@@ -356,9 +441,39 @@ DERIVADOS = [
     ("preventa_inicio", "Preventa firmada al arrancar la obra", "%", PCT),
     ("aportacion", "Tierra más capital entre costo con tierra", "%", PCT),
 ] + [(f"precio_u_{i + 1}", f"Precio por unidad · producto {i + 1}", "MDP", '#,##0.00') for i in range(NP)] \
-  + [(f"firmadas_{i + 1}", f"Firmadas antes de los saldos · producto {i + 1}", "unidades", ENT) for i in range(NP)]
+  + [(f"firmadas_{i + 1}", f"Firmadas antes de los saldos · producto {i + 1}", "unidades", ENT) for i in range(NP)] + [
+    ("construidos", "Construcción sobre el terreno (la de los datos, a escala de la huella y los niveles de esta versión)", "m²", ENT),
+    ("obra_partes", "Obra directa por partes (con el programa de esta versión)", "MDP", MDP),
+    ("obra_partes_base", "Obra directa por partes con el programa de los datos", "MDP", MDP),
+    ("viviendas", "Viviendas (productos de uso vivienda)", "unidades", ENT),
+    ("m2_comercio", "m² de comercio (productos de uso comercio)", "m²", ENT),
+    ("m2_oficina", "m² de oficinas (productos de uso oficina)", "m²", ENT),
+    ("cajones_pide", "Cajones que pide la norma", "cajones", ENT),
+    ("cajones_faltan", "Cajones que faltan para la norma", "cajones", ENT),
+    ("m2_estac_nivel", "m² de cajones a nivel", "m²", ENT),
+    ("area_libre", "Área libre en planta baja (para cajones a nivel)", "m²", ENT),
+    ("cos_usado", "Ocupación del terreno", "%", PCT),
+    ("cus_usado", "Intensidad de construcción (veces el terreno)", "veces", '0.00'),
+    ("alertas_norma", "Reglas de la norma que no se cumplen", "reglas", ENT),
+    ("norma_texto", "Qué no cumple", "texto", None),
+]
 
 MOD_FILA = {}
+
+
+def _filas_modelo():
+    fila = 7
+    for item in PALANCAS:
+        if item[0] != "§":
+            MOD_FILA[item[0]] = fila
+        fila += 1
+    fila += 2
+    for item in DERIVADOS:
+        MOD_FILA[item[0]] = fila
+        fila += 1
+
+
+_filas_modelo()
 
 
 def M(clave, col):
@@ -427,6 +542,69 @@ def hoja_modelo(wb, plan):
     return ws
 
 
+NORMA_DERIVADOS = ("construidos", "viviendas", "m2_comercio", "m2_oficina", "cajones_pide", "cajones_faltan", "m2_estac_nivel", "area_libre",
+                   "cos_usado", "cus_usado", "alertas_norma", "norma_texto")
+
+
+def norma_condiciones(col):
+    """Las cinco reglas de la norma, cada una sólo cuando tiene sus datos (una regla sin datos no avisa)."""
+    P = lambda k: f"{col}{MOD_FILA[k]}"
+    return [
+        f"AND(ISNUMBER({P('cos_usado')}),N({P('norma_cos')})>0,N({P('cos_usado')})>N({P('norma_cos')})+0.00001)",
+        f"AND(ISNUMBER({P('cus_usado')}),N({P('norma_cus')})>0,N({P('cus_usado')})>N({P('norma_cus')})+0.00001)",
+        f"AND(N({P('niveles')})>0,N({P('norma_niveles')})>0,N({P('niveles')})>N({P('norma_niveles')}))",
+        f"AND(ISNUMBER({P('cajones_faltan')}),N({P('cajones_faltan')})>0)",
+        f"AND(ISNUMBER({P('area_libre')}),N({P('m2_estac_nivel')})>N({P('area_libre')}))",
+    ]
+
+
+def norma_formula(clave, col):
+    P = lambda k: f"{col}{MOD_FILA[k]}"
+    prod = lambda c: f"Productos!${c}${PROD_FILA0}:${c}${PROD_FILA0 + NP - 1}"
+    terreno = D("terreno.m2")
+    if clave == "construidos":
+        # la construcción de los datos; si la versión cambia la huella o los niveles, crece o se encoge en la misma proporción
+        base, dn, dd, dp = D("lamina.m2_construidos"), D("prog.niveles"), D("prog.desplante"), D("prog.planta_baja")
+        version, datos = construccion(P('desplante'), P('niveles'), P('planta_baja')), construccion(dd, dn, dp)
+        return (f"=IFERROR(IF(N({base})>0,IF(AND(N({P('niveles')})>0,N({P('desplante')})>0,N({dn})>0,N({dd})>0),"
+                f"{base}*({version})/({datos}),{base}),\"\"),\"\")")
+    if clave == "viviendas":
+        return f"=SUMIF({prod('J')},\"vivienda\",{prod('B')})"
+    if clave == "m2_comercio":
+        return f"=SUMIF({prod('J')},\"comercio\",{prod('C')})"
+    if clave == "m2_oficina":
+        return f"=SUMIF({prod('J')},\"oficina\",{prod('C')})"
+    if clave == "cajones_pide":
+        return (f"=IFERROR(ROUNDUP(ROUND(N({P('viviendas')})*(N({P('cajon_vivienda')})+N({P('cajon_visitas')}))"
+                f"+IF(N({P('m2_cajon_comercio')})>0,N({P('m2_comercio')})/{P('m2_cajon_comercio')},0)"
+                f"+IF(N({P('m2_cajon_oficina')})>0,N({P('m2_oficina')})/{P('m2_cajon_oficina')},0),6),0),\"\")")
+    if clave == "cajones_faltan":
+        return f"=IFERROR(IF(ISNUMBER({P('cajones')}),MAX(0,N({P('cajones_pide')})-N({P('cajones')})),\"\"),\"\")"
+    if clave == "m2_estac_nivel":
+        return f"=IFERROR(MAX(0,N({P('cajones')})-{sotano_efectivo(P)})*N({P('m2_cajon')}),\"\")"
+    if clave == "area_libre":
+        # lo que queda libre en planta baja: el terreno menos lo cerrado (si no se dice, toda la huella)
+        cerrado = f"IF(N({P('planta_baja')})>0,{P('planta_baja')},{P('desplante')})"
+        return f"=IFERROR(IF(AND(N({cerrado})>0,N({terreno})>0),MAX(0,{terreno}-{cerrado}),\"\"),\"\")"
+    if clave == "cos_usado":
+        return f"=IFERROR(IF(AND(N({P('desplante')})>0,N({terreno})>0),{P('desplante')}/{terreno},\"\"),\"\")"
+    if clave == "cus_usado":
+        return f"=IFERROR(IF(AND(N({P('construidos')})>0,N({terreno})>0),{P('construidos')}/{terreno},\"\"),\"\")"
+    c = norma_condiciones(col)
+    if clave == "alertas_norma":
+        return "=" + "+".join(f"IF({x},1,0)" for x in c)
+    if clave == "norma_texto":
+        textos = [
+            f"\"Ocupa \"&ROUND(N({P('cos_usado')})*100,1)&\"% del terreno y la norma permite \"&ROUND(N({P('norma_cos')})*100,1)&\"%. \"",
+            f"\"Construye \"&ROUND(N({P('cus_usado')}),2)&\" veces el terreno y la norma permite \"&ROUND(N({P('norma_cus')}),2)&\". \"",
+            f"\"Tiene \"&N({P('niveles')})&\" niveles y la norma permite \"&N({P('norma_niveles')})&\". \"",
+            f"\"Faltan \"&N({P('cajones_faltan')})&\" cajones: la norma pide \"&N({P('cajones_pide')})&\". \"",
+            f"\"Los cajones a nivel (\"&ROUND(N({P('m2_estac_nivel')}),0)&\" m²) no caben en lo libre de la planta baja (\"&ROUND(N({P('area_libre')}),0)&\" m²). \"",
+        ]
+        return "=TRIM(" + "&".join(f"IF({x},{t},\"\")" for x, t in zip(c, textos)) + ")"
+    raise KeyError(clave)
+
+
 def derivado(clave, col, flujo):
     P = lambda k: f"{col}{MOD_FILA[k]}"
     F = f"'{flujo}'"
@@ -437,7 +615,16 @@ def derivado(clave, col, flujo):
     if clave == "cierre_monto":
         return f"={P('cierre')}*{P('tierra')}"
     if clave == "obra":
-        return f"=IFERROR({D('costo.obra_directa')}*(1+{P('ajuste_obra')}),\"\")"
+        # la obra de los datos más lo que cambie el programa de esta versión frente al base (si hay presupuesto escrito,
+        # la versión sólo suma o resta lo que cambie su programa)
+        return (f"=IFERROR(({D('costo.obra_directa')}+N({P('obra_partes')})-N({P('obra_partes_base')}))"
+                f"*(1+{P('ajuste_obra')}),\"\")")
+    if clave == "obra_partes":
+        return "=IFERROR(" + partes(lambda k: P(k)) + ",\"\")"
+    if clave == "obra_partes_base":
+        return "=IFERROR(" + partes(lambda k: D(PARTES_DATO[k])) + ",\"\")"
+    if clave in NORMA_DERIVADOS:
+        return norma_formula(clave, col)
     if clave == "indirectos_monto":
         return f"=IFERROR({P('indirectos')}*{P('obra')},\"\")"
     if clave == "imprevistos_monto":
@@ -725,9 +912,20 @@ VER_FILAS = [
     ("ck_unidades", "Se firman todas las unidades (debe ser 0)", ENT, "ck_uni"),
     ("§", "AVISOS (se marcan, no cambian la revisión para fondos)"),
     ("capital_sobre_tope", "Capital por arriba del tope de 1/3 de las ventas (MDP; 0 = dentro)", MDP, "cap_tope"),
+    ("fuera_horizonte", "Unidades que no se alcanzan a firmar en los 60 meses que calcula el libro (debe ser 0)", ENT, "horizonte"),
+    ("§", "NORMA (el programa de la versión contra el uso de suelo y el reglamento)"),
+    ("norma_alertas", "Reglas de la norma que no se cumplen (debe ser 0)", ENT, "m:alertas_norma"),
+    ("norma_texto", "Qué no cumple", None, "m:norma_texto"),
+    ("niveles", "Niveles sobre el terreno", ENT, "m:niveles"),
+    ("construidos", "Construcción sobre el terreno (m²)", ENT, "m:construidos"),
+    ("cos_usado", "Ocupación del terreno", PCT, "m:cos_usado"),
+    ("cus_usado", "Intensidad de construcción (veces el terreno)", '0.00', "m:cus_usado"),
+    ("cajones", "Cajones que se construyen", ENT, "m:cajones"),
+    ("cajones_pide", "Cajones que pide la norma", ENT, "m:cajones_pide"),
 ]
 # Claves de Versiones que llegaron después de los libros vivos: en el Resumen van al final (resumen_lista).
-VER_AL_FINAL = ("capital_sobre_tope",)
+VER_AL_FINAL = ("capital_sobre_tope", "fuera_horizonte", "norma_alertas", "norma_texto", "niveles", "construidos", "cos_usado", "cus_usado",
+                "cajones", "cajones_pide")
 VER_FILA = {}
 
 
@@ -821,6 +1019,8 @@ def hoja_versiones(wb, plan):
                 val = f"=IFERROR({fl}!B16-{Pm('ventas')},\"\")"
             elif kind == "ck_uni":
                 val = f"=IFERROR({fl}!B11-Productos!$B${PT},\"\")"
+            elif kind == "horizonte":
+                val = f"=IFERROR(MAX(0,ROUND(Productos!$B${PT}-{fl}!B11,0)),\"\")"
             elif kind == "cap_tope":
                 val = f"=IFERROR(MAX(0,ROUND({Pm('capital')}-{D('din.capital')},3)),\"\")"
             celda(ws, f"{col}{r}", val, fmt=fmt)
@@ -1032,7 +1232,7 @@ def resumen_consejo(ws):
 # Lo que entra en la huella: resultados Y lo que depende de las palancas que no se ven en ellos
 # (la aportación cambia con el capital comprometido aunque el flujo use lo mismo).
 HUELLA_CLAVES = ["ventas", "costo_sin_tierra", "tierra", "capital", "banco_max", "max_ajeno", "costo_dinero", "ganancia",
-                 "dueno_recibe", "mes_reparto", "obra_inicio", "rv_aportacion", "rv_preventa"]
+                 "dueno_recibe", "mes_reparto", "obra_inicio", "rv_aportacion", "rv_preventa", "norma_alertas"]
 
 
 def huella_formula(k):

@@ -206,7 +206,8 @@ votos **dejan de contar** y el plan vuelve a probarse y a defenderse.
    producto, cobranza (enganche, pagos durante la obra, saldos al individualizar), obra en campana,
    capital primero, banco contra avance con tope y caja mínima, respaldo si falta dinero, y la
    devolución del dinero con su rendimiento. La revisión para fondos (nueve pruebas de comité), el
-   reparto con el dueño (cinco esquemas), la edad y el ciclo se calculan ahí mismo.
+   reparto con el dueño (cinco esquemas), la edad y el ciclo se calculan ahí mismo. Desde la plantilla
+   v2, también el programa contra la norma (ver «La plantilla v2 del libro»).
 2. **El servidor** (`server/ppp2/PPP2.gs`): Apps Script aparte, ligado al registro «PPP 2 ·
    Vivero». Valida la sesión con el Portero, lee y escribe celdas permitidas con bitácora,
    revisión y `request_id`, y corre la ronda y las pruebas. Instalación en `server/ppp2/INSTALAR.md`.
@@ -840,8 +841,56 @@ cambió el libro desde entonces no escribe (`revision`), y al abrir otro plan la
 lo calculaba el libro, su fórmula se guarda como texto en la columna L de Datos («Fórmula anterior») y
 deshacer la regresa tal cual; lo que una persona haya escrito en esa columna no se pisa.
 
-Lo que sigue: la plantilla definitiva del libro (programa y norma, costo por partes, ritmo de ventas,
-alertas de norma) y llevar ahí a los planes.
+## La plantilla v2 del libro: programa, norma, costo por partes y ritmo de ventas (15-nov-2026)
+
+Lo que pidió Dirección («cajones de estacionamiento… te va a decir está relacionado… va a empezar a dar
+alerta de que no cumples»): la cabida y la norma viven **dentro** del libro, como datos con fuente, y cada
+versión dice si su programa cumple. Esquema `ppp2-libro-v2` (pestaña Resumen, renglón `esquema`).
+
+**Datos nuevos** (pestaña Datos, con estado y fuente como todos):
+
+- *Norma*: zona del plan de desarrollo urbano (texto), ocupación máxima (COS), intensidad máxima (CUS),
+  niveles máximos, cajones por vivienda y de visitas, y metros por cajón para comercio y oficinas.
+- *Programa*: niveles, huella en planta baja (cuenta para la ocupación), planta baja cerrada (si hay cajones
+  bajo los edificios es menos que la huella; los cajones a nivel tienen que caber en lo que queda libre),
+  construcción sobre el terreno, sin sótano (si no se escribe, sale de la huella en cada nivel y, en planta
+  baja, sólo lo cerrado), área vendible (sale de la suma de los productos), cajones que se construyen, cuántos en
+  sótano y metros por cajón con su circulación. Y el frente del terreno, que sólo se enseña.
+- *Costo de obra por partes*: pesos por m² construido, por m² de sótano y por m² de cajones a nivel, y
+  obras exteriores. La obra directa sale de ahí (`=PARTES`); si hay presupuesto, se escribe encima y entonces
+  cada versión sólo suma o resta lo que cambie su programa frente al de los datos.
+- *Ritmo de ventas* (unidades por mes): los meses de comercialización salen de ahí (`=RITMO`); si se
+  escriben, manda lo escrito.
+- En Productos, la columna J dice el **uso** de cada producto (vivienda, comercio, oficina u otro): con eso
+  se cuentan los cajones que pide la norma. La hoja rechaza otro valor; el servidor lo lee en minúsculas y la
+  página conserva un valor que no esté en la lista (y dice que no cuenta) en vez de borrarlo al guardar otro campo.
+
+**Lo que se quitó** (la ingeniería inversa desde el visor): ventas, costo total, utilidad y pago al dueño
+«de la lámina» (eran para cuadrar y no llegaban a ningún resultado), el precio `=CUADRAR` y la palanca de
+preventa mínima (ninguna fórmula la leía; el dato se queda porque el cuadro Tiempo lo enseña).
+
+**Cada versión** puede tener su propio programa (palancas «Programa y norma» y «Costo de obra por partes»
+en el Modelo) y el libro calcula, por versión: construcción (la de los datos a escala de su huella y sus
+niveles), obra por partes, viviendas, m² de comercio y oficinas, cajones que pide la norma y los que faltan,
+m² de cajones a nivel, área libre, ocupación e intensidad usadas, y **cuántas reglas de la norma no cumple y
+cuáles** (`norma_alertas`, `norma_texto`, en palabras: «Faltan 10 cajones: la norma pide 130.»). Una regla
+sin sus datos no avisa; un 0 escrito sí es un dato (una versión con 0 cajones avisa que faltan). Los cajones
+en sótano no pueden ser más que los que se construyen. Y si la venta, con su ritmo, no cabe en los 60 meses
+que calcula el libro, la versión lo dice (`fuera_horizonte`: unidades que no se alcanzan a firmar) y la ficha
+lo avisa: el libro no recorta la venta en silencio. Las alertas entran a la huella de la versión, así que una prueba o un voto del
+consejo sobre una versión que deja de cumplir dejan de contar.
+
+**En la ficha**: si la versión que se ve no cumple, debajo de los cuadros sale el aviso con lo que no cumple
+y un enlace al cuadro Terreno, donde el lápiz lleva los datos del programa y de la norma; «Ver qué cambia»
+dice si la cifra nueva deja de cumplir o ya cumple. La tabla de versiones lleva el renglón «La norma».
+
+**Compatibilidad**: los libros vivos siguen en v1 y el servidor los lee igual (las claves nuevas no
+existen en ellos y no se enseñan). Un plan sembrado anota el esquema que trae la plantilla de Drive. Los
+números del plan de ejemplo no cambian: su obra por partes cuadra con la obra de siempre.
+
+Lo que sigue: subir la plantilla v2 a Drive (la que copia «Sembrar»), pasar a ella los planes que la
+necesiten (cada uno en un libro nuevo; el v1 se queda como estaba) y enseñar las alertas también en el visor
+por liga.
 
 ## Invariantes
 
