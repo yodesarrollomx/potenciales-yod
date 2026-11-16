@@ -238,6 +238,7 @@
   }
   function cabeza(titulo, d) {
     var plan = (d && d.plan && d.plan.nombre) || 'Plan de Potencial', v = d && d.version ? 'V' + d.version + (d.v && d.v.estado ? ' ' + d.v.estado : '') : '';
+    if (titulo === 'Opciones' && opcionesFijas(d)) v = '';
     return '<header class="vzp-cab"><span class="vzp-marca">YoDesarrollo · Plan de Potencial</span><h2 class="vzp-tit" tabindex="-1">' + esc(titulo) + '</h2>' +
       '<p class="vzp-subt"><span>' + esc(plan) + '</span>' + (v ? '<span class="vzp-subt-v">' + esc(v) + '</span>' : '') + '</p></header>';
   }
