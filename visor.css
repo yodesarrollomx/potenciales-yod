@@ -204,3 +204,7 @@ html.vz-con-modal, html.vz-con-modal body { overflow: hidden; }
   .vz-card:active { transform: none; }
   .vz-card.vz-cambio { outline: 2px solid #9a7b3f; outline-offset: 1px; }
 }
+/* El visor ofrece la entrada; los permisos se comprueban en el editor. */
+.vz-editor{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0 0;font-size:13px}
+.vz-editor a{display:inline-flex;align-items:center;min-height:44px;padding:6px 14px;border:1px solid #7d5f1e;border-radius:999px;color:#604814;text-decoration:none;font-weight:600}
+.vz-editor small{color:#6e675a}

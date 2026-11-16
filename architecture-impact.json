@@ -1,21 +1,20 @@
 {
-  "model_revision": "2026-11-15.mcp-operativo.1",
-  "proposal_id": "CHG-PPP2-20261112",
-  "summary": "PPP 2 · el visor en vivo explica cada cifra que se toca (seguimiento de CHG-PPP2-20261112). Pedido de Dirección: que la leyenda de cada cifra de «Riesgo y estado» diga qué es y de qué depende, revisado contra el grafo del plan, legible para alguien de 17 o 18 años y preciso para un financiero; después, los demás cuadros. La leyenda sigue breve (la cifra, el límite, la holgura y una línea de qué es) y, dentro de la hoja, ofrece «Qué es y de qué depende», que abre el renglón de esa cifra en la lista de abajo (no tapa la hoja en el teléfono): qué es, cómo se calcula con las cifras que el servidor ya trae (lo que no viene se dice sin cifra), cómo está hoy (el plan, «la revisión para fondos pide…» y la holgura), de qué depende, qué la mueve, por qué importa y de dónde sale. Los renglones son botones con aria-expanded y aria-controls que abren una región con nombre; con ratón la leyenda se fija con un clic; lo abierto sigue abierto si la hoja se repinta sola. «De qué depende» sale del grafo de fórmulas: visor-explica-grafo.js lo genera ppp2/libro/explica.py con el mismo recorrido de referencias que relaciones.py pero hacia atrás (entradas directas y segundo nivel, con su tipo: palanca, dato o resultado, y los rótulos del libro); sin cifras; huella de las fuentes y firma del contenido, como ppp2-relaciones.js. Los textos viven aparte en visor-explica.js, una entrada por cifra; su campo opera se compara con el grafo, así que un texto que describa otra fórmula falla si la plantilla cambia. Fase 1: las nueve pruebas de la revisión para fondos, aguante, etapa, candados y siguiente paso. Fase 2: Reparto, Terreno, Producto, Tiempo, Costo y ganancia y Dinero (lo que acomoda el visor —cocientes y sumas— dice de qué cifras del libro sale). En fotos del PPP de siempre, el renglón dice que la cifra sale del motor de su tablero y su marca deducido. De paso: la leyenda dice «La revisión pide» (no «El banco pide»: el límite es la regla de la revisión para fondos del PPP), etapa y candados tienen su propia leyenda, la holgura de una aportación justa no repite «lo sano» y los cortes de Costo y ganancia enseñan el costo sin tierra. visor.js no hace cuentas nuevas: sólo formatea lo que llega; sin los archivos nuevos el visor es el de siempre. visor.html y ppp2.html cargan los dos archivos; sube la etiqueta de caché de los archivos de este repo para todas las páginas (también accesos.html, por eso se declara SYS-CONTROL). No cambian el servidor PPP 2, los libros, ppp2.js, ppp2-relaciones.js, el Portero ni los motores; sólo lectura, sin datos reales en el repo.",
+  "model_revision": "2026-11-16.ppp-factores.2",
+  "proposal_id": "CHG-PPP-FACTORES-20261116",
+  "summary": "Editor de factores visible en todos los planes con libro, con búsqueda, relaciones, sliders y sí/no; navegación desde el visor a la ficha autenticada. Se reutilizan simulación, guardado y deshacer existentes.",
   "components": [
     "SYS-POTENCIALES",
     "SYS-PPP2",
     "SHEET-PPP2",
-    "SYS-CONTROL"
+    "SYS-CONTROL",
+    "GAS-PPP2"
   ],
   "tests": [
-    "node --test tests/visor-explica.test.cjs (cada prueba de la revisión y cada cifra que se toca en los siete cuadros tiene su texto y su renglón; opera de cada texto contra el grafo; visor-explica-grafo.js al día con la plantilla y sin editar a mano, y regenerado igual por python3 ppp2/libro/explica.py --check si hay openpyxl; «De qué depende» sale del grafo y cambia si el grafo cambia; las cifras son las que trae el servidor y lo que no trae no aparece; los límites son los de la plantilla y se dicen como regla de la revisión para fondos; tono; fotos del PPP de siempre; sin los archivos, el visor de siempre; las series y datos que recorre el guion son los del servidor)",
-    "node tests/visor-explica-browser.cjs (12 recorridos: teléfonos de 430, 390 y 375 px a 3× con tema claro y oscuro del sistema, teclado y lector de pantalla, escritorio con la leyenda fija, contraste AA, nada se sale a lo ancho, repintado en vivo con un renglón abierto, foto del PPP de siempre, sin visor-explica.js, la ficha con quien lee y con quien edita —el lápiz no abre el renglón— y los demás cuadros)",
-    "node --test tests/ppp2-visor.test.cjs tests/ppp2-visor-pagina.test.cjs tests/visor-pestanas.test.cjs tests/ppp2-lapiz.test.cjs",
-    "node tests/ppp2-visor-browser.cjs, node tests/visor-pestanas-browser.cjs y node tests/ppp2-browser.cjs",
-    "node --test tests/*.test.cjs (tests/ppp-ui.test.cjs ya fallaba en main)",
+    "node tests/ppp2-browser.cjs",
+    "node --test tests/ppp2-*.test.cjs",
+    "node tests/ppp2-visor-browser.cjs",
     "node scripts/versiones.cjs --check",
-    "verificar-impacto contra el atlas fijado"
+    "verificar-impacto contra atlas fijado"
   ],
-  "rollback": "Revertir el PR: la leyenda vuelve a ser la de antes (sin la línea de qué es ni el botón) y los renglones de la hoja dejan de abrirse. No hay nada que revertir en el servidor, en las hojas ni en los libros. Para apagarlo sin código basta con no cargar visor-explica.js: el visor queda como antes."
+  "rollback": "Revertir este PR: se conserva el lápiz anterior, los libros, sus versiones y permisos."
 }

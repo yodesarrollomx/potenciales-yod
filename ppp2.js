@@ -67,7 +67,7 @@
      con sinRed, no pude traer lo nuevo. Mientras no sea fresco no se guarda nada. */
   /* pestana: la sección del expediente que está abierta debajo de los cuadros ('' = ninguna: la carátula limpia). */
   var estado = { vivero: null, plan: null, planId: '', pestana: '', version: 0, ocupado: false, fresco: true, visto: 0, sinRed: false,
-    viveroCopia: null };
+    viveroCopia: null, factores: 'terreno', buscaFactor: '' };
   var raiz = document.getElementById('ppp2');
 
   /* ───────── utilidades ───────── */
@@ -214,11 +214,12 @@
     var h = (location.hash || '').replace(/^#\/?/, '').split('/');
     if (h[0] === 'plan' && /^p2[a-z0-9]{6,20}$/.test(h[1] || '')) {
       var cambio = estado.planId !== h[1];
-      if (cambio) escondeDeshacer();
+      if (cambio) { escondeDeshacer(); estado.factores = 'terreno'; estado.buscaFactor = ''; }
       estado.planId = h[1];
       var pes = h[2] === 'auton' ? 'rondas' : h[2];
-      estado.pestana = ['versiones', 'preguntas', 'rondas', 'bitacora'].indexOf(pes) >= 0 ? pes : '';
-      if (cambio || !estado.plan) { estado.plan = null; estado.version = 0; estado.fresco = true; estado.sinRed = false; cargarPlan(); } else pintarPlan();
+      estado.pestana = ['editar', 'versiones', 'preguntas', 'rondas', 'bitacora'].indexOf(pes) >= 0 ? pes : '';
+      var pedida = /^[123]$/.test(h[3] || '') ? Number(h[3]) : 0;
+      if (cambio || !estado.plan) { estado.plan = null; estado.version = pedida; estado.fresco = true; estado.sinRed = false; cargarPlan(); } else { if (pedida) estado.version = pedida; pintarPlan(); }
     } else {
       escondeDeshacer();
       estado.planId = ''; estado.plan = null;
@@ -358,6 +359,8 @@
       '<div class="p2-crecer">' + edad(r['plan.edad']) + '<span class="p2-tenue"><b>Para crecer falta:</b> ' + esc(r['plan.para_crecer'] || '—') + '</span></div></div>' +
       (p.libro_url ? '<a class="p2-btn suave" href="' + esc(p.libro_url) + '" target="_blank" rel="noopener"><i class="ti ti-table"></i> Abrir el libro</a>' : '') + '</div>' +
       '<div class="p2-versiones" role="group" aria-label="Versiones">' + vers + '</div>' +
+      (puede.editar ? '<div class="p2-editar-entrada"><a class="p2-btn oro" href="#/plan/' + esc(estado.planId) + '/editar"' + (estado.pestana === 'editar' ? ' aria-current="page"' : '') + '><i class="ti ti-adjustments-horizontal" aria-hidden="true"></i> Editar factores</a><span>Prueba una cifra, mira qué mueve y guárdala en la V' + estado.version + '.</span></div>' : '') +
+      (estado.pestana === 'editar' && puede.editar ? panelFactores() : '') +
       '<section class="p2-cuadros" aria-label="El plan en siete cuadros"><div class="p2-cuadros-cab"><div><div class="p2-sobre">El plan en siete cuadros · V' + estado.version + '</div>' +
       '<span class="p2-tenue p2-chico">Toca un cuadro para ver sus puntos y de dónde sale cada cifra' + (puede.editar ? '; con el lápiz pruebas otra cifra antes de guardarla.' : '.') + '</span></div>' +
       (puede.editar ? '<button class="p2-btn suave" data-accion="compartir"><i class="ti ti-share-2"></i> Compartir visor</button>' : '') + '</div>' +
@@ -552,6 +555,45 @@
     return '<h3>Lo que mueve este cuadro · V' + k + '</h3><p class="p2-mueve-pista">' +
       (editar ? 'Con el lápiz pruebas otra cifra, ves qué cambia y decides si la guardas.' : 'Las cifras que alimentan este cuadro y de dónde salen.') + '</p><dl>' + filas.join('') + '</dl>';
   }
+  /* Una entrada directa al mismo lápiz: no crea otra copia de los datos ni otro motor. */
+  function panelFactores() {
+    return '<section id="p2Factores" class="p2-panel p2-factores" aria-labelledby="p2FactoresTitulo"><div class="p2-factores-cab"><div><div class="p2-sobre">V' + estado.version + ' · ' + esc(ver().nombre || '') + '</div><h2 id="p2FactoresTitulo">Editar factores</h2></div><a class="p2-btn suave" href="#/plan/' + esc(estado.planId) + '">Ver el plan</a></div>' +
+      '<p class="p2-tenue">Elige un factor para ver sus relaciones. Puedes probar las palancas antes de guardar; los datos comunes y los productos indican qué versiones afectan.</p>' +
+      '<label class="p2-busca-factor">Buscar un factor<input type="search" data-busca-factor value="' + esc(estado.buscaFactor) + '" placeholder="Capital, niveles, ventas…" aria-controls="p2FactoresLista"></label>' +
+      '<div class="p2-grupos-factor" role="group" aria-label="Grupos de factores">' + Object.keys(CUADRO_NOMBRE).map(function (id) {
+        return '<button type="button" class="p2-btn suave" data-accion="grupo-factor" data-c="' + id + '" aria-pressed="' + (estado.factores === id) + '">' + esc(CUADRO_NOMBRE[id]) + '</button>';
+      }).join('') + '</div><div id="p2FactoresLista" class="p2-mueve">' + listaFactores() + '</div></section>';
+  }
+  function listaFactores() {
+    var R = rel(), q = estado.buscaFactor.trim().toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g, ''), filas = [], vistos = {};
+    if (!R) return '<p>Los factores no se pudieron cargar. Recarga el plan.</p>';
+    var ids = q ? Object.keys(R.entradas) : (R.cuadros[estado.factores] || []);
+    ids.forEach(function (id) {
+      if (vistos[id]) return; vistos[id] = true;
+      var e = entrada(id), texto = [e.concepto, e.palanca, e.dato, (e.mueve || []).join(' ')].join(' ');
+      if (e.tipo === 'productos') texto += ' ' + (estado.plan.productos || []).map(function (p) { return p.nombre; }).join(' ');
+      if (q && texto.toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g, '').indexOf(q) < 0) return;
+      filas = filas.concat(renglonesDe(id, estado.version, true));
+    });
+    return '<h3>' + (q ? 'Resultados de la búsqueda' : esc(CUADRO_NOMBRE[estado.factores])) + ' · V' + estado.version + '</h3>' +
+      (filas.length ? '<dl>' + filas.join('') + '</dl>' : '<p class="p2-tenue">No hay factores para esta selección.</p>');
+  }
+  function refrescaFactores() {
+    var el = document.getElementById('p2FactoresLista');
+    if (el) el.innerHTML = listaFactores();
+    document.querySelectorAll('[data-accion="grupo-factor"]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-c') === estado.factores)); });
+  }
+  /* El deslizador sólo facilita introducir una cifra. Su recorrido no es un límite del proyecto;
+     la cifra exacta sigue siendo editable y el servidor conserva toda la validación. */
+  function controlCifra(unidad, mostrado) {
+    var exacto = '<input name="valor" inputmode="decimal" autocomplete="off" value="' + esc(mostrado) + '">';
+    if (unidad === '1/0') return exacto + '<button type="button" class="p2-switch" role="switch" aria-label="Activar este factor" aria-checked="' + (Number(mostrado) === 1) + '" data-accion="factor-switch"><span aria-hidden="true"></span><b>' + (Number(mostrado) === 1 ? 'Sí' : 'No') + '</b></button>';
+    var n = Number(mostrado), max = Math.max(100, Math.ceil(Math.abs(n) * 2)), min = n < 0 ? -max : 0;
+    var paso = ['mes', 'meses', 'niveles', 'cajones', 'unidades', '$/m²'].indexOf(unidad) >= 0 ? 1 : 0.01;
+    if (unidad === '%') { min = -100; max = 500; paso = 0.1; }
+    if (unidad === 'mes' || unidad === 'meses') { min = 0; max = 60; }
+    return exacto + '<input type="range" data-factor-slider aria-label="Ajustar cifra" min="' + min + '" max="' + max + '" step="' + paso + '" value="' + esc(mostrado === '' ? 0 : mostrado) + '"><small class="p2-tenue">Desliza o escribe la cifra exacta. Nada se guarda al mover el control.</small>';
+  }
   /* Cerrar la hoja del cuadro antes de ir a otra parte: la hoja vive en la historia del navegador (atrás la cierra). */
   function cierraHojaY(fn) {
     var x = document.querySelector('#vzModal:not([hidden]) .vz-x');
@@ -607,7 +649,7 @@
       '<div class="p2-ligado"><div class="p2-sobre">Está ligado a</div><div data-ligado>' + ligadoA(e, false) + '</div>' + (e.nota ? '<p class="p2-chico p2-tenue">' + esc(e.nota) + '</p>' : '') + '</div>' +
       '<form class="p2-form" data-form="lapiz">' +
       '<label>Otra cifra' + (unidad && unidad !== 'texto' ? ' <span class="p2-tenue">(' + esc(unidad === '%' ? '% · escribe 30 para 30%' : unidad === '1/0' ? '1 sí · 0 no' : unidad) + ')</span>' : '') +
-      (esNumero ? '<input name="valor" inputmode="decimal" autocomplete="off" value="' + esc(mostrado) + '">' : '<textarea name="valor" rows="2">' + esc(mostrado) + '</textarea>') + '</label>' +
+      (esNumero ? controlCifra(unidad, mostrado) : '<textarea name="valor" rows="2">' + esc(mostrado) + '</textarea>') + '</label>' +
       opciones +
       (derivado ? '<p class="p2-chico p2-aviso-chico">Hoy lo calcula el libro' + (d.fuente ? ' (' + esc(corta(d.fuente, 90)) + ')' : '') + '. Si escribes una cifra en los datos, deja de calcularse.</p>' : '') +
       (pideFuente ? '<div class="p2-fuente"' + (pa ? ' data-solo-dato="1" hidden' : '') + '><label>Estado del dato<select name="estado">' +
@@ -1346,6 +1388,8 @@
     var b = ev.target.closest('[data-accion]');
     if (!b || !raiz.contains(b) && !b.closest('.p2-dialogo') && !b.closest('#vzModal')) return;
     var a = b.getAttribute('data-accion');
+    if (a === 'grupo-factor') { estado.factores = b.getAttribute('data-c'); estado.buscaFactor = ''; var busca = document.querySelector('[data-busca-factor]'); if (busca) busca.value = ''; refrescaFactores(); return; }
+    if (a === 'factor-switch') { var f = b.closest('form'), activo = b.getAttribute('aria-checked') !== 'true'; f.valor.value = activo ? '1' : '0'; b.setAttribute('aria-checked', String(activo)); b.querySelector('b').textContent = activo ? 'Sí' : 'No'; limpiaPrueba(); return; }
     if (a === 'lapiz') { abrirLapiz(b.getAttribute('data-e')); return; }
     if (a === 'abrir-cuadro') { var cu = document.querySelector('#p2Cuadros .vz-card[data-card="' + b.getAttribute('data-c') + '"]'); if (cu) cu.click(); return; }
     if (a === 'lapiz-probar') { probarLapiz(b); return; }
@@ -1463,7 +1507,16 @@
 
   // cambiar la cifra borra el resultado de la prueba anterior: lo que se ve siempre es de la cifra escrita
   document.addEventListener('input', function (ev) {
-    if (ev.target.matches && ev.target.matches('#p2Dialogo form[data-form="lapiz"] input[name="valor"]')) limpiaPrueba();
+    var t = ev.target;
+    if (!t.matches) return;
+    if (t.matches('[data-busca-factor]')) { estado.buscaFactor = t.value; refrescaFactores(); return; }
+    if (t.matches('#p2Dialogo [data-factor-slider]')) { t.closest('form').valor.value = t.value; limpiaPrueba(); return; }
+    if (t.matches('#p2Dialogo form[data-form="lapiz"] input[name="valor"]')) {
+      var f = t.closest('form'), s = f.querySelector('[data-factor-slider]'), b = f.querySelector('[data-accion="factor-switch"]'), n = aNumero(t.value, 'MDP');
+      if (s && n !== null && !isNaN(n)) { if (n < Number(s.min)) s.min = n; if (n > Number(s.max)) s.max = n; s.value = n; }
+      if (b) { b.setAttribute('aria-checked', String(n === 1)); b.querySelector('b').textContent = n === 1 ? 'Sí' : 'No'; }
+      limpiaPrueba();
+    }
   });
 
   document.addEventListener('submit', function (ev) {

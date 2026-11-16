@@ -1005,7 +1005,14 @@
     var v = d.v || {}, est = String(v.estado || ''), fa = fechaCorta(v.fecha_aprobacion), cambio = fechaCorta(d.cambio);
     return '<header class="vz-top"><div class="vz-l1"><span class="vz-marca">YoDesarrollo · Plan de Potencial</span>' +
       '<span class="vz-vivo" id="vzVivo" data-base="' + esc('En vivo' + (cambio ? ' · cambió ' + cambio : '')) + '"><i aria-hidden="true"></i><span>En vivo' + (cambio ? ' · cambió ' + esc(cambio) : '') + '</span></span></div>' +
-      '<div class="vz-l2"><h1>' + esc((d.plan && d.plan.nombre) || 'Plan de Potencial') + '</h1><span class="vz-ver">V' + esc(d.version) + (est ? ' ' + esc(est) : '') + (est === 'vigente' && fa ? ' · ' + fa : '') + '</span></div></header>';
+      '<div class="vz-l2"><h1>' + esc((d.plan && d.plan.nombre) || 'Plan de Potencial') + '</h1><span class="vz-ver">V' + esc(d.version) + (est ? ' ' + esc(est) : '') + (est === 'vigente' && fa ? ' · ' + fa : '') + '</span></div>' + entradaEditor(d) + '</header>';
+  }
+  /* Sólo navegación: el destino valida la sesión y el permiso de edición con el Portero. */
+  function entradaEditor(d) {
+    var id = d.menu && d.menu.plan, href = '', etiqueta = 'Editar factores';
+    if (/^p2[a-z0-9]{6,20}$/.test(id || '')) href = 'ppp2.html#/plan/' + encodeURIComponent(id) + '/editar' + (/^[123]$/.test(String(d.version)) ? '/' + d.version : '');
+    else if (/^ppp:[A-Za-z0-9_-]{3,64}(?::[A-Za-z0-9_-]{1,40})?$/.test(id || '')) { href = 'index.html'; etiqueta = 'Abrir editor del PPP'; }
+    return href ? '<p class="vz-editor"><a href="' + esc(href) + '">' + etiqueta + ' →</a><small>Acceso del equipo</small></p>' : '';
   }
   function selector(d) {
     var planes = (d.menu && d.menu.planes) || [], vers = d.versiones || [], o = '';

@@ -19,6 +19,15 @@ const texto = (html) => html.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').rep
 const leyendas = (html) => [...html.matchAll(/data-t="([^"]+)"/g)].map((m) => JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')));
 const mdp = (x) => '$' + x.toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
+test('el visor enlaza al editor con el plan y versión visibles sin llevar la liga ni credenciales', () => {
+  const d = datos();
+  assert.match(visor.pinta(d).html, new RegExp('ppp2.html#/plan/' + PLAN + '/editar/' + d.version));
+  const malo = copia(d); malo.menu.plan = 'javascript:alert(1)';
+  assert.doesNotMatch(visor.pinta(malo).html, /Editar factores/);
+  const foto = copia(d); foto.menu.plan = 'ppp:caso-ejemplo:escenario-1';
+  assert.match(visor.pinta(foto).html, /href="index.html">Abrir editor del PPP/);
+});
+
 test('pinta los siete cuadros con las cifras del libro, sin inventar ninguna', () => {
   const d = datos(), p = visor.pinta(d, null), t = texto(p.html);
   assert.deepEqual(p.cuadros.map((c) => c.id), ['reparto', 'terreno', 'producto', 'tiempo', 'costo', 'dinero', 'riesgo']);

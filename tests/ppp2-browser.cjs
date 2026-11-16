@@ -107,6 +107,60 @@ async function foto(page, nombre) {
     try { await fn(); console.log('ok · ' + nombre); } catch (e) { fallos++; console.error('FALLA · ' + nombre + '\n  ' + (e && e.stack || e)); }
   };
   try {
+    await caso('factores visibles: buscar, deslizar, probar, guardar y deshacer conservan la versión', async () => {
+      const w = mundo();
+      const { page, ctx, posts, errores } = await pagina(navegador, base, w, EDITOR, { movil: true, hash: '#/plan/' + PLAN });
+      await page.getByRole('link', { name: 'Editar factores', exact: true }).click();
+      await page.locator('[data-busca-factor]').fill('indirectos');
+      await page.locator('#p2FactoresLista [data-e="palanca:indirectos"]').click();
+      const dlg = page.locator('#p2Dialogo'), val = dlg.locator('input[name="valor"]'), slider = dlg.getByRole('slider', { name: 'Ajustar cifra' });
+      await val.fill('15');
+      await slider.focus(); await page.keyboard.press('ArrowRight');
+      assert.equal(Number(await val.inputValue()), 15.1);
+      assert.equal(posts.length, 0, 'mover no guarda ni prueba');
+      await dlg.locator('[data-accion="lapiz-probar"]').click();
+      await page.locator('#p2LapizRes[data-probado]').waitFor();
+      assert.deepEqual(posts.at(-1).cambios, [{ clave: 'indirectos', valor: .151 }]);
+      await val.fill('16');
+      assert.equal(await page.locator('#p2LapizRes[data-probado]').count(), 0, 'una cifra distinta invalida la prueba');
+      await dlg.locator('button[type="submit"]').click();
+      await page.locator('#p2Deshacer:not([hidden])').waitFor();
+      assert.deepEqual([posts.at(-1).tipo, posts.at(-1).version, posts.at(-1).valor], ['ppp2-palanca', 2, .16]);
+      await page.waitForFunction(() => !window.PPP2.estado.ocupado);
+      assert.equal(await page.locator('[data-busca-factor]').inputValue(), 'indirectos');
+      await page.locator('#p2Deshacer .p2-btn').click();
+      await page.getByText('Listo: regresé la cifra que había.').waitFor();
+      assert.equal(posts.at(-1).valor, null);
+      await sinDesborde(page, 'factores móvil');
+      await foto(page, 'ppp2-factores-movil');
+      assert.deepEqual(errores, []); await ctx.close();
+    });
+    await caso('factores: switch de banco, cambio de versión, búsqueda vacía y lector sin editor', async () => {
+      const w = mundo();
+      const { page, ctx, posts, errores } = await pagina(navegador, base, w, ADMIN, { hash: '#/plan/' + PLAN + '/editar/1' });
+      await page.locator('[data-busca-factor]').fill('usa crédito');
+      await page.locator('#p2FactoresLista [data-e="palanca:usa_banco"]').click();
+      const dlg = page.locator('#p2Dialogo'), sw = dlg.getByRole('switch');
+      const inicial = await sw.getAttribute('aria-checked');
+      await sw.press('Space');
+      assert.equal(await sw.getAttribute('aria-checked'), inicial === 'true' ? 'false' : 'true');
+      assert.equal(await dlg.locator('input[name="valor"]').inputValue(), inicial === 'true' ? '0' : '1');
+      assert.equal(posts.length, 0);
+      await dlg.getByRole('button', { name: 'Cancelar', exact: true }).click();
+      await page.locator('[data-accion="version"][data-v="3"]').click();
+      assert.match(await page.locator('#p2Factores').innerText(), /V3/);
+      await page.locator('[data-busca-factor]').fill('zzzinexistente');
+      await page.getByText('No hay factores para esta selección.').waitFor();
+      await page.getByRole('button', { name: 'Producto', exact: true }).click();
+      assert.equal(await page.locator('[data-busca-factor]').inputValue(), '');
+      assert.ok(await page.locator('#p2FactoresLista [data-e^="producto:"]').count() > 0);
+      assert.deepEqual(errores, []); await ctx.close();
+      const lector = await pagina(navegador, base, mundo(), LECTOR, { hash: '#/plan/' + PLAN + '/editar' });
+      await lector.page.locator('.p2-versiones').waitFor();
+      assert.equal(await lector.page.locator('#p2Factores').count(), 0);
+      assert.equal(await lector.page.getByRole('link', { name: 'Editar factores', exact: true }).count(), 0);
+      assert.equal(lector.posts.length, 0); await lector.ctx.close();
+    });
     await caso('sin servidor instalado la página lo dice y no pide nada', async () => {
       const w = mundo();
       const { page, ctx, errores } = await pagina(navegador, base, w, EDITOR, { sinServidor: true });
