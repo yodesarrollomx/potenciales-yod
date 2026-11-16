@@ -1,12 +1,13 @@
 {
-  "model_revision": "2026-11-16.ppp-factores.1",
+  "model_revision": "2026-11-16.ppp-factores.2",
   "proposal_id": "CHG-PPP-FACTORES-20261116",
   "summary": "Editor de factores visible en todos los planes con libro, con búsqueda, relaciones, sliders y sí/no; navegación desde el visor a la ficha autenticada. Se reutilizan simulación, guardado y deshacer existentes.",
   "components": [
     "SYS-POTENCIALES",
     "SYS-PPP2",
     "SHEET-PPP2",
-    "SYS-CONTROL"
+    "SYS-CONTROL",
+    "GAS-PPP2"
   ],
   "tests": [
     "node tests/ppp2-browser.cjs",
