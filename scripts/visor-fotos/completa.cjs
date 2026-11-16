@@ -304,10 +304,14 @@ function hechos(tipo, r, F, visor) {
      · ganancia: la salida del motor que ya tiene ese sentido, si la hay: su utilidad cuando toda la tierra es
        costo a su valor (se compra en efectivo y no hay regalía), o en residencial su utilidad repartible cuando
        repaga al dueño su tierra completa (100 %), sin honorario, sin modo histórico y sin quedarse corta. Si no
-       la hay, queda vacía con su razón (va a `conciliacion.vacios`): mejor vacía que con otro sentido. Aquí
-       nunca se calcula una ganancia. `margen` sigue a la ganancia: sólo el del motor cuando la ganancia es la suya.
-   Devuelve {tierra?, tierraTexto?, ganancia? (null = vacía), gananciaTexto?, margen? (null = vacío), porque};
-   lo que no viene no cambia. */
+       la hay, se deduce como el libro: caja al cierre, ya devueltos capital, banco y respaldo (el resultado a
+       repartir de la foto), menos la tierra que aporta el dueño a su valor (`gananciaDeR`; la que se paga en
+       efectivo ya va en los egresos). Cuando el motor sí da la ganancia, es esa misma cuenta: el mismo plan con la
+       tierra pagada o aportada da la misma ganancia. Es antes de repartir: no depende de cómo cobra el dueño (un %
+       de la utilidad, una regalía por venta, el repago de su tierra) ni del honorario de la alianza, que salen de
+       ella. Sólo si falta el resultado a repartir queda vacía con su razón. `margen` = ganancia ÷ ventas.
+   Devuelve {tierra?, tierraTexto?, ganancia? (null = vacía), gananciaTexto?, gananciaDeR?, margen? (null = vacío),
+   porque}; lo que no viene no cambia. */
 function sentidoVisor(tipo, r, H) {
   const p = r.p || {}, x = k => num(r[k]), out = { porque: {} };
   const pago = x('tierraPago') || 0, aport = H.tierraAportada || 0, valor = H.tierraValor;
@@ -329,11 +333,13 @@ function sentidoVisor(tipo, r, H) {
       return out;
     }
     out.ganancia = null;
+    out.gananciaDeR = true;
     out.porque['v.ganancia'] = completo
       ? 'La utilidad del motor no alcanza a repagar al dueño su tierra a su valor: el motor deja la utilidad repartible en cero y no da la ganancia después de la tierra (sería negativa).' + SIN
       : 'Con honorario de desarrollo, modo histórico o repago parcial de la tierra, la utilidad repartible del motor no es la ganancia después de la tierra a su valor, y el motor no la da de otro modo.' + SIN;
   } else {
     out.ganancia = null;
+    out.gananciaDeR = true;
     out.porque['v.ganancia'] = (H.regalia || 0) > PESO
       ? 'El motor resta la regalía del dueño (un % de cada venta), no la tierra a su valor: no da la ganancia después de la tierra a su valor.' + SIN
       : 'La utilidad del motor es antes de la tierra que aporta el dueño (él cobra un % de esa utilidad): el motor no da la ganancia después de la tierra a su valor.' + SIN;
@@ -388,9 +394,10 @@ function llena(visor, H, F, extra) {
       corrige('v.tierra', M(S.tierra), S.tierraTexto);
       if (H.tipo === 'MACROLOTES') corrige('datos.tierra.valor', M(S.tierra), S.tierraTexto);
     }
-    if (S.ganancia === null) anula('v.ganancia', S.porque['v.ganancia']);
+    /* con `gananciaDeR` la ganancia y su margen se deducen abajo, cuando ya está el resultado a repartir */
+    if (S.ganancia === null && !S.gananciaDeR) anula('v.ganancia', S.porque['v.ganancia']);
     else if (fin(S.ganancia)) corrige('v.ganancia', M(S.ganancia), S.gananciaTexto);
-    if (S.margen === null) anula('v.margen', S.porque['v.margen']);
+    if (S.margen === null && !S.gananciaDeR) anula('v.margen', S.porque['v.margen']);
     if (S.margenDeduce && fin(v.ganancia) && fin(v.ventas) && v.ventas > 0) corrige('v.margen', N.r6(v.ganancia / v.ventas), 'ganancia real ÷ ventas, como el libro (el margen del motor es el de su utilidad antes de la tierra que aporta el dueño)');
   }
 
@@ -422,9 +429,26 @@ function llena(visor, H, F, extra) {
     if (vacio('v.resultado_repartir')) deduce('v.resultado_repartir', M(R), 'caja al cierre menos el capital aportado, la deuda y el respaldo que siguen pendientes');
     else corrige('v.resultado_repartir', M(R), 'caja al cierre menos el capital aportado (antes contaba el capital adentro o ya restaba la tierra)');
   }
+  /* la ganancia después de la tierra a su valor, como el libro (ganancia = caja al cierre − tierra): el resultado a
+     repartir menos la tierra que aporta el dueño (la que se paga en efectivo ya está en los egresos) */
+  if (S && S.gananciaDeR) {
+    if (fin(R) && fin(H.tierraAportada)) {
+      const textoG = 'resultado a repartir (caja al cierre, ya devueltos capital, banco y respaldo) menos la tierra que aporta el dueño a su valor: la ganancia después de la tierra, como en el libro; el motor no la da así';
+      if (vacio('v.ganancia')) deduce('v.ganancia', M(R - H.tierraAportada), textoG); else corrige('v.ganancia', M(R - H.tierraAportada), textoG);
+      if (fin(v.ventas) && v.ventas > 0) {
+        const textoM = 'ganancia ÷ ventas, como el libro';
+        if (vacio('v.margen')) deduce('v.margen', N.r6(v.ganancia / v.ventas), textoM); else corrige('v.margen', N.r6(v.ganancia / v.ventas), textoM);
+      }
+    } else {
+      anula('v.ganancia', S.porque['v.ganancia']);
+      anula('v.margen', S.porque['v.margen']);
+    }
+  }
   const bancoMes = H.tipo === 'UNIFAMILIAR' ? null : liquida(F.debt);
   if (H.tipo !== 'UNIFAMILIAR') {
     if (vacio('v.banco_mes')) deduce('v.banco_mes', bancoMes, 'mes en que se liquida el banco: el último con saldo, más uno');
+    /* el banco que nunca tiene saldo no se liquida en ningún mes: en blanco, como el libro (antes quedaba un 0) */
+    else if (bancoMes === null) { corregidos['v.banco_mes'] = { antes: leer('v.banco_mes'), despues: null }; poner('v.banco_mes', null); }
     else corrige('v.banco_mes', bancoMes, 'mes en que se liquida el banco (antes era el mes del saldo máximo)');
   }
   if (vacio('v.capital_mes') && (H.capital || 0) > 0 && fin(v.mes_reparto)) deduce('v.capital_mes', v.mes_reparto, 'el capital regresa al cierre, con el reparto');
@@ -437,7 +461,13 @@ function llena(visor, H, F, extra) {
   /* 6 · reparto */
   if (vacio('v.dueno_aporta')) deduce('v.dueno_aporta', M(H.tierraAportada), H.tipo === 'UNIFAMILIAR' ? 'la tierra se compra: nadie la aporta' : 'superficie × valor del m² × % que aporta el dueño');
   if (vacio('v.dueno_recibe')) deduce('v.dueno_recibe', M(H.dueno), H.tipo === 'UNIFAMILIAR' ? 'el precio del terreno, pagado al arrancar' : 'lo que el motor le paga al dueño');
-  if (vacio('v.dueno_veces') && H.tierraValor > 0 && fin(H.dueno)) deduce('v.dueno_veces', N.r6(H.dueno / H.tierraValor), 'lo que recibe el dueño ÷ valor de su tierra');
+  /* el dueño que no aporta su tierra la vende a su valor: «veces» no aplica (lo que recibe es su precio) */
+  const vendeTierra = fin(v.dueno_aporta) && v.dueno_aporta <= 0.0005 && fin(v.dueno_recibe) && v.dueno_recibe > 0.0005;
+  if (vendeTierra) {
+    const antes = leer('v.dueno_veces');
+    if (antes !== null && antes !== undefined) { poner('v.dueno_veces', null); corregidos['v.dueno_veces'] = { antes, despues: null }; }
+    noAplica('v.dueno_veces', 'el dueño no aporta su tierra: la vende a su valor (lo que recibe es su precio)');
+  } else if (vacio('v.dueno_veces') && H.tierraValor > 0 && fin(H.dueno)) deduce('v.dueno_veces', N.r6(H.dueno / H.tierraValor), 'lo que recibe el dueño ÷ valor de su tierra');
   if (vacio('v.dueno_meses') && fin(v.mes_reparto)) {
     /* Si además de la tierra en efectivo cobra una parte de la utilidad, lo último lo recibe en el reparto. */
     if ((H.tierraAportada || 0) > 0 || (H.dueno || 0) > (H.tierraEfectivo || 0) + 1) deduce('v.dueno_meses', v.mes_reparto, 'el dueño recibe lo último en el mes de reparto');

@@ -621,6 +621,15 @@ estado» (las nueve pruebas, aguante, etapa, candados y siguiente paso) y sigui�
   entra y sale). Las columnas por trimestre de «Dinero» sí (clave `visor.trimestre`; la última, si es de un solo mes,
   dice «Mes n»); «Intereses y apertura» de «Costo y ganancia» tiene la suya (`visor.intereses_apertura`: costo del
   dinero menos el rendimiento del capital, que va en su propio renglón).
+- **Lo que no se pinta como si valiera (maquila, segunda vuelta):** con «Falta calcular» (la versión no tiene sus cifras,
+  p. ej. una obra directa en 0) los anillos dicen «sin dato» con esa razón aunque traigan número, el Reparto dice
+  «Falta calcular el reparto» en lugar de ceros y «Costo y ganancia» no da margen sobre costo. El dueño que pierde más
+  de lo que puso no tiene «veces» (dice «pierde más de lo que puso», en rojo). Un mes que pasa de lo que calcula el plan
+  (el libro marca «61» cuando el capital o el banco no se liquidan en 60 meses) se dice «después del mes 60», no
+  «mes 61» sobre un eje que acaba en 60; el plazo se lee «60+». En «Dinero», «a repartir» y lo más hondo no se
+  enciman: si lo más hondo es el último mes queda un solo rótulo (la leyenda lo dice); si quedan cerca, lo más hondo
+  baja un renglón (o «a repartir» sube). En «Terreno», lo vendible que pasa de lo construido se marca y la hoja pide
+  revisar los datos; el banco que nunca tuvo saldo no se liquida: «no aplica».
 - **Lo que no cambia:** el servidor, los libros, `ppp2.js`, `ppp2-relaciones.js`, el Portero y los motores. `visor.js`
   no hace cuentas nuevas: sólo formatea lo que llega. Sin `visor-explica.js` (o sin el grafo), el visor es el de siempre.
 - **De paso:** la etapa y los candados tienen cada uno su leyenda; la holgura de una aportación justa ya no repite «lo
