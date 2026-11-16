@@ -906,6 +906,12 @@ es mejor». La tabla vive en `FACTORES` de `visor-compara.js`; si cambia allá, 
 | Aportación: tierra y capital entre costo | Resumen · v{n}.rv_aportacion | más es mejor | — |
 | Cobertura: por cobrar entre saldo del banco | Resumen · v{n}.rv_cobertura | más es mejor | — |
 | Candados abiertos | Resumen · plan.candados_abiertos | menos es mejor | — |
+| Anticipo incluido en el pago | Resumen · v{n}.pago_anticipo | dato | — |
+| Pago restante en viviendas | Resumen · v{n}.pago_vivienda | dato | — |
+| Cobros de terceros, sin adjudicaciones | Resumen · v{n}.pago_cobros | dato | — |
+| Resultado neto del desarrollador | Resumen · v{n}.pago_resultado | más es mejor | le falta más de 0.05 MDP respecto de la mejor |
+
+Los cuatro factores de pago aparecen sólo en comparaciones que incluyen pago en especie. Sus importes se leen de la foto nativa.
 
 El rojo se reserva para lo que cambia la decisión (plazo, preventa, ganancia, dinero ajeno, dinero que
 faltaría, lo que reciben el dueño y la alianza, la revisión para fondos); los demás factores sólo marcan

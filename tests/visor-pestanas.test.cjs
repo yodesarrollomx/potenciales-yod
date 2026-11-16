@@ -370,3 +370,20 @@ test('el archivo de las pestañas sólo lee, no calcula, carga pdf.js fijo y ver
   assert.match(html, /<link rel="stylesheet" href="visor-pestanas\.css\?v=[^"]+">/);
   assert.doesNotMatch(fs.readFileSync(path.join(RAIZ, 'ppp2.html'), 'utf8'), /visor-pestanas\.(js|css)/, 'la ficha del plan no carga las pestañas');
 });
+
+test('comparación fija conserva sólo sus opciones y separa efectivo, viviendas y resultado del desarrollador', () => {
+  const menu = { planes: ['a', 'b', 'c'].map(x => ({ id: 'ppp:caso-ejemplo:' + x })) };
+  assert.equal(P.opcionesFijas({ menu }), true);
+  for (const ids of [['ppp:caso-ejemplo:a'], ['ppp:caso-ejemplo:a', 'ppp:otro:b'], ['ppp:caso-ejemplo:a', 'ppp:caso-ejemplo'], ['ppp:caso-ejemplo:a', 'ppp:caso-ejemplo:a']]) assert.equal(P.opcionesFijas({ menu: { planes: ids.map(id => ({ id })) } }), false);
+  const d = visorDe(); d.v.pago_especie = true; d.v.pago_anticipo = 1.4; d.v.pago_vivienda = 4.8; d.v.pago_m2 = 160; d.v.pago_unidades = 2.25; d.v.pago_resultado = -0.4;
+  const rows = menu.planes.map((p, i) => ({ ...P.resumenOpcion(d, 'Acuerdo ' + (i + 1)), plan: p.id, version: 10 + i, listo: true }));
+  const html = P.opcionesHtml(rows, { fijas: true, plan: rows[0].plan, version: rows[0].version });
+  assert.equal((html.match(/data-plan=/g) || []).length, 3);
+  assert.match(texto(html), /Opciones del mismo proyecto/);
+  assert.match(texto(html), /Anticipo \$1\.4 \+ viviendas \$4\.8/);
+  assert.match(texto(html), /2\.25 viviendas equivalentes/);
+  assert.match(texto(html), /Desarrollador: −\$0\.4 · pérdida/);
+  assert.doesNotMatch(texto(html), /V10|V11|V12/);
+  d.v.pago_anticipo = null;
+  assert.match(texto(P.opcionesHtml([P.resumenOpcion(d, '')], {})), /Anticipo sin dato/);
+});
