@@ -387,7 +387,9 @@ hecha para caber en la pantalla de un teléfono y se ve igual en todos los plane
   abrir; cualquier otro valor la apaga en un minuto. `vence` (fecha) es opcional. Quien tiene la liga
   ve el plan: la pantalla lo dice al pie.
 - **Los selectores sólo aparecen si la liga los trae.** `versiones` en blanco: sólo la versión que el
-  libro muestra; `todas`: las que calculan y no están descartadas; `1,2`: esas. Varios `plan_id`
+  libro muestra; `todas`: las que calculan y no están descartadas, más siempre la que el libro muestra
+  aunque no calcule (se ve con sus «sin dato»; antes se caía en silencio a la primera que calculaba);
+  `1,2`: esas. Varios `plan_id`
   separados por coma (y sus `etiquetas` separadas por `|`) ponen en la misma liga varios planes —varios
   terrenos del mismo predio, por ejemplo— y la pantalla deja escoger entre ellos. Sin eso, el visor se
   ve siempre igual.
@@ -802,7 +804,7 @@ libros**: sirve una «foto» ya hecha de cada versión. Contrato completo en `do
   entre las que se pueden servir. `ppp:<caso_id>:<escenario_id>` sirve siempre esa versión. Un caso sin
   escenarios tiene un solo renglón con `escenario_id` vacío y se sirve por `ppp:<caso_id>`.
 - **Qué sale:** la forma `ppp2-visor-v1` (más `origen`) tomada del `visor_json`, **clave por clave y con
-  su tipo** (`fotoLimpia_`): números finitos o `null`, textos recortados, sí/no; lo que no es de la forma
+  su tipo** (`fotoLimpia_`): números finitos o `null`, textos recortados (en palabra y con «…», `cortaTexto_`: el esquema a 80, los textos de la versión a 200; también el nombre del esquema y de las versiones de un libro), sí/no; lo que no es de la forma
   no sale. Así la foto no pisa lo que arma el servidor (`ok`, `llave`, `menu`, `puede`, `elige`, `marcas`…)
   ni mete marcado donde la página espera un número. Se revisa que sea un objeto y que no pase de 50 000
   caracteres; no salen `elegida_por`, `motor_commit` ni nombres de personas. `version` y `plan.mostrada`
