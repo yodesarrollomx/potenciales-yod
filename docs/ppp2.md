@@ -562,6 +562,67 @@ no se exporta; con `PPP_PDFJS_DIR` apuntando a `pdfjs-dist@3.11.174/legacy/build
 pdf.js con su huella SRI). Contra el servidor publicado hoy, los recorridos le contestan `sin_sesion` a estos
 recursos, como él.
 
+### Qué es cada cifra y de qué depende (15-nov-2026)
+
+Dirección, viendo «Riesgo y estado» en su teléfono: que la leyenda de cada cifra sea más precisa y más nutrida, que diga
+**de qué depende** (y si no depende de nada, que lo diga), revisado contra el grafo del plan, con un texto que entienda
+alguien de 17 o 18 años y que a un financiero le parezca preciso sin sentirse sobreexplicado. Empezó por «Riesgo y
+estado» (las nueve pruebas, aguante, etapa, candados y siguiente paso) y siguió con los otros seis cuadros.
+
+- **En la pantalla.** Una leyenda flotante con todo eso taparía la hoja en un iPhone. Por eso la leyenda sigue breve
+  (la cifra, el límite, la holgura y una línea de qué es) y, dentro de la hoja, ofrece **«Qué es y de qué depende ›»**:
+  abre el renglón de esa cifra en la lista de abajo, lo trae a la vista bajo el encabezado y le pasa el foco. Cada
+  renglón cuya cifra tiene texto lleva una flecha y se abre ahí mismo con un toque en cualquier parte de él; su
+  botón (`aria-expanded`, `aria-controls`, nombre «… : qué es y de qué depende») lleva el teclado, Enter y Espacio lo
+  abren y cierran, y lo abierto es una región con nombre. Con ratón, la leyenda sale al pasar y se **fija** con un
+  clic (se queda hasta otro clic, Esc o desplazar la hoja) para poder llegar a su botón. Si el libro cambia, la hoja se
+  repinta sola y lo abierto sigue abierto. En la ficha del plan es lo mismo y «Lo que mueve este cuadro» sigue debajo;
+  el lápiz de un renglón no lo abre ni lo cierra.
+- **Lo que dice cada renglón abierto:** qué es (el término financiero entre paréntesis, una vez), cómo se calcula
+  (en palabras y con las cifras de esta versión **que el servidor ya trae**, tal cual; lo que no viene se dice sin
+  cifra: «la línea del banco no viene en esta pantalla»), cómo está hoy (el plan, «la revisión para fondos pide…» y la
+  holgura), de qué depende, qué la mueve («Mejora: … / Empeora: …» o «cambia…»), por qué importa y de dónde sale, en
+  humano («Libro del plan · Resumen · v2.rv_linea_costo»). Los límites son la regla de la revisión para fondos del PPP,
+  no la política de un banco: la leyenda dice «La revisión pide», ya no «El banco pide».
+- **De qué depende sale del grafo, no de un texto.** `visor-explica-grafo.js` lo **genera** `python3 ppp2/libro/explica.py`
+  con el mismo recorrido de referencias que `relaciones.py`, pero hacia atrás: de cada cifra del visor a lo que lee su
+  fórmula (las entradas directas) y, de cada una, a lo que lee la suya (el segundo nivel). Una cifra que sólo copia otra
+  celda (por ejemplo `v{n}.rv_falta`, el total de «Respaldo: lo que faltaría») se recorre hasta la que calcula; la
+  guarda «¿usa banco?» se lista pero no impide recorrerla. Cada entrada lleva su tipo, como lo define el libro:
+  **palanca** (cada versión la puede mover), **dato** (se captura: Datos, Productos, los registros) o **resultado**
+  (sale de otras cifras); los nombres son los rótulos del libro (los de las palancas y datos, los mismos que usa el
+  lápiz), sin la nota de unidad. Si no sale de otra cifra, lo dice: «es un dato del plan» o «es una decisión del plan
+  (una palanca)». No lleva cifras. Si cambia `generar.py` y no se regenera, o alguien lo edita a mano, la prueba falla.
+- **Los textos viven aparte:** `visor-explica.js`, una entrada por cifra (`corto`, `que`, `como`, `cifras`, `sin_cifra`,
+  `mejora`/`empeora` o `cambia`, `importa`, `opera`…; el contrato está al principio del archivo), para revisarlos y
+  corregirlos sin tocar la lógica. `opera` dice qué lee la fórmula que describe `como`: la prueba lo compara con el
+  grafo, así que si la plantilla cambia, el texto que quedó viejo falla. «Qué la mueve» se revisó contra las fórmulas
+  de `generar.py` y contra el libro recalculado en LibreOffice con el plan inventado (moviendo una palanca a la vez);
+  ante la duda no se afirma (por ejemplo, no se dice qué hace el enganche con la cobertura: no es monótono).
+- **Lo que acomoda el visor** (tierra entre ventas, vendible entre construcción, unidades por mes, costo con terreno,
+  utilidad antes de intereses) lo dice así, y en `de` nombra las cifras del grafo de las que sale: «De qué depende» dice
+  de qué sale cada una.
+- **Fotos del PPP de siempre:** el renglón dice que la cifra sale del motor de su tablero (es una foto), no de un
+  libro; si la cifra se dedujo, su marca `deducido` es el «cómo se calcula»; si no, la definición del libro, dicha
+  como tal. No se enseña el grafo del libro ni «qué la mueve» (eso se verificó contra el libro, no contra los motores).
+- **Qué no se abre:** las columnas por trimestre de «Dinero» (suman varias cifras; cada color tiene su texto en la
+  clave), cada candado y los renglones de registro (las partes del esquema, el desglose fino de lo que entra y sale).
+- **Lo que no cambia:** el servidor, los libros, `ppp2.js`, `ppp2-relaciones.js`, el Portero y los motores. `visor.js`
+  no hace cuentas nuevas: sólo formatea lo que llega. Sin `visor-explica.js` (o sin el grafo), el visor es el de siempre.
+- **De paso:** la etapa y los candados tienen cada uno su leyenda; la holgura de una aportación justa ya no repite «lo
+  sano»; «Costo y ganancia» enseña el costo sin tierra en sus cortes.
+- **Qué revisar en un iPhone de verdad:** tocar un anillo y «Qué es y de qué depende» con la barra de Safari abierta y
+  recogida (el renglón debe quedar bajo el encabezado de la hoja); desplazar la hoja con un renglón abierto; VoiceOver
+  sobre un renglón (debe decir su nombre, «contraído/expandido» y leer la región).
+
+Pruebas: `node --test tests/visor-explica.test.cjs` (cada prueba y cada cifra que se toca tiene su texto y su renglón;
+`opera` contra el grafo; el grafo al día con la plantilla y sin editar a mano —y, si hay Python con openpyxl, que el
+guion lo regenere igual—; «De qué depende» sale del grafo; las cifras son las del servidor; los límites son los de la
+plantilla; tono; fotos; sin los archivos, el de siempre; las series y datos que recorre el guion son los del servidor)
+y `node tests/visor-explica-browser.cjs` (teléfonos de 430, 390 y 375 px a 3×, tema claro y oscuro del sistema,
+escritorio, teclado y lector de pantalla, contraste AA, nada se sale a lo ancho, repintado en vivo, foto, sin textos, la
+ficha con quien lee y con quien edita, y los otros cuadros).
+
 ### Los mismos cuadros, en la ficha del plan
 
 La ficha del plan (`ppp2.html#/plan/<id>`, con sesión del Portero) lleva arriba, bajo el selector de
@@ -1020,6 +1081,8 @@ por liga.
   `ppp2-cache`: lo que ya se leyó del libro, con un Drive cuya última modificación cambia con el
   contenido y una caché que, como la real, no acepta más de 100 KB por valor)
 - `node tests/ppp2-browser.cjs` (`PPP2_SOLO=texto` corre sólo los recorridos cuyo nombre lo lleva)
+- Qué es cada cifra y de qué depende: `node --test tests/visor-explica.test.cjs` y `node tests/visor-explica-browser.cjs`.
+  Si tocas `ppp2/libro/generar.py`, corre también `python3 ppp2/libro/explica.py`.
 - El lápiz: `node --test tests/ppp2-lapiz.test.cjs` (probar una cifra deja la columna Prueba como estaba
   y no anota nada; el catálogo «está ligado a» está al día con la plantilla y cubre cada palanca) y los
   recorridos «el lápiz…» de `tests/ppp2-browser.cjs`. Si tocas `ppp2/libro/generar.py`, corre también

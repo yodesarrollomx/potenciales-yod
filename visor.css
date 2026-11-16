@@ -143,6 +143,33 @@ html.vz-con-modal, html.vz-con-modal body { overflow: hidden; }
 .vz-ded[aria-expanded="true"] { background: #efe2bf; }
 .vz-ded:focus-visible { outline: 2px solid var(--oro); outline-offset: 1px; }
 .vz-m-caja small.vz-ded-txt { padding: 6px 9px; margin-top: 4px; border-radius: 9px; background: #fbf5e6; color: #5e4710; line-height: 1.4; }
+/* qué es cada cifra y de qué depende: el renglón se abre ahí mismo, dentro de la hoja (no tapa nada) */
+.vz-m-caja dl > div.vz-xf { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.vz-xb { display: flex; align-items: flex-start; gap: 7px; width: 100%; margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; line-height: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.vz-xb-ic { flex: none; margin-top: 4px; color: var(--oro); transition: transform .15s ease-out; }
+.vz-xb[aria-expanded="true"] .vz-xb-ic { transform: rotate(90deg); }
+.vz-xb:focus-visible { outline: 2px solid var(--oro); outline-offset: 3px; border-radius: 4px; }
+.vz-m-caja dl > div.vz-xf > small { padding-left: 19px; }
+.vz-m-caja dl > div > .vz-xp { grid-column: 1 / -1; margin: 10px 0 4px; padding: 13px 14px 12px; border-radius: 12px; background: #faf6ec; border: 1px solid var(--linea-2); cursor: auto; }
+.vz-xp p { margin: 0 0 6px; font-size: 14px; line-height: 1.45; color: var(--cuerpo); }
+.vz-xp p:last-child { margin-bottom: 0; }
+.vz-xp b { color: var(--tinta); font-variant-numeric: tabular-nums; }
+.vz-xp .vz-x-que { font-size: 14.5px; color: var(--tinta); }
+.vz-x-b { margin-top: 13px; }
+.vz-xp .vz-x-k { margin: 0 0 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--oro); }
+.vz-xp .vz-x-cif { color: var(--tinta); }
+.vz-xp .vz-x-sub { margin: 9px 0 3px; font-size: 12.5px; color: var(--mudo); }
+.vz-x-g { list-style: none; margin: 0; padding: 0; }
+.vz-x-g li { display: grid; grid-template-columns: 78px 1fr; gap: 8px; padding: 3px 0; font-size: 13.5px; line-height: 1.4; }
+.vz-x-tipo { padding-top: 2px; font-size: 10.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; }
+.vz-x-palanca { color: #6a4f12; }
+.vz-x-dato { color: var(--verde); }
+.vz-x-resultado { color: var(--mudo); }
+.vz-x-lista { color: var(--tinta); overflow-wrap: anywhere; }
+.vz-x-lista i { font-style: normal; color: var(--mudo); }
+.vz-xp .vz-x-ley { margin-top: 9px; font-size: 11.5px; line-height: 1.4; color: var(--mudo); }
+.vz-xp .vz-x-fuente { margin-top: 13px; padding-top: 8px; border-top: 1px solid var(--linea); font-size: 11.5px; color: var(--mudo); overflow-wrap: anywhere; }
+@media (max-width: 360px) { .vz-x-g li { grid-template-columns: 1fr; gap: 0; } }
 @media (min-width: 700px) {
   .vz-modal { align-items: center; padding: 24px; }
   .vz-m-caja { border-radius: 20px; max-height: 88vh; padding-bottom: 24px; box-shadow: 0 20px 60px rgba(35, 29, 20, .25); animation-name: vzAparece; }
@@ -160,6 +187,10 @@ html.vz-con-modal, html.vz-con-modal body { overflow: hidden; }
 .vz-tip small.vz-tip-ded { display: flex; align-items: flex-start; gap: 5px; margin-top: 4px; padding-top: 0; border-top: 0; color: #f0dfb0; }
 .vz-tip small.vz-tip-ded svg { flex: none; margin-top: 1px; }
 .vz-pie-ded { margin-top: 1px; color: #6a5013; }
+/* la leyenda dice en una línea qué es la cifra y, dentro de la hoja, ofrece abrir su renglón (lo único que se toca en ella) */
+.vz-tip .vz-tip-que { margin: 7px 0 0; font-size: 12px; line-height: 1.35; color: #f3eee4; }
+.vz-tip .vz-tip-mas { pointer-events: auto; display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 44px; margin-top: 9px; padding: 0 12px; border: 0; border-radius: 10px; background: #f3e4bd; color: #231d14; font: 700 13px var(--sans); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.vz-tip .vz-tip-mas:focus-visible { outline: 2px solid #f3e4bd; outline-offset: 2px; }
 
 @keyframes vzLate { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 @keyframes vzCambio { 0% { box-shadow: 0 0 0 3px rgba(154, 123, 63, .85); background: #fbf3dc; } 100% { box-shadow: 0 0 0 3px rgba(154, 123, 63, 0); background: var(--papel); } }
@@ -169,7 +200,7 @@ html.vz-con-modal, html.vz-con-modal body { overflow: hidden; }
 @keyframes vzBrilla { from { background-position: 100% 0; } to { background-position: -120% 0; } }
 @media (prefers-reduced-motion: reduce) {
   .vz-vivo i, .vz-card.vz-cambio, .vz-m-caja, .vz-modal, .vz-tip, .vz-esq i, .vz-esq b { animation: none !important; }
-  .vz-card, .vz-modal.vz-baja .vz-m-caja { transition: none; }
+  .vz-card, .vz-modal.vz-baja .vz-m-caja, .vz-xb-ic { transition: none; }
   .vz-card:active { transform: none; }
   .vz-card.vz-cambio { outline: 2px solid #9a7b3f; outline-offset: 1px; }
 }
