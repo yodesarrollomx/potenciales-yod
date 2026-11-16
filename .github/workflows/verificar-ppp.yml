@@ -45,7 +45,7 @@ jobs:
           node --test tests/index-entry.test.cjs tests/ppp-intake.test.cjs tests/ppp-intake-server.test.cjs tests/ppp-stages.test.cjs tests/ppp-stages-server.test.cjs tests/ppp-stages-program.test.cjs
           node --check ppp-ui.js
           node --check ppp-cadena.js
-          node --test tests/ppp-cadena.test.cjs
+          node --test tests/ppp-cadena.test.cjs tests/ppp-land-in-kind.test.cjs
           node --check ppp-version-bridge.js
           node --check ppp-volumes.js
           node --check ppp-volumes-native.js
@@ -129,6 +129,7 @@ jobs:
           node tests/ppp-case-opening-shell-browser.cjs
           node tests/ppp-agent-receipts-browser.cjs
           node tests/ppp-browser.cjs
+          node tests/ppp-land-browser.cjs
           node tests/ppp-cadena-browser.cjs
           node tests/ppp-identity-browser.cjs
           node tests/ppp-terrain-browser.cjs

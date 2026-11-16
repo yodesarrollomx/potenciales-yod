@@ -24,7 +24,8 @@
       if (!N || !ok(r.sales) || !ok(r.profit)) return null;
       const col = k => f.map(x => nz(x[k]));
       const pre = Math.max(0, Math.min(N, Math.round(nz(p.preMonths)))), ent = Math.max(1, Math.min(N, Math.round(nz(p.delivery)) || 1));
-      const resto = ok(r.units) && ok(r.presaleUnits) ? Math.max(0, r.units - r.presaleUnits) : null;
+      const cashUnits = ok(r.kindCashUnits) ? r.kindCashUnits : r.units;
+      const resto = ok(cashUnits) && ok(r.presaleUnits) ? Math.max(0, cashUnits - r.presaleUnits) : null;
       // Calendario de venta que declara el motor: preventa pareja en sus meses; lo demás, parejo en la entrega.
       const vPre = Array(N).fill(0), vEnt = Array(N).fill(0);
       for (let i = 0; i < pre; i++) vPre[i] = nz(r.presaleUnitsPerMonth);
@@ -36,17 +37,17 @@
         tipo: 'vertical', meses: N,
         hitos: { preventaHasta: pre, obraDesde: Math.max(1, Math.min(N, nz(r.buildStart) + 1)), obraHasta: Math.max(1, Math.min(N, nz(r.buildFinish))), entregaDesde: N - ent + 1 },
         vende: { unidad: ['depa', 'depas'], series: [{ id: 'preventa', nombre: 'En preventa', porMes: vPre }, { id: 'entrega', nombre: 'En la entrega', porMes: vEnt }],
-          total: r.units, enPreventa: r.presaleUnits, ritmo: r.presaleUnitsPerMonth, mesesPreventa: pre, resto, mesesEntrega: ent, avanceAlArrancar: r.preventaAtBuild, ventas: r.sales,
+          total: cashUnits, enPreventa: r.presaleUnits, ritmo: r.presaleUnitsPerMonth, mesesPreventa: pre, resto, mesesEntrega: ent, avanceAlArrancar: r.preventaAtBuild, ventas: r.sales,
           productos: [['Vivienda en preventa', r.presaleRev], ['Vivienda en la entrega', r.postRev], ['Locales', r.comRev], ['Cajones', r.parkingRev]].map(([nombre, monto]) => ({ nombre, monto })) },
         flujo: { entra: col('rev'), sale: col('cost'), interes: col('cashPik'), totalEntra: r.revTotal, totalSale: r.costTotal, alFirmar: p.eng, enObra: p.obra },
         banco: { caja: col('caja'), capital, credito: col('debt'), falta, tope: r.debtCap, pico: r.peak, mesPico: r.peakMonth, capitalUsado: r.equityUsed, faltante: r.fundingGap, faltaMax, mesFalta: falta.indexOf(faltaMax) + 1, deudaFinal: r.debt, cajaFinal: r.cash },
-        queda: { ventas: r.sales, costo: r.projectCost, financiamiento: ok(r.interest) && ok(r.feeDebt) ? r.interest + r.feeDebt : null, utilidad: r.profit, margen: r.margin, tir: r.devIrr,
+        queda: { ventas: ok(r.kindGrossValue) ? r.kindGrossValue : r.sales, costo: r.projectCost, financiamiento: ok(r.interest) && ok(r.feeDebt) ? r.interest + r.feeDebt : null, utilidad: r.profit, margen: r.margin, tir: r.devIrr,
           socios: [{ id: 'dueno', nombre: 'Dueño del terreno', recibe: r.ownerTotalProceeds, gana: r.ownerGain }, { id: 'desarrollador', nombre: 'Desarrollador', recibe: r.devDist, gana: r.devGain }] },
         // De qué tarjeta del plan sale cada eslabón y qué controles lo mueven.
         fuentes: { A: { tarjeta: 'dVentas', nombre: 'Ventas e ingresos', ajustes: [['Ritmo', 'inVel', 'Ritmo de preventa'], ['Meses', 'inMesesPreventa', 'Meses de preventa']] },
           B: { tarjeta: 'dCostos', nombre: 'Costos', ajustes: [['Enganche', 'inEng', 'Enganche y pagos de los clientes'], ['Obra', 'inInicioObra', 'Calendario de obra']] },
           C: { tarjeta: 'dMacro', nombre: 'Macro y crédito', ajustes: [['Capital', 'inEquity', 'Capital propio'], ['Tope', 'inMaxDeuda', 'Tope del crédito']] },
-          D: { tarjeta: 'dMacro', nombre: 'Macro y crédito', ajustes: [['Reparto', 'inResidualDueno', 'Reparto con el dueño del terreno']] } }
+          D: { tarjeta: 'dMacro', nombre: 'Macro y crédito', ajustes: [['Reparto', r.kindMethod ? 'pppLand' : 'inResidualDueno', 'Reparto con el dueño del terreno']] } }
       };
     }
   };
