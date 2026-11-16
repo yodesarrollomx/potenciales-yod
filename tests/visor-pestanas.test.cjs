@@ -292,23 +292,29 @@ test('«deducido de …»: la leyenda y la hoja lo dicen donde el servidor lo ma
   const de = (o) => V.partesOrigen(o);
   const margen = ls.find((l) => /Margen antes de financiamiento/.test(l.t));
   assert.equal(de(margen.o).base, d.origen);
-  assert.equal(de(margen.o).ded, 'deducido de (ventas − costo con tierra) ÷ costo con tierra');
+  assert.equal(de(margen.o).ded, 'deducido: (ventas − costo con tierra) ÷ costo con tierra');
   const prod = ls.find((l) => l.t === d.productos[0].nombre && l.f.some((f) => f[0] === 'Ventas'));
-  assert.match(de(prod.o).ded, /deducido de ventas de vivienda/, 'el producto 0 lleva la suya');
+  assert.match(de(prod.o).ded, /deducido: ventas de vivienda/, 'el producto 0 lleva la suya');
   const otro = ls.find((l) => l.t === d.productos[1].nombre && l.f.some((f) => f[0] === 'Ventas'));
   assert.equal(de(otro.o).ded, '', 'el producto 1, no');
   const obra = ls.find((l) => l.t === 'Costos directos');
   assert.equal(de(obra.o).ded, 'corregido: el desglose de costos del motor', '«corregido» se dice tal cual');
-  const tierra = ls.find((l) => l.t === 'Terreno' && l.f.some((f) => f[0] === 'Cierre de tierra'));
-  assert.equal(de(tierra.o).ded, 'deducido del cierre que cobra el motor', 'una cifra compuesta (tierra y su cierre) lleva la nota de su parte deducida');
+  const tierra = ls.find((l) => /^Terreno( y cierre)?$/.test(l.t) && l.f.some((f) => f[0] === 'Cierre de tierra'));
+  assert.equal(de(tierra.o).ded, 'deducido: el cierre que cobra el motor', 'una cifra compuesta (tierra y su cierre) lleva la nota de su parte deducida');
   assert.ok(ls.filter((l) => de(l.o).ded).length < ls.length / 3, 'sólo las cifras marcadas');
   const riesgo = V.detalleHtml(p.cuadros.find((c) => c.id === 'riesgo'));
-  assert.match(riesgo, /<button type="button" class="vz-ded" aria-expanded="false">[\s\S]*?deducido<\/button><\/small><small class="vz-ded-txt" hidden>Deducido de \(ventas − costo con tierra\)/);
+  assert.match(riesgo, /<button type="button" class="vz-ded" aria-expanded="false">[\s\S]*?deducido<\/button><\/small><small class="vz-ded-txt" hidden>Deducido: \(ventas − costo con tierra\)/);
   assert.equal(V.fraseDeducido('corregido: x'), 'corregido: x');
   assert.equal(V.fraseDeducido('Deducido de y'), 'deducido de y');
-  assert.equal(V.fraseDeducido('z ÷ w'), 'deducido de z ÷ w');
-  assert.equal(V.fraseDeducido('El tipo del motor'), 'deducido del tipo del motor');
-  assert.equal(V.fraseDeducido('Lo que recibe el dueño'), 'deducido de lo que recibe el dueño');
+  /* la marca puede ser una oración: va tras dos puntos («Deducido de hay línea de banco…» no se lee) */
+  assert.equal(V.fraseDeducido('z ÷ w'), 'deducido: z ÷ w');
+  assert.equal(V.fraseDeducido('El tipo del motor'), 'deducido: el tipo del motor');
+  assert.equal(V.fraseDeducido('hay línea de banco pero no se dispone'), 'deducido: hay línea de banco pero no se dispone');
+  /* una marca «no aplica: …» o «sin dato: …» no es una deducción: es la razón de un vacío */
+  assert.equal(V.fraseDeducido('no aplica: el motor no guarda caja mínima'), '');
+  assert.equal(V.fraseRazon('No aplica: el motor no guarda caja mínima'), 'no aplica: el motor no guarda caja mínima');
+  assert.equal(V.fraseRazon('sin dato · falta el calendario'), 'sin dato: falta el calendario');
+  assert.equal(V.fraseRazon('el tipo del motor'), '');
   assert.deepEqual(V.rutasDe('Versiones', 'tierra y ventas'), ['v.tierra', 'v.ventas']);
   assert.deepEqual(V.rutasDe('Datos', 'terreno.m2'), ['datos.terreno.m2']);
   assert.deepEqual(V.rutasDe('Flujo', 'obra directa'), ['flujo.obra', 'flujo.total.obra']);
@@ -326,7 +332,9 @@ test('Dinero sin saldo acumulado o sólo con totales: un estado digno, nunca un 
   assert.match(visible(c2), /clientes[\s\S]*costos/);
   assert.match(visible(c2), /saldo del banco/);
   assert.doesNotMatch(visible(c2) + c2.svgG, /a repartir|Lo más hondo|NaN|undefined/);
-  assert.equal((c2.svg.match(/data-t="\{&quot;t&quot;:&quot;Mes \d+&quot;/g) || []).length, sinAcum.flujo.meses, 'cada mes se puede tocar');
+  const meses2 = [...c2.svg.matchAll(/data-t="([^"]+)"/g)].map((m) => JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')))
+    .filter((l) => /^Mes \d+$/.test(l.t) && l.x !== 'visor.trimestre');
+  assert.equal(meses2.length, sinAcum.flujo.meses, 'cada mes se puede tocar');
   // sólo los totales
   const totales = copia(base); totales.flujo = { meses: 6, filas: {}, total: base.flujo.total };
   const c3 = V.pinta(totales, null).cuadros.find((c) => c.id === 'dinero');

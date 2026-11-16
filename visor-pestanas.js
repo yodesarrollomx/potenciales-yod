@@ -236,8 +236,13 @@
         (marcas[p[0]] ? '<span class="vz-sr">' + esc(marcas[p[0]]) + '</span>' : '') + '</button>';
     }).join('') + '</div>';
   }
+  /* En una foto del PPP de siempre el número de versión es su lugar; si su nombre trae su propio «V<n>», se rotula con ése
+     (la misma regla de visor.js). */
+  function etiquetaV(n, nombre, foto) { var V = root.VisorPPP; return V && V.etiquetaVersion ? V.etiquetaVersion(n, nombre, foto) : 'V' + n; }
+  function nombreV(nombre, foto) { var V = root.VisorPPP; return V && V.nombreSinEtiqueta ? V.nombreSinEtiqueta(nombre, foto) : String(nombre || ''); }
   function cabeza(titulo, d) {
-    var plan = (d && d.plan && d.plan.nombre) || 'Plan de Potencial', v = d && d.version ? 'V' + d.version + (d.v && d.v.estado ? ' ' + d.v.estado : '') : '';
+    var meta = d && (d.versiones || []).filter(function (x) { return x && x.n === d.version; })[0];
+    var plan = (d && d.plan && d.plan.nombre) || 'Plan de Potencial', v = d && d.version ? etiquetaV(d.version, (meta && meta.nombre) || '', !!d.origen) + (d.v && d.v.estado ? ' ' + d.v.estado : '') : '';
     return '<header class="vzp-cab"><span class="vzp-marca">YoDesarrollo · Plan de Potencial</span><h2 class="vzp-tit" tabindex="-1">' + esc(titulo) + '</h2>' +
       '<p class="vzp-subt"><span>' + esc(plan) + '</span>' + (v ? '<span class="vzp-subt-v">' + esc(v) + '</span>' : '') + '</p></header>';
   }
@@ -474,7 +479,7 @@
     var t = datos['terreno.m2'];
     return {
       plan: (j.menu && j.menu.plan) || '', version: j.version || 0, etiqueta: String(etiqueta || ''), nombrePlan: (j.plan && j.plan.nombre) || '',
-      nombreV: meta.nombre || v.nombre || '', estado: String(v.estado || meta.estado || ''), terreno: t && num(t.valor) !== null ? t.valor : null,
+      nombreV: meta.nombre || v.nombre || '', foto: !!(j && j.origen), estado: String(v.estado || meta.estado || ''), terreno: t && num(t.valor) !== null ? t.valor : null,
       ventas: num(v.ventas), ganancia: num(v.ganancia), recibe: num(v.dueno_recibe), veces: num(v.dueno_veces), llave: j.llave || ''
     };
   }
@@ -484,7 +489,7 @@
   /* modo 'plan' (cada terreno, una versión): el terreno es el título · 'version' (varias versiones): la versión es el
      título · 'grupo' (varias de cada terreno, bajo el nombre del terreno): sólo la versión */
   function opcionHtml(o, actual, varias, modo) {
-    var v = o.version ? 'V' + o.version + (o.nombreV ? ' · ' + o.nombreV : '') : '', m2 = o.terreno !== null && o.terreno !== undefined ? ent(o.terreno) + ' m²' : '';
+    var resto = nombreV(o.nombreV, o.foto), v = o.version ? etiquetaV(o.version, o.nombreV, o.foto) + (resto ? ' · ' + resto : '') : '', m2 = o.terreno !== null && o.terreno !== undefined ? ent(o.terreno) + ' m²' : '';
     var titulo = modo === 'version' || modo === 'grupo' ? (v || o.etiqueta || 'Versión') : (o.etiqueta || o.nombrePlan || 'Plan');
     var sub = (modo === 'version' ? [m2] : modo === 'grupo' ? [] : [v, m2]).filter(function (x) { return x; }).join(' · ');
     var cargando = o.cargando && !o.listo;

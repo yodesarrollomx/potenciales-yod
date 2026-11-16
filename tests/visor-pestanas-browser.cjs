@@ -385,7 +385,7 @@ const sinDesborde = (page) => page.evaluate(() => document.documentElement.scrol
       await ctx.close();
     });
 
-    await caso('«deducido de …»: el pie lo avisa, la hoja lleva su chip y la leyenda lo dice', async () => {
+    await caso('«Deducido: …»: el pie lo avisa, la hoja lleva su chip y la leyenda lo dice', async () => {
       const ded = (j) => { if (j.ok && j.v) { j.origen = 'PPP · motor vertical · caso de prueba'; j.deducido = { 'v.rv_margen': '(ventas − costo con tierra) ÷ costo con tierra' }; } return j; };
       const { ctx, page, errores } = await abre(navegador, base, { transforma: ded, ancho: 1280, alto: 900 });
       await page.locator('.vz-pie-ded').waitFor();
@@ -395,11 +395,11 @@ const sinDesborde = (page) => page.evaluate(() => document.documentElement.scrol
       assert.equal(await page.locator('#vzModal .vz-ded-txt:not([hidden])').count(), 0);
       await chip.click();
       assert.equal(await chip.getAttribute('aria-expanded'), 'true');
-      assert.match(await page.locator('#vzModal .vz-ded-txt').first().innerText(), /^Deducido de \(ventas − costo con tierra\)/);
+      assert.match(await page.locator('#vzModal .vz-ded-txt').first().innerText(), /^Deducido: \(ventas − costo con tierra\)/);
       const anillo = page.locator('#vzModal .vz-m-fig .vz-t').filter({ has: page.locator('text') }).nth(4);
       await anillo.hover();
       await page.locator('#vzTip .vz-tip-ded').waitFor();
-      assert.match(await page.locator('#vzTip').innerText(), /Deducido de/);
+      assert.match(await page.locator('#vzTip').innerText(), /Deducido: /);
       assert.deepEqual(errores, []);
       await ctx.close();
     });

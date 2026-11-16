@@ -513,10 +513,12 @@ recursos de Historial y Archivos lo documenta el servidor en «Pestañas del vis
   sesión, sin `abre`, tres a la vez; una que no se pudo leer se vuelve a pedir al regresar a la pestaña). Tocar
   una la abre en Plan. «Comparar las n opciones lado a lado» va a
   `visor-comparar.html#l=<liga>`; con una sola opción, su tarjeta y una frase que lo explica.
-- **«deducido de …»:** si la respuesta trae `deducido` (`{ "<ruta>": "<de qué sale>" }`, de las fotos del
-  PPP de siempre), cada leyenda cuya cifra sale de una ruta marcada agrega, aparte del origen, «Deducido de
-  …» (o «Corregido: …» tal cual); en la hoja del cuadro sale un chip discreto «deducido» que al tocarlo lo
-  dice; el pie avisa una vez. Cómo se asigna una ruta a cada cifra: «Versiones» → `v.<clave>`, «Datos» →
+- **«Deducido: …»:** si la respuesta trae `deducido` (`{ "<ruta>": "<de qué sale>" }`, de las fotos del
+  PPP de siempre), cada leyenda cuya cifra sale de una ruta marcada agrega, aparte del origen, «Deducido: …»
+  (tras dos puntos, porque la marca puede ser una oración; varias se juntan con «;»; «Corregido: …» tal cual); en
+  la hoja del cuadro sale un chip discreto «deducido» que al tocarlo lo dice; el pie avisa una vez. Una marca que
+  empieza con «no aplica:» o «sin dato:» no es una deducción: dice por qué esa cifra va vacía; el renglón enseña
+  entonces «no aplica» o «sin dato» en lugar del «—», con la razón a la vista (sin chip). Cómo se asigna una ruta a cada cifra: «Versiones» → `v.<clave>`, «Datos» →
   `datos.<clave>`, «Flujo» → `flujo.<serie>` y `flujo.total.<serie>` por el rótulo del renglón, un producto →
   `productos.<n>.<campo>` (`FLUJO_RUTA` y `rutasDe` en `visor.js`).
 - **Dinero con lo que llegue:** con saldo acumulado, como siempre; sin él pero con lo que entra y sale por
@@ -603,10 +605,22 @@ estado» (las nueve pruebas, aguante, etapa, candados y siguiente paso) y sigui�
   utilidad antes de intereses) lo dice así, y en `de` nombra las cifras del grafo de las que sale: «De qué depende» dice
   de qué sale cada una.
 - **Fotos del PPP de siempre:** el renglón dice que la cifra sale del motor de su tablero (es una foto), no de un
-  libro; si la cifra se dedujo, su marca `deducido` es el «cómo se calcula»; si no, la definición del libro, dicha
-  como tal. No se enseña el grafo del libro ni «qué la mueve» (eso se verificó contra el libro, no contra los motores).
-- **Qué no se abre:** las columnas por trimestre de «Dinero» (suman varias cifras; cada color tiene su texto en la
-  clave), cada candado y los renglones de registro (las partes del esquema, el desglose fino de lo que entra y sale).
+  libro; si la cifra se dedujo, su marca `deducido` es el «cómo se calcula» (también la de un renglón del flujo, por su
+  serie o su total, y la del esquema de reparto); si no, la definición del libro, dicha como tal. **Si la cifra viene
+  vacía** nunca dice que «la dio el motor»: dice «En esta foto no hay cifra (o no aplica): <razón>» —la razón es su
+  marca «sin dato:»/«no aplica:»— y cómo se calcula en el libro. Lo que sólo existe en el libro del PPP 2 (etapa,
+  candados, siguiente paso, pruebas de estrés) lleva el texto `foto` de su entrada y, en una foto que no lo trae, ni se
+  pinta en «—» ni se pide «por repetir». Lo que acomoda el visor dice que lo saca con cifras que da el motor. No se
+  enseña el grafo del libro ni «qué la mueve» (eso se verificó contra el libro, no contra los motores).
+- **Dos renglones con la misma clave** (los productos; «Lo que junta la preventa» y «Lo más hondo»): la leyenda lleva
+  el título de la figura y se abre el renglón con ese rótulo.
+- **«De qué depende», sin sobrar:** a lo más tres bloques de segundo nivel a la vista y lo demás en «Ver n más»; la
+  leyenda de tipos (palanca, dato, resultado) sólo nombra los que salen arriba. Las cifras de «En esta versión» llevan
+  «millones»; la holgura del renglón «Hoy» dice «puntos».
+- **Qué no se abre:** cada candado y los renglones de registro (las partes del esquema, el desglose fino de lo que
+  entra y sale). Las columnas por trimestre de «Dinero» sí (clave `visor.trimestre`; la última, si es de un solo mes,
+  dice «Mes n»); «Intereses y apertura» de «Costo y ganancia» tiene la suya (`visor.intereses_apertura`: costo del
+  dinero menos el rendimiento del capital, que va en su propio renglón).
 - **Lo que no cambia:** el servidor, los libros, `ppp2.js`, `ppp2-relaciones.js`, el Portero y los motores. `visor.js`
   no hace cuentas nuevas: sólo formatea lo que llega. Sin `visor-explica.js` (o sin el grafo), el visor es el de siempre.
 - **De paso:** la etapa y los candados tienen cada uno su leyenda; la holgura de una aportación justa ya no repite «lo

@@ -152,8 +152,8 @@ async function contraste(page) {
         assert.ok(pos.top >= pos.cab - 1 && pos.top < pos.cab + 40, 'el renglón queda a la vista, bajo el encabezado de la hoja: ' + JSON.stringify(pos));
         const t = await fila.locator('.vz-xp').innerText();
         for (const parte of ['CÓMO SE CALCULA', 'HOY', 'DE QUÉ DEPENDE', 'QUÉ LA MUEVE', 'POR QUÉ IMPORTA']) assert.ok(t.includes(parte), 'falta ' + parte);
-        assert.match(t, /En esta versión: costo sin terreno \$380\.0 · valor de la tierra \$30\.0\./);
-        assert.match(t, /El plan: 40\.0% · la revisión para fondos pide 50% o menos · sobran 10\.0 pts\./);
+        assert.match(t, /En esta versión: costo sin terreno \$380\.0 millones · valor de la tierra \$30\.0 millones\./);
+        assert.match(t, /El plan: 40\.0% · la revisión para fondos pide 50% o menos · sobran 10\.0 puntos\./);
         assert.match(t, /Línea del banco sale de/);
         assert.match(t, /Libro del plan · Resumen · v2\.rv_linea_costo/);
         await cabe(page);
@@ -275,7 +275,7 @@ async function contraste(page) {
       await abreCuadro(page, 'riesgo', true);
       await page.locator('.vz-xb[data-x="v.rv_aportacion"]').tap();
       const t = await page.locator('.vz-xf:has(.vz-xb[data-x="v.rv_aportacion"]) .vz-xp').innerText();
-      assert.match(t, /Deducido de \(tierra que aporta el dueño \+ capital usado\) ÷ costo con tierra\./);
+      assert.match(t, /Deducido: \(tierra que aporta el dueño \+ capital usado\) ÷ costo con tierra\./);
       assert.match(t, /motor de su tablero del PPP de siempre/);
       assert.doesNotMatch(t, /Sale directo de|Mejora:/);
       assert.deepEqual(errores, []);
@@ -300,7 +300,7 @@ async function contraste(page) {
       await page.locator('#vzModal').waitFor({ state: 'visible' });
       await page.locator('.vz-xb[data-x="v.rv_linea_ventas"]').click();
       await page.locator('.vz-xf:has(.vz-xb[data-x="v.rv_linea_ventas"]) .vz-xp').waitFor({ state: 'visible' });
-      assert.match(await page.locator('.vz-xf:has(.vz-xb[data-x="v.rv_linea_ventas"]) .vz-xp').innerText(), /En banca se le llama LTV sobre el valor de venta \(LTGDV\)\./);
+      assert.match(await page.locator('.vz-xf:has(.vz-xb[data-x="v.rv_linea_ventas"]) .vz-xp').innerText(), /en banca, LTV sobre el valor de venta o LTGDV/);
       await page.keyboard.press('Escape');
       await page.locator('#vzModal').waitFor({ state: 'hidden' });
       // y en un cuadro con lápiz, la hoja lleva los renglones que se abren y, debajo, «Lo que mueve este cuadro» (ppp2.js)

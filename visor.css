@@ -143,6 +143,8 @@ html.vz-con-modal, html.vz-con-modal body { overflow: hidden; }
 .vz-ded[aria-expanded="true"] { background: #efe2bf; }
 .vz-ded:focus-visible { outline: 2px solid var(--oro); outline-offset: 1px; }
 .vz-m-caja small.vz-ded-txt { padding: 6px 9px; margin-top: 4px; border-radius: 9px; background: #fbf5e6; color: #5e4710; line-height: 1.4; }
+/* por qué una cifra va vacía («no aplica: …», «sin dato: …»): a la vista, junto al «—» */
+.vz-m-caja small.vz-vac { margin-top: 3px; padding-left: 8px; border-left: 2px solid #ddd3bd; color: #5f584b; line-height: 1.4; }
 /* qué es cada cifra y de qué depende: el renglón se abre ahí mismo, dentro de la hoja (no tapa nada) */
 .vz-m-caja dl > div.vz-xf { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .vz-xb { display: flex; align-items: flex-start; gap: 7px; width: 100%; margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; line-height: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -168,6 +170,9 @@ html.vz-con-modal, html.vz-con-modal body { overflow: hidden; }
 .vz-x-lista { color: var(--tinta); overflow-wrap: anywhere; }
 .vz-x-lista i { font-style: normal; color: var(--mudo); }
 .vz-xp .vz-x-ley { margin-top: 9px; font-size: 11.5px; line-height: 1.4; color: var(--mudo); }
+.vz-x-mas { margin-top: 6px; }
+.vz-x-mas summary { display: inline-flex; align-items: center; min-height: 32px; font-size: 12.5px; font-weight: 600; color: #6a4f12; cursor: pointer; }
+.vz-x-mas summary:focus-visible { outline: 2px solid var(--oro); outline-offset: 2px; border-radius: 4px; }
 .vz-xp .vz-x-fuente { margin-top: 13px; padding-top: 8px; border-top: 1px solid var(--linea); font-size: 11.5px; color: var(--mudo); overflow-wrap: anywhere; }
 @media (max-width: 360px) { .vz-x-g li { grid-template-columns: 1fr; gap: 0; } }
 @media (min-width: 700px) {
@@ -186,6 +191,7 @@ html.vz-con-modal, html.vz-con-modal body { overflow: hidden; }
 .vz-tip small { display: block; margin-top: 6px; padding-top: 5px; border-top: 1px solid rgba(255, 253, 249, .16); font-size: 10.5px; color: #d9c79a; }
 .vz-tip small.vz-tip-ded { display: flex; align-items: flex-start; gap: 5px; margin-top: 4px; padding-top: 0; border-top: 0; color: #f0dfb0; }
 .vz-tip small.vz-tip-ded svg { flex: none; margin-top: 1px; }
+.vz-tip small.vz-tip-vac { margin-top: 4px; padding-top: 0; border-top: 0; color: #e9e3d6; }
 .vz-pie-ded { margin-top: 1px; color: #6a5013; }
 /* la leyenda dice en una línea qué es la cifra y, dentro de la hoja, ofrece abrir su renglón (lo único que se toca en ella) */
 .vz-tip .vz-tip-que { margin: 7px 0 0; font-size: 12px; line-height: 1.35; color: #f3eee4; }

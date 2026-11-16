@@ -204,7 +204,9 @@ function calendarioMacro(r, F) {
   const ingVenta = (r.rentaN ? 0 : (r.ingNaves || 0)) + (r.ingMacro || 0) + (r.rentaC ? 0 : (r.ingCom || 0)) + (r.ingViv || 0);
   if (!cerca(suma(firmado), ingVenta, Math.max(1000, T))) return null;
   if (renta ? cobrado.some((x, i) => x > F.rev[i] + PESO) : cobrado.some((x, i) => Math.abs(x - F.rev[i]) > PESO)) return null;
-  return { firmas, firmado, cobrado, saldoCob };
+  /* Sin renta, lo cobrado es exactamente la cobranza del motor: se parte en el enganche de cada venta y lo que se cobra
+     después (saldo al entregar la nave o mensualidades del lote). Con renta no: la renta no es un contrato de venta. */
+  return { firmas, firmado, cobrado, saldoCob, enganches: renta ? null : cobrado.map((x, i) => x - saldoCob[i]), saldos: renta ? null : saldoCob.slice() };
 }
 /* Residencial: `absLotes` lotes al mes desde el inicio de ventas hasta venderlos todos (el bucle de ventas del motor). */
 function calendarioResidencial(r, F) {
@@ -221,7 +223,7 @@ function calendarioUnifamiliar(r, F) {
   if (!T) return null;
   const firmas = ceros(T), saldos = ceros(T), i = T - 1;
   firmas[i] = 1; saldos[i] = F.rev[i];
-  return { firmas, firmado: F.rev.slice(), saldos };
+  return { firmas, firmado: F.rev.slice(), saldos, enganches: ceros(T), pagos_obra: ceros(T) };
 }
 
 /* ───────────── los hechos de cada motor (en pesos), con nombres comunes ───────────── */
@@ -236,7 +238,7 @@ function hechos(tipo, r, F, visor) {
       costos: { obra: x('hard'), indirectos: x('indirect') === null ? null : x('indirect') + (x('legal') || 0), imprevistos: x('cont'), comisiones: x('commission'), cierre: x('closing') },
       reconcilia: x('cashReconciliation'), cobranzaTotal: x('revTotal'),
       reparto: {
-        esquema: 'Cascada: regresan tierra y capital, preferente ' + N.r3((num(p.pref) || 0) * 100) + ' % anual y residual ' + N.r3((x('effectiveOwnerResidual') || 0) * 100) + ' % dueño',
+        esquema: 'Cascada: regresan tierra y capital; preferente ' + N.r3((num(p.pref) || 0) * 100) + ' %; residual ' + N.r3((x('effectiveOwnerResidual') || 0) * 100) + ' % al dueño',
         tasa: num(p.pref), paga: (x('ownerCapital') || 0) > 0 || (x('landCash') || 0) > 0, dueno: x('effectiveOwnerResidual'), honorarios: 0
       },
       cal: calendarioVertical(r, F, uProd)
@@ -272,7 +274,7 @@ function hechos(tipo, r, F, visor) {
         obra: urb + (x('costoConstrViv') || 0) + (x('ccCosto') || 0), imprevistos: urb * (num(p.imprevistos) || 0),
         indirectos: urb * (num(p.tramites) || 0) + (x('costoDonacion') || 0) + (x('costoOtros') || 0), comisiones: x('blandosIng'), cierre: 0
       },
-      cobranzaTotal: x('revTotal'), m2Construidos: r.vivActiva ? (x('nLotesViv') || 0) * (x('m2ConstrPromedioViv') || 0) : 0,
+      cobranzaTotal: x('revTotal'), m2Construidos: r.vivActiva ? (x('nLotesViv') || 0) * (x('m2ConstrPromedioViv') || 0) : 0, otrosIngresos: x('retFinTodo'),
       reparto: { tasa: 0, honorarios: num(p.honorario), dueno: num(p.pctDueno) },
       cal: calendarioResidencial(r, F)
     });
@@ -283,7 +285,7 @@ function hechos(tipo, r, F, visor) {
       ventas: x('venta'), costoConTierra: x('costoTotal') === null ? null : x('costoTotal') - (x('costoFin') || 0), tierraValor: x('costoTerreno'), tierraAportada: 0,
       tierraEfectivo: x('costoTerreno'), capital: x('equityUsed'), linea: 0, respaldo: 0, dueno: x('costoTerreno'),
       alianza: cajaFin === null || x('equityUsed') === null ? null : cajaFin - x('equityUsed'), inversion: x('retAcum'), cobranzaTotal: x('revTotal'),
-      reparto: { esquema: 'Sin socio de tierra: la tierra se compra al arrancar; el inversionista cobra su rendimiento y la utilidad es de quien pone el capital', tasa: 0, paga: true, dueno: 0, honorarios: 0 },
+      reparto: { esquema: 'Sin socio de tierra: se compra; la utilidad es de quien pone el capital', tasa: 0, paga: true, dueno: 0, honorarios: 0 },
       obraInicio: 2, finObra: (num(p.mesesObra) || 0) + 1, cal: calendarioUnifamiliar(r, F)
     });
   }
@@ -311,7 +313,7 @@ function sentidoVisor(tipo, r, H) {
   if (!(aport > PESO) && !(tipo === 'MACROLOTES' && (H.regalia || 0) > PESO)) return out;   // toda la tierra es costo a su valor: ya tiene el sentido del visor
   if (aport > PESO && fin(valor)) {
     out.tierra = valor;
-    out.tierraTexto = (tipo === 'RESIDENCIAL' && pago <= PESO ? 'valor de la tierra del caso: tierraAportada del motor (superficie × valor del m²)' : 'valor de la tierra del caso: superficie × valor del m² que trae el motor')
+    out.tierraTexto = (tipo === 'RESIDENCIAL' && pago <= PESO ? 'valor de la tierra del caso: la tierra que aporta el dueño, según el motor (superficie × valor del m²)' : 'valor de la tierra del caso: superficie × valor del m² que trae el motor')
       + (pago > PESO ? '; ' + N.r3(pago / valor * 100) + ' % se paga en efectivo en el mes 1 (va en egresos) y el resto lo aporta el dueño' : '; el dueño la aporta, no se paga en efectivo');
   }
   const SIN = ' No se calcula aquí: mejor vacía que con otro sentido.';
@@ -321,8 +323,8 @@ function sentidoVisor(tipo, r, H) {
     if (completo && alcanza && fin(x('utilidadRepartible'))) {
       out.ganancia = x('utilidadRepartible');
       out.gananciaTexto = 'utilidad repartible del motor: ya le repagó al dueño su tierra a su valor (100 %) y no hay honorario de desarrollo; es la ganancia después de la tierra';
-      out.margen = null;
-      out.porque['v.margen'] = 'El motor no da su utilidad repartible entre ventas; su margen es el de la utilidad antes de la tierra aportada (otro sentido).' + SIN;
+      /* el margen del motor es el de su utilidad antes de la tierra aportada: el del visor es esta ganancia entre ventas */
+      out.margenDeduce = true;
       return out;
     }
     out.ganancia = null;
@@ -388,6 +390,7 @@ function llena(visor, H, F, extra) {
     if (S.ganancia === null) anula('v.ganancia', S.porque['v.ganancia']);
     else if (fin(S.ganancia)) corrige('v.ganancia', M(S.ganancia), S.gananciaTexto);
     if (S.margen === null) anula('v.margen', S.porque['v.margen']);
+    if (S.margenDeduce && fin(v.ganancia) && fin(v.ventas) && v.ventas > 0) corrige('v.margen', N.r6(v.ganancia / v.ventas), 'ganancia real ÷ ventas, como el libro (el margen del motor es el de su utilidad antes de la tierra que aporta el dueño)');
   }
 
   /* 0 · encabezado y texto */
@@ -411,6 +414,8 @@ function llena(visor, H, F, extra) {
   if (vacio('v.banco_max') && H.tipo === 'UNIFAMILIAR') deduce('v.banco_max', 0, 'la casa no usa banco: el saldo máximo del banco es 0 (como lo da el libro sin banco)');
   if (vacio('v.respaldo') && H.tipo === 'UNIFAMILIAR') deduce('v.respaldo', 0, 'nunca falta dinero: el capital cubre cada mes que la caja quedaría negativa');
   if (vacio('v.max_ajeno') && T) deduce('v.max_ajeno', M(Math.max(...F.ajenoUso)), 'máximo mensual de saldo del banco + capital aportado + respaldo pendiente');
+  /* en la casa, el dinero ajeno es el capital aportado más lo que se le debe al inversionista (el módulo sólo contaba lo del inversionista) */
+  else if (H.tipo === 'UNIFAMILIAR' && T) corrige('v.max_ajeno', M(Math.max(...F.ajenoUso)), 'máximo mensual del capital aportado más lo que se le debe al inversionista (antes contaba sólo al inversionista)');
   const R = T ? F.flujoAcum[ult] : null;
   if (fin(R)) {
     if (vacio('v.resultado_repartir')) deduce('v.resultado_repartir', M(R), 'caja al cierre menos el capital aportado, la deuda y el respaldo que siguen pendientes');
@@ -430,7 +435,7 @@ function llena(visor, H, F, extra) {
 
   /* 6 · reparto */
   if (vacio('v.dueno_aporta')) deduce('v.dueno_aporta', M(H.tierraAportada), H.tipo === 'UNIFAMILIAR' ? 'la tierra se compra: nadie la aporta' : 'superficie × valor del m² × % que aporta el dueño');
-  if (vacio('v.dueno_recibe')) deduce('v.dueno_recibe', M(H.dueno), H.tipo === 'UNIFAMILIAR' ? 'el precio del terreno, pagado al arrancar' : 'ownerTotal del motor');
+  if (vacio('v.dueno_recibe')) deduce('v.dueno_recibe', M(H.dueno), H.tipo === 'UNIFAMILIAR' ? 'el precio del terreno, pagado al arrancar' : 'lo que el motor le paga al dueño');
   if (vacio('v.dueno_veces') && H.tierraValor > 0 && fin(H.dueno)) deduce('v.dueno_veces', N.r6(H.dueno / H.tierraValor), 'lo que recibe el dueño ÷ valor de su tierra');
   if (vacio('v.dueno_meses') && fin(v.mes_reparto)) {
     /* Si además de la tierra en efectivo cobra una parte de la utilidad, lo último lo recibe en el reparto. */
@@ -443,7 +448,15 @@ function llena(visor, H, F, extra) {
     if (vacio('v.alianza_recibe')) deduce('v.alianza_recibe', M(H.alianza), H.tipo === 'UNIFAMILIAR' ? 'caja al cierre menos el capital que se devuelve' : 'lo que recibe la alianza menos su capital');
     else if (H.tipo === 'MACROLOTES' || H.tipo === 'RESIDENCIAL') corrige('v.alianza_recibe', M(H.alianza), 'lo que recibe la alianza encima de su capital (antes traía el capital adentro y el visor lo contaba dos veces)');
   }
-  if (vacio('v.inversion_recibe')) deduce('v.inversion_recibe', M(H.inversion), H.tipo === 'UNIFAMILIAR' ? 'rendimiento que se le paga al inversionista (retAcum)' : 'no hay inversionista aparte: el capital es de la alianza y su ganancia va en lo que recibe la alianza');
+  /* El capital es de la alianza en los cuatro motores y cobra antes que la utilidad, como en el libro: si la alianza no
+     recupera todo su capital, lo que recibe es del capital y su utilidad es 0 (nunca «recibe» negativo). Lo que recupera el
+     capital va como total del pago al capital (el motor lo devuelve con el reparto, sin serie por mes). */
+  if ((H.capital || 0) > PESO && fin(H.alianza)) {
+    e.pagoCapital = H.capital + Math.min(0, H.alianza);
+    if (H.alianza < -PESO) corrige('v.alianza_recibe', 0, 'la alianza no recupera todo su capital: lo que recibe al cierre es del capital, que cobra antes que la utilidad, y su utilidad es 0');
+  }
+  if (vacio('v.otros_ingresos') && (H.otrosIngresos || 0) > PESO) deduce('v.otros_ingresos', M(H.otrosIngresos), 'retorno por financiar del motor (lo que pagan de más quienes compran a plazos): va en las ventas y no es de ningún producto');
+  if (vacio('v.inversion_recibe')) deduce('v.inversion_recibe', M(H.inversion), H.tipo === 'UNIFAMILIAR' ? 'el rendimiento que el motor le paga al inversionista' : 'no hay inversionista aparte: el capital es de la alianza y su ganancia va en lo que recibe la alianza');
   if (vacio('v.capital_sobre_tope') && fin(H.capital) && fin(H.ventas)) deduce('v.capital_sobre_tope', N.r3(Math.max(0, H.capital - H.ventas * TOPE_CAPITAL) / 1e6), 'capital − 1/3 de las ventas, si se pasa (regla de Dirección; sólo avisa)');
 
   /* 7 · revisión para fondos (mismas definiciones del libro del PPP 2) */
@@ -463,7 +476,7 @@ function llena(visor, H, F, extra) {
   const cal = H.cal, obraIni = num(v.obra_inicio);
   const firmasPrueba = cal ? (cal.deptos || cal.firmas) : null, totalFirmas = firmasPrueba ? (cal.total > 0 ? cal.total : suma(firmasPrueba)) : 0;
   if (vacio('v.rv_preventa')) {
-    if (fin(H.preventaArranque)) deduce('v.rv_preventa', N.r6(H.preventaArranque), 'preventaAtBuild del motor: lo firmado antes de arrancar la obra');
+    if (fin(H.preventaArranque)) deduce('v.rv_preventa', N.r6(H.preventaArranque), 'lo firmado antes de arrancar la obra, según el motor');
     else if (firmasPrueba && totalFirmas > 0 && fin(obraIni)) deduce('v.rv_preventa', N.r6(suma(firmasPrueba.slice(0, Math.max(0, obraIni - 1))) / totalFirmas), 'unidades firmadas antes del mes de arranque de obra ÷ unidades totales (calendario de ventas del motor)');
   }
   const primerDesembolso = primero(F.draw);
@@ -489,7 +502,7 @@ function llena(visor, H, F, extra) {
     else if (bancoMes === null) deduce('v.rv_meses_credito', 'sin disposición', 'hay línea de banco pero nunca tiene saldo');
     else if (fin(obraIni)) deduce('v.rv_meses_credito', bancoMes - obraIni, 'mes en que se liquida el banco − mes de arranque de obra');
   }
-  if (vacio('v.rv_resultado')) deduce('v.rv_resultado', revision(v), 'las nueve pruebas con los límites del libro del PPP 2 (revision_formula)');
+  if (vacio('v.rv_resultado')) deduce('v.rv_resultado', revision(v), 'las nueve pruebas con los límites del libro del PPP 2');
   if (vacio('v.ck_flujo') && fin(H.reconcilia)) mapea('v.ck_flujo', N.r6(H.reconcilia / 1e6), 'cashReconciliation del motor (fuentes − usos de caja)');
   if (vacio('v.ck_cobranza') && fin(H.cobranzaTotal) && fin(V)) mapea('v.ck_cobranza', M(H.cobranzaTotal - V), 'revTotal − ventas del motor');
   if (vacio('v.ck_unidades') && cal && cal.firmas && H.unidades > 0) deduce('v.ck_unidades', N.r3(suma(cal.firmas) - H.unidades), 'unidades firmadas en el calendario − unidades de los productos');
@@ -508,7 +521,7 @@ function llena(visor, H, F, extra) {
   /* reparto */
   if (!visor.reparto) visor.reparto = { numero: null, esquema: null, tasa_capital: null, paga_tierra: null, parte_dueno: null, parte_alianza: null, parte_capital: null, honorarios_pct: null };
   const rp = H.reparto || {};
-  if (vacio('reparto.esquema') && rp.esquema) deduce('reparto.esquema', rp.esquema, 'el esquema que aplica el motor');
+  if (vacio('reparto.esquema') && rp.esquema) deduce('reparto.esquema', rp.esquema, 'es el esquema que usa el motor de su tablero; no es uno de los cinco del libro del PPP 2');
   if (vacio('reparto.paga_tierra') && typeof rp.paga === 'boolean') deduce('reparto.paga_tierra', rp.paga, 'el motor paga o devuelve la tierra a su valor antes de repartir');
   if (rp.modo1) { noAplica('reparto.parte_dueno', 'el dueño cobra un % de las ventas, no de la utilidad'); noAplica('reparto.parte_alianza', 'la alianza se queda con la utilidad que deja la regalía del dueño'); }
   else if (vacio('reparto.parte_dueno') && fin(rp.dueno)) deduce('reparto.parte_dueno', N.r6(rp.dueno), '% de la utilidad del dueño en el motor');
@@ -546,7 +559,7 @@ function llena(visor, H, F, extra) {
   falta('v.mes_saldos', 'El motor no tiene un mes único de saldos.');
   falta('v.ck_flujo', 'El motor no entrega su conciliación de caja; recalcularla aquí sería circular.');
   falta('v.ck_unidades', 'Sin calendario de firmas comprobado no se puede contar.');
-  ['rv_preventa', 'rv_preventa_banco', 'rv_cobertura'].forEach(k => falta('v.' + k, 'Sin calendario de firmas comprobado contra los cobros del motor (p. ej. un libro por etapas). Supuesto: el calendario de ventas de cada etapa.'));
+  ['rv_preventa', 'rv_preventa_banco', 'rv_cobertura'].forEach(k => falta('v.' + k, 'El calendario de firmas no cuadra con los cobros del motor (p. ej. un libro que vende por etapas). Supuesto: el calendario de ventas de cada etapa.'));
   falta('v.dueno_meses', 'Sin pago al dueño no hay mes.');
   falta('v.dueno_veces', 'Sin valor de la tierra no hay veces.');
   falta('plan.ubicacion', 'El renglón no trae ubicación.');
@@ -556,14 +569,64 @@ function llena(visor, H, F, extra) {
   return { marca, sinLlenar, mapeados, corregidos, noAp, vacios };
 }
 
+/* ───────────── por qué va vacío lo que va vacío ───────────── */
+/* La razón de cada cifra que el visor enseña y la foto deja vacía, para que el visor diga «no aplica» o «sin dato» con su
+   porqué (nunca un «—» mudo ni «la dio el motor»). Viaja en la misma marca `deducido`, empezando con «no aplica:» o
+   «sin dato:»; el visor no la toma como deducción. Sale de lo que ya anotó `llena` (no aplica, sin llenar, vacíos a
+   propósito) y, para los totales del flujo, de lo que el motor de verdad no tiene. */
+const RAZON_FLUJO = {
+  caja_minima: 'no aplica: el motor de su tablero no guarda caja mínima; usa cada peso en cuanto entra',
+  enganches: 'sin dato: el motor de su tablero no separa lo que cobra en enganches, pagos durante la obra y saldos',
+  pagos_obra: 'sin dato: el motor de su tablero no separa lo que cobra en enganches, pagos durante la obra y saldos',
+  saldos: 'sin dato: el motor de su tablero no separa lo que cobra en enganches, pagos durante la obra y saldos',
+  firmas: 'sin dato: el calendario de ventas no cuadra con los cobros del motor (p. ej. un libro que vende por etapas)'
+};
+const RAZON_RUTA = /^(v|datos|reparto|productos)\./;
+function razonCorta(t) {
+  t = String(t || '').replace(/\s*Supuesto:[\s\S]*$/, '').replace(/\s*No se calcula aquí:[\s\S]*$/, '').trim().replace(/\.+$/, '');
+  return t.charAt(0).toLowerCase() + t.slice(1);
+}
+function valorEn(visor, ruta) {
+  const p = ruta.split('.');
+  if (p[0] === 'v') return (visor.v || {})[p.slice(1).join('.')];
+  if (p[0] === 'datos') { const d = (visor.datos || {})[p.slice(1).join('.')]; return d ? d.valor : undefined; }
+  if (p[0] === 'reparto') return visor.reparto ? visor.reparto[p[1]] : undefined;
+  if (p[0] === 'productos') { const q = (visor.productos || [])[Number(p[1])]; return q ? q[p[2]] : undefined; }
+  return undefined;
+}
+function razonesVacias(visor, marca, ll, noAp) {
+  const nulo = x => x === null || x === undefined, pon = (ruta, texto) => { if (!marca[ruta] && texto) marca[ruta] = texto; };
+  Object.keys(noAp || {}).forEach(r => { if (RAZON_RUTA.test(r) && nulo(valorEn(visor, r))) pon(r, 'no aplica: ' + razonCorta(noAp[r])); });
+  const sin = Object.assign({}, ll.vacios || {}, ll.sinLlenar || {});
+  Object.keys(sin).forEach(r => { if (RAZON_RUTA.test(r) && nulo(valorEn(visor, r))) pon(r, 'sin dato: ' + razonCorta(sin[r])); });
+  const fl = visor.flujo || {}, filas = fl.filas || {}, total = fl.total || {};
+  if (fl.meses) Object.keys(RAZON_FLUJO).forEach(k => { if (!filas[k] && nulo(total[k])) pon('flujo.total.' + k, RAZON_FLUJO[k]); });
+}
+
+/* ───────────── textos dentro de los topes del servidor ───────────── */
+/* fotoLimpia_ (server/ppp2/Visor.gs) corta cada texto a su tope sin aviso; aquí se cortan antes, en palabra y con «…». */
+const TOPES = { 'plan.nombre': 120, 'plan.ubicacion': 200, 'plan.tipo': 200, 'plan.edad': 40, 'plan.paso_texto': 200, 'plan.esquema': 80, 'reparto.esquema': 80 };
+function cortaPalabra(t, max) {
+  t = String(t);
+  if (t.length <= max) return t;
+  const c = t.slice(0, max - 1), i = c.lastIndexOf(' ');
+  return (i > max * 0.6 ? c.slice(0, i) : c).replace(/[\s,;:·–—-]+$/, '') + '…';
+}
+function ajustaTextos(visor) {
+  Object.keys(TOPES).forEach(r => { const [a, b] = r.split('.'), o = visor[a]; if (o && typeof o[b] === 'string') o[b] = cortaPalabra(o[b], TOPES[r]); });
+  Object.keys(visor.v || {}).forEach(k => { if (typeof visor.v[k] === 'string') visor.v[k] = cortaPalabra(visor.v[k], 200); });
+  (visor.productos || []).forEach(q => { if (typeof q.nombre === 'string') q.nombre = cortaPalabra(q.nombre, 60); });
+  Object.keys(visor.deducido || {}).forEach(k => { visor.deducido[k] = cortaPalabra(visor.deducido[k], 240); });
+}
+
 /* El flujo completo, armado otra vez desde las series del motor (las que ya había quedan idénticas, salvo lo
    corregido) más las deducidas, y los totales del desglose de costos. */
-function flujoCompleto(visor, H, F, marca) {
+function flujoCompleto(visor, H, F, marca, extra) {
   const viejo = visor.flujo || { meses: null, filas: {}, total: {} }, T = F.T;
   if (!T) return viejo;
   const s = { cobranza: F.rev, egresos: F.cost, cap_aporta: F.equity, interes: F.pik, caja: F.caja, cap_acum: F.capAcum, saldo_capital: F.capAcum, flujo_acum: F.flujoAcum };
   if (F.banco) Object.assign(s, { apertura: F.fee, saldo_banco: F.debt, disposicion: F.draw.map((x, i) => x + F.capPik[i] + F.fee[i]), pago_banco: F.repay, ajeno: F.ajenoUso });
-  else s.ajeno = F.ajeno;
+  else s.ajeno = H.tipo === 'UNIFAMILIAR' ? F.ajenoUso : F.ajeno;
   if (F.banco && F.ok) Object.assign(s, { respaldo: F.gap, pago_respaldo: F.cure, saldo_respaldo: F.gapOut });
   const cal = H.cal;
   if (cal && cal.firmas) s.firmas = cal.firmas;
@@ -579,6 +642,7 @@ function flujoCompleto(visor, H, F, marca) {
     const dif = Math.max(0, ...a.slice(0, largo).map((x, i) => Math.abs(x - b[i])));
     if (dif > 0.0015) {
       if (k === 'disposicion') marca['flujo.disposicion'] = 'corregido: lo que crece la deuda en el mes (desembolso + comisión + interés capitalizado); así entra y sale del banco cuadran con la caja';
+      else if (k === 'ajeno' && H.tipo === 'UNIFAMILIAR') marca['flujo.ajeno'] = 'corregido: capital aportado más lo que se le debe al inversionista, mes a mes (antes contaba sólo al inversionista)';
       else throw new Error('La serie ' + k + ' del módulo no coincide con el motor (dif ' + dif + ').');
     }
   });
@@ -586,13 +650,18 @@ function flujoCompleto(visor, H, F, marca) {
   const MARCAS = {
     cap_acum: 'capital aportado acumulado mes a mes', saldo_capital: 'el capital sigue adentro hasta el cierre (el motor lo devuelve con el reparto)',
     flujo_acum: 'caja − capital aportado − saldo del banco − respaldo pendiente' + (H.tipo === 'UNIFAMILIAR' ? ' − lo que se le debe al inversionista' : ''),
-    apertura: 'comisión de disposición del motor, mes a mes', pago_banco: 'Δdeuda − interés capitalizado − comisión, cuando baja (identidad del motor)',
+    apertura: 'comisión de disposición del motor, mes a mes', pago_banco: 'lo que baja la deuda en el mes, sin contar el interés que se le suma ni la comisión (cuentas del propio motor)',
     disposicion: 'lo que crece la deuda en el mes: desembolso + comisión + interés capitalizado (identidad del motor)', ajeno: 'saldo del banco + capital aportado + respaldo pendiente',
-    respaldo: 'Δcaja − Δdeuda − (cobranza − costo − interés − comisión + capital), cuando falta (identidad del motor)', pago_respaldo: 'la misma identidad, cuando sobra y se cura el respaldo',
-    saldo_respaldo: 'respaldo pendiente acumulado', firmas: 'calendario de ventas del motor', enganches: cal && cal.parcial ? 'lo que entra antes de la entrega: el enganche de lo que se firma (el libro no tiene pagos durante la obra)' : 'enganche de la preventa repartido en los meses de preventa (como el motor)',
+    respaldo: 'lo que falta en el mes después de cobranza, costos, banco y capital (cuentas del propio motor)', pago_respaldo: 'lo que sobra en el mes y paga el respaldo (cuentas del propio motor)',
+    saldo_respaldo: 'respaldo pendiente acumulado', firmas: 'calendario de ventas del motor',
+    enganches: H.tipo === 'UNIFAMILIAR' ? 'la casa se cobra completa al escriturar: no hay enganche al firmar'
+      : H.tipo === 'MACROLOTES' ? 'el enganche de cada venta, al firmar (calendario de ventas del motor)'
+        : cal && cal.parcial ? 'lo que entra antes de la entrega: el enganche de lo que se firma (el libro no tiene pagos durante la obra)' : 'enganche de la preventa repartido en los meses de preventa (como el motor)',
     saldos: H.tipo === 'UNIFAMILIAR' ? 'la venta se cobra completa al escriturar, en el mes de la venta'
-      : cal && cal.parcial ? 'lo que entra desde la entrega: saldos de la preventa y ventas de entrega (el libro no tiene pagos durante la obra)' : 'saldos de la preventa y ventas de entrega repartidos en los meses de entrega (como el motor)',
-    pagos_obra: cal && cal.parcial ? 'el libro no tiene pagos durante la obra (% durante la obra = 0)' : 'cobranza − enganches − saldos (el motor la reparte con la curva de obra)'
+      : H.tipo === 'MACROLOTES' ? 'lo que se cobra después de firmar: el saldo al entregar la nave o las mensualidades del lote (calendario de ventas del motor)'
+        : cal && cal.parcial ? 'lo que entra desde la entrega: saldos de la preventa y ventas de entrega (el libro no tiene pagos durante la obra)' : 'saldos de la preventa y ventas de entrega repartidos en los meses de entrega (como el motor)',
+    pagos_obra: H.tipo === 'UNIFAMILIAR' ? 'la casa se cobra completa al escriturar: no hay pagos durante la obra'
+      : cal && cal.parcial ? 'el libro no tiene pagos durante la obra (% durante la obra = 0)' : 'cobranza − enganches − saldos (el motor la reparte con la curva de obra)'
   };
   Object.keys(nuevo.filas).forEach(k => { if (!(viejo.filas || {})[k] && MARCAS[k] && !marca['flujo.' + k]) marca['flujo.' + k] = MARCAS[k]; });
   if (F.banco && !(viejo.filas || {}).ajeno && nuevo.filas.ajeno) marca['flujo.ajeno'] = MARCAS.ajeno;
@@ -600,13 +669,21 @@ function flujoCompleto(visor, H, F, marca) {
   const c = H.costos;
   if (c) {
     const TEXTO = {
-      VERTICAL: { obra: 'hard del motor', indirectos: 'indirect + legal del motor', imprevistos: 'cont del motor', comisiones: 'commission del motor', cierre: 'closing del motor' },
+      VERTICAL: { obra: 'la obra directa del motor', indirectos: 'los indirectos del motor (proyecto, permisos y legales)', imprevistos: 'las contingencias del motor', comisiones: 'la comisión de venta del motor', cierre: 'el cierre de la compra de la tierra del motor' },
       MACROLOTES: { obra: 'urbanización + construcción (directo)', indirectos: 'directo × (estudios + licencias + supervisión) + ingresos × (legal + administración)', imprevistos: 'directo × imprevistos', comisiones: 'ingresos × (comisión + marketing)', cierre: 'el motor no tiene cierre de tierra' + (H.regalia ? ' (la regalía del dueño, un % de cada venta, va en lo que él recibe: el reparto)' : '') },
       RESIDENCIAL: { obra: 'urbanización + casas + casa club', indirectos: 'urbanización × trámites + donación pagada + otros costos', imprevistos: 'urbanización × imprevistos', comisiones: 'costos blandos sobre ingresos: administración + comisiones + marketing (el motor los junta)', cierre: 'el motor no tiene costo de cierre' }
     }[H.tipo] || {};
     Object.keys(TEXTO).forEach(k => {
       if (nuevo.total[k] === undefined && fin(c[k])) { nuevo.total[k] = N.r3(c[k] / 1e6); marca['flujo.total.' + k] = TEXTO[k]; }
     });
+  }
+  /* La casa no tiene gastos de cierre de la compra del terreno: su motor no los cobra (el cuadro 4 suma igual las ventas). */
+  if (H.tipo === 'UNIFAMILIAR' && nuevo.total.cierre === undefined) { nuevo.total.cierre = 0; marca['flujo.total.cierre'] = 'el motor de la casa no tiene gastos de cierre de la compra del terreno'; }
+  /* Lo que recupera el capital al cierre (ver llena: cobra antes que la utilidad). Total sin serie por mes. */
+  const pc = extra && extra.pagoCapital;
+  if (fin(pc) && nuevo.total.pago_capital === undefined) {
+    nuevo.total.pago_capital = N.r3(pc / 1e6);
+    marca['flujo.total.pago_capital'] = 'lo que recupera el capital al cierre, con el reparto: lo que recibe la alianza, hasta lo que puso (cobra antes que la utilidad, como en el libro); el motor no lo paga mes a mes';
   }
   return nuevo;
 }
@@ -619,13 +696,24 @@ function productosCompletos(visor, H, r, marca, noAp) {
     P.forEach((q, i) => {
       if (/^Deptos [ABC]/.test(q.nombre) && q.ventas === null && tot > 0 && res > 0) {
         const j = 'ABC'.indexOf(q.nombre.charAt(7));
-        if (j >= 0) { q.ventas = N.r3(N.mdp(res * m2[j] / tot)); marca['productos.' + i + '.ventas'] = 'ventas de vivienda × m² de la tipología ÷ m² de vivienda (el motor cobra el mismo $/m² a todas)'; }
+        if (j >= 0) {
+          q.ventas = N.r3(N.mdp(res * m2[j] / tot)); marca['productos.' + i + '.ventas'] = 'ventas de vivienda × m² de la tipología ÷ m² de vivienda (el motor cobra el mismo $/m² a todas)';
+          /* esas ventas llevan el descuento de preventa; el precio por m² del módulo es el de lista: el promedio es el que casa */
+          if (fin(q.precio_m2) && q.m2 > 0 && Math.abs(q.ventas * 1e6 - q.m2 * q.precio_m2) > 0.005 * Math.abs(q.ventas * 1e6)) {
+            const lista = q.precio_m2;
+            q.precio_m2 = N.r3(q.ventas * 1e6 / q.m2);
+            marca['productos.' + i + '.precio_m2'] = 'corregido: precio promedio = ventas del producto ÷ m² (el de lista, $' + Math.round(lista).toLocaleString('en-US') + ' por m², no lleva el descuento de preventa)';
+          }
+        }
       }
     });
   }
   P.forEach((q, i) => {
-    if (q.precio_unidad === null && fin(q.ventas) && q.unidades > 0) { q.precio_unidad = N.r3(q.ventas / q.unidades); marca['productos.' + i + '.precio_unidad'] = 'ventas del producto ÷ unidades (promedio)'; }
-    if (q.precio_m2 === null && fin(q.ventas) && q.m2 > 0 && !/renta/i.test(q.nombre)) { q.precio_m2 = N.r3(q.ventas * 1e6 / q.m2); marca['productos.' + i + '.precio_m2'] = 'ventas del producto ÷ m² (promedio)'; }
+    /* un producto sin ventas en esta versión no tiene precio promedio (0 ÷ unidades no es un precio) */
+    const sinVentas = fin(q.ventas) && Math.abs(q.ventas) < 1e-9 && ((q.m2 || 0) > 0 || (q.unidades || 0) > 0);
+    if (sinVentas) { if (q.precio_unidad === null) na['productos.' + i + '.precio_unidad'] = 'el producto no tiene ventas en esta versión: no hay precio promedio'; }
+    if (q.precio_unidad === null && fin(q.ventas) && !sinVentas && q.unidades > 0) { q.precio_unidad = N.r3(q.ventas / q.unidades); marca['productos.' + i + '.precio_unidad'] = 'ventas del producto ÷ unidades (promedio)'; }
+    if (q.precio_m2 === null && fin(q.ventas) && !sinVentas && q.m2 > 0 && !/renta/i.test(q.nombre)) { q.precio_m2 = N.r3(q.ventas * 1e6 / q.m2); marca['productos.' + i + '.precio_m2'] = 'ventas del producto ÷ m² (promedio)'; }
     if (q.precio_m2 === null && /renta/i.test(q.nombre)) na['productos.' + i + '.precio_m2'] = 'en renta no hay precio de venta por m²';
     if (q.unidades === null) { na['productos.' + i + '.unidades'] = 'se vende por m², no por unidad'; if (q.precio_unidad === null) na['productos.' + i + '.precio_unidad'] = 'se vende por m², no por unidad'; }
     if (q.m2 === null && /cajones/i.test(q.nombre)) { na['productos.' + i + '.m2'] = 'los cajones se venden por pieza'; if (q.precio_m2 === null) na['productos.' + i + '.precio_m2'] = 'los cajones se venden por pieza'; }
@@ -668,9 +756,11 @@ function etiquetas(html) {
   for (const m of html.matchAll(/<input\b[^>]*>/gi)) {
     const tag = m[0], id = (tag.match(/\sid\s*=\s*"([^"]+)"/) || [])[1];
     if (!id || !/type\s*=\s*"range"/i.test(tag)) continue;
-    const antes = html.slice(Math.max(0, m.index - 700), m.index), ls = [...antes.matchAll(/<label[^>]*>([\s\S]*?)<\/label>/gi)];
+    /* el rótulo más cercano antes del deslizante: un <label> o, en los interruptores, su <div class="sw-lbl"> */
+    const antes = html.slice(Math.max(0, m.index - 700), m.index);
+    const ls = [...antes.matchAll(/<label[^>]*>([\s\S]*?)<\/label>|<div[^>]*class="[^"]*\bsw-lbl\b[^"]*"[^>]*>([\s\S]*?)<\/div>/gi)];
     if (!ls.length) continue;
-    const t = ls[ls.length - 1][1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().split(/ \(| · /)[0].trim();
+    const ult = ls[ls.length - 1], t = (ult[1] !== undefined ? ult[1] : ult[2]).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().split(/ \(| · /)[0].trim();
     if (t) out[id] = t;
   }
   return out;
@@ -746,9 +836,11 @@ function completaFila(fila, ctx) {
   ex.noAp = noAp;
   if (ms && ms.noAplica) noAp['v.mes_saldos'] = ms.noAplica;
   const ll = llena(visor, H, F, ex);
-  visor.flujo = flujoCompleto(visor, H, F, ll.marca);
+  visor.flujo = flujoCompleto(visor, H, F, ll.marca, ex);
   visor.productos = productosCompletos(visor, H, res.r, ll.marca, noAp);
+  razonesVacias(visor, ll.marca, ll, noAp);
   visor.deducido = ll.marca;
+  ajustaTextos(visor);
   const problemas = validaCompleta(visor);
   if (problemas.length) throw new Error('La foto completada no pasa: ' + problemas.slice(0, 5).join('; '));
   const json = JSON.stringify(visor);
@@ -915,7 +1007,7 @@ module.exports = {
   PREFIJO_REESTRUCTURA, ID_REESTRUCTURA, TOPE_CAPITAL, CAJA_MINIMA, PRUEBAS, ESQUEMAS_PPP2,
   resultado, normaliza, calendarioVertical, calendarioMacro, calendarioResidencial, calendarioUnifamiliar, hechos, revision, llena,
   flujoCompleto, productosCompletos, criterios, completaFila, completaCaso, versionReestructura, cuentaVacios, validaCompleta,
-  etiquetas, parametros, queCambia, liquida, ensayo
+  etiquetas, parametros, queCambia, liquida, ensayo, razonesVacias, cortaPalabra, ajustaTextos
 };
 
 /* Línea de órdenes: node scripts/visor-fotos/completa.cjs ensayo <entrada.json> <salida.json> [--fecha "AAAA-MM-DD HH:mm"] */
