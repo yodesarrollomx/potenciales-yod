@@ -1,20 +1,18 @@
 {
-  "model_revision": "2026-11-16.ppp-factores.2",
-  "proposal_id": "CHG-PPP-FACTORES-20261116",
-  "summary": "Editor de factores visible en todos los planes con libro, con búsqueda, relaciones, sliders y sí/no; navegación desde el visor a la ficha autenticada. Se reutilizan simulación, guardado y deshacer existentes.",
+  "model_revision": "2026-11-16.ppp-especie.1",
+  "proposal_id": "CHG-PPP-ESPECIE-20261116",
+  "summary": "Comparar pago de tierra con anticipo y viviendas: participación en utilidad, interés simple sobre saldo y porcentaje del valor de ventas. Extender el libro nativo por versión; separar adjudicación de cobros y conservar las fórmulas de deuda. La UI captura, muestra y solicita equilibrio de la entrega; Sheets calcula. Corregir primero la lectura si no confirma revisión.",
   "components": [
     "SYS-POTENCIALES",
-    "SYS-PPP2",
-    "SHEET-PPP2",
+    "GAS-PORTERO",
+    "SHEET-PORTERO",
     "SYS-CONTROL",
-    "GAS-PPP2"
+    "SYS-PPP2"
   ],
   "tests": [
-    "node tests/ppp2-browser.cjs",
-    "node --test tests/ppp2-*.test.cjs",
-    "node tests/ppp2-visor-browser.cjs",
-    "node scripts/versiones.cjs --check",
-    "verificar-impacto contra atlas fijado"
+    "Pruebas sintéticas de conservación de inventario y efectivo, anticipo una vez, interés sobre saldo y reparto después de deuda.",
+    "Regresiones de versiones nativas, lectura, recuperación, permisos y móvil.",
+    "Lectura nativa y resultados guardados contrastados en UI; sin POST de prueba productivo."
   ],
-  "rollback": "Revertir este PR: se conserva el lápiz anterior, los libros, sus versiones y permisos."
+  "rollback": "Revertir consumidor y servidor a versiones anteriores sobre la misma implementación; conservar copias nativas y registro de cambios."
 }
