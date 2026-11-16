@@ -180,3 +180,13 @@ Pruebas: `node --test tests/visor-fotos-completa.test.cjs` (datos inventados) y 
 - **Libro nativo y renglón con versiones distintas** (inventario, hallazgo 4): el módulo vertical decide qué lista de versiones manda (`versiones(caso)`). Con esto Dirección puede elegir cualquiera, pero sólo la activa del renglón se concilia.
 - **Meses:** el visor del PPP 2 corta en 60. El núcleo no recorta el horizonte del PPP 1. Si un caso pasa de 60 meses, que lo revise quien rediseña `visor.js`.
 - **Macrolotes:** `aplicarCatalogo` puede cambiar `PRELLENADO` y los umbrales con el catálogo remoto. La foto usa el respaldo del HTML. El módulo de macrolotes debe confirmar que da lo mismo.
+
+### Comparaciones explícitas y pago en viviendas
+
+Una liga con varios identificadores `ppp:<caso>:<escenario>` distintos del mismo caso muestra sus opciones configuradas. En Opciones se omite el selector global de versiones y su aviso de Dirección; la liga no se modifica ni amplía permisos. Otras ligas conservan su comportamiento.
+
+Una foto puede declarar `v.pago_especie=true` y los resultados nativos `pago_anticipo`, `pago_vivienda`, `pago_cobros`, `pago_resultado` (MDP), `pago_m2` y `pago_unidades` (equivalentes). El visor sólo presenta estos campos. Anticipo y vivienda componen el pago total, la adjudicación no produce cobros de terceros y un resultado negativo del desarrollador queda visible. El capital efectivamente devuelto y el residual distribuible son conceptos distintos del resultado neto. En el comparativo, Unidades reúne las cantidades del inventario de Productos (venta y adjudicación), no sólo las firmas que generan efectivo; si falta una cantidad no se inventa el total.
+
+Esta entrega sólo cambia presentación de fotos existentes. Las fórmulas y entradas permanecen en el libro; una foto requiere regeneración para reflejar cambios posteriores. No despliega el servidor ni activa el editor del acuerdo. Los datos reales y su trazabilidad permanecen en hojas privadas.
+
+Validación: pruebas unitarias de selección y cifras, recorrido sintético móvil de tres opciones y navegación de regreso al plan; revisión visual de la liga productiva después de publicar. La ejecución local de Chromium puede no estar disponible; el recorrido se ejecuta en CI antes de integrar.

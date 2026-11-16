@@ -95,6 +95,36 @@ const sinDesborde = (page) => page.evaluate(() => document.documentElement.scrol
   const solo = process.env.PESTANAS_SOLO || '';
   const caso = async (nombre, f) => { if (solo && nombre.indexOf(solo) < 0) return; await f(); n++; console.log('ok · ' + nombre); };
   try {
+    await caso('opciones fijas: tres acuerdos, sin historial ni selector global de versiones', async () => {
+      let semilla;
+      const planes = ['a', 'b', 'c'].map((x, i) => ({ id: 'ppp:caso-demo:' + x, etiqueta: 'Acuerdo ' + (i + 1) }));
+      const { ctx, page, escrituras, errores } = await abre(navegador, base, { nuevo: true, direccion: true, sesion: ADMIN, transforma(j, p) {
+        if (p.recurso !== 'ppp2-visor') return j;
+        if (j.ok && j.v) semilla = JSON.parse(JSON.stringify(j));
+        const d = JSON.parse(JSON.stringify(semilla));
+        if (!d) return j;
+        const i = Math.max(0, planes.findIndex(x => x.id === p.plan));
+        d.menu = { ...d.menu, plan: planes[i].id, planes };
+        d.version = 10 + i; d.plan.mostrada = d.version;
+        d.versiones = [{ n: d.version, nombre: 'Acuerdo actual' }];
+        d.elige = { versiones: [{ v: 'historica', nombre: 'Versión histórica que no debe verse', buena: true }] };
+        Object.assign(d.v, { pago_especie: true, pago_anticipo: 1.4, pago_vivienda: 4.8, pago_m2: 160, pago_unidades: 2.25, pago_resultado: i ? 0.7 : -0.4 });
+        return d;
+      } });
+      await pestana(page, 'opciones');
+      await page.locator('.vzp-op-pago').nth(2).waitFor();
+      assert.equal(await page.locator('.vzp-op').count(), 3);
+      assert.equal(await page.locator('#vzpElige').innerText(), '');
+      assert.doesNotMatch(await page.locator('#vzpPanel-opciones').innerText(), /Versión histórica|V10|V11|V12/);
+      assert.match(await page.locator('.vzp-op').first().innerText(), /pérdida/);
+      assert.equal(await sinDesborde(page), true);
+      await page.locator('.vzp-op').nth(1).click();
+      await page.locator('#vzpPanel-plan').waitFor({ state: 'visible' });
+      await pestana(page, 'opciones');
+      assert.equal(await page.locator('.vzp-op').count(), 3);
+      assert.deepEqual(escrituras, []); assert.deepEqual(errores, []);
+      await ctx.close();
+    });
     await caso('contra el servidor de hoy: la barra, cada pestaña con un estado digno, el plan intacto y sólo lecturas', async () => {
       const { ctx, page, pedidos, escrituras, errores } = await abre(navegador, base, {});
       await page.locator('.vz-card').first().waitFor();

@@ -23,6 +23,17 @@ function opcion(nombre, v, extra) {
 }
 function fila(ops, k) { return C.compara(ops).find((r) => r.f.k === k); }
 
+test('el pago en viviendas conserva el programa completo, sin contar sólo firmas con efectivo', () => {
+  const d = { v: { pago_especie: true }, flujo: { total: { firmas: 7.5 } }, productos: [{ unidades: 7.5 }, { unidades: 2.5 }] };
+  assert.equal(C.valor(factor('unidades'), d).x, 10);
+  const o = { nombre: 'Acuerdo', plan: 'p', v: 1, d };
+  assert.match(C.pinta([o, { ...o, nombre: 'Otro acuerdo', plan: 'q' }], {}).html, /unidades totales, incluidas las adjudicadas sin cobro/);
+  d.productos[1].unidades = null;
+  assert.equal(C.valor(factor('unidades'), d).hay, false);
+  delete d.v.pago_especie;
+  assert.equal(C.valor(factor('unidades'), d).x, 8, 'el contrato previo conserva sus firmas');
+});
+
 test('la tabla de factores: siete cuadros, sentido y umbral declarados, y la misma tabla escrita en docs/ppp2.md', () => {
   assert.deepEqual(C.GRUPOS.map((g) => g.titulo), ['Terreno', 'Producto', 'Tiempo', 'Costo y ganancia', 'Dinero', 'Reparto', 'Riesgo']);
   const docs = fs.readFileSync(path.join(RAIZ, 'docs/ppp2.md'), 'utf8');
@@ -39,7 +50,7 @@ test('la tabla de factores: siete cuadros, sentido y umbral declarados, y la mis
     const umbral = !f.rojo ? '—' : f.rojo.orden ? 'no pasa y otra sí' : f.rojo.rel ? Math.round(f.rojo.rel * 100) + ' %' : f.u === 'pct' ? Math.round(f.rojo.abs * 100) + ' puntos' : 'le falta más';
     assert.ok(renglon.includes(umbral), f.k + ': el umbral de docs/ppp2.md no es el del código (' + umbral + ')');
   }
-  const n = C.FACTORES.length;
+  const n = C.FACTORES.filter(f => !f.especie).length;
   assert.ok(n >= 18 && n <= 28, 'ni pocos ni todos: ' + n);
 });
 
@@ -241,4 +252,15 @@ test('sólo GET, sin Portero ni marco, mismo servidor que PPP 2, y una hoja de i
     const t = fs.readFileSync(path.join(RAIZ, f), 'utf8').replace(/assert\.doesNotMatch\([^\n]*\n/g, '');
     assert.doesNotMatch(t, /Mor[eé]o|Avermont|Morelos|Puebla Arquitectos|@aurumarquitectos/i, f);
   }
+});
+
+
+test('pago en especie: filas adicionales sólo con datos nativos y pérdidas visibles', () => {
+  const normal = [opcion('A', { ganancia: 2 }), opcion('B', { ganancia: 3 })];
+  assert.equal(C.compara(normal).filter(r => r.f.especie).length, 0);
+  const pagos = [opcion('A', { pago_especie: true, pago_resultado: -0.4, pago_anticipo: 1.4, pago_vivienda: 4.8, pago_cobros: 12 }), opcion('B', { pago_especie: true, pago_resultado: 0.7, pago_anticipo: 1.4, pago_vivienda: 3.7, pago_cobros: 13.1 })];
+  assert.equal(C.compara(pagos).filter(r => r.f.especie).length, 4);
+  assert.deepEqual(fila(pagos, 'pago_resultado').rojo, [0]);
+  assert.deepEqual(fila(pagos, 'pago_resultado').mejor, [1]);
+  assert.equal(fila(pagos, 'pago_anticipo').compara, false);
 });

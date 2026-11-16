@@ -69,7 +69,11 @@
     { k: 'rv_margen', g: 'riesgo', nombre: 'Margen antes de financiamiento, sobre costo', corto: 'margen sobre costo', de: ['v', 'rv_margen'], u: 'pct', sentido: 'mas', rojo: null },
     { k: 'rv_aportacion', g: 'riesgo', nombre: 'Aportación: tierra y capital entre costo', corto: 'aportación', de: ['v', 'rv_aportacion'], u: 'pct', sentido: 'mas', rojo: null },
     { k: 'rv_cobertura', g: 'riesgo', nombre: 'Cobertura: por cobrar entre saldo del banco', corto: 'cobertura', de: ['v', 'rv_cobertura'], u: 'veces', sentido: 'mas', rojo: null },
-    { k: 'candados', g: 'riesgo', nombre: 'Candados abiertos', corto: 'candados', de: ['plan', 'candados_abiertos'], u: 'num', sentido: 'menos', rojo: null }
+    { k: 'candados', g: 'riesgo', nombre: 'Candados abiertos', corto: 'candados', de: ['plan', 'candados_abiertos'], u: 'num', sentido: 'menos', rojo: null },
+    { k: 'pago_anticipo', g: 'reparto', nombre: 'Anticipo incluido en el pago', corto: 'anticipo', de: ['v', 'pago_anticipo'], u: 'mdp', sentido: 'dato', rojo: null, especie: true },
+    { k: 'pago_vivienda', g: 'reparto', nombre: 'Pago restante en viviendas', corto: 'viviendas adjudicadas', de: ['v', 'pago_vivienda'], u: 'mdp', sentido: 'dato', rojo: null, especie: true },
+    { k: 'pago_cobros', g: 'dinero', nombre: 'Cobros de terceros, sin adjudicaciones', corto: 'cobros de terceros', de: ['v', 'pago_cobros'], u: 'mdp', sentido: 'dato', rojo: null, especie: true },
+    { k: 'pago_resultado', g: 'reparto', nombre: 'Resultado neto del desarrollador', corto: 'resultado del desarrollador', de: ['v', 'pago_resultado'], u: 'mdp', sentido: 'mas', rojo: { abs: 0.05 }, especie: true }
   ];
   /* A qué precisión se enseña (y se compara) cada unidad: número de decimales de la cifra cruda. */
   var DECIMALES = { mdp: 1, m2: 0, u: 0, meses: 0, mes: 0, pct: 3, veces: 2, num: 0 };
@@ -92,6 +96,11 @@
   function crudo(f, d) {
     var a = f.de[0], c = f.de[1];
     if (!d) return null;
+    if (f.k === 'unidades' && d.v && d.v.pago_especie === true) {
+      var productos = d.productos;
+      return Array.isArray(productos) && productos.length && productos.every(function (p) { return p && num(p.unidades) !== null; })
+        ? productos.reduce(function (n, p) { return n + p.unidades; }, 0) : null;
+    }
     if (a === 'v') return d.v ? d.v[c] : null;
     if (a === 'datos') return d.datos && d.datos[c] ? d.datos[c].valor : null;
     if (a === 'flujo') return d.flujo && d.flujo.total ? d.flujo.total[c] : null;
@@ -139,6 +148,7 @@
   function deDonde(f, d) {
     var a = f.de[0], c = f.de[1], n = (d && d.version) || '';
     var pre = d && d.origen ? String(d.origen) + ' · ' : 'Libro · ';
+    if (f.k === 'unidades' && d && d.v && d.v.pago_especie === true) return pre + 'Productos · unidades totales, incluidas las adjudicadas sin cobro';
     if (a === 'v') return pre + 'Resumen · v' + n + '.' + c;
     if (a === 'datos') return pre + 'Datos · ' + c;
     if (a === 'flujo') return pre + 'Flujo V' + n + ' · total de «' + ({ firmas: 'Total de unidades' }[c] || c) + '»';
@@ -172,7 +182,7 @@
   /* Para cada factor: los valores de cada opción, cuáles son la mejor, cuáles quedan muy por debajo y la
      escala de la barrita (siempre desde cero). */
   function compara(ops) {
-    return FACTORES.map(function (f) {
+    return FACTORES.filter(function (f) { return !f.especie || ops.some(function (o) { return o.d && o.d.v && o.d.v.pago_especie === true; }); }).map(function (f) {
       var vals = ops.map(function (o) { return valor(f, o.d); });
       var con = [], i;
       for (i = 0; i < vals.length; i++) if (vals[i].x !== null) con.push(i);

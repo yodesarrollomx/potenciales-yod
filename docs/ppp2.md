@@ -886,7 +886,7 @@ es mejor». La tabla vive en `FACTORES` de `visor-compara.js`; si cambia allá, 
 | Valor de la tierra | Resumen · v{n}.tierra | dato | — |
 | Ventas totales | Resumen · v{n}.ventas | dato | — |
 | Área vendible | Datos · lamina.m2_vendibles | dato | — |
-| Unidades | Flujo V{n} · total de «Total de unidades» | dato | — |
+| Unidades | Flujo V{n} · total de «Total de unidades»; en pago en especie, total del inventario de Productos, incluidas las adjudicadas | dato | — |
 | Plazo hasta el reparto | Resumen · v{n}.mes_reparto | menos es mejor | más de 25 % peor que la mejor |
 | Preventa al arrancar la obra | Resumen · v{n}.rv_preventa | más es mejor | más de 15 puntos abajo de la mejor |
 | Costo sin tierra | Resumen · v{n}.costo_sin_tierra | dato | — |
@@ -906,6 +906,12 @@ es mejor». La tabla vive en `FACTORES` de `visor-compara.js`; si cambia allá, 
 | Aportación: tierra y capital entre costo | Resumen · v{n}.rv_aportacion | más es mejor | — |
 | Cobertura: por cobrar entre saldo del banco | Resumen · v{n}.rv_cobertura | más es mejor | — |
 | Candados abiertos | Resumen · plan.candados_abiertos | menos es mejor | — |
+| Anticipo incluido en el pago | Resumen · v{n}.pago_anticipo | dato | — |
+| Pago restante en viviendas | Resumen · v{n}.pago_vivienda | dato | — |
+| Cobros de terceros, sin adjudicaciones | Resumen · v{n}.pago_cobros | dato | — |
+| Resultado neto del desarrollador | Resumen · v{n}.pago_resultado | más es mejor | le falta más de 0.05 MDP respecto de la mejor |
+
+Los cuatro factores de pago aparecen sólo en comparaciones que incluyen pago en especie. Sus importes se leen de la foto nativa.
 
 El rojo se reserva para lo que cambia la decisión (plazo, preventa, ganancia, dinero ajeno, dinero que
 faltaría, lo que reciben el dueño y la alianza, la revisión para fondos); los demás factores sólo marcan

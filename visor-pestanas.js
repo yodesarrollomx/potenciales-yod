@@ -238,6 +238,7 @@
   }
   function cabeza(titulo, d) {
     var plan = (d && d.plan && d.plan.nombre) || 'Plan de Potencial', v = d && d.version ? 'V' + d.version + (d.v && d.v.estado ? ' ' + d.v.estado : '') : '';
+    if (titulo === 'Opciones' && opcionesFijas(d)) v = '';
     return '<header class="vzp-cab"><span class="vzp-marca">YoDesarrollo · Plan de Potencial</span><h2 class="vzp-tit" tabindex="-1">' + esc(titulo) + '</h2>' +
       '<p class="vzp-subt"><span>' + esc(plan) + '</span>' + (v ? '<span class="vzp-subt-v">' + esc(v) + '</span>' : '') + '</p></header>';
   }
@@ -467,6 +468,15 @@
   }
 
   /* ───────────────────────── Opciones ───────────────────────── */
+  /* Una comparación explícita del mismo caso no es el selector de su historial. */
+  function opcionesFijas(d) {
+    var ps = d && d.menu && d.menu.planes, caso = '', vistos = {};
+    return Array.isArray(ps) && ps.length > 1 && ps.every(function (p) {
+      var m = /^ppp:([A-Za-z0-9_-]+):([A-Za-z0-9_-]+)$/.exec(String(p && p.id || ''));
+      if (!m || vistos[p.id] || caso && caso !== m[1]) return false;
+      caso = m[1]; vistos[p.id] = true; return true;
+    });
+  }
   /* Una opción de la liga, de lo que el servidor ya dio para ella (sin calcular nada). */
   function resumenOpcion(j, etiqueta) {
     var v = (j && j.v) || {}, datos = (j && j.datos) || {}, vs = (j && j.versiones) || [];
@@ -475,7 +485,8 @@
     return {
       plan: (j.menu && j.menu.plan) || '', version: j.version || 0, etiqueta: String(etiqueta || ''), nombrePlan: (j.plan && j.plan.nombre) || '',
       nombreV: meta.nombre || v.nombre || '', estado: String(v.estado || meta.estado || ''), terreno: t && num(t.valor) !== null ? t.valor : null,
-      ventas: num(v.ventas), ganancia: num(v.ganancia), recibe: num(v.dueno_recibe), veces: num(v.dueno_veces), llave: j.llave || ''
+      ventas: num(v.ventas), ganancia: num(v.ganancia), recibe: num(v.dueno_recibe), veces: num(v.dueno_veces), llave: j.llave || '',
+      pago: v.pago_especie === true ? { anticipo: num(v.pago_anticipo), vivienda: num(v.pago_vivienda), m2: num(v.pago_m2), unidades: num(v.pago_unidades), mes: num(v.dueno_meses), desarrollador: num(v.pago_resultado) } : null
     };
   }
   function cifraHtml(nombre, x, extra, malo) {
@@ -486,16 +497,20 @@
   function opcionHtml(o, actual, varias, modo) {
     var v = o.version ? 'V' + o.version + (o.nombreV ? ' · ' + o.nombreV : '') : '', m2 = o.terreno !== null && o.terreno !== undefined ? ent(o.terreno) + ' m²' : '';
     var titulo = modo === 'version' || modo === 'grupo' ? (v || o.etiqueta || 'Versión') : (o.etiqueta || o.nombrePlan || 'Plan');
-    var sub = (modo === 'version' ? [m2] : modo === 'grupo' ? [] : [v, m2]).filter(function (x) { return x; }).join(' · ');
+    var sub = (modo === 'version' || modo === 'fijas' ? [m2] : modo === 'grupo' ? [] : [v, m2]).filter(function (x) { return x; }).join(' · ');
     var cargando = o.cargando && !o.listo;
     var cifras = cargando ? '<span class="vzp-op-cifras vzp-op-cargando" aria-hidden="true"><i></i><i></i><i></i></span>' :
       (o.error ? '<span class="vzp-op-err">No pude leer esta opción.</span>' :
-        '<span class="vzp-op-cifras">' + cifraHtml('Ventas', mdp(o.ventas)) + cifraHtml('Ganancia', mdp(o.ganancia), '', o.ganancia !== null && o.ganancia < 0) +
+        '<span class="vzp-op-cifras">' + cifraHtml(o.pago ? 'Valor de viviendas' : 'Ventas', mdp(o.ventas)) + cifraHtml(o.pago ? 'Utilidad proyecto' : 'Ganancia', mdp(o.ganancia), '', o.ganancia !== null && o.ganancia < 0) +
         cifraHtml('El dueño recibe', mdp(o.recibe), o.veces !== null ? '×' + o.veces.toFixed(2) + ' su tierra' : '') + '</span>');
+    var pago = o.pago, detalle = pago && !cargando && !o.error ? '<span class="vzp-op-pago">' +
+      '<span>Anticipo ' + esc(mdp(pago.anticipo) || 'sin dato') + ' + viviendas ' + esc(mdp(pago.vivienda) || 'sin dato') + '</span>' +
+      '<span>' + esc(pago.m2 === null ? 'Área por definir' : pago.m2.toFixed(2) + ' m²') + ' · ' + esc(pago.unidades === null ? 'unidades por definir' : pago.unidades.toFixed(2) + ' viviendas equivalentes') + (pago.mes === null ? '' : ' · mes ' + esc(pago.mes)) + '</span>' +
+      '<strong' + (pago.desarrollador !== null && pago.desarrollador < 0 ? ' class="vzp-malo"' : '') + '>Desarrollador: ' + esc(mdp(pago.desarrollador) || 'sin dato') + (pago.desarrollador !== null && pago.desarrollador < 0 ? ' · pérdida' : '') + '</strong></span>' : '';
     var marcas = (o.estado === 'vigente' ? '<span class="vzp-chip vzp-chip-ok">' + ico('paloma', 'vzp-ic-chico') + 'vigente</span>' : '') + (actual ? '<span class="vzp-chip vzp-chip-tinta">viendo ahora</span>' : '');
     var aria = titulo + ', ' + sub + (o.estado === 'vigente' ? ', vigente' : '') + (actual ? ', es la que estás viendo' : '') + (cargando ? '' : '. Ventas ' + (mdp(o.ventas) || 'sin dato') + ', ganancia ' + (mdp(o.ganancia) || 'sin dato') + ', el dueño recibe ' + (mdp(o.recibe) || 'sin dato')) + (varias ? '. Ver esta opción en el plan' : '');
     return '<li><button type="button" class="vzp-op' + (actual ? ' vzp-op-actual' : '') + '" data-plan="' + esc(o.plan) + '" data-v="' + esc(o.porOmision ? 0 : o.version) + '" data-version="' + esc(o.version) + '" aria-label="' + esc(aria) + '"' + (actual ? ' aria-current="true"' : '') + '>' +
-      '<span class="vzp-op-cab"><span class="vzp-op-tit"><b>' + esc(titulo) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span><span class="vzp-op-marcas">' + marcas + '</span></span>' + cifras +
+      '<span class="vzp-op-cab"><span class="vzp-op-tit"><b>' + esc(titulo) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span><span class="vzp-op-marcas">' + marcas + '</span></span>' + cifras + detalle +
       (varias && !actual ? '<span class="vzp-op-ir">Ver en el plan' + ico('flecha', 'vzp-ic-chico') + '</span>' : '') + '</button></li>';
   }
   function opcionesHtml(ops, op) {
@@ -504,13 +519,13 @@
     lista.forEach(function (o) { if (planes.indexOf(o.plan) < 0) planes.push(o.plan); });
     var deUno = function (p) { return lista.filter(function (o) { return o.plan === p; }); };
     var variasV = planes.some(function (p) { return deUno(p).length > 1; });
-    var tarjeta = function (o, modo) { return opcionHtml(o, o.plan === op.plan && o.version === op.version, varias, modo); };
+    var tarjeta = function (o, modo) { return opcionHtml(o, o.plan === op.plan && o.version === op.version, varias, op.fijas ? 'fijas' : modo); };
     var cuerpo = planes.length > 1 && variasV ? planes.map(function (p, i) {
       var os = deUno(p), conM2 = os.filter(function (o) { return o.terreno !== null && o.terreno !== undefined; })[0], et = os[0].etiqueta || os[0].nombrePlan || 'Plan';
       return '<section class="vzp-op-grupo" aria-labelledby="vzpOG' + i + '"><h3 class="vzp-sec-tit" id="vzpOG' + i + '">' + esc(et) + (conM2 ? ' <em>' + esc(ent(conM2.terreno)) + ' m²</em>' : '') + '</h3>' +
         '<ul class="vzp-ops">' + os.map(function (o) { return tarjeta(o, 'grupo'); }).join('') + '</ul></section>';
     }).join('') : '<ul class="vzp-ops">' + lista.map(function (o) { return tarjeta(o, planes.length > 1 || !varias ? 'plan' : 'version'); }).join('') + '</ul>';
-    return '<p class="vzp-nota vzp-unidades">Cifras en millones de pesos, como en el plan.</p>' + cuerpo +
+    return '<p class="vzp-nota vzp-unidades">' + (op.fijas ? 'Opciones del mismo proyecto. ' : '') + 'Cifras en millones de pesos, como en el plan.</p>' + cuerpo +
       (varias ? '<a class="vzp-comparar" href="visor-comparar.html#l=' + encodeURIComponent(op.liga || '') + '">' + ico('comparar') + '<span><b>Comparar las ' + lista.length + ' opciones lado a lado</b><small>Factor por factor; se puede guardar en PDF</small></span>' + ico('flecha', 'vzp-ic-chico') + '</a>'
         : '<p class="vzp-nota vzp-una">Esta liga trae una sola opción del plan. Si se agregan otros terrenos o versiones, aquí podrás cambiar entre ellas y compararlas lado a lado.</p>');
   }
@@ -547,7 +562,7 @@
       eventos();
       muestraPanel(actual, true);
     }
-    function marcasBarra() { var d = pagina.datos(); return d && d.elige && d.elige.versiones && d.elige.versiones.length ? { opciones: 'Sólo tú: aquí escoges la versión que ven todos' } : {}; }
+    function marcasBarra() { var d = pagina.datos(); return d && !opcionesFijas(d) && d.elige && d.elige.versiones && d.elige.versiones.length ? { opciones: 'Sólo tú: aquí escoges la versión que ven todos' } : {}; }
     /* Se vuelve a dibujar la barra; si el foco estaba en ella (teclado, lector de pantalla), regresa a la pestaña
        elegida en lugar de perderse en el cuerpo de la página. */
     function pintaBarra() {
@@ -700,12 +715,12 @@
     function pintaOpciones() {
       var d = pagina.datos(), cont = doc.getElementById('vzpOps');
       if (!cont || !d) return;
-      cont.innerHTML = opcionesHtml(listaOpciones(), { plan: d.menu && d.menu.plan, version: d.version, liga: pagina.liga() });
+      cont.innerHTML = opcionesHtml(listaOpciones(), { plan: d.menu && d.menu.plan, version: d.version, liga: pagina.liga(), fijas: opcionesFijas(d) });
     }
     function pintaElige() {
       var d = pagina.datos(), cont = doc.getElementById('vzpElige'), V = root.VisorPPP;
       if (!cont) return;
-      cont.innerHTML = d && d.elige && V && V.eligeHtml ? V.eligeHtml(d) : '';
+      cont.innerHTML = d && !opcionesFijas(d) && d.elige && V && V.eligeHtml ? V.eligeHtml(d) : '';
     }
     function cargaOpciones() {
       var d = pagina.datos();
@@ -1154,7 +1169,7 @@
     historialHtml: historialHtml, diaHtml: diaHtml, lineaHtml: lineaHtml, pendientesHtml: pendientesHtml, capturas: capturas, agrupa: agrupa, chatHtml: chatHtml,
     diasOrdenados: diasOrdenados, tipoSeguro: tipoSeguro,
     archivosHtml: archivosHtml, tipoArchivo: tipoArchivo, tamano: tamano, fechaLarga: fechaLarga, fechaCorta: fechaCorta,
-    resumenOpcion: resumenOpcion, opcionesHtml: opcionesHtml, colorNombre: colorNombre, nombreGuardar: nombreGuardar
+    resumenOpcion: resumenOpcion, opcionesHtml: opcionesHtml, opcionesFijas: opcionesFijas, colorNombre: colorNombre, nombreGuardar: nombreGuardar
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.VisorPestanas = api;

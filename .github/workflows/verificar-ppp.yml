@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: yodesarrollomx/yod-portal
-          ref: b8fef76bc901db73bea400d4470f725bea321881
+          ref: a4e2272b236907d89f69505752496dd548f20b1a
           path: .yod-atlas-ui
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -107,6 +107,14 @@ jobs:
           curl --fail --location --retry 3 https://unpkg.com/leaflet@1.9.4/dist/leaflet.css -o "$RUNNER_TEMP/ppp-map-assets/leaflet.css"
           curl --fail --location --retry 3 https://unpkg.com/leaflet-gesture-handling@1.2.2/dist/leaflet-gesture-handling.min.js -o "$RUNNER_TEMP/ppp-map-assets/gesture.js"
           curl --fail --location --retry 3 https://unpkg.com/leaflet-gesture-handling@1.2.2/dist/leaflet-gesture-handling.min.css -o "$RUNNER_TEMP/ppp-map-assets/gesture.css"
+      - name: Visor · opciones y comparativo en navegador
+        env:
+          NODE_PATH: ${{ runner.temp }}/ppp-browser/node_modules
+          PPP_SCREENSHOTS: ${{ runner.temp }}/ppp-shots
+          PPP_PDFJS_DIR: ${{ runner.temp }}/pdfjs/package/legacy/build
+        run: |
+          node tests/visor-compara-browser.cjs
+          node tests/visor-pestanas-browser.cjs
       - name: Recorridos reales del DOM con transporte sintético
         env:
           NODE_PATH: ${{ runner.temp }}/ppp-browser/node_modules
@@ -142,8 +150,6 @@ jobs:
           node tests/ppp-paridad-cargador-browser.cjs
           node tests/ppp2-browser.cjs
           node tests/ppp2-visor-browser.cjs
-          node tests/visor-compara-browser.cjs
-          node tests/visor-pestanas-browser.cjs
           node tests/visor-explica-browser.cjs
       - name: Comprobar archivos publicados
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

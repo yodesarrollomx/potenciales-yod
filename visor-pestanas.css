@@ -301,3 +301,4 @@ div.vzp-vers-b { cursor: default; }
 .vzp-op-grupo + .vzp-op-grupo { margin-top: 22px; }
 .vzp-op-grupo .vzp-sec-tit em { font-style: normal; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--mudo); }
 .vzp-op-grupo .vzp-op-tit b { font-size: 21px; }
+.vzp-op-pago{display:grid;gap:5px;margin-top:12px;padding-top:12px;border-top:1px solid #ded8cf;font-size:13px;line-height:1.4;color:#534f48}.vzp-op-pago strong{font-size:14px}.vzp-op-pago .vzp-malo{color:#a5362f}

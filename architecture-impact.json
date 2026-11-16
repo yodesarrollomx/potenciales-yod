@@ -1,20 +1,17 @@
 {
-  "model_revision": "2026-11-16.ppp-factores.2",
-  "proposal_id": "CHG-PPP-FACTORES-20261116",
-  "summary": "Editor de factores visible en todos los planes con libro, con búsqueda, relaciones, sliders y sí/no; navegación desde el visor a la ficha autenticada. Se reutilizan simulación, guardado y deshacer existentes.",
+  "model_revision": "2026-11-16.ppp-especie.1",
+  "proposal_id": "CHG-PPP-ESPECIE-20261116",
+  "summary": "Comparaciones explícitas del mismo caso muestran sólo sus escenarios configurados. El visor presenta anticipo, valor y equivalentes de vivienda y resultado neto del desarrollador leídos de la foto nativa. Sin escrituras de casos ni despliegue de servidor.",
   "components": [
     "SYS-POTENCIALES",
     "SYS-PPP2",
-    "SHEET-PPP2",
-    "SYS-CONTROL",
-    "GAS-PPP2"
+    "SYS-CONTROL"
   ],
   "tests": [
-    "node tests/ppp2-browser.cjs",
-    "node --test tests/ppp2-*.test.cjs",
-    "node tests/ppp2-visor-browser.cjs",
+    "node --test tests/visor-pestanas.test.cjs",
+    "node tests/visor-pestanas-browser.cjs",
     "node scripts/versiones.cjs --check",
-    "verificar-impacto contra atlas fijado"
+    "Comparación real de tres fotos del mismo caso, sin duplicar anticipo o adjudicación."
   ],
-  "rollback": "Revertir este PR: se conserva el lápiz anterior, los libros, sus versiones y permisos."
+  "rollback": "Revertir frontend y conservar hojas, fotos y liga configurada. No borrar registros ni restaurar históricos."
 }
