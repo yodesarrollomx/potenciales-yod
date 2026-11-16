@@ -89,6 +89,9 @@
   /* De dónde sale cada cifra, con el nombre real de la pestaña del libro. «Versiones» son las claves
      `v{n}.…` de la pestaña Resumen; «Flujo» es la pestaña «Flujo V{n}» de la versión que se ve. */
   var VER = 0, ORIGEN = '', DED = null, ACTUAL = null;
+  /* «Falta calcular»: la revisión del libro (o de la foto) dice que la versión no tiene sus cifras (p. ej. un dato en
+     cero que tumba el flujo). Lo que se arma con esas cifras (anillos, reparto, margen) no se pinta como si valiera. */
+  var FALTA = false, RAZON_FALTA = 'sin dato: falta calcular esta versión (el libro no tiene todas sus cifras)';
   /* Lo que el servidor marca como deducido (`deducido`: ruta del cuadro → «de qué sale y cómo») viaja pegado al
      origen tras este separador; la leyenda y la hoja lo enseñan aparte, como «Deducido: …». Una marca que empieza con
      «no aplica:» o «sin dato:» no es una deducción: dice por qué esa cifra va vacía (viaja tras SEPV y se enseña tal
@@ -262,10 +265,12 @@
       o.push('<line x1="101" y1="13" x2="46" y2="13" stroke="' + MUTED + '" stroke-width="0.9"></line><circle cx="45.5" cy="13" r="1.4" fill="' + MUTED + '"></circle><line x1="101" y1="53.5" x2="85.5" y2="53.5" stroke="' + ORO + '" stroke-width="1.1"></line><circle cx="85" cy="53.5" r="1.4" fill="' + ORO + '"></circle>');
     }
     /* en lotes lo que se vende es terreno, no construcción: el cociente no dice nada */
-    var conCociente = clase !== 'lotes' && constr > 0 && vend, parte = conCociente ? ' · ' + pct(vend / constr, 1) : '';
+    var conCociente = clase !== 'lotes' && constr > 0 && vend, pasaC = conCociente && vend > constr * 1.005;
+    /* lo vendible no puede pasar de lo construido: si pasa, se marca (es un dato que hay que revisar), no se pinta como normal */
+    var parte = conCociente ? ' · ' + (pasaC ? '<tspan font-weight="700" fill="' + BADT + '">' + pct(vend / constr, 1) + '</tspan>' : pct(vend / constr, 1)) : '';
     o.push('<g' + T('Construcción total', [['Construcción', hayC ? ent(constr) + ' m²' + (constr === 0 ? ' (no se construye)' : '') : 'sin capturar'], ['Estado del dato', (d.datos && d.datos['lamina.m2_construidos'] || {}).estado || '—']], L('Datos', 'lamina.m2_construidos'), 'datos.lamina.m2_construidos') + '>' +
       '<text x="102" y="16" font-size="8" fill="' + MUTED + '">Construcción total</text><text x="102" y="28" font-size="11" font-weight="700" fill="' + (hayC ? INK : MUTED) + '">' + (hayC ? ent(constr) + ' m²' : SD(9)) + '</text></g>');
-    o.push('<g' + T('Área vendible', [['Vendible', ent(vend) + ' m²']].concat(difiere ? [['Suma de los productos', ent(sumaP) + ' m²']] : []).concat(conCociente ? [['Vendible ÷ construcción', pct(vend / constr, 1)]] : []), vendDato !== null ? L('Datos', 'lamina.m2_vendibles') : L('Productos', 'suma de m² vendibles'), 'datos.lamina.m2_vendibles') + '>' +
+    o.push('<g' + T('Área vendible', [['Vendible', ent(vend) + ' m²']].concat(difiere ? [['Suma de los productos', ent(sumaP) + ' m²']] : []).concat(conCociente ? [['Vendible ÷ construcción', pct(vend / constr, 1)]] : []).concat(pasaC ? [['Lo vendible pasa de lo construido', 'revisa los datos']] : []), vendDato !== null ? L('Datos', 'lamina.m2_vendibles') : L('Productos', 'suma de m² vendibles'), 'datos.lamina.m2_vendibles') + '>' +
       '<text x="102" y="56" font-size="8" fill="' + ORO + '">Vendible' + parte + '</text><text x="102" y="68" font-size="11" font-weight="700" fill="' + (vend ? INK : MUTED) + '">' + (vend ? ent(vend) + ' m²' : SD(9)) + '</text></g>');
     o.push('<g' + tipTerreno + '><text x="1" y="121" font-size="7.4" font-weight="700" letter-spacing="0.6" fill="' + MUTED + '">TERRENO</text><text x="1" y="133.5" font-size="11" font-weight="700" fill="' + INK + '">' + (falta(terreno) ? SD(9) : ent(terreno) + ' m²') + '</text></g>');
     /* la parte de las ventas va junto a la cifra sólo si cabe en la tarjeta (está también en la leyenda y en la hoja) */
@@ -284,7 +289,7 @@
         ['Construcción total', hayC ? ent(constr) + ' m²' : '—', L('Datos', 'lamina.m2_construidos'), 'datos.lamina.m2_construidos'],
         ['Área vendible', ent(vend) + ' m²', (difiere ? 'la suma de los productos da ' + ent(sumaP) + ' m² · ' : '') + (vendDato !== null ? L('Datos', 'lamina.m2_vendibles') : L('Productos', null, ['productos.*.m2'])), 'datos.lamina.m2_vendibles'],
         ['Vendible entre construcción', conCociente ? pct(vend / constr, 1) : (clase === 'lotes' || constr === 0 ? 'no aplica' : '—'),
-          clase === 'lotes' ? 'en lotes lo que se vende es terreno, no construcción' : (constr === 0 ? 'no se construye: la construcción es 0 m²' : 'vendible ÷ construcción'), 'visor.vendible_construccion']
+          clase === 'lotes' ? 'en lotes lo que se vende es terreno, no construcción' : (constr === 0 ? 'no se construye: la construcción es 0 m²' : 'vendible ÷ construcción' + (pasaC ? ' · lo vendible pasa de lo construido: revisa los datos' : '')), 'visor.vendible_construccion']
       ] }, { h: 'Tipo de proyecto', filas: [[(d.plan && d.plan.tipo) || '—', '', L('Plan', 'plan.tipo')]] }]
     };
   }
@@ -440,6 +445,8 @@
     });
     return o + puestos.map(function (p) { return p.html; }).join('');
   }
+  /* «mes 61» en un plan que calcula 60 meses no está en el eje: es que no se liquida (o no se reparte) dentro del plan. */
+  function mesFin(m, N) { return N && m > N ? 'después del mes ' + N : 'mes ' + m; }
   function cTiempo(d) {
     var v = d.v || {}, N = Math.max(1, (d.flujo && d.flujo.meses) || num(v.mes_reparto) || 1), o = [];
     var firmas = fila(d, 'firmas'), saldos = fila(d, 'saldos'), vi = primero(firmas), vf = ultimo(firmas), ei = primero(saldos), ef = ultimo(saldos);
@@ -466,15 +473,15 @@
           (w >= ancho(txt, 7.5, true) + 8 ? '<text x="' + f1(R.X(a) + 4) + '" y="' + (y + 7.6) + '" font-size="7.5" font-weight="600" fill="#fffdf9">' + txt + '</text>' : '') + '</g>');
       });
       if (rep) {
-        var cx = clamp(R.XE(rep) - 3.5, R.x0 + 4, R.x1 - 2), tr = T('Reparto', [['Mes del reparto', 'mes ' + rep], ['El dueño recibe lo último en el mes', num(v.dueno_meses) || '—']], L('Versiones', 'mes_reparto'), 'v.mes_reparto');
+        var cx = clamp(R.XE(rep) - 3.5, R.x0 + 4, R.x1 - 2), tr = T('Reparto', [['Mes del reparto', mesFin(rep, N)], ['El dueño recibe lo último', num(v.dueno_meses) !== null ? mesFin(v.dueno_meses, N) : '—']], L('Versiones', 'mes_reparto'), 'v.mes_reparto');
         f.push('<text' + tr + ' x="0" y="71.5" font-size="8.5" font-weight="700" fill="' + INK + '">Reparto</text>');
-        p.push('<g' + tr + '><circle cx="' + f1(cx) + '" cy="69" r="3.5" fill="' + INK + '"></circle><text x="' + f1(cx - 6.5) + '" y="71.6" text-anchor="end" font-size="7.5" font-weight="700" fill="' + INK + '">mes ' + rep + '</text></g>');
+        p.push('<g' + tr + '><circle cx="' + f1(cx) + '" cy="69" r="3.5" fill="' + INK + '"></circle><text x="' + f1(cx - 6.5) + '" y="71.6" text-anchor="end" font-size="7.5" font-weight="700" fill="' + INK + '">' + mesFin(rep, N) + '</text></g>');
       }
       p.push(ejeMeses(d, N, 81, 89, R));
       return f.join('') + panWrap('T', p.join(''), R, 0, 92);
     }
     var kpis = [
-      [rep ? String(rep) : '—', 'meses de plazo', 'firma a reparto', T('Plazo', [['Mes del reparto', rep || '—']], L('Versiones', 'mes_reparto'), 'v.mes_reparto')],
+      [rep ? (rep > N ? N + '+' : String(rep)) : '—', 'meses de plazo', 'firma a reparto', T('Plazo', [['Mes del reparto', rep ? mesFin(rep, N) : '—']], L('Versiones', 'mes_reparto'), 'v.mes_reparto')],
       [pct(prev), 'preventa', pmin !== null ? 'mínimo ' + pct(pmin, 0) : '', T('Preventa al arrancar la obra', [['Preventa firmada', pct(prev)], ['Mínimo', pct(pmin, 0)]], L('Versiones', 'rv_preventa'), 'v.rv_preventa')],
       [mesesVenta && unidades ? f1(unidades / mesesVenta) : '—', 'unidades al mes', mesesVenta ? pct(1 / mesesVenta) + ' del total' : '',
         T('Ritmo de venta', [['Unidades', ent(unidades)], ['Meses de venta', mesesVenta || '—'], ['Unidades ÷ meses', mesesVenta && unidades ? f1(unidades / mesesVenta) : '—']], L('Flujo', 'unidades que se firman'), 'visor.ritmo')]
@@ -495,9 +502,9 @@
         ['Ventas', vi ? 'mes ' + vi + ' a ' + vf : '—', (mesesVenta ? mesesVenta + ' meses · ' : '') + L('Flujo', 'unidades que se firman'), 'flujo.firmas'],
         ['Obra', oi ? 'mes ' + oi + ' a ' + of : '—', L('Versiones', 'obra_inicio y fin_obra'), 'v.fin_obra'],
         ['Escrituras', ei ? 'mes ' + ei + ' a ' + ef : '—', L('Flujo', 'saldos al escriturar'), 'flujo.saldos'],
-        ['Banco liquidado', num(v.banco_mes) ? 'mes ' + v.banco_mes : '—', L('Versiones', 'banco_mes'), 'v.banco_mes'],
-        ['Capital liquidado', num(v.capital_mes) ? 'mes ' + v.capital_mes : '—', L('Versiones', 'capital_mes'), 'v.capital_mes'],
-        ['Reparto', rep ? 'mes ' + rep : '—', L('Versiones', 'mes_reparto'), 'v.mes_reparto']
+        ['Banco liquidado', num(v.banco_mes) > 0 ? mesFin(v.banco_mes, N) : ((total(d, 'disposicion') || 0) > 0.05 ? '—' : 'no aplica'), L('Versiones', 'banco_mes'), 'v.banco_mes'],
+        ['Capital liquidado', num(v.capital_mes) ? mesFin(v.capital_mes, N) : '—', L('Versiones', 'capital_mes'), 'v.capital_mes'],
+        ['Reparto', rep ? mesFin(rep, N) : '—', L('Versiones', 'mes_reparto'), 'v.mes_reparto']
       ] }, { h: 'Ritmo', filas: [
         ['Preventa al arrancar la obra', pct(prev), 'mínimo ' + pct(pmin, 0) + ' · ' + L('Versiones', 'rv_preventa'), 'v.rv_preventa'],
         ['Unidades por mes', mesesVenta && unidades ? f1(unidades / mesesVenta) : '—', mesesVenta && unidades ? ent(unidades) + ' unidades ÷ ' + mesesVenta + ' meses' : L('Flujo', 'unidades que se firman'), 'visor.ritmo']
@@ -544,7 +551,8 @@
     var hayCosto = num(v.costo_sin_tierra) !== null, costoTotal = sinTierra + tierra, antes = ventas - costoTotal, margen = num(v.rv_margen);
     o.push('<text' + T('Ventas y costo total', ventasPorProducto(d).concat([['Ingresos por ventas', mdp(ventas)], ['Costo sin tierra', mdp(sinTierra)], ['Tierra', mdp(tierra)], ['Costo total con tierra', mdp(costoTotal)]]), L('Versiones', 'ventas, costo_sin_tierra y tierra'), 'visor.costo_total') +
       ' x="0" y="124" font-size="7.4" fill="' + MUTED + '">Ventas <tspan font-weight="700" fill="' + INK + '">' + mdp(ventas) + '</tspan>' + (hayCosto ? ' · costo total ' + mdp(costoTotal) : '') + '</text>');
-    if (pierde || hayCosto) o.push('<text' + T('Utilidad antes de intereses', [['Ventas menos costo total', mdp(antes)], ['Margen sobre costo', pct(num(v.rv_margen))], ['Costo del dinero', mdp(costoDin)], ['Ganancia real', mdp(gan)]], L('Versiones', 'rv_margen, costo_dinero y ganancia'), 'visor.antes_intereses') +
+    if (FALTA) o.push('<text x="0" y="133.8" font-size="7.4" fill="' + MUTED + '">Falta calcular: <tspan font-weight="700" fill="' + INK + '">sin ganancia ni margen</tspan></text>');
+    else if (pierde || hayCosto) o.push('<text' + T('Utilidad antes de intereses', [['Ventas menos costo total', mdp(antes)], ['Margen sobre costo', pct(num(v.rv_margen))], ['Costo del dinero', mdp(costoDin)], ['Ganancia real', mdp(gan)]], L('Versiones', 'rv_margen, costo_dinero y ganancia'), 'visor.antes_intereses') +
       ' x="0" y="133.8" font-size="7.4" fill="' + MUTED + '">' + (pierde ? 'Pérdida después del costo del dinero <tspan font-weight="700" fill="' + BADT + '">' + mdp(gan) + '</tspan>'
         : 'Antes de intereses <tspan font-weight="700" fill="' + ORO + '">' + mdp(antes) + '</tspan>' + (margen !== null ? ' · ' + pct(margen) + ' sobre costo' : '')) + '</text>');
     return {
@@ -709,15 +717,29 @@
         var tj = T('Lo que junta la preventa', [['Saldo acumulado', '+' + mdp(junta)], ['Mes', mh + 1]], L('Flujo', 'flujo acumulado'), 'flujo.flujo_acum');
         o.push(punto(mh + 1, junta, CLI, tj) + '<text' + tj + ' x="' + f1(clamp(R.XE(mh + 1), cx0, cx1)) + '" y="' + f1(Y(junta) - 4.4) + '" text-anchor="middle" font-size="' + fs + '" font-weight="700" fill="' + CLIT + '">+' + mdp(junta) + '</text>');
       }
+      /* «a repartir» (el último punto) y lo más hondo: sus rótulos no se enciman. Si lo más hondo es el último mes, es la
+         misma cifra en el mismo punto y queda uno solo (la leyenda lo dice); si sólo quedan cerca, lo más hondo baja un
+         renglón (junto a su punto) o, si abajo no cabe, «a repartir» sube uno. Cuando la figura se recorre de lado,
+         «a repartir» va fijo al borde y no se compara. */
+      var xR = (R.vista || R.x1) - (R.vista ? 2 : 8), yR = clamp(Y(fin) + fs + 1, yT + 4, yB + 4), wR = ancho('a repartir ' + (fin >= 0 ? '+' : '') + mdp(fin), fs);
+      var mismoPunto = false;
       if (hoyo < -0.05) {
         var th = T('Lo más hondo', [['Saldo acumulado', mdp(hoyo)], ['Mes', mv + 1], ['Dinero ajeno en uso, máximo', mdp(ajeno)]], L('Flujo', 'flujo acumulado'), 'flujo.flujo_acum');
-        o.push(punto(mv + 1, hoyo, BAD, th) + '<text' + th + ' x="' + f1(clamp(R.XE(mv + 1) - 10, cx0 + 14, cx1)) + '" y="' + f1(Math.min(Y(hoyo) + fs + 2, grande ? yB + fs + 1.4 : 105.6)) + '" text-anchor="middle" font-size="' + fs + '" font-weight="700" fill="' + BADT + '">' + mdp(hoyo) +
-          ' <tspan font-weight="400" fill="' + MUTED + '" font-size="' + (fs - 1) + '">· mes ' + (mv + 1) + '</tspan></text>');
+        var xH = clamp(R.XE(mv + 1) - 10, cx0 + 14, cx1), yH = Math.min(Y(hoyo) + fs + 2, grande ? yB + fs + 1.4 : 105.6);
+        var wH = ancho(mdp(hoyo), fs, true) + ancho(' · mes ' + (mv + 1), fs - 1);
+        if (!(R.vista && !grande) && Math.abs(yH - yR) < fs + 1 && xH - wH / 2 < xR + 1 && xH + wH / 2 > xR - wR - 1) {
+          var limH = grande ? yB + fs + 1.4 : 105.6;
+          if (mv === N - 1) mismoPunto = true;
+          else if (yR + fs + 1.6 <= limH) yH = Math.max(yH, yR + fs + 1.6);
+          else yR = yH - fs - 1.6;
+        }
+        o.push(punto(mv + 1, hoyo, BAD, th) + (mismoPunto ? '' : '<text' + th + ' x="' + f1(xH) + '" y="' + f1(yH) + '" text-anchor="middle" font-size="' + fs + '" font-weight="700" fill="' + BADT + '" stroke="#fffdf9" stroke-width="2.6" stroke-linejoin="round" paint-order="stroke">' + mdp(hoyo) +
+          ' <tspan font-weight="400" fill="' + MUTED + '" font-size="' + (fs - 1) + '">· mes ' + (mv + 1) + '</tspan></text>'));
       }
-      var tf = T('Resultado a repartir', [['Antes de pagar capital y tierra', mdp(num(v.resultado_repartir))], ['Mes', N]], L('Versiones', 'resultado_repartir'), 'v.resultado_repartir');
+      var tf = T('Resultado a repartir', [['Antes de pagar capital y tierra', mdp(num(v.resultado_repartir))], ['Mes', N]].concat(mismoPunto ? [['Es también lo más hondo', 'mes ' + N]] : []), L('Versiones', 'resultado_repartir'), 'v.resultado_repartir');
       /* el rótulo lleva halo de papel (la curva y el área no lo tachan) y, si la figura se recorre de lado, va fijo al borde
          de la ventana: dentro de lo que se recorre lo partía el borde */
-      var rotulo = '<text' + tf + ' x="' + f1((R.vista || R.x1) - (R.vista ? 2 : 8)) + '" y="' + f1(clamp(Y(fin) + fs + 1, yT + 4, yB + 4)) + '" text-anchor="end" font-size="' + fs + '" fill="' + MUTED + '" stroke="#fffdf9" stroke-width="2.6" stroke-linejoin="round" paint-order="stroke">a repartir <tspan font-weight="700" fill="' + (fin >= 0 ? CLIT : BADT) + '">' + (fin >= 0 ? '+' : '') + mdp(fin) + '</tspan></text>';
+      var rotulo = '<text' + tf + ' x="' + f1(xR) + '" y="' + f1(yR) + '" text-anchor="end" font-size="' + fs + '" fill="' + MUTED + '" stroke="#fffdf9" stroke-width="2.6" stroke-linejoin="round" paint-order="stroke">a repartir <tspan font-weight="700" fill="' + (fin >= 0 ? CLIT : BADT) + '">' + (fin >= 0 ? '+' : '') + mdp(fin) + '</tspan></text>';
       o.push(punto(N, fin, fin >= 0 ? CLI : BAD, tf));
       if (R.vista && !grande) fijo.push(rotulo); else o.push(rotulo);
       if (grande) {
@@ -855,13 +877,16 @@
     var alianza = num(v.alianza_recibe) || 0;
     /* El dueño que no pone su terreno lo vende (o no hay terreno en el trato): «veces lo que puso» no aplica. */
     var aporta = pone > 0.05, vende = !aporta && recibe > 0.05;
-    var vecesDueno = aporta ? (veces !== null ? '×' + veces.toFixed(2) : '') : '';
-    var noAplica = aporta ? '' : 'no aplica';
+    /* Con pérdida, «veces lo que puso» en negativo no dice nada: se dice que pierde más de lo que puso. */
+    var pierdeD = aporta && (recibe < -0.05 || (veces !== null && veces < 0));
+    var vecesDueno = aporta && !pierdeD ? (veces !== null ? '×' + veces.toFixed(2) : '') : '';
+    var noAplica = aporta ? (pierdeD ? 'pierde más de lo que puso' : '') : 'no aplica';
+    var vecesTierra = veces === null ? '—' : (veces < 0 ? 'no aplica: pierde más que el valor de su tierra' : veces.toFixed(2) + '×');
     var rows = [{ nom: 'Dueño', sub: aporta ? 'pone su terreno' : (vende ? 'vende su terreno' : 'no pone terreno'), col: TIE, tinta: ORO, pone: pone,
       poneTxt: aporta ? 'pone ' + mdp(pone) : (vende ? 'no lo aporta: lo vende' : 'no pone terreno'), recibe: recibe, recibeTxt: recibeTxt(recibe),
-      veces: vecesDueno, vecesMalo: aporta && veces !== null && veces < 1, vecesNo: noAplica,
+      veces: vecesDueno, vecesMalo: aporta && veces !== null && veces < 1, vecesNo: noAplica, vecesNoMalo: pierdeD,
       tip: T('Dueño del terreno', [['Aporta su tierra', aporta ? mdp(pone) : (vende ? 'no la aporta: la vende' : 'no aporta terreno')], [recibe < -0.05 ? 'Pierde en total' : 'Recibe en total', mdp(Math.abs(recibe))],
-        ['Veces lo que puso', aporta ? (veces !== null ? veces.toFixed(2) + '×' : '—') : 'no aplica: no pone su terreno'], ['Veces el valor de su tierra', veces !== null ? veces.toFixed(2) + '×' : '—'],
+        ['Veces lo que puso', aporta ? (pierdeD ? 'no aplica: pierde más de lo que puso' : (veces !== null ? veces.toFixed(2) + '×' : '—')) : 'no aplica: no pone su terreno'], ['Veces el valor de su tierra', vecesTierra],
         ['Recibe lo último en el mes', num(v.dueno_meses) !== null ? v.dueno_meses : '—']], L('Versiones', 'dueno_aporta, dueno_recibe y dueno_veces'), 'v.dueno_recibe') }];
     if (capital > 0.05) {
       var vecesCap = capRecibe / capital;
@@ -875,7 +900,7 @@
     /* La escala deja lugar a cada rótulo: los de «pone» y «recibe» terminan antes de la columna «×» (y el «pone» del
        primer renglón, antes de «veces lo que puso»). */
     var CAB = 'veces lo que puso', anchoX = 0, sc = 1.7;
-    rows.forEach(function (r) { anchoX = Math.max(anchoX, r.veces ? ancho(r.veces, 19, true) : (r.vecesNo ? ancho(r.vecesNo, 7.6) : 0)); });
+    rows.forEach(function (r) { anchoX = Math.max(anchoX, r.veces ? ancho(r.veces, 19, true) : (r.vecesNo ? ancho(r.vecesNo, 7.6, r.vecesNoMalo) : 0)); });
     var limR = VX - anchoX - 8;
     rows.forEach(function (r, i) {
       var limP = i === 0 ? Math.min(limR, VX - ancho(CAB, 7.4) - 8) : limR;
@@ -891,7 +916,7 @@
       else o.push('<rect x="' + X0 + '" y="' + (y + 4) + '" width="16" height="9" rx="2" fill="none" stroke="' + r.col + '" stroke-width="0.8" stroke-dasharray="2 1.5"></rect><text x="' + (X0 + 21) + '" y="' + (y + 11.6) + '" font-size="7.6" fill="' + BODY + '">' + r.poneTxt + '</text>');
       o.push('<rect x="' + X0 + '" y="' + (y + 17) + '" width="' + f1(Math.max(0, r.recibe) * sc) + '" height="12" fill="' + r.col + '"></rect><text x="' + f1(X0 + Math.max(0, r.recibe) * sc + 5) + '" y="' + (y + 26.8) + '" font-size="8.4" font-weight="700" fill="' + (malo ? BADT : INK) + '">' + r.recibeTxt + '</text>');
       if (r.veces) o.push('<text x="' + VX + '" y="' + (y + 26) + '" text-anchor="end" font-size="19" font-weight="700" fill="' + (r.vecesMalo ? BADT : r.tinta) + '">' + r.veces + '</text>');
-      else if (r.vecesNo) o.push('<text x="' + VX + '" y="' + (y + 24) + '" text-anchor="end" font-size="7.6" fill="' + MUTED + '">' + r.vecesNo + '</text>');
+      else if (r.vecesNo) o.push('<text x="' + VX + '" y="' + (y + 24) + '" text-anchor="end" font-size="7.6"' + (r.vecesNoMalo ? ' font-weight="700"' : '') + ' fill="' + (r.vecesNoMalo ? BADT : MUTED) + '">' + r.vecesNo + '</text>');
       o.push('</g>');
     });
     o.push('<text x="' + VX + '" y="10" text-anchor="end" font-size="7.4" fill="' + MUTED + '">' + CAB + '</text>');
@@ -902,11 +927,12 @@
     var pd = num(rp.parte_dueno), pa = num(rp.parte_alianza), pc = num(rp.parte_capital) || 0;
     orden.push(pd !== null ? (pd === pa && !pc ? 'utilidad mitad y mitad' : 'utilidad ' + pct(pd, 0) + ' dueño · ' + pct(pa, 0) + ' alianza' + (pc ? ' · ' + pct(pc, 0) + ' capital' : '')) : 'utilidad');
     /* «Orden de cobro»: medido para que no se salga del cuadro; si no cabe, se achica y, al final, se queda sin el mes del dueño (está en su leyenda) */
-    var ordenTxt = 'Orden de cobro: ' + orden.join(' → '), mesDueno = num(v.dueno_meses) !== null ? ' · el dueño cobra en el mes ' + v.dueno_meses : '', fo = 7.6;
+    var Nm = (d.flujo && d.flujo.meses) || 0, mesD = num(v.dueno_meses), mesDTxt = mesD === null ? '' : mesFin(mesD, Nm);
+    var ordenTxt = 'Orden de cobro: ' + orden.join(' → '), mesDueno = mesD !== null ? ' · el dueño cobra ' + (mesD > Nm && Nm ? mesDTxt : 'en el ' + mesDTxt) : '', fo = 7.6;
     var lineaOrden = ordenTxt + mesDueno;
     while (fo > 6.4 && ancho(lineaOrden, fo) > VX) fo = Math.round((fo - 0.2) * 10) / 10;
     if (ancho(lineaOrden, fo) > VX) lineaOrden = ordenTxt;
-    o.push('<text' + T('Esquema de reparto', [['Esquema', rp.esquema || (d.plan && d.plan.esquema) || '—'], ['Parte del dueño', pct(pd, 0)], ['Parte de la alianza', pct(pa, 0)], ['Parte del capital', pct(pc, 0)], ['¿Se paga la tierra antes de repartir?', rp.paga_tierra ? 'sí' : 'no']].concat(mesDueno ? [['El dueño cobra en el mes', v.dueno_meses]] : []), L('Reparto'), 'reparto.esquema') +
+    o.push('<text' + T('Esquema de reparto', [['Esquema', rp.esquema || (d.plan && d.plan.esquema) || '—'], ['Parte del dueño', pct(pd, 0)], ['Parte de la alianza', pct(pa, 0)], ['Parte del capital', pct(pc, 0)], ['¿Se paga la tierra antes de repartir?', rp.paga_tierra ? 'sí' : 'no']].concat(mesDueno ? [['El dueño cobra', mesDTxt]] : []), L('Reparto'), 'reparto.esquema') +
       ' x="0" y="132" font-size="' + fo + '" fill="' + MUTED + '">' + esc(lineaOrden) + '</text>');
     /* El mismo cuadro, en alto, para el pop-up del teléfono: cada quien en su renglón, con las barras a todo lo ancho. */
     var g = ['<text x="220" y="7" text-anchor="end" font-size="6" fill="' + MUTED + '">' + CAB + '</text>'], tope = 1, sg;
@@ -920,20 +946,21 @@
       else g.push('<rect x="0" y="' + (y + 16) + '" width="14" height="8" rx="2" fill="none" stroke="' + r.col + '" stroke-width="0.8" stroke-dasharray="2 1.5"></rect><text x="18" y="' + (y + 22.4) + '" font-size="6.8" fill="' + BODY + '">' + r.poneTxt + '</text>');
       g.push('<rect x="0" y="' + (y + 27) + '" width="' + f1(Math.max(0, r.recibe) * sg) + '" height="11" fill="' + r.col + '"></rect><text x="' + f1(Math.max(0, r.recibe) * sg + 4) + '" y="' + (y + 35.6) + '" font-size="7.6" font-weight="700" fill="' + (malo ? BADT : INK) + '">' + r.recibeTxt.replace(' de utilidad', '') + '</text>');
       if (r.veces) g.push('<text x="220" y="' + (y + 12) + '" text-anchor="end" font-size="14" font-weight="700" fill="' + (r.vecesMalo ? BADT : r.tinta) + '">' + r.veces + '</text>');
-      else if (r.vecesNo) g.push('<text x="220" y="' + (y + 10) + '" text-anchor="end" font-size="6.6" fill="' + MUTED + '">' + r.vecesNo + '</text>');
+      else if (r.vecesNo) g.push('<text x="220" y="' + (y + 10) + '" text-anchor="end" font-size="6.6"' + (r.vecesNoMalo ? ' font-weight="700"' : '') + ' fill="' + (r.vecesNoMalo ? BADT : MUTED) + '">' + r.vecesNo + '</text>');
       g.push('</g>');
     });
-    var yo = 12 + rows.length * 46 + 6, lineas = partir(ordenTxt, 6.6, 220).concat(mesDueno ? ['El dueño cobra en el mes ' + v.dueno_meses] : []);
+    var yo = 12 + rows.length * 46 + 6, lineas = partir(ordenTxt, 6.6, 220).concat(mesDueno ? ['El dueño cobra ' + (mesD > Nm && Nm ? mesDTxt : 'en el ' + mesDTxt)] : []);
     lineas.forEach(function (t, i) { g.push('<text x="0" y="' + f1(yo + i * 9.5) + '" font-size="6.6" fill="' + MUTED + '">' + esc(t) + '</text>'); });
-    var hay = pone || recibe || alianza;
+    var hay = !FALTA && (pone || recibe || alianza);
+    var vacio = FALTA ? ['Falta calcular el reparto', 'Esta versión no tiene todas sus cifras.'] : ['Aún no hay reparto calculado', 'Cuando el plan tenga su esquema, aquí se verá quién pone y quién recibe.'];
     return {
-      id: 'reparto', n: 6, titulo: 'Reparto', sub: esc(corta(rp.esquema || (d.plan && d.plan.esquema) || 'pones y recibes', 44)), svg: hay ? o.join('') : sinDatos(396, 'Aún no hay reparto calculado', 'Cuando el plan tenga su esquema, aquí se verá quién pone y quién recibe.'), w: 396, doble: true,
-      svgG: hay ? g.join('') : sinDatos(220, 'Aún no hay reparto calculado'), wG: 220, hG: hay ? yo + (lineas.length - 1) * 9.5 + 7 : 136,
+      id: 'reparto', n: 6, titulo: 'Reparto', sub: esc(corta(rp.esquema || (d.plan && d.plan.esquema) || 'pones y recibes', 44)), svg: hay ? o.join('') : sinDatos(396, vacio[0], vacio[1]), w: 396, doble: true,
+      svgG: hay ? g.join('') : sinDatos(220, vacio[0]), wG: 220, hG: hay ? yo + (lineas.length - 1) * 9.5 + 7 : 136,
       aria: 'Reparto: el dueño ' + (aporta ? 'pone ' + mdp(pone) : (vende ? 'vende su terreno' : 'no pone terreno')) + ' y ' + recibeTxt(recibe) + '; la alianza ' + recibeTxt(alianza),
-      detalle: [{ h: 'Quién pone y quién recibe (MDP)', filas: [
+      detalle: FALTA ? [{ h: 'Quién pone y quién recibe', filas: [['Falta calcular', '', 'Esta versión no tiene todas sus cifras: lo que recibe cada quien no se puede leer.', 'v.dueno_recibe']] }] : [{ h: 'Quién pone y quién recibe (MDP)', filas: [
         ['Dueño · aporta su tierra', aporta ? mdp(pone) : (vende ? 'no la aporta: la vende' : mdp(pone)), L('Versiones', 'dueno_aporta'), 'v.dueno_aporta'],
         [recibe < -0.05 ? 'Dueño · pierde en total' : 'Dueño · recibe en total', mdp(Math.abs(recibe)), L('Versiones', 'dueno_recibe'), 'v.dueno_recibe'],
-        ['Dueño · veces su tierra', veces !== null ? veces.toFixed(2) + '×' : '—', L('Versiones', 'dueno_veces'), 'v.dueno_veces'],
+        ['Dueño · veces su tierra', vecesTierra, L('Versiones', 'dueno_veces'), 'v.dueno_veces'],
         ['Capital · aporta', mdp(capital), L('Versiones', 'capital'), 'v.capital'], ['Capital · recibe con rendimiento', mdp(capRecibe), L('Flujo', 'capital: pago'), 'flujo.pago_capital'],
         [alianza < -0.05 ? 'Alianza · pierde' : 'Alianza · recibe', mdp(Math.abs(alianza)), L('Versiones', 'alianza_recibe'), 'v.alianza_recibe'], ['Resultado a repartir', mdp(num(v.resultado_repartir)), L('Versiones', 'resultado_repartir'), 'v.resultado_repartir']
       ] }, { h: 'Esquema', filas: [
@@ -1049,16 +1076,17 @@
     function figura(grande) {
       var o = [], COL = [0, 62, 124], FIL = [0, 36.5, 73];
       PRUEBAS.forEach(function (p, i) {
-        var x = num(v[p.k]), cx = COL[i % 3] + 30, y0 = FIL[Math.floor(i / 3)], a = anillo(p, x, cx, y0 + (grande ? 12 : 11.4), grande ? 10.4 : 10.6, grande, v[p.k]), h = holguraPrueba(p, x, a.st);
-        var valor = x === null ? (typeof v[p.k] === 'string' && v[p.k].trim() ? v[p.k] : '—') : (p.u === '%' ? pct(x) : valorPrueba(p, x) + (p.u === 'meses' ? ' meses' : ''));
+        /* con «Falta calcular» la prueba no se lee aunque traiga un número (sale de cifras a medias): sin dato, con la razón */
+        var crudo = FALTA ? null : v[p.k], x = num(crudo), cx = COL[i % 3] + 30, y0 = FIL[Math.floor(i / 3)], a = anillo(p, x, cx, y0 + (grande ? 12 : 11.4), grande ? 10.4 : 10.6, grande, crudo), h = holguraPrueba(p, x, a.st);
+        var valor = x === null ? (typeof crudo === 'string' && crudo.trim() ? crudo : '—') : (p.u === '%' ? pct(x) : valorPrueba(p, x) + (p.u === 'meses' ? ' meses' : ''));
+        var origenP = FALTA ? partesOrigen(L('Versiones', p.k)).base + SEPV + RAZON_FALTA : L('Versiones', p.k);
         if (grande) {
           cuenta[a.st]++;
-          var origenP = L('Versiones', p.k);
           det.push([p.largo, valor, limitePrueba(p) + ' · ' + holguraCorta(h, a.st)[0] + ' · ' + origenP, 'v.' + p.k, hoyPrueba(p, valor, h, a.st, partesOrigen(origenP).vac)]);
         }
         var hc = grande ? h : holguraCorta(h, a.st);
         var linea = grande && p.modo === 'cero' && a.st === 'ok' ? '<tspan fill="' + MUTED + '">debe ser $0 · </tspan><tspan fill="' + hc[1] + '" font-weight="700">' + hc[0] + '</tspan>' : '<tspan fill="' + hc[1] + '" font-weight="700">' + hc[0] + '</tspan>';
-        o.push('<g' + T(p.largo, [['El plan', valor], ['La revisión pide', limitePrueba(p)], ['Holgura', holguraCorta(h, a.st)[0]]], L('Versiones', p.k), 'v.' + p.k) + '><rect x="' + COL[i % 3] + '" y="' + y0 + '" width="60" height="35" fill="#fffdf9" fill-opacity="0"></rect>' + a.svg +
+        o.push('<g' + T(p.largo, [['El plan', valor], ['La revisión pide', limitePrueba(p)], ['Holgura', holguraCorta(h, a.st)[0]]], origenP, 'v.' + p.k) + '><rect x="' + COL[i % 3] + '" y="' + y0 + '" width="60" height="35" fill="#fffdf9" fill-opacity="0"></rect>' + a.svg +
           (grande ? '<text x="' + cx + '" y="' + f1(y0 + 28.2) + '" text-anchor="middle" font-size="5.4" fill="' + BODY + '">' + p.nombre + '</text><text x="' + cx + '" y="' + f1(y0 + 34.4) + '" text-anchor="middle" font-size="5.1">' + linea + '</text>'
             : '<text x="' + cx + '" y="' + f1(y0 + 27.6) + '" text-anchor="middle" font-size="6.8" fill="' + BODY + '">' + p.corto + '</text><text x="' + cx + '" y="' + f1(y0 + 35) + '" text-anchor="middle" font-size="6.3">' + linea + '</text>') + '</g>');
       });
@@ -1127,6 +1155,7 @@
     ACTUAL = d;
     VER = d.version || 0; ORIGEN = typeof d.origen === 'string' ? d.origen.trim().slice(0, 120) : '';
     DED = d.deducido && typeof d.deducido === 'object' && !Array.isArray(d.deducido) && Object.keys(d.deducido).length ? d.deducido : null;
+    FALTA = /^\s*falta calcular/i.test(String((d.v || {}).rv_resultado || ''));
     return [cReparto(d), cTerreno(d), cProducto(d), cTiempo(d), cCosto(d), cDinero(d), cRiesgo(d)];
   }
   /* El origen de una cifra, con su nota «deducido de …» aparte: en la leyenda va abierta; en la hoja, tras un chip. */

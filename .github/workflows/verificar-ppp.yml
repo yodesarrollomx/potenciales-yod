@@ -82,8 +82,8 @@ jobs:
           node --check visor-explica.js
           node --check visor-explica-grafo.js
           node --test tests/visor-explica.test.cjs
-          node --test tests/visor-maquila.test.cjs
-          node --test tests/visor-fotos-nucleo.test.cjs tests/visor-fotos-vertical.test.cjs tests/visor-fotos-macrolotes.test.cjs tests/visor-fotos-residencial.test.cjs tests/visor-fotos-unifamiliar.test.cjs tests/visor-fotos-completa.test.cjs tests/visor-fotos-maquila.test.cjs
+          node --test tests/visor-maquila.test.cjs tests/visor-maquila-2.test.cjs
+          node --test tests/visor-fotos-nucleo.test.cjs tests/visor-fotos-vertical.test.cjs tests/visor-fotos-macrolotes.test.cjs tests/visor-fotos-residencial.test.cjs tests/visor-fotos-unifamiliar.test.cjs tests/visor-fotos-completa.test.cjs tests/visor-fotos-maquila.test.cjs tests/visor-fotos-maquila-2.test.cjs
           git diff --check
       - name: MCP · protocolo y operaciones sobre el servidor PPP aislado
         run: |

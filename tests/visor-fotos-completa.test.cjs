@@ -125,14 +125,16 @@ test('macrolotes: llena, marca y deja que el reparto sume (la alianza sin contar
   r.fotos.forEach(f => {
     const b = vis(f), c = f.aseo.criterios, res = C.resultado('MACROLOTES', require('../scripts/visor-fotos/macrolotes.cjs'), MACRO, N.versionesDeRenglon(MACRO.renglon)[f.orden - 1], motor('MACROLOTES')).r;
     assert.equal(b.v.capital, N.mdp(res.equityUsed));
-    /* con aportación: la tierra es su valor (superficie × valor del m²) y la ganancia del motor no tiene el sentido del visor */
+    /* con aportación: la tierra es su valor (superficie × valor del m²); la utilidad del motor no tiene el sentido del
+       visor, así que la ganancia se deduce como el libro: resultado a repartir − tierra que aporta el dueño */
     assert.equal(res.tierraPago, 0);
     assert.equal(b.v.tierra, N.mdp(res.superficie * res.p.valorTierraM2));
     assert.equal(b.datos['tierra.valor'].valor, b.v.tierra);
     assert.match(b.deducido['v.tierra'], /valor de la tierra del caso.*aporta/);
-    assert.equal(b.v.ganancia, null);
-    assert.equal(b.v.margen, null);
-    assert.match(JSON.parse(f.conciliacion).vacios['v.ganancia'], /antes de la tierra que aporta el dueño/);
+    assert.ok(Math.abs(b.v.ganancia - (b.v.resultado_repartir - b.v.dueno_aporta)) < 2e-6, 'ganancia = resultado a repartir − tierra aportada');
+    assert.match(b.deducido['v.ganancia'], /resultado a repartir .* menos la tierra que aporta el dueño/);
+    assert.equal(b.v.margen, N.r6(b.v.ganancia / b.v.ventas));
+    assert.ok(!(JSON.parse(f.conciliacion).vacios || {})['v.ganancia'], 'ya no queda vacía');
     assert.equal(b.flujo.total.cierre, 0, 'el motor no tiene cierre de tierra');
     assert.doesNotMatch(b.v.rv_resultado, /Falta calcular/, 'una ganancia vacía a propósito no es «falta calcular»');
     assert.ok(b.deducido['v.alianza_recibe'] || b.v.alianza_recibe !== null);
@@ -155,12 +157,15 @@ test('residencial: resultado a repartir, banco y reparto con las definiciones de
   assert.equal(b.v.margen, N.r6(b.v.ganancia / b.v.ventas));
   assert.match(b.deducido['v.margen'], /^corregido: ganancia real ÷ ventas/);
   assert.ok(!(JSON.parse(f.conciliacion || '{}').vacios || {})['v.margen'], 'el margen ya no queda vacío');
-  /* si la utilidad no alcanza a repagar la tierra, la ganancia queda vacía con su razón */
+  /* si la utilidad no alcanza a repagar la tierra, el motor no da la ganancia (sería negativa): se deduce como el libro,
+     resultado a repartir − tierra que aporta el dueño, y sale negativa (antes quedaba vacía justo cuando el plan pierde) */
   const CORTO = Object.assign({}, RES, { renglon: Object.assign({}, RES.renglon, { inValorTierraM2: 4000 }) });
   const corto = completa(CORTO).fotos[0], rc = C.resultado('RESIDENCIAL', require('../scripts/visor-fotos/residencial.cjs'), CORTO, N.versionesDeRenglon(CORTO.renglon)[0], motor('RESIDENCIAL')).r;
   assert.ok(rc.repagoTierra < rc.repagoObjetivo - 1, 'el caso inventado no alcanza a repagar su tierra');
-  assert.equal(vis(corto).v.ganancia, null);
-  assert.match(JSON.parse(corto.conciliacion).vacios['v.ganancia'], /no alcanza/);
+  const vc = vis(corto).v;
+  assert.ok(vc.ganancia < 0 && Math.abs(vc.ganancia - (vc.resultado_repartir - vc.dueno_aporta)) < 2e-6, 'ganancia negativa = resultado a repartir − tierra aportada');
+  assert.equal(vc.margen, N.r6(vc.ganancia / vc.ventas));
+  assert.match(vis(corto).deducido['v.ganancia'], /menos la tierra que aporta el dueño/);
   assert.equal(vis(corto).v.tierra, N.mdp(rc.tierraAportada));
   assert.equal(b.v.dueno_veces, N.r6(f.aseo.criterios.dueno_veces));
   assert.equal(b.reparto.parte_alianza, N.r6(1 - b.reparto.parte_dueno));
@@ -176,7 +181,9 @@ test('casa: sin banco ni socio de tierra; la venta se firma y escritura en un me
   assert.equal(b.v.banco_max, 0);
   assert.equal(b.v.dueno_aporta, 0);
   assert.equal(b.v.dueno_recibe, N.mdp(res.costoTerreno));
-  assert.equal(b.v.dueno_veces, 1);
+  /* la casa compra el terreno: el dueño lo vende a su valor, «veces» no aplica (antes servía ×1.00 con aportación 0) */
+  assert.equal(b.v.dueno_veces, null);
+  assert.match(b.deducido['v.dueno_veces'], /^no aplica: el dueño no aporta su tierra/);
   assert.equal(b.v.inversion_recibe, N.mdp(res.retAcum));
   assert.equal(b.v.obra_inicio, 2);
   assert.equal(b.v.mes_reparto, res.totalMonths);
