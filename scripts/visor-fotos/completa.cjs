@@ -238,7 +238,8 @@ function hechos(tipo, r, F, visor) {
       costos: { obra: x('hard'), indirectos: x('indirect') === null ? null : x('indirect') + (x('legal') || 0), imprevistos: x('cont'), comisiones: x('commission'), cierre: x('closing') },
       reconcilia: x('cashReconciliation'), cobranzaTotal: x('revTotal'),
       reparto: {
-        esquema: 'Cascada: regresan tierra y capital; preferente ' + N.r3((num(p.pref) || 0) * 100) + ' %; residual ' + N.r3((x('effectiveOwnerResidual') || 0) * 100) + ' % al dueño',
+        /* El preferente es una tasa anual (el motor la cobra por meses ÷ 12). Sin «Cascada:» cabe en los 80 del servidor. */
+        esquema: 'Regresan tierra y capital; preferente ' + N.r3((num(p.pref) || 0) * 100) + ' % anual; residual ' + N.r3((x('effectiveOwnerResidual') || 0) * 100) + ' % al dueño',
         tasa: num(p.pref), paga: (x('ownerCapital') || 0) > 0 || (x('landCash') || 0) > 0, dueno: x('effectiveOwnerResidual'), honorarios: 0
       },
       cal: calendarioVertical(r, F, uProd)
@@ -285,7 +286,7 @@ function hechos(tipo, r, F, visor) {
       ventas: x('venta'), costoConTierra: x('costoTotal') === null ? null : x('costoTotal') - (x('costoFin') || 0), tierraValor: x('costoTerreno'), tierraAportada: 0,
       tierraEfectivo: x('costoTerreno'), capital: x('equityUsed'), linea: 0, respaldo: 0, dueno: x('costoTerreno'),
       alianza: cajaFin === null || x('equityUsed') === null ? null : cajaFin - x('equityUsed'), inversion: x('retAcum'), cobranzaTotal: x('revTotal'),
-      reparto: { esquema: 'Sin socio de tierra: se compra; la utilidad es de quien pone el capital', tasa: 0, paga: true, dueno: 0, honorarios: 0 },
+      reparto: { esquema: 'Tierra comprada; el inversionista cobra su rendimiento; utilidad para el capital', tasa: 0, paga: true, dueno: 0, honorarios: 0 },
       obraInicio: 2, finObra: (num(p.mesesObra) || 0) + 1, cal: calendarioUnifamiliar(r, F)
     });
   }

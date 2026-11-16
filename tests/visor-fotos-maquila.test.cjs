@@ -149,6 +149,16 @@ test('los textos caben en los topes del servidor y se cortan en palabra con «�
     assert.ok(!b.plan.esquema || b.plan.esquema.length <= 80);
     Object.entries(b.v).forEach(([k, x]) => { if (typeof x === 'string') assert.ok(x.length <= 200, 'v.' + k); });
   }
+  /* caben sin perder sentido: el preferente del vertical es anual (el motor lo cobra por meses ÷ 12) y se dice a quién
+     va el residual; la casa no pierde el rendimiento del inversionista. Ninguno llega cortado. */
+  for (const extra of [{}, { inPref: 15.5, inResidualDueno: 14.25 }]) {
+    const e = vis(completa(vert(extra)).fotos[0]).reparto.esquema;
+    assert.match(e, /^Regresan tierra y capital; preferente [\d.]+ % anual; residual [\d.]+ % al dueño$/, e);
+    assert.ok(e.length <= 80 && !e.includes('…'), e);
+  }
+  const casa = vis(completa(CASA).fotos[0]);
+  assert.match(casa.reparto.esquema, /inversionista cobra su rendimiento/);
+  assert.ok(!casa.reparto.esquema.includes('…') && casa.reparto.esquema === casa.plan.esquema);
   assert.equal(C.cortaPalabra('uno dos tres cuatro cinco seis siete', 20), 'uno dos tres cuatro…');
   assert.equal(C.cortaPalabra('corto', 20), 'corto');
 });
