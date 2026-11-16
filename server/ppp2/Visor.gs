@@ -28,7 +28,7 @@
  */
 var VISOR = {
   ESQUEMA: 'ppp2-visor-v1',
-  CACHE: 'visor-2',          // forma de lo guardado: si cambia lo que se lee, se sube (visor-2: marcas `deducido` de las fotos)
+  CACHE: 'visor-3',          // forma de lo guardado: si cambia lo que se lee, se sube (visor-2: marcas `deducido` de las fotos; visor-3: textos cortados en palabra y la versión mostrada en «todas»)
   LIGAS_S: 60,               // apagar una liga tarda a lo más esto en notarse
   LLAVE_S: 2,                // la pregunta «¿cambió?» de todos los que miran un plan comparte una consulta a Drive
   MARCAS_S: 21600,
@@ -91,17 +91,27 @@ function ligaViva_(t) {
   return l;
 }
 /* Qué versiones deja ver la liga: en blanco, sólo la que el libro muestra; «todas», las que calculan y no
-   están descartadas; o una lista («1,2»). */
+   están descartadas, y siempre la que el libro muestra aunque no calcule (se ve con sus «sin dato»; antes se caía
+   en silencio a la primera que calculaba); o una lista («1,2»). */
 function versionesVisor_(r, regla) {
   var mostrada = Number(r['plan.version_mostrada']) || 1;
   var vivas = [1, 2, 3].filter(function (k) { return low_(r['v' + k + '.estado']) !== 'descartada' && typeof r['v' + k + '.ganancia'] === 'number'; });
   var lista;
   regla = low_(regla);
   if (!regla) lista = [mostrada];
-  else if (regla === 'todas') lista = vivas;
+  else if (regla === 'todas') lista = [1, 2, 3].filter(function (k) { return vivas.indexOf(k) >= 0 || k === mostrada; });
   else lista = regla.split(/[,;| ]+/).map(Number).filter(function (k, i, a) { return vivas.indexOf(k) >= 0 && a.indexOf(k) === i; });
   if (!lista.length) lista = [mostrada];
   return { mostrada: mostrada, lista: lista };
+}
+
+/* Un texto que no cabe en su tope se corta en palabra y con «…» (txt_ lo corta a media palabra y sin aviso: «…preferente
+   15 % anual y residual 14.23 % due»). */
+function cortaTexto_(v, max) {
+  var s = txt_(v, 100000);
+  if (s.length <= max) return s;
+  var c = s.slice(0, max - 1), i = c.lastIndexOf(' ');
+  return (i > max * 0.6 ? c.slice(0, i) : c).replace(/[\s,;:·–—-]+$/, '') + '…';
 }
 
 /* Las ligas de un plan, para quien las administra desde la ficha: leídas de la hoja (no de la caché), con
@@ -228,7 +238,7 @@ function leeVisor_(p, libro, pedida, regla) {
   if (rep) {
     var rb = rep.getRange(4, 1, 11, 6).getValues().map(function (f) { return f.map(limpio_); }), e = Number(rb[1][1]) || 0;
     if (e >= 1 && e <= 5) reparto = {
-      numero: e, esquema: txt_(rb[4][e], 80), tasa_capital: r3v_(rb[5][e]), paga_tierra: Number(rb[6][e]) === 1,
+      numero: e, esquema: cortaTexto_(rb[4][e], 80), tasa_capital: r3v_(rb[5][e]), paga_tierra: Number(rb[6][e]) === 1,
       parte_dueno: r3v_(rb[7][e]), parte_alianza: r3v_(rb[8][e]), parte_capital: r3v_(rb[9][e]), honorarios_pct: r3v_(rb[10][e])
     };
   }
@@ -245,10 +255,10 @@ function leeVisor_(p, libro, pedida, regla) {
     plan: {
       nombre: txt_(r['plan.nombre'] || p.nombre, 120), ubicacion: txt_(r['plan.ubicacion'], 200), tipo: txt_(r['plan.tipo'], 200),
       edad: r['plan.edad'] || '', candados_abiertos: r3v_(r['plan.candados_abiertos']), paso_texto: txt_(r['plan.paso_texto'], 200),
-      esquema: txt_(r['plan.esquema'], 80), vigente: Number(r['plan.vigente']) || 0, mostrada: vs.mostrada
+      esquema: cortaTexto_(r['plan.esquema'], 80), vigente: Number(r['plan.vigente']) || 0, mostrada: vs.mostrada
     },
     version: k,
-    versiones: vs.lista.map(function (n) { return { n: n, nombre: txt_(r['v' + n + '.nombre'], 80), estado: low_(r['v' + n + '.estado']) }; }),
+    versiones: vs.lista.map(function (n) { return { n: n, nombre: cortaTexto_(r['v' + n + '.nombre'], 80), estado: low_(r['v' + n + '.estado']) }; }),
     v: v, datos: datos, productos: productos, flujo: flujo, reparto: reparto, candados: candados,
     pruebas: pruebas, pruebas_viejas: todas.length - pruebas.length, ultimo: ultimo, cambio: cambio
   };
@@ -387,7 +397,7 @@ function fotoLimpia_(o, p) {
   var obj = function (x) { return x && typeof x === 'object' && !Array.isArray(x) ? x : {}; };
   var lista = function (x, max) { return Array.isArray(x) ? x.slice(0, max) : []; };
   var numero = function (x) { return typeof x === 'number' ? r6v_(x) : null; };
-  var texto = function (x, max) { return typeof x === 'string' ? txt_(x, max) : null; };
+  var texto = function (x, max) { return typeof x === 'string' ? cortaTexto_(x, max) : null; };
   var valor = function (x, max) { return typeof x === 'number' ? r6v_(x) : typeof x === 'boolean' ? x : texto(x, max || 200); };
   var pl = obj(o.plan), ov = obj(o.v), v = {};
   Object.keys(ov).forEach(function (k) { if (VISOR.FOTO_V.test(k) && k !== 'propuesta_por' && k !== 'aprobada_por') v[k] = valor(ov[k]); });
