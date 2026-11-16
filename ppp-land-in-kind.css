@@ -1,3 +1,5 @@
 #pppLand,#pppLand *{box-sizing:border-box}
 .ppp-land{margin:16px 0;border:1px solid var(--line,#a9a297);border-radius:12px;background:var(--paper,#faf9f6);color:var(--ink,#25241f)}
 .ppp-land>summary{padding:18px;font-weight:700;cursor:pointer}.land-body{padding:0 18px 18px}.land-inputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}.ppp-land label{display:block;font-size:13px;margin:10px 0}.ppp-land input,.ppp-land select{display:block;width:100%;min-height:44px;padding:10px;margin-top:5px;background:var(--paper,#fff);color:inherit;border:1px solid #a9a297;border-radius:6px;font:inherit}.land-actions{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}.land-table{overflow:auto}.land-table table{border-collapse:collapse;font-size:13px;min-width:100%}.land-table td,.land-table th{border-bottom:1px solid #d6d2ca;padding:10px;min-width:150px;text-align:right;vertical-align:top}.land-table th:first-child{text-align:left;position:sticky;left:0;background:var(--paper,#faf9f6);min-width:180px}.ppp-land [data-status]{font-weight:600}.ppp-land label[hidden]{display:none}
+
+#dMacro .input-group[hidden]{display:none}

@@ -1108,7 +1108,7 @@
 
   function render(){
     landEditor?.update();
-    ['inAporteTierra','inPref','inResidualDueno'].forEach(id=>{const el=$(id);if(el){el.disabled=!!state?.kindMethod;el.title=state?.kindMethod?'Este acuerdo se edita en Pago del terreno':'';}});
+    ['inAporteTierra','inPref','inResidualDueno'].forEach(id=>{const el=$(id);if(el){el.disabled=!!state?.kindMethod;const group=el.closest('.input-group');if(group)group.hidden=!!state?.kindMethod;el.title=state?.kindMethod?'Este acuerdo se edita en Pago del terreno':'';}});
     renderSheetPanel();
     renderMercadoDocumento();
     const r=state;syncPills();
@@ -1153,7 +1153,7 @@
     const ver=id=>{const d=$(id);if(!d)return;if(d.tagName==='DETAILS')d.open=true;else d.querySelector('details')?.setAttribute('open','');d.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});};
     return{ancla:document.querySelector('.ppp-hud'),nativo:!!sheetModel,revision:sheetModel?.revision,caso:caso.caso_id,version:escActivo,
       versiones:escenarios.map(e=>({id:e.id,nombre:e.nombre,base:!!e.esBase,activa:e.id===escActivo,estado:e.id===escActivo?r:sheetModel?sheetModel.estados?.[e.id]:computar(e.inputs)})),
-      activar:id=>escCambiar(id),abrir:id=>window.PPPView?.toggle(id,true),ajustar:id=>window.PPPView?.reveal?.(id),verVersiones:()=>ver('pppVersiones'),verTabla:()=>ver('advBoard')};
+      activar:id=>escCambiar(id),abrir:id=>window.PPPView?.toggle(id,true),ajustar:id=>{if(id==='pppLand'){const node=$('pppLand');if(node){node.open=true;node.scrollIntoView({block:'start',behavior:'smooth'});}return node;}return window.PPPView?.reveal?.(id);},verVersiones:()=>ver('pppVersiones'),verTabla:()=>ver('advBoard')};
   }
   function renderProforma(r){
     const row=(label,value,klass='')=>`<tr class="${klass}"><td>${label}</td><td>${value}</td></tr>`,section=label=>`<tr class="section-row"><td colspan="2">${label}</td></tr>`,economicTotal=r.projectCost+r.interest+r.feeDebt,cashOk=Math.abs(r.cashReconciliation)<1;
