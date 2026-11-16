@@ -23,6 +23,17 @@ function opcion(nombre, v, extra) {
 }
 function fila(ops, k) { return C.compara(ops).find((r) => r.f.k === k); }
 
+test('el pago en viviendas conserva el programa completo, sin contar sólo firmas con efectivo', () => {
+  const d = { v: { pago_especie: true }, flujo: { total: { firmas: 7.5 } }, productos: [{ unidades: 7.5 }, { unidades: 2.5 }] };
+  assert.equal(C.valor(factor('unidades'), d).x, 10);
+  const o = { nombre: 'Acuerdo', plan: 'p', v: 1, d };
+  assert.match(C.pinta([o, { ...o, nombre: 'Otro acuerdo', plan: 'q' }], {}).html, /unidades totales, incluidas las adjudicadas sin cobro/);
+  d.productos[1].unidades = null;
+  assert.equal(C.valor(factor('unidades'), d).hay, false);
+  delete d.v.pago_especie;
+  assert.equal(C.valor(factor('unidades'), d).x, 8, 'el contrato previo conserva sus firmas');
+});
+
 test('la tabla de factores: siete cuadros, sentido y umbral declarados, y la misma tabla escrita en docs/ppp2.md', () => {
   assert.deepEqual(C.GRUPOS.map((g) => g.titulo), ['Terreno', 'Producto', 'Tiempo', 'Costo y ganancia', 'Dinero', 'Reparto', 'Riesgo']);
   const docs = fs.readFileSync(path.join(RAIZ, 'docs/ppp2.md'), 'utf8');

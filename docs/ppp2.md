@@ -886,7 +886,7 @@ es mejor». La tabla vive en `FACTORES` de `visor-compara.js`; si cambia allá, 
 | Valor de la tierra | Resumen · v{n}.tierra | dato | — |
 | Ventas totales | Resumen · v{n}.ventas | dato | — |
 | Área vendible | Datos · lamina.m2_vendibles | dato | — |
-| Unidades | Flujo V{n} · total de «Total de unidades» | dato | — |
+| Unidades | Flujo V{n} · total de «Total de unidades»; en pago en especie, total del inventario de Productos, incluidas las adjudicadas | dato | — |
 | Plazo hasta el reparto | Resumen · v{n}.mes_reparto | menos es mejor | más de 25 % peor que la mejor |
 | Preventa al arrancar la obra | Resumen · v{n}.rv_preventa | más es mejor | más de 15 puntos abajo de la mejor |
 | Costo sin tierra | Resumen · v{n}.costo_sin_tierra | dato | — |

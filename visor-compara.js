@@ -96,6 +96,11 @@
   function crudo(f, d) {
     var a = f.de[0], c = f.de[1];
     if (!d) return null;
+    if (f.k === 'unidades' && d.v && d.v.pago_especie === true) {
+      var productos = d.productos;
+      return Array.isArray(productos) && productos.length && productos.every(function (p) { return p && num(p.unidades) !== null; })
+        ? productos.reduce(function (n, p) { return n + p.unidades; }, 0) : null;
+    }
     if (a === 'v') return d.v ? d.v[c] : null;
     if (a === 'datos') return d.datos && d.datos[c] ? d.datos[c].valor : null;
     if (a === 'flujo') return d.flujo && d.flujo.total ? d.flujo.total[c] : null;
@@ -143,6 +148,7 @@
   function deDonde(f, d) {
     var a = f.de[0], c = f.de[1], n = (d && d.version) || '';
     var pre = d && d.origen ? String(d.origen) + ' · ' : 'Libro · ';
+    if (f.k === 'unidades' && d && d.v && d.v.pago_especie === true) return pre + 'Productos · unidades totales, incluidas las adjudicadas sin cobro';
     if (a === 'v') return pre + 'Resumen · v' + n + '.' + c;
     if (a === 'datos') return pre + 'Datos · ' + c;
     if (a === 'flujo') return pre + 'Flujo V' + n + ' · total de «' + ({ firmas: 'Total de unidades' }[c] || c) + '»';
