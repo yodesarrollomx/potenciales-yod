@@ -93,6 +93,30 @@ a.p2-tarjeta:hover{border-color:var(--p2-oro);transform:translateY(-1px)}
 .p2-vbtn span{font-size:12px;color:var(--p2-tenue)}
 .p2-vbtn[aria-pressed="true"]{border-color:var(--p2-oro);box-shadow:0 0 0 2px var(--p2-oro-claro)}
 
+/* Factores a la vista: comparte el lápiz y las relaciones de los siete cuadros. */
+.p2-editar-entrada{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 18px}
+.p2-editar-entrada>span{font-size:13px;color:var(--p2-tenue)}
+.p2-editar-entrada .p2-btn,.p2-grupos-factor .p2-btn{min-height:44px}
+.p2-factores-cab{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.p2-factores-cab h2{margin:4px 0 10px}
+.p2-busca-factor{display:grid;gap:5px;font-size:13px;font-weight:600;margin:14px 0}
+.p2-busca-factor input{width:100%;min-width:0;min-height:44px;font:inherit;border:1px solid var(--p2-linea);border-radius:10px;padding:10px;background:#fff;color:var(--p2-tinta)}
+.p2-grupos-factor{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.p2-grupos-factor [aria-pressed="true"]{background:var(--p2-oro-claro);border-color:var(--p2-oro)}
+.p2-factores .p2-mueve{border:0;padding-top:0;margin-top:0}
+.p2-factores dl{margin:0}
+.p2-factores dl>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:12px 0;border-bottom:1px solid var(--p2-linea)}
+.p2-factores dt{font-size:13px;min-width:0;overflow-wrap:anywhere}
+.p2-factores dd{margin:0;font-size:14px;font-weight:600;text-align:right}
+.p2-factores dl>div>small{grid-column:1/-1;font-size:12px;color:var(--p2-tenue);overflow-wrap:anywhere}
+.p2-factores .p2-lapiz{min-width:44px;min-height:44px}
+.p2-form input[data-factor-slider]{padding:0;min-height:44px;accent-color:var(--p2-verde);cursor:pointer}
+.p2-switch{display:flex;align-items:center;gap:10px;border:0;background:none;min-height:44px;padding:0;color:var(--p2-tinta)}
+.p2-switch>span{position:relative;width:46px;height:26px;background:#80796d;border-radius:20px}
+.p2-switch>span:after{content:'';position:absolute;width:20px;height:20px;top:3px;left:3px;border-radius:50%;background:#fff}
+.p2-switch[aria-checked="true"]>span{background:var(--p2-verde)}
+.p2-switch[aria-checked="true"]>span:after{left:23px}
+
 /* pestañas */
 .p2-pestanas{display:flex;gap:4px;border-bottom:1px solid var(--p2-linea);margin-bottom:18px;overflow-x:auto;scrollbar-width:none}
 .p2-pestanas::-webkit-scrollbar{display:none}
