@@ -51,7 +51,7 @@ test('cada figura dice qué hay detrás y de qué pestaña del libro sale', () =
   assert.deepEqual(ventas.f[3], ['Total de ventas', mdp(d.v.ventas)]);
   const clientes = ls.find((l) => l.t === 'Clientes');
   assert.deepEqual(clientes.f.map((f) => f[0]), ['Enganches al firmar', 'Pagos durante la obra', 'Saldos al escriturar', 'Total']);
-  assert.equal(ls.filter((l) => /^Mes \d+$/.test(l.t)).length, d.flujo.meses, 'el saldo se puede recorrer mes por mes');
+  assert.equal(ls.filter((l) => /^Mes \d+$/.test(l.t) && l.x === 'flujo.flujo_acum').length, d.flujo.meses, 'el saldo se puede recorrer mes por mes');
   assert.ok(ls.some((l) => l.o === 'Libro · Resumen · v' + d.version + '.rv_margen'));
   for (const c of p.cuadros) {
     const h = visor.detalleHtml(c);
@@ -95,7 +95,9 @@ test('los límites de la revisión para fondos son los de la plantilla del libro
   assert.equal(visor.estadoPrueba(visor.PRUEBAS[0], 0.651), 'fuera');
   assert.equal(visor.estadoPrueba(visor.PRUEBAS.find((p) => p.k === 'rv_aportacion'), 0.22), 'justa');
   assert.equal(visor.estadoPrueba(visor.PRUEBAS.find((p) => p.k === 'rv_falta'), 0.5), 'fuera');
-  assert.equal(visor.estadoPrueba(visor.PRUEBAS[0], null), 'na', 'una prueba sin banco no aplica');
+  assert.equal(visor.estadoPrueba(visor.PRUEBAS[0], null, 'sin banco'), 'na', 'una prueba sin banco no aplica');
+  assert.equal(visor.estadoPrueba(visor.PRUEBAS[0], null, null), 'sd', 'sin número y sin razón, la cifra falta: «sin dato», no «no aplica»');
+  assert.equal(visor.estadoPrueba(visor.PRUEBAS[0], null, ''), 'sd');
 });
 
 test('aguanta planes raros: sin banco, con pérdida, sin productos, a medio capturar', () => {

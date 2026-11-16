@@ -121,30 +121,40 @@ En pesos del motor; el visor recibe MDP, fracciones y meses (base 1), como siemp
 | `v.ck_cobranza`, `v.ck_unidades` | cobranza total − ventas; unidades firmadas − unidades de los productos |
 | `v.capital_sobre_tope` | capital − 1/3 de las ventas, si se pasa (regla de Dirección; sólo avisa) |
 | `v.resultado_repartir` | caja al cierre − capital aportado − deuda − respaldo pendiente (= último `flujo_acum`) |
-| `v.max_ajeno` | máximo mensual de saldo del banco + capital aportado + respaldo pendiente |
+| `v.max_ajeno` | máximo mensual de saldo del banco + capital aportado + respaldo pendiente (en la casa: capital aportado + lo que se le debe al inversionista) |
 | `v.banco_mes`, `v.respaldo_mes` | último mes con saldo, más uno (regla LIQ del libro); en blanco si nunca hubo saldo |
 | `v.capital_mes`, `v.dueno_meses`, `v.dueno_anos` | el capital y el dueño que aporta (o que, además de la tierra en efectivo, cobra parte de la utilidad) cobran al cierre (mes de reparto); la tierra pagada en efectivo, en el mes 1; años = `dueno_meses` ÷ 12 (en el libro `dueno_meses` es el mes de reparto) |
 | `v.dueno_aporta`, `v.dueno_recibe`, `v.dueno_veces` | tierra que aporta a su valor; lo que recibe; recibe ÷ valor de la tierra |
-| `v.alianza_recibe` | lo que recibe la alianza **encima** de su capital |
+| `v.alianza_recibe` | lo que recibe la alianza **encima** de su capital; si no recupera su capital, 0 (ver `flujo.total.pago_capital`) |
+| `flujo.total.pago_capital` | lo que recupera el capital al cierre: lo que recibe la alianza, hasta lo que puso (el capital es de la alianza en los cuatro motores y cobra antes que la utilidad, como en el libro). Total sin serie por mes: el motor lo devuelve con el reparto |
+| `v.margen` | residencial con la ganancia del visor (utilidad repartible que repaga la tierra completa): ganancia ÷ ventas, como el libro |
+| `v.otros_ingresos` | residencial: el retorno por financiar del motor (`retFinTodo`), que va en las ventas y no es de ningún producto. Clave sólo de las fotos: el visor la enseña como «No es de un producto» para que productos y ventas casen |
 | `v.inversion_recibe`, `v.rend_capital`, `reparto.tasa_capital` | 0 cuando el motor no paga rendimiento al capital antes de repartir (el capital es de la alianza; en el vertical su preferente va dentro de la cascada); en la casa, el rendimiento pagado al inversionista |
 | `v.pagos_obra` | vertical: preventa × % que se paga durante la obra |
 | `v.mes_saldos` | primer mes en que entra un pago que no es enganche |
 | `datos.tierra.valor`, `datos.lamina.m2_construidos`, `datos.din.*`, `datos.cob.enganche`, `datos.costo.comision` | del motor cuando hay un solo valor que corresponda |
 | `reparto.*` | esquema, si se paga la tierra, parte del dueño, la de la alianza (lo que queda), capital 0, honorarios; `numero` sólo si coincide con uno de los cinco esquemas del libro |
 | `flujo.firmas` | calendario de ventas del motor (vertical: preventa pareja en sus meses y lo demás al entregar; macrolotes y residencial: `abs` unidades al mes desde el inicio de ventas; casa: una unidad en el mes de la venta). Se comprueba contra los cobros del motor; si no cuadra (un libro que escalona por edificio), no se entrega |
-| `flujo.enganches`, `flujo.saldos`, `flujo.pagos_obra` | vertical: los tres términos con que el motor arma sus cobros (se comprueba que sumen la cobranza mes a mes) |
+| `flujo.enganches`, `flujo.saldos`, `flujo.pagos_obra` | vertical: los tres términos con que el motor arma sus cobros (se comprueba que sumen la cobranza mes a mes). Macrolotes sin renta: el enganche de cada venta al firmar y lo que se cobra después (saldo al entregar la nave o mensualidades del lote), del mismo calendario que ya se comprueba contra la cobranza. Casa: enganche y pagos durante la obra en 0 (el motor cobra toda la venta al escriturar) |
 | `flujo.disposicion`, `flujo.pago_banco` | Δdeuda = interés capitalizado + desembolso + comisión − pago (identidad del motor). La disposición es lo que crece la deuda en el mes; así lo que entra y sale del banco cuadra con la caja |
 | `flujo.respaldo`, `flujo.pago_respaldo`, `flujo.saldo_respaldo` | Δcaja − Δdeuda − (cobranza − costo − interés − comisión + capital): cuando falta es respaldo, cuando sobra se cura |
 | `flujo.cap_acum`, `flujo.saldo_capital`, `flujo.flujo_acum`, `flujo.ajeno`, `flujo.apertura` | acumulados y la comisión del motor mes a mes |
 | `flujo.total.obra … cierre` | el desglose de costos del motor en totales (sin serie mensual), para el cuadro 4. Macrolotes no tiene cierre de tierra (0): su regalía al dueño no es costo de la tierra, va en lo que él recibe |
-| `productos.*.ventas`, `precio_unidad`, `precio_m2` | vertical: ventas de vivienda × m² de la tipología ÷ m² de vivienda (el motor cobra el mismo $/m² a todas); promedio = ventas ÷ unidades o ÷ m² |
+| `productos.*.ventas`, `precio_unidad`, `precio_m2` | vertical: ventas de vivienda × m² de la tipología ÷ m² de vivienda (el motor cobra el mismo $/m² a todas); promedio = ventas ÷ unidades o ÷ m² (en esas tipologías el precio por m² de lista se corrige al promedio, que sí lleva el descuento de preventa). Un producto con ventas en 0 no lleva precio promedio |
+| `flujo.total.cierre` | casa: 0 (su motor no cobra gastos de cierre de la compra del terreno) |
 | `v.que_cambia` | las entradas que cambian contra la versión anterior, con el nombre de su deslizante |
 
 Antes de entregar, cada serie deducida se compara con los totales del propio motor (desembolsos = `debtDraws`, respaldo pendiente = `fundingGap`); si no cuadran, no se entregan.
 
 ### Lo que se corrige para que cuadre
 
-Pocas cosas, anotadas en `deducido` como «corregido: …» y listadas en `aseo.corregidos`: `v.resultado_repartir` (no lleva el capital adentro ni resta ya la tierra), `v.banco_mes` (es el mes en que se liquida, no el del saldo máximo), `v.alianza_recibe` en macrolotes y residencial (sin su capital, que el visor ya pinta aparte), `v.respaldo` (el máximo pendiente, no sólo el del cierre), `v.rv_falta` (la suma) y `flujo.disposicion` del libro vertical (con la comisión y el interés capitalizado). Lo demás que ya traía la foto queda igual.
+Pocas cosas, anotadas en `deducido` como «corregido: …» y listadas en `aseo.corregidos`: `v.resultado_repartir` (no lleva el capital adentro ni resta ya la tierra), `v.banco_mes` (es el mes en que se liquida, no el del saldo máximo), `v.alianza_recibe` en macrolotes y residencial (sin su capital, que el visor ya pinta aparte; y en 0 si no recupera su capital, en cualquier motor), `v.respaldo` (el máximo pendiente, no sólo el del cierre), `v.rv_falta` (la suma), `flujo.disposicion` del libro vertical (con la comisión y el interés capitalizado), `v.max_ajeno` y `flujo.ajeno` de la casa (con el capital aportado), `v.margen` del residencial con ganancia del visor y el precio por m² de las tipologías del vertical (el promedio). Lo demás que ya traía la foto queda igual.
+
+### Por qué va vacío lo que va vacío (15-nov-2026)
+
+Lo que el visor enseña y la foto deja vacío lleva su razón en la misma marca `deducido`, empezando con «no aplica:» (lo que el libro también deja en blanco o que el motor de plano no tiene: caja mínima, banco que nunca tiene saldo, partes del reparto que no son de la utilidad…) o «sin dato:» (lo que haría falta un supuesto: el calendario que no cuadra, la ganancia sin el sentido del visor…). Sale de `aseo.no_aplica` y `aseo.sin_llenar` (sin la parte del supuesto) y, para los totales del flujo, de lo que el motor no separa (enganches, pagos y saldos) o no guarda (caja mínima). El visor no la toma como deducción: el renglón dice «no aplica» o «sin dato» con la razón a la vista, y la explicación de esa cifra lo dice en lugar de «la dio el motor». Sólo lleva razón una ruta que de verdad va vacía (lo vigila `tests/visor-fotos-maquila.test.cjs`).
+
+Las marcas dicen de qué salen en palabras (nunca nombres de variables del motor) y los textos se cortan antes de los topes de `fotoLimpia_` (`reparto.esquema` y `plan.esquema` a 80, los textos de `v` a 200, el nombre de un producto a 60, una marca a 240), en palabra y con «…».
 
 **Tierra y ganancia con el sentido del visor (macrolotes y residencial).** En el visor, `v.tierra` es el valor de la tierra del caso, se pague o se aporte, y `v.ganancia` es la ganancia real después de la tierra a su valor (`v.margen` = ganancia ÷ ventas). Los módulos de esos dos motores traían el sentido del PPP de siempre (la tierra pagada en efectivo y la utilidad del motor, que es antes de la tierra que aporta el dueño). `sentidoVisor` sólo mapea, sin fórmula financiera nueva:
 

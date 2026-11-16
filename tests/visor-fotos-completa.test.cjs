@@ -151,8 +151,10 @@ test('residencial: resultado a repartir, banco y reparto con las definiciones de
   assert.ok(res.repagoTierra >= res.repagoObjetivo - 1 && res.honorarioDev === 0, 'el caso inventado repaga completa su tierra');
   assert.equal(b.v.ganancia, N.mdp(res.utilidadRepartible));
   assert.match(b.deducido['v.ganancia'], /utilidad repartible del motor/);
-  assert.equal(b.v.margen, null);
-  assert.ok(JSON.parse(f.conciliacion).vacios['v.margen']);
+  /* el margen del visor es esa ganancia entre ventas (el del motor es el de su utilidad antes de la tierra aportada) */
+  assert.equal(b.v.margen, N.r6(b.v.ganancia / b.v.ventas));
+  assert.match(b.deducido['v.margen'], /^corregido: ganancia real ÷ ventas/);
+  assert.ok(!(JSON.parse(f.conciliacion || '{}').vacios || {})['v.margen'], 'el margen ya no queda vacío');
   /* si la utilidad no alcanza a repagar la tierra, la ganancia queda vacía con su razón */
   const CORTO = Object.assign({}, RES, { renglon: Object.assign({}, RES.renglon, { inValorTierraM2: 4000 }) });
   const corto = completa(CORTO).fotos[0], rc = C.resultado('RESIDENCIAL', require('../scripts/visor-fotos/residencial.cjs'), CORTO, N.versionesDeRenglon(CORTO.renglon)[0], motor('RESIDENCIAL')).r;

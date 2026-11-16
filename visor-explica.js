@@ -23,6 +23,8 @@
  *   de         para lo que acomoda el visor (un cociente o una suma de cifras del libro): las cifras del grafo de las que
  *              sale; «De qué depende» dice de qué sale cada una (y `opera` va vacío: no es una fórmula del libro).
  *   fuente     de dónde sale, cuando no es una clave del Resumen ({v} = la versión que se ve).
+ *   foto       en una foto del PPP de siempre, lo que se dice en lugar de «cómo se calcula» cuando esa cifra sólo existe en
+ *              el libro del PPP 2 (etapa, candados, siguiente paso, pruebas de estrés).
  *
  * Tono: español de México, de tú, frases cortas, cifras con su unidad, sin adjetivos de venta. Este archivo no lleva
  * nombres de planes ni de personas, ni cifras de un plan, ni identificadores.
@@ -33,24 +35,24 @@
     /* ───────── Riesgo y estado · las nueve pruebas de la revisión para fondos ───────── */
     'v.rv_linea_ventas': {
       corto: 'Cuánto presta el banco por cada $100 de ventas.',
-      que: 'Qué parte de lo que se va a vender cubre el crédito del banco: de cada $100 de ventas, cuántos presta. En banca se le llama LTV sobre el valor de venta (LTGDV).',
+      que: 'Qué parte de lo que se va a vender cubre el crédito del banco: de cada $100 de ventas, cuántos presta (en banca, LTV sobre el valor de venta o LTGDV). Nunca pasa del tope sobre ventas que el libro le da al banco.',
       como: 'Línea del banco ÷ ventas. La línea es el crédito que el banco autoriza: el menor de sus tres topes (sobre la obra directa, sobre el costo con terreno y sobre las ventas).',
       cifras: [['ventas', 'v.ventas', 'mdp']],
       sin_cifra: 'La línea del banco no viene en esta pantalla.',
-      mejora: 'Baja con topes del banco más bajos o con precios más altos.',
-      empeora: 'Sube con topes más altos o si la obra cuesta más. Nunca pasa del tope sobre ventas que el libro le da al banco.',
+      mejora: 'Baja con topes del banco más bajos.',
+      empeora: 'Sube con topes más altos o si la obra cuesta más.',
       importa: 'Si las ventas salen más bajas de lo calculado, una línea grande deja poco margen para pagarle al banco. La revisión para fondos del PPP pide 65% o menos.',
       opera: ['palanca:usa_banco', 'modelo:tope_banco', 'modelo:ventas'],
       banco: true
     },
     'v.rv_linea_costo': {
       corto: 'Cuánto presta el banco por cada $100 de costo, terreno incluido.',
-      que: 'Qué parte del costo total del proyecto, terreno incluido, financia el banco: de cada $100 que cuesta, cuántos presta. En banca se le llama LTC (loan to cost).',
+      que: 'Qué parte del costo total del proyecto, terreno incluido, financia el banco: de cada $100 que cuesta, cuántos presta (en banca, LTC o loan to cost). Nunca pasa del tope sobre costo con terreno que el libro le da al banco.',
       como: 'Línea del banco ÷ costo con terreno. El costo con terreno es el costo sin terreno más el valor de la tierra.',
       cifras: [['costo sin terreno', 'v.costo_sin_tierra', 'mdp'], ['valor de la tierra', 'v.tierra', 'mdp']],
       sin_cifra: 'La línea del banco no viene en esta pantalla.',
       mejora: 'Baja con topes del banco más bajos; pero si el banco presta menos, revisa que no aparezca dinero faltante.',
-      empeora: 'Sube con topes más altos. Nunca pasa del tope sobre costo con terreno que el libro le da al banco.',
+      empeora: 'Sube con topes más altos.',
       importa: 'Entre más del costo ponga el banco, menos pone el proyecto y menos colchón queda si algo sale más caro. La revisión para fondos del PPP pide 50% o menos.',
       opera: ['palanca:usa_banco', 'modelo:tope_banco', 'modelo:costo_con_tierra'],
       banco: true
@@ -135,6 +137,7 @@
     /* ───────── Riesgo y estado · aguante, etapa, candados y siguiente paso ───────── */
     'estres': {
       figura: 'v.huella',
+      foto: 'El PPP de siempre no tiene pruebas de estrés: sólo los planes con libro (PPP 2) las corren.',
       corto: 'Cuántos golpes aguanta la versión sin que falte dinero ni se pierda.',
       que: 'Qué tan bien resiste esta versión si algo sale peor de lo calculado. Cada prueba de estrés cambia una sola cosa (precios, costo de obra, ritmo de ventas…) y vuelve a calcular el plan.',
       como: 'Cuenta las pruebas corridas con esta misma versión en las que no faltaría dinero y la ganancia sigue arriba de cero.',
@@ -148,6 +151,7 @@
     },
     'plan.edad': {
       corto: 'En qué etapa va el plan, de semilla a fruto.',
+      foto: 'El PPP de siempre no tiene esta cifra: sólo los planes con libro (PPP 2) la calculan.',
       que: 'En qué punto de su vida va el plan. Son cinco etapas: semilla, plántula, árbol, flor y fruto.',
       como: 'Semilla: todavía no calcula. Plántula: la versión que se muestra ya calcula con todos sus datos y productos. Árbol: el consejo de planes aprobó la versión vigente (5 de 7 votos, sin veto). Flor: además, todos sus candados están cerrados. Fruto: ya hay acuerdo firmado con el dueño.',
       cambia: 'Avanza al cumplir lo que pide la etapa siguiente (lo dice el siguiente paso). Retrocede si falta un dato que se necesita para calcular, o si cambian las cifras de la vigente: la aprobación del consejo vale sólo para esas cifras.',
@@ -156,6 +160,7 @@
     },
     'plan.candados_abiertos': {
       corto: 'Lo que falta resolver fuera de los números.',
+      foto: 'El PPP de siempre no tiene esta cifra: sólo los planes con libro (PPP 2) la calculan.',
       que: 'Lo que todavía falta resolver fuera del cálculo antes de presentar el plan a socios: por ejemplo, la tenencia de la tierra, el uso de suelo, el agua, la vialidad, el interés del banco y el acuerdo con los dueños.',
       como: 'Cuenta los candados de la pestaña Candados que están abiertos o en revisión.',
       cambia: 'Baja cada vez que se cierra un candado con su evidencia o se marca que no aplica.',
@@ -164,6 +169,7 @@
     },
     'plan.paso_texto': {
       corto: 'Lo que el plan necesita ahora para avanzar.',
+      foto: 'El PPP de siempre no tiene esta cifra: sólo los planes con libro (PPP 2) la calculan.',
       que: 'Lo que el plan necesita ahora para avanzar. Lo decide el libro con reglas fijas.',
       como: 'Sigue un orden: si faltan datos, capturarlos; si la versión no pasa la revisión para fondos, mover capital y arranque de obra (o armar otra propuesta si eso ya no alcanza); si pasa, probarla contra golpes, presentarla al consejo y que Dirección la vuelva vigente; después, cerrar candados y firmar el acuerdo.',
       cambia: 'Cambia en cuanto se cumple el paso de hoy.',
@@ -200,6 +206,7 @@
       corto: 'Lo que vale la tierra que aporta el dueño.',
       que: 'Lo que vale el terreno en esta versión. Es lo que aporta el dueño y lo que el reparto le reconoce.',
       como: 'Es la palanca Valor de la tierra de la versión; si la versión no trae la suya, toma el dato del plan. En Costo y ganancia se le suma el cierre de la compra.',
+      cifras: [['valor de la tierra', 'v.tierra', 'mdp'], ['cierre de tierra', 'flujo.total.cierre', 'mdp']],
       cambia: 'Un valor más alto sube el costo con terreno y baja la ganancia real, pero sube lo que recibe el dueño cuando el esquema le paga la tierra.',
       importa: 'Pesa en todo: entra al costo con terreno, a la revisión para fondos y a lo que recibe el dueño.',
       opera: ['palanca:tierra']
@@ -294,6 +301,7 @@
       corto: 'Proyecto, permisos, supervisión y administración.',
       que: 'Lo que cuesta lo que no es construir pero hace falta para hacerlo: proyecto, permisos, supervisión y administración. Son los costos indirectos (costo blando).',
       como: 'Un porcentaje de la obra directa. Una parte se gasta en el predesarrollo y el resto al ritmo de la obra.',
+      cifras: [['obra directa', 'flujo.total.obra', 'mdp'], ['indirectos', 'flujo.total.indirectos', 'mdp']],
       mejora: 'Bajan con un porcentaje menor o con menos obra directa.',
       empeora: 'Suben si sube la obra directa o el porcentaje.',
       importa: 'Una parte sale en el predesarrollo, cuando todavía no hay cobranza: ese dinero lo pone el capital.',
@@ -303,6 +311,7 @@
       corto: 'La reserva para lo que salga más caro de lo calculado.',
       que: 'Una reserva para lo que salga mal o más caro en la obra. Son las contingencias.',
       como: 'Un porcentaje de la obra directa, que se gasta al ritmo de la obra.',
+      cifras: [['obra directa', 'flujo.total.obra', 'mdp'], ['imprevistos', 'flujo.total.imprevistos', 'mdp']],
       mejora: 'Bajan con un porcentaje menor.',
       empeora: 'Suben con más obra directa o un porcentaje mayor.',
       importa: 'Es el colchón de la obra: sin él, cualquier sorpresa sale directo de la ganancia.',
@@ -312,6 +321,7 @@
       corto: 'Lo que se paga a quien vende, conforme se cobra.',
       que: 'Lo que se les paga a los vendedores o brokers por las ventas.',
       como: 'Comisión sobre ventas × lo que se cobra cada mes.',
+      cifras: [['ventas', 'v.ventas', 'mdp'], ['comisiones', 'flujo.total.comisiones', 'mdp']],
       mejora: 'Bajan con una comisión menor.',
       empeora: 'Suben con una comisión mayor.',
       importa: 'Se pagan conforme entra el dinero: crecen con las ventas.',
@@ -481,6 +491,7 @@
       corto: 'El colchón de caja que se exige desde que arranca la obra.',
       que: 'Un colchón de dinero que el proyecto debe tener en caja desde que arranca la obra.',
       como: 'Caja mínima (% del costo sin terreno) × costo sin terreno, exigida cada mes desde el arranque de obra.',
+      cifras: [['costo sin terreno', 'v.costo_sin_tierra', 'mdp']],
       cambia: 'Más caja mínima pide más dinero ajeno y sube el costo del dinero; menos, lo baja, con menos colchón.',
       importa: 'Es la regla de Dirección para no quedarse sin caja; el dinero que se guarda también hay que financiarlo.',
       opera: ['palanca:obra_inicio', 'modelo:caja_minima']
@@ -508,7 +519,7 @@
       corto: 'Todo lo que recibe el dueño al final.',
       que: 'Todo lo que recibe el dueño por aportar su tierra, según el esquema de reparto elegido.',
       como: 'El pago de su tierra, si el esquema lo hace antes de repartir, más su parte de la utilidad real: lo que queda para repartir menos los honorarios de la alianza, el costo del capital y la tierra que se paga.',
-      cifras: [['tierra', 'v.tierra', 'mdp'], ['resultado a repartir', 'v.resultado_repartir', 'mdp']],
+      cifras: [['tierra', 'v.tierra', 'mdp'], ['resultado a repartir', 'v.resultado_repartir', 'mdp'], ['rendimiento del capital', 'v.rend_capital', 'mdp']],
       mejora: 'Sube con más utilidad (mejores precios, menos costo, menos costo del dinero) o con un esquema que le dé más parte.',
       empeora: 'Baja si la utilidad baja o el esquema le da menos.',
       importa: 'Es lo que el dueño compara contra vender su terreno hoy.',
@@ -536,7 +547,7 @@
       corto: 'Lo que recibe la alianza por su trabajo y gestión.',
       que: 'Lo que recibe la alianza desarrolladora: su parte de la utilidad real más sus honorarios, si el esquema los tiene.',
       como: 'Parte de la alianza × utilidad real + honorarios de la alianza (un porcentaje de las ventas).',
-      cifras: [['resultado a repartir', 'v.resultado_repartir', 'mdp']],
+      cifras: [['resultado a repartir', 'v.resultado_repartir', 'mdp'], ['valor de la tierra', 'v.tierra', 'mdp'], ['rendimiento del capital', 'v.rend_capital', 'mdp']],
       mejora: 'Sube con más utilidad o un esquema que le dé más parte.',
       empeora: 'Baja si la utilidad baja.',
       importa: 'La alianza no pone dinero propio: cobra si el proyecto deja utilidad.',
@@ -587,12 +598,32 @@
     'visor.antes_intereses': {
       corto: 'Lo que dejan las ventas después de todos los costos, antes de intereses.',
       que: 'Lo que dejaría el proyecto antes de pagar el dinero ajeno: ventas menos el costo total con terreno. Es la utilidad antes de financiamiento.',
-      como: 'Ventas − (costo sin terreno + valor de la tierra). Esta resta la hace el visor con cifras del libro; entre el costo con terreno, es el margen sobre costo.',
+      como: 'Ventas − (costo sin terreno + valor de la tierra). Esta resta la hace el visor con cifras del libro; dividida entre el costo con terreno, es el margen sobre costo.',
       cifras: [['ventas', 'v.ventas', 'mdp'], ['costo sin terreno', 'v.costo_sin_tierra', 'mdp'], ['valor de la tierra', 'v.tierra', 'mdp']],
       mejora: 'Sube con precios más altos o costos más bajos.',
       empeora: 'Baja si los precios bajan o los costos suben.',
       importa: 'Menos el costo del dinero, da la ganancia real.',
       de: ['v.ventas', 'v.costo_sin_tierra', 'v.tierra'],
+      opera: []
+    },
+    'visor.intereses_apertura': {
+      corto: 'Lo que se le paga al banco por prestar: intereses y comisión de apertura.',
+      que: 'Lo que cuesta el dinero que no es del capital: los intereses y la comisión de apertura del banco (y, si en algún mes faltó dinero, lo que costó el respaldo).',
+      como: 'Costo del dinero − rendimiento del capital. Esta resta la hace el visor con dos cifras del libro: el rendimiento del capital va en su propio renglón, abajo.',
+      cifras: [['intereses', 'flujo.total.interes', 'mdp'], ['comisión de apertura', 'flujo.total.apertura', 'mdp'], ['costo del dinero', 'v.costo_dinero', 'mdp'], ['rendimiento del capital', 'v.rend_capital', 'mdp']],
+      cambia: 'Baja con tasas menores o si el banco se usa menos tiempo (saldos que se cobran antes, más enganche); sube si la obra o las ventas se alargan.',
+      importa: 'Es la parte del costo del dinero que se le paga al banco: sale de la ganancia antes de repartir.',
+      de: ['v.costo_dinero', 'v.rend_capital'],
+      opera: []
+    },
+    'visor.trimestre': {
+      corto: 'Lo que entró y salió en esos meses, sumado.',
+      que: 'Cada columna junta tres meses (seis, si el plan pasa de seis años): arriba lo que entró —clientes, banco, capital y respaldo— y abajo lo que salió —costos, banco, capital y respaldo—.',
+      como: 'Suma de los renglones mensuales del flujo en esos meses. Esta suma la hace el visor con cifras del libro, sólo para que las barras se lean.',
+      cifras: [],
+      cambia: 'Se mueve con todo lo que mueve el flujo: ritmo de ventas, enganches, obra, banco y capital.',
+      importa: 'Deja ver en qué meses el proyecto necesita dinero de fuera y cuándo empieza a devolverlo.',
+      de: ['flujo.cobranza', 'flujo.egresos'],
       opera: []
     }
   };

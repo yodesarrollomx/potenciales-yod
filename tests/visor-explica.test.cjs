@@ -60,13 +60,15 @@ test('cada prueba de la revisión para fondos y cada cifra que se toca en «Ries
   assert.match(texto(h), /toca un renglón con flecha para ver qué es y de qué depende/);
 });
 
-test('los siete cuadros: cada cifra que se toca trae su texto (salvo las columnas por trimestre de Dinero, que suman varias) y cada texto tiene lo que pide', () => {
+test('los siete cuadros: cada cifra que se toca trae su texto (también las columnas por trimestre de Dinero) y cada texto tiene lo que pide', () => {
   const d = datos(), p = visor.pinta(d, null);
   const claves = new Set();
   for (const c of p.cuadros) {
     for (const l of leyendas((c.svgG || '') + c.svg)) {
-      if (!l.x) assert.match(l.t, /^Meses \d+ a \d+$/, c.id + ': una cifra que se toca sin texto: ' + l.t);
-      else claves.add(l.x);
+      assert.ok(l.x, c.id + ': una cifra que se toca sin texto: ' + l.t);
+      if (/^Mes(es)? \d+( a \d+)?$/.test(l.t) && /suma de (tres|seis) meses/.test(l.o)) assert.equal(l.x, 'visor.trimestre', 'las columnas por trimestre también traen su texto');
+      if (!l.x) continue;
+      claves.add(l.x);
     }
     for (const s of c.detalle) for (const f of s.filas) if (f[3]) claves.add(f[3]);
     // en su hoja, el botón de la leyenda siempre encuentra su renglón
@@ -82,7 +84,7 @@ test('los siete cuadros: cada cifra que se toca trae su texto (salvo las columna
   for (const x of Object.keys(TEXTOS)) assert.ok(claves.has(x), 'texto que ninguna cifra usa: ' + x);
   // cuántos renglones se abren por cuadro (lo que no se abre son renglones de registro: candados, esquema por partes, desglose)
   const abren = Object.fromEntries(p.cuadros.map((c) => [c.id, [].concat(...c.detalle.map((s) => s.filas)).filter((f) => f[3]).length]));
-  assert.deepEqual(abren, { reparto: 9, terreno: 6, producto: 4, tiempo: 8, costo: 15, dinero: 15, riesgo: 13 });
+  assert.deepEqual(abren, { reparto: 9, terreno: 6, producto: 4, tiempo: 8, costo: 15, dinero: 16, riesgo: 13 });
   for (const [x, e] of Object.entries(TEXTOS)) {
     for (const k of ['corto', 'que', 'como', 'importa']) assert.ok(typeof e[k] === 'string' && e[k].trim(), x + ': falta ' + k);
     assert.ok(e.mejora || e.cambia, x + ': falta qué la mueve');
@@ -171,17 +173,17 @@ test('lo que acomoda el visor dice de qué cifras del libro sale; lo que no sale
   // un dato que el libro calcula si nadie lo escribe: de qué sale
   assert.match(texto(panel(h('terreno'), 'datos.lamina.m2_construidos')), /Sale directo de datos Huella en planta baja \(desplante\) · , Niveles sobre el terreno · , Planta baja cerrada/);
   // Costo y ganancia, Dinero y Reparto: sus cifras con lo que trae el servidor
-  assert.match(texto(panel(h('costo'), 'v.ganancia')), new RegExp('En esta versión: caja al cierre \\' + mdp(d.v.caja_cierre) + ' · valor de la tierra \\' + mdp(d.v.tierra)));
-  assert.match(texto(panel(h('dinero'), 'flujo.cobranza')), new RegExp('enganches \\' + mdp(d.flujo.total.enganches) + ' · pagos durante la obra \\' + mdp(d.flujo.total.pagos_obra) + ' · saldos \\' + mdp(d.flujo.total.saldos)));
+  assert.match(texto(panel(h('costo'), 'v.ganancia')), new RegExp('En esta versión: caja al cierre \\' + mdp(d.v.caja_cierre) + ' millones · valor de la tierra \\' + mdp(d.v.tierra) + ' millones'));
+  assert.match(texto(panel(h('dinero'), 'flujo.cobranza')), new RegExp('enganches \\' + mdp(d.flujo.total.enganches) + ' millones · pagos durante la obra \\' + mdp(d.flujo.total.pagos_obra) + ' millones · saldos \\' + mdp(d.flujo.total.saldos) + ' millones'));
   assert.match(texto(panel(h('reparto'), 'v.dueno_veces')), /Es un criterio de Dirección: el dueño debe recibir por lo menos el valor de su tierra/);
 });
 
 test('las cifras de «cómo se calcula» son las que trae el servidor, tal cual; lo que no trae se dice sin cifra (visor.js no calcula)', () => {
   const d = datos(), h = visor.detalleHtml(cuadro(d, 'riesgo'));
   const lc = texto(panel(h, 'v.rv_linea_costo'));
-  assert.match(lc, new RegExp('En esta versión: costo sin terreno \\' + mdp(d.v.costo_sin_tierra) + ' · valor de la tierra \\' + mdp(d.v.tierra) + ' \\.'));
+  assert.match(lc, new RegExp('En esta versión: costo sin terreno \\' + mdp(d.v.costo_sin_tierra) + ' millones · valor de la tierra \\' + mdp(d.v.tierra) + ' millones \\.'));
   assert.match(lc, /La línea del banco no viene en esta pantalla\./);
-  assert.match(lc, /Hoy El plan: 40\.0% · la revisión para fondos pide 50% o menos · sobran 10\.0 pts\./);
+  assert.match(lc, /Hoy El plan: 40\.0% · la revisión para fondos pide 50% o menos · sobran 10\.0 puntos\./);
   assert.match(texto(panel(h, 'v.rv_meses_credito')), new RegExp('el banco se liquida en el mes ' + d.v.banco_mes + ' · la obra arranca en el mes ' + d.v.obra_inicio));
   // ninguna cifra inventada: cada monto o mes del panel es uno que trajo el servidor (o el límite de la prueba)
   const servidas = new Set();
@@ -195,7 +197,7 @@ test('las cifras de «cómo se calcula» son las que trae el servidor, tal cual;
   const sin = datos(); delete sin.v.tierra;
   const t2 = texto(panel(visor.detalleHtml(cuadro(sin, 'riesgo')), 'v.rv_linea_costo'));
   assert.doesNotMatch(t2, /valor de la tierra \$/);
-  assert.match(t2, /costo sin terreno \$380\.0/);
+  assert.match(t2, /costo sin terreno \$380\.0 millones/);
   // el código que junta el texto no hace cuentas con las cifras: sólo las formatea
   const fuente = fs.readFileSync(path.join(RAIZ, 'visor.js'), 'utf8');
   const bloque = fuente.slice(fuente.indexOf('function cifraDe('), fuente.indexOf('function detalleHtml('));
@@ -249,7 +251,7 @@ test('una foto del PPP de siempre: el renglón dice que la cifra salió del moto
   d.deducido = { 'v.rv_aportacion': '(tierra que aporta el dueño + capital usado) ÷ costo con tierra' };
   const h = visor.detalleHtml(cuadro(d, 'riesgo'));
   const ap = texto(panel(h, 'v.rv_aportacion'));
-  assert.match(ap, /Cómo se calcula Deducido de \(tierra que aporta el dueño \+ capital usado\) ÷ costo con tierra\./);
+  assert.match(ap, /Cómo se calcula Deducido: \(tierra que aporta el dueño \+ capital usado\) ÷ costo con tierra\./);
   assert.match(ap, /sale del motor de su tablero del PPP de siempre \(es una foto\)/);
   assert.doesNotMatch(ap, /Sale directo de|Mejora:|palanca Capital|capital comprometido no viene/, 'nada del grafo ni de lo verificado contra el libro');
   assert.match(ap, /PPP · VERTICAL · versión «Base» · foto del 1-ene-2026$/);
