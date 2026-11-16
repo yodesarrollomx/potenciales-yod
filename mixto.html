@@ -1599,7 +1599,11 @@
     context:()=>({native:!!sheetModel,caseId:caso.caso_id,scenarioId:escActivo,identity:clave,
       ready:!!sheetModel&&!modoLocal&&!sheetNeedsRefresh&&!sheetPending&&!sheetFailure&&!sheetBusy&&!volumeOperation&&!stageOperation}),
     read:apiGet,write:apiPost,busy:value=>{sheetBusy=value;},
-    refresh:async id=>{const m=await apiGet({recurso:'sheet-model',id:caso.caso_id});if(!acceptSheetModel(m,id))throw Error('visor_readback_failed');}
+    refresh:async id=>{const caseId=caso.caso_id,credential=clave;return window.PPPLandUI.selectVersion({caseId,scenarioId:id,
+      current:()=>caso.caso_id===caseId&&clave===credential&&!modoLocal,
+      read:()=>apiGet({recurso:'sheet-model',id:caseId}),
+      activate:revision=>apiPost({tipo:'sheet-version',accion:'activar',caso_id:caseId,escenario_id:id,revision_esperada:revision,request_id:nuevoRequestId()}),
+      accept:acceptSheetModel});}
   });
   intakeBoard=window.PPPIntake.mountBoard({type:'vertical',controls,adapter:window.PPPIntake.nativeAdapter({type:'vertical',get:apiGet,post:apiPost}),onOpen:()=>{caseReader.invalidate();casePresentation('ready','');},onStart:(draft,receipt)=>{
     retireVolumeIdentity();caseReader.invalidate();casePresentation('ready','');sheetModel=null;sheetPending=null;sheetNeedsRefresh=false;sheetFailure=false;sheetBusy=false;state=null;legacySavedInputs=null;

@@ -12,6 +12,17 @@
   const money=x=>number(x)?new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:0}).format(x):'—';
   const qty=x=>number(x)?x.toLocaleString('es-MX',{maximumFractionDigits:2}):'—';
   function valid(r,c){return !!(r?.ok&&r.schema==='native-land-in-kind-v1'&&r.case_id===c.caseId&&typeof r.revision==='string'&&Array.isArray(r.versions)&&r.versions.some(v=>v.id===r.scenario_id));}
+  async function selectVersion(options){
+    const current=options.current||(()=>true),id=options.scenarioId;
+    let model=await options.read();
+    if(!current())throw Error('selection_changed');
+    if(model?.caso_id!==options.caseId||!model.revision||!model.escenarios?.some(v=>v.id===id))throw Error('version_readback_failed');
+    // Native clones start inactive; only the active version includes its full flow.
+    if(model.activo!==id)model=await options.activate(model.revision);
+    if(!current())throw Error('selection_changed');
+    if(model?.caso_id!==options.caseId||model.activo!==id||!Array.isArray(model.estados?.[id]?.flows)||!options.accept(model,id))throw Error('version_activation_failed');
+    return model;
+  }
   function mount(options){
     const doc=options.document||document,host=doc.createElement('details');host.id='pppLand';host.className='ppp-land';
     host.innerHTML='<summary>Pago del terreno · comparar acuerdos</summary><div class="land-body"><p>Anticipo en efectivo y saldo en viviendas. Cada acuerdo conserva su propia versión.</p><button type="button" class="small-btn" data-load>Leer acuerdos guardados</button><p role="status" data-status></p><div data-editor></div><div data-comparison></div></div>';
@@ -62,5 +73,5 @@
     function update(){const c=ctx(),key=[c.identity,c.caseId,c.scenarioId].join('|');host.hidden=!c.native;if(key!==identity&&!busy){identity=key;data=null;dirty=false;epoch++;host.querySelector('[data-editor]').replaceChildren();host.querySelector('[data-comparison]').replaceChildren();status('Lee los acuerdos de esta versión para editarlos.');}disable();}
     update();return{update,read};
   }
-  root.PPPLandUI={mount,valid};if(typeof module!=='undefined')module.exports=root.PPPLandUI;
+  root.PPPLandUI={mount,valid,selectVersion};if(typeof module!=='undefined')module.exports=root.PPPLandUI;
 })(typeof window==='undefined'?globalThis:window);
