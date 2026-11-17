@@ -1,6 +1,19 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-17T20:00:17.372696+00:00",
-  "changes": [],
+  "checked_at": "2026-11-17T20:05:23.148044+00:00",
+  "changes": [
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-native.html",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/voz-native.html",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-gateway.js",
+      "status": "added"
+    }
+  ],
   "scope": "Huellas del corte y nuevos archivos de código en las carpetas analizadas; datos y secretos excluidos."
 }
