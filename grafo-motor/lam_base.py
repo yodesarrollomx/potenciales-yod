@@ -29,7 +29,7 @@ def slug(s):
     return re.sub(r'[^a-z0-9]+', '-', s.lower()).strip('-')
 
 # ── tableros (filas del mapa) ─────────────────────────────────────────────────────────────────────
-AREAS = [('despacho', 'El Despacho'), ('ppp', 'PPP'), ('mercado', 'Mercado Hermosillo'), ('codes', 'Codesarrollos y Miramar'), ('moac', 'MOAC'), ('flujo', 'Flujo'),
+AREAS = [('despacho', 'El Despacho'), ('ppp', 'PPP'), ('codes', 'Codesarrollos y Miramar'), ('moac', 'MOAC'), ('flujo', 'Flujo'),
          ('aurum', 'AURUM'), ('brokers', 'Masterbrokers'), ('embudo', 'Embudo y Sala'), ('obra', 'Obra en vivo'), ('control', 'Control, cabina y Portero'),
          ('asistentes', 'Asistentes y rutinas'), ('fuera', 'Fuera del menú'), ('drive', 'Sólo en Drive')]
 ANOM = dict(AREAS)
@@ -43,7 +43,11 @@ _area = {}
 
 def area_de(i):
     if i in _area: return _area[i]
-    a = _area_calc(i); _area[i] = a; return a
+    if i in {'SYS-PPP2', 'SHEET-PPP2', 'GAS-PPP2', 'CTR-PPP2'}:
+        return None
+    a = _area_calc(i)
+    _area[i] = 'brokers' if a == 'mercado' else a
+    return _area[i]
 
 def _mayoria(ids):
     c = collections.Counter(x for x in (area_de(j) for j in ids) if x)
