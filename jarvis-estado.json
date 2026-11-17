@@ -1,12 +1,24 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-17T21:06:02.206870+00:00",
+  "checked_at": "2026-11-17T21:11:12.527417+00:00",
   "changes": [
     {
       "file": "03_cli_panel/hermes_cli/web_server.py",
       "status": "modified",
       "sha256": "15661758c25a85004299a6d68f164bfb37e7e10887dddc443c7c6bc733d1f3a2",
       "baseline": "450289d43bb48e0df8906881ca4760fc8e4d92cf6e9b63e8fc5890a7231ce047"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/index.html",
+      "status": "modified",
+      "sha256": "eb2a9b7085685972d5eb2f1a10d027d3e029f195d1119f0568cd4ef37a1ede10",
+      "baseline": "0fc1320e046fb0e42f63b5c3df79ae42c22a5bda96914a32e673bad857d5a8f1"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis.html",
+      "status": "modified",
+      "sha256": "20c52fd8bacaafe904e65b5103ad7700cadbee0019ca96caf44a95844258c41c",
+      "baseline": "4ab8424f0423a00839c78e7de1c7bec19966bd0a9af8c3a4ce89c4cc16c4d620"
     },
     {
       "file": "03_cli_panel/hermes_cli/web_routers/native_gateway.py",
@@ -22,6 +34,10 @@
     },
     {
       "file": "06_yod/yod-voz/dashboard/jarvis-gateway.js",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-gateway-preview.js",
       "status": "added"
     }
   ],
