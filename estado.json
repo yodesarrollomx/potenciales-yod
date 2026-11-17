@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-17T23:10:53.714Z",
+ "generado": "2026-11-17T23:26:15.913Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -8,7 +8,7 @@
     "repo:yodesarrollomx/yod-portal"
    ],
    "desde": "2026-11-13T02:09:31Z",
-   "url": "https://github.com/yodesarrollomx/yod-portal/commit/80ddc7f83cbc0c76c93a26126693ba8262d3490c",
+   "url": "https://github.com/yodesarrollomx/yod-portal/commit/857fc4e657037ebbf686f94bad56fde698852841",
    "msg": "yod-portal cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
@@ -18,7 +18,7 @@
     "repo:yodesarrollomx/potenciales-yod"
    ],
    "desde": "2026-11-13T02:10:58Z",
-   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/cc405ca71ca4ecb76e9a115a1d2afea5b05514b5",
+   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/c2d24abfc13d7fa16773cf1a1c097da3b58e8893",
    "msg": "potenciales-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
@@ -40,18 +40,6 @@
    "desde": "2026-11-14T00:43:09Z",
    "url": "https://github.com/yodesarrollomx/board-flujo-yod/commit/1cef2f06d619d43afbc59957eb469520920a8740",
    "msg": "board-flujo-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
-  },
-  {
-   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-cada-hora.yml",
-   "tipo": "flujo",
-   "nodos": [
-    "sala-edicion::github_workflows_sala_cada_hora",
-    "repo:yodesarrollomx/sala-edicion",
-    "SYS-SALA"
-   ],
-   "desde": "2026-11-17T22:34:01Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/44191290228",
-   "msg": "Falló el flujo «Sala · Cada hora» de sala-edicion, trabajo «mesa / mesa», paso 14 «Avisar si algo falló»"
   },
   {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-revision.yml",
