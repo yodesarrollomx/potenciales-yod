@@ -46,7 +46,8 @@ for l in LAMS:
     n, m, tam = W.html_lamina(l, A, titulos, SAL_DIR)
     resumen.append((l.seccion, l.id, l.titulo, n, m, tam, l.padre))
 
-extra = []
+extra = [('Graphify tal cual', 'jarvis', 'Jarvis · código instalado y cambios', 'tablero-asistentes')]
+open(os.path.join(SAL_DIR, 'jarvis.html'), 'w', encoding='utf-8').write('<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><title>Jarvis · Graphify original</title><style>html,body,iframe{margin:0;width:100%;height:100%;border:0}a{font:14px system-ui}</style></head><body><a href="https://yodesarrollomx.github.io/yod-portal/jarvis/" target="_blank" rel="noopener">Abrir Jarvis y sus cambios en grande ↗</a><iframe src="https://yodesarrollomx.github.io/yod-portal/jarvis/" title="Grafo nativo de Jarvis con estado por huellas"></iframe></body></html>')
 
 # ── portada: una barra para hojear y el visor de Graphify debajo ──────────────────────────────────
 ORDEN = ['Mapa', 'Tableros', 'Pantallas propuestas', 'Negocio', 'Datos', 'Atlas del portal', 'Código', 'Graphify tal cual', 'Para leer']

@@ -1,17 +1,15 @@
 {
-  "model_revision": "2026-11-16.ppp-especie.1",
-  "proposal_id": "CHG-PPP-ESPECIE-20261116",
-  "summary": "Comparaciones explícitas del mismo caso muestran sólo sus escenarios configurados. El visor presenta anticipo, valor y equivalentes de vivienda y resultado neto del desarrollador leídos de la foto nativa. Sin escrituras de casos ni despliegue de servidor.",
+  "model_revision": "2026-11-16.jarvis-grafo.1",
+  "proposal_id": "CHG-JARVIS-GRAFO-20261116",
+  "summary": "Añadir al grafo de Accesos una lámina Jarvis vinculada al HTML real del portal y a su estado de huellas. Conserva las láminas aprobadas y los permisos.",
   "components": [
+    "SYS-CONTROL",
     "SYS-POTENCIALES",
-    "SYS-PPP2",
-    "SYS-CONTROL"
+    "SYS-YOD-OS"
   ],
   "tests": [
-    "node --test tests/visor-pestanas.test.cjs",
-    "node tests/visor-pestanas-browser.cjs",
-    "node scripts/versiones.cjs --check",
-    "Comparación real de tres fotos del mismo caso, sin duplicar anticipo o adjudicación."
+    "Regresiones de acceso y control del grafo.",
+    "Generación de la nueva lámina y enlace al HTML canónico; sin datos privados."
   ],
-  "rollback": "Revertir frontend y conservar hojas, fotos y liga configurada. No borrar registros ni restaurar históricos."
+  "rollback": "Revertir PR de publicación y detener sólo el verificador de grafo. Conservar archivos y permisos de PPP/Mercado."
 }
