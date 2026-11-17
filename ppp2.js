@@ -1625,6 +1625,9 @@
     if ((estado.planId && estado.fresco === false) || (!estado.planId && estado.viveroCopia)) fallo({ error: 'liga' });
   });
   window.addEventListener('yodcargador:sesion-cerrada', olvidaTodo);
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && estado.planId && estado.plan && estado.plan.resumen.esquema === 'ppp-libro-v3' && !estado.ocupado && !document.getElementById('p2Dialogo')) cargarPlan(true);
+  });
   window.addEventListener('hashchange', ruta);
   window.PPP2 = { estado: estado, recargar: function () { estado.vivero = null; estado.plan = null; ruta(); } };
   ruta();

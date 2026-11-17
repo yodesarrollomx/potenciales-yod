@@ -60,7 +60,7 @@
     var resto=Array.from(datos.keys()).filter(function(c){return !incluidas.has(c) && c!=='predio.alcance' && c!=='plan.caso_ppp';});
     return '<nav class="p2-migas"><a href="#/">Planes de potencial</a><span> / </span><span>'+esc(r['ppp.escenario'] || 'BASE')+'</span></nav>'+
       '<header class="p2-cabeza"><div><div class="p2-sobre">'+esc(r['ppp.etapa'] || 'Semilla')+'</div><h1>'+esc(r['plan.nombre'] || 'Plan de potencial')+'</h1>'+
-      '<p class="p2-intro">'+esc(r['plan.ubicacion'] || '')+'</p></div>'+libro('Abrir mi libro de Sheets','inicio','A1')+'</header>'+
+      '<p class="p2-intro">'+esc(r['plan.ubicacion'] || '')+'</p></div>'+libro('Abrir mi libro de Sheets','inicio','A1')+'<button class="p2-btn suave" type="button" data-accion="refrescar">Actualizar desde Sheets</button></header>'+
       '<section class="ppp-paso"><div class="p2-sobre">'+esc(r['ppp.decision'] || 'Explorar')+'</div><h2>'+esc(r['ppp.pregunta'] || 'Revisa la ruta del plan')+'</h2><div class="p2-acciones">'+respuesta+'</div></section>'+
       '<section><h2>Escenario '+esc(r['ppp.escenario'] || 'BASE')+'</h2><div class="ppp-resultados">'+
       [['Unidades del grupo','unidades',''],['Ventas potenciales','ventas','MXN'],['Renta potencial mensual','renta','MXN/mes'],['Efectivo recibido por el dueño','efectivo','MXN']].map(function(m){return '<div><small>'+esc(m[0])+'</small><strong>'+cifra(m[1],m[2])+'</strong></div>';}).join('')+'</div></section>'+
