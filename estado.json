@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-17T14:56:03.072Z",
+ "generado": "2026-11-17T21:02:58.147Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -50,7 +50,7 @@
     "SYS-SALA"
    ],
    "desde": "2026-11-16T20:38:25Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/43951867296",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/44108420852",
    "msg": "Falló el flujo «Montador de la mesa» de sala-edicion, trabajo «mesa», paso 14 «Avisar si algo falló»"
   },
   {
