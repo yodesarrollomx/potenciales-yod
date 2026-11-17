@@ -50,7 +50,7 @@ extra = [('Graphify tal cual', 'jarvis', 'Jarvis · código instalado y cambios'
 shutil.copyfile(os.path.join(AQUI, 'jarvis.html'), os.path.join(SAL_DIR, 'jarvis.html'))
 # Preserve old bookmarks after Mercado moved into Masterbrokers.
 with open(os.path.join(SAL_DIR, 'tablero-mercado.html'), 'w', encoding='utf-8') as old:
-    old.write('<!doctype html><html lang="es"><meta charset="utf-8"><meta name="robots" content="noindex"><meta http-equiv="refresh" content="0;url=tablero-brokers.html"><title>Mercado en Masterbrokers</title><a href="tablero-brokers.html">Abrir Mercado en Masterbrokers</a></html>')
+    old.write('<!doctype html><html lang="es"><meta charset="utf-8"><meta name="robots" content="noindex,nofollow,noarchive"><meta http-equiv="refresh" content="0;url=tablero-brokers.html"><title>Mercado en Masterbrokers</title><a href="tablero-brokers.html">Abrir Mercado en Masterbrokers</a></html>')
 
 
 # ── portada: una barra para hojear y el visor de Graphify debajo ──────────────────────────────────
