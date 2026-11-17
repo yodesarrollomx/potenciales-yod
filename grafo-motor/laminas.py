@@ -47,7 +47,11 @@ for l in LAMS:
     resumen.append((l.seccion, l.id, l.titulo, n, m, tam, l.padre))
 
 extra = [('Graphify tal cual', 'jarvis', 'Jarvis · código instalado y cambios', 'tablero-asistentes')]
-open(os.path.join(SAL_DIR, 'jarvis.html'), 'w', encoding='utf-8').write('<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><title>Jarvis · Graphify original</title><style>html,body,iframe{margin:0;width:100%;height:100%;border:0}a{font:14px system-ui}</style></head><body><a href="https://yodesarrollomx.github.io/yod-portal/jarvis/" target="_blank" rel="noopener">Abrir Jarvis y sus cambios en grande ↗</a><iframe src="https://yodesarrollomx.github.io/yod-portal/jarvis/" title="Grafo nativo de Jarvis con estado por huellas"></iframe></body></html>')
+shutil.copyfile(os.path.join(AQUI, 'jarvis.html'), os.path.join(SAL_DIR, 'jarvis.html'))
+# Preserve old bookmarks after Mercado moved into Masterbrokers.
+with open(os.path.join(SAL_DIR, 'tablero-mercado.html'), 'w', encoding='utf-8') as old:
+    old.write('<!doctype html><html lang="es"><meta charset="utf-8"><meta name="robots" content="noindex"><meta http-equiv="refresh" content="0;url=tablero-brokers.html"><title>Mercado en Masterbrokers</title><a href="tablero-brokers.html">Abrir Mercado en Masterbrokers</a></html>')
+
 
 # ── portada: una barra para hojear y el visor de Graphify debajo ──────────────────────────────────
 ORDEN = ['Mapa', 'Tableros', 'Pantallas propuestas', 'Negocio', 'Datos', 'Atlas del portal', 'Código', 'Graphify tal cual', 'Para leer']
@@ -95,7 +99,7 @@ function lista() { let grupo = null, og = null; sel.textContent = '';
   L.forEach(l => { if (l[2] !== grupo) { grupo = l[2]; og = document.createElement('optgroup'); og.label = grupo; sel.appendChild(og); }
     const o = document.createElement('option'); o.value = l[0]; o.textContent = l[1]; og.appendChild(o); }); }
 function marca(l) { actual = l; sel.value = l[0]; sube.disabled = !l[3]; if (location.hash.slice(1) !== l[0]) { try { history.replaceState(null, '', location.pathname + location.search + '#' + l[0]); } catch (e) {} } }
-function ir(id, nodo) { const l = L.find(x => x[0] === id) || L[0]; if (!l) return; marca(l);
+function ir(id, nodo) { if (id === 'tablero-mercado') id = 'tablero-brokers'; const l = L.find(x => x[0] === id) || L[0]; if (!l) return; marca(l);
   if (!CRUDO) { const src = l[0] + '.html' + (nodo ? '#' + encodeURIComponent(nodo) : ''); if (marco.getAttribute('src') !== src) marco.setAttribute('src', src); return; }
   const mio = ++turno;
   fetch(CRUDO + l[0] + '.html', { cache: 'no-store' }).then(r => r.ok ? r.text() : Promise.reject()).then(t => { if (mio !== turno) return;

@@ -1,15 +1,15 @@
 {
   "model_revision": "2026-11-16.jarvis-grafo.1",
   "proposal_id": "CHG-JARVIS-GRAFO-20261116",
-  "summary": "Añadir al grafo de Accesos una lámina Jarvis vinculada al HTML real del portal y a su estado de huellas. Conserva las láminas aprobadas y los permisos.",
+  "summary": "Accesos abre el grafo privado oficial de Jarvis, el HTML instalado y sus fuentes. La vista operativa integra Mercado en Masterbrokers y conserva el PPP vigente.",
   "components": [
     "SYS-CONTROL",
     "SYS-POTENCIALES",
     "SYS-YOD-OS"
   ],
   "tests": [
-    "Regresiones de acceso y control del grafo.",
-    "Generación de la nueva lámina y enlace al HTML canónico; sin datos privados."
+    "Generación con el exportador oficial Graphify y revisión de destinos del selector.",
+    "Pruebas de Accesos y del control de cambios."
   ],
   "rollback": "Revertir PR de publicación y detener sólo el verificador de grafo. Conservar archivos y permisos de PPP/Mercado."
 }

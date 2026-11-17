@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive"><title>Jarvis en Graphify · Accesos</title>
+<style>
+:root{color-scheme:light dark;font-family:system-ui,sans-serif;color:#182a33;background:#f4f6f5;--muted:#475e65;--line:#b8c9c7;--link:#005f58}*{box-sizing:border-box}body{margin:0}main{max-width:55rem;margin:auto;padding:clamp(1.25rem,5vw,4rem)}h1{font-size:clamp(2rem,6vw,3.4rem);margin:1rem 0 .35rem;letter-spacing:-.045em}h2{font-size:1.08rem;margin:0}p{line-height:1.55;color:var(--muted);margin:.35rem 0 1rem}a{color:var(--link);text-underline-offset:.19em}a:focus-visible,button:focus-visible{outline:3px solid #df8121;outline-offset:3px}.open{display:inline-block;background:#00655e;color:white;padding:.8rem 1.25rem;border-radius:.45rem;font-weight:700;text-decoration:none}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr));gap:1.15rem 2rem;margin-top:2rem}section{border-top:1px solid var(--line);padding-top:1rem}section a{display:inline-block;padding:.3rem 0;margin-right:1rem}details{margin:1rem 0}summary{cursor:pointer;color:var(--link)}ul{padding-left:1.3rem}li{overflow-wrap:anywhere;margin:.3rem 0}time{font-variant-numeric:tabular-nums}
+@media(prefers-color-scheme:dark){:root{background:#141e22;color:#ecf3f2;--muted:#b6c8ca;--line:#415459;--link:#83ded2}.open{background:#97e7db;color:#102e2b}}
+</style></head><body><main>
+<h1>Jarvis en Graphify</h1><p>Explora cómo se conectan las funciones, los archivos y las pruebas de Jarvis. Accede con tu cuenta del equipo.</p>
+<a class="open" href="https://app.graphify.com/alejandro-s-workspace/graph?repo=jarvis-contexto" target="_blank" rel="noopener">Abrir el grafo oficial ↗</a>
+<div class="grid">
+<section><h2>Panel y código</h2><p>Abre Jarvis en la Chromebook o consulta el HTML que se indexa en Graphify.</p>
+<a href="http://localhost:8080/dashboard-plugins/@astra/yod-voz/jarvis.html" target="_blank" rel="noopener">Abrir Jarvis en esta Chromebook</a>
+<a href="https://github.com/yodesarrollomx/jarvis-contexto/blob/main/plugins/astra/yod-voz/dashboard/jarvis.html" target="_blank" rel="noopener">Leer el HTML</a>
+<a href="https://github.com/yodesarrollomx/jarvis-contexto/find/main" target="_blank" rel="noopener">Buscar un archivo por su ruta</a></section>
+<section><h2>Notas y decisiones</h2><p>La guía enlaza cada fuente con su ubicación de trabajo.</p>
+<a href="https://drive.google.com/file/d/1u02xJyjCLXe_zn8eWF0_ZOA86sopx9Vc/view" target="_blank" rel="noopener">Guía en Drive</a>
+<a href="obsidian://open?vault=YOD%20OS&amp;file=20%20Tableros%2FJarvis%2FJarvis%202.0%20-%20Fuentes%20y%20enlaces">Abrir en Obsidian</a>
+<a href="https://drive.google.com/file/d/1zlmQSsD5YPj4npuC98_YILEfmcBiIM_N/view" target="_blank" rel="noopener">Mejoras de Hermes y videos</a></section>
+<section><h2>Cambios desde el corte</h2><p id="estado" role="status">Consultando la última comprobación…</p><details id="detalle" hidden><summary>Ver archivos que cambiaron</summary><ul id="archivos"></ul></details>
+<a href="https://github.com/yodesarrollomx/jarvis-contexto/commits/main/" target="_blank" rel="noopener">Historial del código indexado</a></section>
+<section><h2>Grafo HTML original</h2><p>Consulta la exportación del área YOD que se conserva en el portal.</p>
+<a href="https://yodesarrollomx.github.io/yod-portal/jarvis/data/06_yod-original.html" target="_blank" rel="noopener">Abrir el HTML de Graphify</a>
+<a href="https://yodesarrollomx.github.io/yod-portal/jarvis/" target="_blank" rel="noopener">Explorar las ocho áreas</a></section></div>
+</main><script>
+(async () => {
+  const estado=document.getElementById('estado'), fecha=new Intl.DateTimeFormat('es-MX',{dateStyle:'medium',timeStyle:'short'});
+  try {
+    const respuesta=await fetch('https://raw.githubusercontent.com/yodesarrollomx/potenciales-yod/grafo-datos/jarvis-estado.json',{cache:'no-store',signal:AbortSignal.timeout(10000)});
+    if(!respuesta.ok) throw Error();
+    const datos=await respuesta.json(), corte=new Date(datos.baseline), revision=new Date(datos.checked_at);
+    if(!Array.isArray(datos.changes)||!Number.isFinite(+revision)||!Number.isFinite(+corte)) throw Error();
+    const retrasado=Date.now()-revision>20*60*1000;
+    estado.textContent=datos.changes.length+' cambios frente al corte del '+fecha.format(corte)+'. Última comprobación '+fecha.format(revision)+'.'+(retrasado?' Comprobación pendiente de actualizar.':'');
+    for(const cambio of datos.changes){
+      const item=document.createElement('li');item.textContent=({added:'Nuevo',deleted:'Retirado',modified:'Modificado'}[cambio.status]||'Cambio')+' · '+cambio.file;
+      document.getElementById('archivos').append(item);
+    }
+    document.getElementById('detalle').hidden=!datos.changes.length;
+  } catch { estado.textContent='No se pudo consultar el monitor. El historial del código sigue disponible.'; }
+})();
+</script></body></html>
