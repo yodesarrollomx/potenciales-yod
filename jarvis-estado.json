@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-17T22:37:20.074236+00:00",
+  "checked_at": "2026-11-17T22:42:23.310109+00:00",
   "changes": [
     {
       "file": "01_motor/gateway/session_controls.py",
@@ -15,10 +15,28 @@
       "baseline": "15a567dc1637efb36254edbe4b92c70e442dbf4a412dae1960f2026f7bacfb04"
     },
     {
+      "file": "01_motor/gateway/session_settlement_recovery.py",
+      "status": "modified",
+      "sha256": "020b4ee6828f24a3abce006afe06161759558ccfc306e596cd6b22a11cca558c",
+      "baseline": "f33174eafa49c4ec5fe7dcf18fa70c8ed9fb8e232de86a1fb3ae66c36f1bf312"
+    },
+    {
+      "file": "01_motor/gateway/session_usage.py",
+      "status": "modified",
+      "sha256": "df94ee39eb86d461cafe83e0508ffe6ba5a0cd09303696ad4e997ebbc9647aac",
+      "baseline": "b8073660f2bc86910e6aac5d1bef793681ce341ea403999500f09afc5866eb65"
+    },
+    {
       "file": "01_motor/tui_gateway/contracts/canonical_sessions.py",
       "status": "modified",
       "sha256": "ed8842e10ece5c04850b887c36d068808459e27e3d8ff61b2975c207be58c94d",
       "baseline": "b6f9d9e4f0ef233b386f5dd56e406f4168c3e123abc892300e4f256d7f8eac4a"
+    },
+    {
+      "file": "01_motor/tui_gateway/contracts/common.py",
+      "status": "modified",
+      "sha256": "d397e6d771a11bed01cbcafbf1a2fbf923caf72870f4c2af3b297cba92e9c9e3",
+      "baseline": "ae02eaf1a42d3646beae4d1577af07b2f85decf03f7414379a1c7383fae247ae"
     },
     {
       "file": "03_cli_panel/hermes_cli/web_server.py",
