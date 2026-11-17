@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-16T19:37:15.132541-07:00",
-  "checked_at": "2026-11-17T14:17:00.501999+00:00",
+  "checked_at": "2026-11-17T14:22:02.660820+00:00",
   "changes": [
     {
       "file": "06_yod/yod-mayordomo-regla/__init__.py",
