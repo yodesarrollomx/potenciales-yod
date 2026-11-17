@@ -1,0 +1,1 @@
+El grafo de Accesos incorpora la lámina Jarvis desde grafo-motor/laminas.py. Apunta a https://yodesarrollomx.github.io/yod-portal/jarvis/ y comparte el recibo de huellas jarvis-estado.json de grafo-datos. La generación conserva el corte aprobado del resto del sistema; no aprueba otro borrador ni cambia las presentaciones. Propuesta CHG-JARVIS-GRAFO-20261116.
