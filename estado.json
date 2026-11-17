@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-17T21:02:58.147Z",
+ "generado": "2026-11-17T23:10:53.714Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -8,7 +8,7 @@
     "repo:yodesarrollomx/yod-portal"
    ],
    "desde": "2026-11-13T02:09:31Z",
-   "url": "https://github.com/yodesarrollomx/yod-portal/commit/ff71bae5876e00bc767e07cb400e76490bb080ff",
+   "url": "https://github.com/yodesarrollomx/yod-portal/commit/80ddc7f83cbc0c76c93a26126693ba8262d3490c",
    "msg": "yod-portal cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
@@ -40,6 +40,30 @@
    "desde": "2026-11-14T00:43:09Z",
    "url": "https://github.com/yodesarrollomx/board-flujo-yod/commit/1cef2f06d619d43afbc59957eb469520920a8740",
    "msg": "board-flujo-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
+  },
+  {
+   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-cada-hora.yml",
+   "tipo": "flujo",
+   "nodos": [
+    "sala-edicion::github_workflows_sala_cada_hora",
+    "repo:yodesarrollomx/sala-edicion",
+    "SYS-SALA"
+   ],
+   "desde": "2026-11-17T22:34:01Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/44191290228",
+   "msg": "Falló el flujo «Sala · Cada hora» de sala-edicion, trabajo «mesa / mesa», paso 14 «Avisar si algo falló»"
+  },
+  {
+   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-revision.yml",
+   "tipo": "flujo",
+   "nodos": [
+    "sala-edicion::github_workflows_sala_revision",
+    "repo:yodesarrollomx/sala-edicion",
+    "SYS-SALA"
+   ],
+   "desde": "2026-11-17T22:03:21Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/44186170238",
+   "msg": "Falló el flujo «Revisión continua de la Sala» de sala-edicion, trabajo «revision», paso 4 «Hidratar revisión anterior y adquirir mutex»"
   },
   {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-mesa.yml",
