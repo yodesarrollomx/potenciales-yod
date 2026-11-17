@@ -1,7 +1,17 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-17T20:25:35.390674+00:00",
+  "checked_at": "2026-11-17T20:30:40.114420+00:00",
   "changes": [
+    {
+      "file": "03_cli_panel/hermes_cli/web_server.py",
+      "status": "modified",
+      "sha256": "15661758c25a85004299a6d68f164bfb37e7e10887dddc443c7c6bc733d1f3a2",
+      "baseline": "450289d43bb48e0df8906881ca4760fc8e4d92cf6e9b63e8fc5890a7231ce047"
+    },
+    {
+      "file": "03_cli_panel/hermes_cli/web_routers/native_gateway.py",
+      "status": "added"
+    },
     {
       "file": "06_yod/yod-voz/dashboard/jarvis-native.html",
       "status": "added"
