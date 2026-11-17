@@ -1,7 +1,25 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-17T22:12:03.099712+00:00",
+  "checked_at": "2026-11-17T22:22:10.717666+00:00",
   "changes": [
+    {
+      "file": "01_motor/gateway/session_controls.py",
+      "status": "modified",
+      "sha256": "d33b427d6e9297f50407fd4425adda5947a7752ee93a8516d6bc69fc06cc38e1",
+      "baseline": "44624fbc34c86529db0963eb9dd2183b56b2c8034650053c6a6dc8c3556dc352"
+    },
+    {
+      "file": "01_motor/gateway/session_local_inventory.py",
+      "status": "modified",
+      "sha256": "8b93527311c4ad31e587c6d7deff1c283ba294f15a9b85b03a31833eadad6d5f",
+      "baseline": "15a567dc1637efb36254edbe4b92c70e442dbf4a412dae1960f2026f7bacfb04"
+    },
+    {
+      "file": "01_motor/tui_gateway/contracts/canonical_sessions.py",
+      "status": "modified",
+      "sha256": "ed8842e10ece5c04850b887c36d068808459e27e3d8ff61b2975c207be58c94d",
+      "baseline": "b6f9d9e4f0ef233b386f5dd56e406f4168c3e123abc892300e4f256d7f8eac4a"
+    },
     {
       "file": "03_cli_panel/hermes_cli/web_server.py",
       "status": "modified",
