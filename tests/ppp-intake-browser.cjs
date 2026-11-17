@@ -94,6 +94,7 @@ async function reviewStages(editor,writes,model){
   // An uncertain mutation survives a reload and is recovered by exact GET receipt only.
   uncertainNext=true;await page.locator('#'+required.id).evaluate((input,value)=>{input.value=String(value);input.dispatchEvent(new Event('input',{bubbles:true}));},required.min+2);
   await page.waitForFunction(()=>document.querySelector('[data-intake-board-status]')?.textContent.includes('por confirmar'));assert.equal(writes.length,4);
+  assert.ok((await page.locator('[data-intake-board-status]').textContent()).includes('Solicitud: '+writes[3].request_id));
   await page.reload();await page.locator('[data-intake-check]').waitFor({state:'visible'});await page.getByRole('button',{name:'Comprobar guardado',exact:true}).click();await page.waitForFunction(()=>document.querySelector('[data-intake-board-status]')?.textContent.includes('Ficha guardada en Sheets'));
   assert.equal(writes.length,4);assert.equal(await page.locator('#'+required.id).inputValue(),String(required.min+2));
   // A definitive pre-reservation rejection has no receipt: keep newest edits and reread before retry.

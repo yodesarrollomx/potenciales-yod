@@ -1,15 +1,16 @@
 {
-  "model_revision": "2026-11-16.jarvis-grafo.1",
-  "proposal_id": "CHG-JARVIS-GRAFO-20261116",
-  "summary": "Añadir al grafo de Accesos una lámina Jarvis vinculada al HTML real del portal y a su estado de huellas. Conserva las láminas aprobadas y los permisos.",
+  "model_revision": "2026-11-17.ppp-multiuso.1",
+  "proposal_id": "CHG-PPP-MULTIUSO-20261117",
+  "summary": "Programa multiuso: fórmulas nativas y grafo de dependencias, presupuestos excluyentes y diagnóstico de operaciones inciertas. Candidato sin activación financiera.",
   "components": [
-    "SYS-CONTROL",
     "SYS-POTENCIALES",
-    "SYS-YOD-OS"
+    "GAS-PORTERO",
+    "SHEET-PPP-MODELOS"
   ],
   "tests": [
-    "Regresiones de acceso y control del grafo.",
-    "Generación de la nueva lámina y enlace al HTML canónico; sin datos privados."
+    "Pruebas unitarias de compilación, dependencias y captura; datos sintéticos.",
+    "Evaluación nativa en copia aislada: cantidades, ventas, costos, faltantes y consolidado excluyente.",
+    "Protección de fórmulas e identidades y validación de entradas en plan de migración."
   ],
-  "rollback": "Revertir PR de publicación y detener sólo el verificador de grafo. Conservar archivos y permisos de PPP/Mercado."
+  "rollback": "Revertir el commit y retirar capacidad nueva. Conservar libros, histórico y operaciones pendientes; no borrar datos."
 }

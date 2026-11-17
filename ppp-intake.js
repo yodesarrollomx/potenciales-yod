@@ -194,7 +194,7 @@
     type=normalizeType(type);modelFor(type);
     const main=doc.querySelector('main.container');if(!main)return null;
     let draft=null,form=null,opening=false,active=false,banner=null,key=null,disposed=false,epoch=0,readingNotice=null;const viewGuard=createReadGuard();
-    let receipt=null,pending={},job=null,busy=false,saveError='',saveTimer=null,writeEpoch=0;
+    let receipt=null,pending={},job=null,busy=false,saveError='',saveDiagnostic='',saveTimer=null,writeEpoch=0;
     let stageEditor=null,stageHost=null,stageOperation=false,stageRefreshing=false,stagePending=false,stageJob=null,recoveredStage=false,stageResumeAllowed=false,leaving=false;
     let identity=getIdentity();
     async function resolveScope(){
@@ -217,7 +217,7 @@
     function readGuard(){const current=viewGuard.capture();return()=>!disposed&&current();}
     const dangerous='#btnWhats,#btnGuardar,#btnPropuesta,#gGuardarSolo,#gGuardarEnviar,#refreshJson,#applyJson,#exportJson,.preset-casa,.gate-mode,.rep-btn,.land-mode,#btnSoloLotes,#escBar button,[data-operation]';
     function persist(){if(!active||!draft||!key||identity!==getIdentity())return;try{
-      if(receipt){storage.removeItem(key);storage.setItem(key+':case:'+receipt.caso_id,JSON.stringify({schema:'ppp-intake-pending-v1',model_type:type,caso_id:receipt.caso_id,revision:receipt.revision,job,pending,stage_job:stageJob}));}
+      if(receipt){storage.removeItem(key);storage.setItem(key+':case:'+receipt.caso_id,JSON.stringify({schema:'ppp-intake-pending-v1',model_type:type,caso_id:receipt.caso_id,revision:receipt.revision,job,pending,diagnostic:saveDiagnostic,stage_job:stageJob}));}
       else storage.setItem(key,JSON.stringify(draft));
     }catch{if(banner)banner.querySelector('[data-intake-board-status]').textContent='La captura no se pudo conservar en este navegador. Mantén esta pestaña abierta.';}}
     function updateInput(el){
@@ -248,6 +248,7 @@
       const dot=doc.getElementById('syncDot');if(dot)dot.textContent='· captura local';
       if(receipt){if(dot)dot.textContent=busy?'· guardando':saveError||job?'· guardado por confirmar':Object.keys(pending).length?'· cambios pendientes':'· captura guardada en Sheets';if(name)name.textContent=draft.nombre_caso+' · ficha en Sheets';}
       if(banner){const stageCount=draft.stages?.count||1;banner.querySelector('.pi-kicker').textContent='FICHA DEL PLAN · '+stageCount+(stageCount===1?' ETAPA':' ETAPAS');const status=banner.querySelector('[data-intake-board-status]');status.textContent=receipt?(busy?'Guardando los datos en Sheets…':saveError==='case_operation_pending'?'Hay otro cambio pendiente en este libro. Este ajuste no se envió a las celdas; conservamos tus cantidades para releer y reintentar después.':['conflicto_revision','revision_rejected'].includes(saveError)?'Otra edición cambió el libro. Tus datos pendientes se conservan. Relee antes de continuar.':saveError==='input_rejected'?'Sheets rechazó este ajuste antes de escribir. Revisa tus cantidades; se conservan para corregir y reintentar.':saveError||job?'El guardado está por confirmar. Conservamos tus datos; comprueba el recibo antes de seguir.':Object.keys(pending).length?'Cambios pendientes de guardar.':'Ficha guardada en Sheets · revisión '+receipt.revision.slice(0,12)+'. El cálculo financiero de esta ficha aún no está conectado.'):((key?'Captura conservada en este navegador para tu sesión.':'Captura sólo en esta pestaña; mantenla abierta.')+' Esta ficha todavía no está guardada en Sheets. El cálculo financiero aún no está conectado.');
+        if(job&&saveError&&!busy)status.textContent+=diagnosticText({status:'uncertain',error:saveDiagnostic,request_id:job.request_id});
         const resume=banner.querySelector('[data-intake-stage-resume]');if(resume){resume.hidden=!recoveredStage||!stageResumeAllowed;resume.disabled=busy||stageOperation;}const retry=banner.querySelector('[data-intake-check]');if(retry){retry.hidden=!job&&!Object.keys(pending).length&&!recoveredStage;retry.disabled=busy||stageOperation||stageLocked()&&!recoveredStage||saveError==='conflicto_revision'&&!job;retry.textContent=recoveredStage?'Comprobar etapas':job?'Comprobar guardado':['case_operation_pending','revision_rejected','input_rejected'].includes(saveError)?'Releer y reintentar':'Guardar cambios pendientes';}}
       syncStageLock();
       stageEditor?.setContext(stageContext());
@@ -260,7 +261,7 @@
     function start(result){
       viewGuard.invalidate();clearReading();
       leaving=false;
-      receipt=result.status==='confirmed'?validateRead(result,{type}):null;pending={};job=null;busy=false;saveError='';writeEpoch++;
+      receipt=result.status==='confirmed'?validateRead(result,{type}):null;pending={};job=null;busy=false;saveError='';saveDiagnostic='';writeEpoch++;
       active=true;opening=false;draft=copy(result.draft);doc.body.classList.remove('ppp-intake-opening');doc.body.classList.add('ppp-intake-capture');
       if(receipt)draft={...draft,...copy(receipt.intake),inputs:Object.fromEntries(Object.entries(receipt.intake.inputs).filter(([,value])=>value!==null))};
       if(receipt){const url=new URL(win.location.href);url.searchParams.delete('new');url.searchParams.set('open',receipt.caso_id);win.history.replaceState(null,'',url);}
@@ -310,7 +311,7 @@
     }
     function deactivate(){
       viewGuard.invalidate();clearReading();
-      writeEpoch++;win.clearTimeout(saveTimer);receipt=null;pending={};job=null;busy=false;saveError='';
+      writeEpoch++;win.clearTimeout(saveTimer);receipt=null;pending={};job=null;busy=false;saveError='';saveDiagnostic='';
       stageEditor?.dispose();stageEditor=null;stageHost?.remove();stageHost=null;stageOperation=false;stageRefreshing=false;stagePending=false;stageJob=null;recoveredStage=false;stageResumeAllowed=false;
       closeForm();active=false;draft=null;doc.body.classList.remove('ppp-intake-capture');banner?.remove();banner=null;
       for(const [control,old] of original){control.removeEventListener('input',captureInput);control.removeEventListener('change',captureInput);control.type=old.type;control.step=old.step;control.value=old.value;control.disabled=old.disabled;control.removeAttribute('placeholder');if(old.title===null)control.removeAttribute('title');else control.setAttribute('title',old.title);control.closest('.input-group')?.classList.remove('pi-pending-input');}original.clear();main.querySelectorAll('.pi-stage-link').forEach(el=>el.remove());
@@ -318,7 +319,7 @@
     }
     function acceptSaved(response,expected){
       const confirmed=validateRead(response,{type,id:receipt.caso_id,request_id:expected.request_id,inputs:expected.intake.inputs});
-      receipt=confirmed;job=null;saveError='';
+      receipt=confirmed;job=null;saveError='';saveDiagnostic='';
       const values={...confirmed.intake.inputs,...pending};draft={...draft,...copy(confirmed.intake),inputs:Object.fromEntries(Object.entries(values).filter(([,v])=>v!==null))};
       for(const control of controls)control.value=own(draft.inputs,control.id)?draft.inputs[control.id]:'';
       paint();persist();
@@ -329,7 +330,7 @@
       try{const response=await adapter.update(copy(job));if(generation!==writeEpoch||owner!==getIdentity())return;
         if(prewriteRejected(response,job)){pending={...job.intake.inputs,...pending};job=null;saveError=response.error==='revision_conflict'?'revision_rejected':response.error==='intake_case_operation_pending'?'case_operation_pending':'input_rejected';persist();return;}
         if(response?.ok!==true)throw Error(response?.error||'sin_confirmacion');acceptSaved(response,job);}
-      catch(error){if(generation===writeEpoch){saveError=/revision|conflict/.test(error.message)?'conflicto_revision':'sin_confirmacion';}}
+      catch(error){if(generation===writeEpoch){saveDiagnostic=safeError(error.message);saveError=/revision|conflict/.test(error.message)?'conflicto_revision':'sin_confirmacion';}}
       finally{if(generation===writeEpoch){busy=false;paint();if(!saveError&&!job&&Object.keys(pending).length)saveTimer=win.setTimeout(flush,650);}}
     }
     async function checkSave(){
@@ -338,9 +339,9 @@
       if(!job&&['case_operation_pending','revision_rejected','input_rejected'].includes(saveError))return refreshBlocked();
       if(!job){return flush();}
       if(!active||!receipt||!adapter?.read||busy||identity!==getIdentity())return;busy=true;paint();const generation=writeEpoch,owner=identity;
-      try{const response=await adapter.read({id:receipt.caso_id,request_id:job.request_id});if(generation!==writeEpoch||owner!==getIdentity())return;if(response?.ok!==true)throw Error('sin_confirmacion');acceptSaved(response,job);
+      try{const response=await adapter.read({id:receipt.caso_id,request_id:job.request_id});if(generation!==writeEpoch||owner!==getIdentity())return;if(response?.ok!==true)throw Error(safeError(response?.error));acceptSaved(response,job);
         const fresh=await adapter.read({id:receipt.caso_id});if(generation!==writeEpoch||owner!==getIdentity())return;const latest=validateRead(fresh,{type,id:receipt.caso_id});receipt=latest;draft={...draft,...copy(latest.intake),inputs:Object.fromEntries(Object.entries({...latest.intake.inputs,...pending}).filter(([,v])=>v!==null))};for(const control of controls)control.value=own(draft.inputs,control.id)?draft.inputs[control.id]:'';persist();}
-      catch{if(generation===writeEpoch)saveError='sin_confirmacion';}
+      catch(error){if(generation===writeEpoch){saveDiagnostic=safeError(error.message);saveError='sin_confirmacion';}}
       finally{if(generation===writeEpoch){busy=false;paint();if(!saveError&&!job&&Object.keys(pending).length)saveTimer=win.setTimeout(flush,650);}}
     }
     async function refreshBlocked(){
@@ -363,7 +364,7 @@
           if(s.tipo!=='sheet-stages'||normalizeType(s.tipo_desarrollo)!==type||s.caso_id!==confirmed.caso_id||s.escenario_id!==(confirmed.activo||'base')||typeof s.revision_esperada!=='string'||!s.revision_esperada||typeof s.request_id!=='string'||!/^[-A-Za-z0-9_.:]{1,256}$/.test(s.request_id))throw Error('solicitud_invalida');
           stageJob={tipo:'sheet-stages',tipo_desarrollo:s.tipo_desarrollo,caso_id:s.caso_id,escenario_id:s.escenario_id,revision_esperada:s.revision_esperada,request_id:s.request_id,stages:win.PPPStages.validateStages(s.stages)};recoveredStage=true;stagePending=true;paint();persist();return;
         }catch{}}
-        if(cached.job){const j=cached.job;if(j.caso_id!==confirmed.caso_id||typeof j.revision_esperada!=='string'||!j.revision_esperada||typeof j.request_id!=='string'||!/^[-A-Za-z0-9_.:]{1,256}$/.test(j.request_id)||!validPatch(j.intake?.inputs))return;job=copy(j);saveError='sin_confirmacion';}
+        if(cached.job){const j=cached.job;if(j.caso_id!==confirmed.caso_id||typeof j.revision_esperada!=='string'||!j.revision_esperada||typeof j.request_id!=='string'||!/^[-A-Za-z0-9_.:]{1,256}$/.test(j.request_id)||!validPatch(j.intake?.inputs))return;job=copy(j);saveError='sin_confirmacion';saveDiagnostic=safeError(cached.diagnostic);}
         pending=copy(cached.pending);if(!job&&Object.keys(pending).length&&cached.revision!==confirmed.revision)saveError='conflicto_revision';
         const values={...confirmed.intake.inputs,...(job?.intake.inputs||{}),...pending};draft.inputs=Object.fromEntries(Object.entries(values).filter(([,v])=>v!==null));for(const control of controls)control.value=own(draft.inputs,control.id)?draft.inputs[control.id]:'';paint();persist();
       });return true;
