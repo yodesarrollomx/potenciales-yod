@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-16T19:37:15.132541-07:00",
-  "checked_at": "2026-11-17T14:32:09.421120+00:00",
+  "checked_at": "2026-11-17T14:37:11.564717+00:00",
   "changes": [
     {
       "file": "06_yod/yod-mayordomo-regla/__init__.py",
@@ -17,7 +17,7 @@
     {
       "file": "06_yod/yod-voz/dashboard/jarvis.html",
       "status": "modified",
-      "sha256": "283609fd684c03365519d84dd799cdaf65b80219f012bb20e9a6660d9c8af381",
+      "sha256": "f8c02b8074404f947992a6afbf3c39214436a7b92d747f7959a0ab54625520bb",
       "baseline": "434043a7034d5f6adaebb76b3a8b3ffe927242f6543294535abd7793c3a0da05"
     }
   ],
