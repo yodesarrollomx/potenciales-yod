@@ -1,25 +1,6 @@
 {
-  "baseline": "2026-11-16T19:37:15.132541-07:00",
-  "checked_at": "2026-11-17T14:57:21.674736+00:00",
-  "changes": [
-    {
-      "file": "06_yod/yod-mayordomo-regla/__init__.py",
-      "status": "modified",
-      "sha256": "53ccea1433f922e804cda8bcc49521f0f59c2da2c362b66c579762f8dd973869",
-      "baseline": "845383f7975ed0d7e57cb710a9ba98b20b8495d31d4c8c63775a99472dc60d37"
-    },
-    {
-      "file": "06_yod/yod-voz/dashboard/index.html",
-      "status": "modified",
-      "sha256": "0fc1320e046fb0e42f63b5c3df79ae42c22a5bda96914a32e673bad857d5a8f1",
-      "baseline": "1fcc60ce7860eb2492a079e28b5d10b898cd1bf76802cb886a5625b030161e9e"
-    },
-    {
-      "file": "06_yod/yod-voz/dashboard/jarvis.html",
-      "status": "modified",
-      "sha256": "4ab8424f0423a00839c78e7de1c7bec19966bd0a9af8c3a4ce89c4cc16c4d620",
-      "baseline": "434043a7034d5f6adaebb76b3a8b3ffe927242f6543294535abd7793c3a0da05"
-    }
-  ],
+  "baseline": "2026-11-17T14:43:58.441169+00:00",
+  "checked_at": "2026-11-17T14:59:46.824401+00:00",
+  "changes": [],
   "scope": "Huellas del corte y nuevos archivos de código en las carpetas analizadas; datos y secretos excluidos."
 }
