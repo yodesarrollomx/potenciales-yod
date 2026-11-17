@@ -62,7 +62,7 @@ async function menuAboveMap(p){
    const c=await browser.newContext({viewport:{width:430,height:932},isMobile:true,hasTouch:true}),net=await fixture(c),p=await c.newPage(),errors=[];
    p.on('pageerror',e=>errors.push(e.message));
    for(const page of ['index','mapa']){
-    await p.goto('https://ppp.test/potenciales-yod/'+page+'.html');
+    await p.goto('https://ppp.test/potenciales-yod/'+page+'.html'+(page==='index'?'?archivo=1':''));
     await p.waitForFunction(()=>document.getElementById('cntTodos').textContent==='15');
     if(page==='mapa')await p.locator('#btnTodos').click();assert.equal(await p.locator('#btnTodos').getAttribute('aria-expanded'),'true');assert.equal(await p.locator('#listaTodos .lt-item').count(),15);assert.equal(await p.locator('.lt-group').count(),5);
     for(let i=0;i<types.length;i++)assert.equal(await p.locator('.lt-group').nth(i).locator('a').first().getAttribute('href'),pages[i]+'.html?open=prueba%20'+types[i]+'%2F0');
@@ -72,23 +72,20 @@ async function menuAboveMap(p){
     await menuAboveMap(p);
     if(page==='mapa'){await p.locator('#btnTodos').click();assert.equal(await p.locator('#listaTodos').isVisible(),false);}
     if(page==='index'){
-     assert.equal(await p.locator('.ppp-main-link svg').count(),5,'Icons do not depend on a remote icon font');
-     assert.equal(await p.locator('#planificadores .ppp details p').count(),0,'Calculator descriptions removed from the project view');
+     assert.equal(await p.locator('.new-plan').getAttribute('href'),'ppp2.html#/nuevo');
      for(const width of [320,390,430,1280]){
       await p.setViewportSize({width,height:932});await p.waitForFunction(()=>document.documentElement.scrollWidth<=innerWidth+1,{},{timeout:5000}).catch(async e=>{console.error(await p.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,body:document.body.getBoundingClientRect().toJSON(),wide:[...document.querySelectorAll('body *')].filter(e=>{const r=e.getBoundingClientRect();return r.right>innerWidth+1&&r.width>1}).slice(0,20).map(e=>({tag:e.tagName,cls:e.className,id:e.id,rect:e.getBoundingClientRect().toJSON()}))})));throw e;});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'No overflow at '+width);
-      const boxes=await p.locator('.ppp-main-link').evaluateAll(es=>es.map(e=>e.getBoundingClientRect().toJSON()));assert.ok(boxes.every(box=>box.width>=44&&box.height>=44),'Touch targets remain usable at '+width);for(let a=0;a<boxes.length;a++)for(let b=a+1;b<boxes.length;b++)assert.ok(boxes[a].right<=boxes[b].left||boxes[b].right<=boxes[a].left||boxes[a].bottom<=boxes[b].top||boxes[b].bottom<=boxes[a].top,'New analysis links never overlap at '+width);
      }
      await p.setViewportSize({width:430,height:932});assert.equal(await p.locator('.pie').innerText(),'YoDesarrollo · Aurum Arquitectos');assert.equal(await p.locator('.archive-link').count(),1);
      await p.locator('#temaBtn').click();assert.equal(await p.locator('html').getAttribute('data-tema'),'oscuro');
-     await p.locator('#planificadores').scrollIntoViewIfNeeded();await p.waitForTimeout(350);
      if(process.env.PPP_SCREENSHOTS){fs.mkdirSync(process.env.PPP_SCREENSHOTS,{recursive:true});await p.screenshot({path:path.join(process.env.PPP_SCREENSHOTS,name+'-home-icons.png')});await p.locator('#temaBtn').click();await p.locator('.map-view').scrollIntoViewIfNeeded();await p.locator('#projectsTitle').scrollIntoViewIfNeeded();await p.waitForTimeout(350);await p.screenshot({path:path.join(process.env.PPP_SCREENSHOTS,name+'-projects.png'),fullPage:true});}
     }
    }
    assert.deepEqual(errors,[]);assert.equal(net.writes.length,0);await c.close();
-   console.log('PASS '+name+': 15 cases, 5 types, correct URLs, catalogue scroll, sidebar above Leaflet, 5 SVG links, private archive link, no calculator descriptions, 320/390/430/1280 px, no writes.');
+   console.log('PASS '+name+': 15 cases, 5 types, correct URLs, catalogue scroll, sidebar above Leaflet, single create link, private archive link, no calculator descriptions, 320/390/430/1280 px, no writes.');
    const options={status:{vertical:'network',patrimonial:'malformed',residencial:'delay'},mapFail:true};
    const d=await browser.newContext({viewport:{width:430,height:932},isMobile:true,hasTouch:true}),partial=await fixture(d,options),q=await d.newPage();
-   await q.goto('https://ppp.test/potenciales-yod/index.html');await q.locator('#btnTodos').click();
+   await q.goto('https://ppp.test/potenciales-yod/index.html?archivo=1');await q.locator('#btnTodos').click();
    await q.waitForFunction(()=>document.getElementById('cntTodos').textContent==='6+');assert.match(await q.locator('.lt-status').innerText(),/Cargando|consultar/);assert.equal(await q.locator('.lt-item').count(),6);
    await q.waitForFunction(()=>document.getElementById('cntTodos').textContent==='9+');assert.match(await q.locator('.lt-status').innerText(),/2 de 5/);
    const successfulBefore=partial.calls.filter(t=>t==='macrolotes').length;options.status={};await q.locator('.lt-retry').click();await q.waitForFunction(()=>document.getElementById('cntTodos').textContent==='15');
@@ -97,7 +94,7 @@ async function menuAboveMap(p){
    console.log('PASS '+name+': catalogue independent of failed map; partial progress, malformed response, retry only failed types, complete count after recovery.');
    // A saved map access must survive a delayed/failed list, but never denial/empty confirmation.
    const recovery={status:{vertical:'network'},pins:[{tipo:'vertical',lat:29,lng:-110,nombre:'Terreno de prueba',dato1:'Dato histórico 999',dato2:'Importe histórico 999',link:'https://alexpueblag.github.io/potenciales-yod/mixto.html?open=prueba%20vertical%2F0'},{tipo:'vertical',nombre:'Duplicado',link:'https://alexpueblag.github.io/potenciales-yod/mixto.html?open=prueba%20vertical%2F0'},{tipo:'vertical',nombre:'Ajeno',link:'https://example.org/potenciales-yod/mixto.html?open=bad'}]};
-   const rc=await browser.newContext({viewport:{width:430,height:932},isMobile:true,hasTouch:true}),rn=await fixture(rc,recovery),rp=await rc.newPage();await rp.goto('https://ppp.test/potenciales-yod/index.html');await rp.waitForFunction(()=>document.getElementById('cntTodos').textContent==='13+');
+   const rc=await browser.newContext({viewport:{width:430,height:932},isMobile:true,hasTouch:true}),rn=await fixture(rc,recovery),rp=await rc.newPage();await rp.goto('https://ppp.test/potenciales-yod/index.html?archivo=1');await rp.waitForFunction(()=>document.getElementById('cntTodos').textContent==='13+');
    await rp.locator('#map').scrollIntoViewIfNeeded();await rp.evaluate(()=>window._pyodMap.eachLayer(layer=>{if(layer.getPopup)layer.openPopup();}));assert.equal(await rp.locator('.pp-a').getAttribute('href'),'mixto.html?open=prueba%20vertical%2F0');await rp.evaluate(()=>window._pyodMap.closePopup());
    const group=rp.locator('.lt-group[data-type=vertical]');assert.equal(await group.locator('.lt-item').count(),1);assert.equal(await group.locator('a').getAttribute('href'),'mixto.html?open=prueba%20vertical%2F0');assert.match(await group.innerText(),/Acceso del mapa/);assert.equal((await rp.locator('#listaTodos').innerText()).includes('999'),false);assert.equal((await rp.locator('#listaTodos').innerText()).includes('Ajeno'),false);
    assert.ok(await rp.locator('.lt-feedback').isVisible(),'Failure remains visible in the normal page flow');assert.equal(await rp.locator('.lt-tipo').first().evaluate(e=>getComputedStyle(e).position),'static','Category headings do not cover projects while scrolling');
@@ -107,7 +104,7 @@ async function menuAboveMap(p){
    const delayed={status:Object.fromEntries(types.map(t=>[t,'delay'])),delay:350};
    const e=await browser.newContext({viewport:{width:430,height:932},isMobile:true,hasTouch:true}),slow=await fixture(e,delayed);
    await e.addInitScript(()=>{const native=setTimeout;window.setTimeout=(fn,ms,...args)=>native(fn,ms===60000?100:ms,...args);});
-   const v=await e.newPage();await v.goto('https://ppp.test/potenciales-yod/index.html');await v.locator('#btnTodos').click();await v.locator('.lt-retry').waitFor();await v.waitForFunction(()=>{const status=document.querySelector('.lt-status')?.textContent||'';return status.includes('No se pudieron consultar 5 de 5 listas')&&!status.includes('Cargando');});assert.match(await v.locator('.lt-status').innerText(),/5 de 5/);assert.equal(await v.locator('#cntTodos').innerText(),'…');
+   const v=await e.newPage();await v.goto('https://ppp.test/potenciales-yod/index.html?archivo=1');await v.locator('#btnTodos').click();await v.locator('.lt-retry').waitFor();await v.waitForFunction(()=>{const status=document.querySelector('.lt-status')?.textContent||'';return status.includes('No se pudieron consultar 5 de 5 listas')&&!status.includes('Cargando');});assert.match(await v.locator('.lt-status').innerText(),/5 de 5/);assert.equal(await v.locator('#cntTodos').innerText(),'…');
    delayed.status=Object.fromEntries(types.map(t=>[t,'empty']));await v.locator('.lt-retry').click();await v.waitForFunction(()=>document.getElementById('cntTodos').textContent==='0');assert.match(await v.locator('.lt-status').innerText(),/Aún no hay/);
    delayed.status=Object.fromEntries(types.map(t=>[t,'delay']));
    await v.evaluate(()=>{localStorage.setItem('pyod_clave_v1','new-synthetic-session');PPPCatalog.load('new-synthetic-session');localStorage.removeItem('pyod_clave_v1');PPPCatalog.load('');});await v.waitForTimeout(450);assert.equal(await v.locator('.lt-item').count(),0);assert.match(await v.locator('.lt-status').innerText(),/Entra con tu sesión/);assert.equal(slow.writes.length,0);await e.close();

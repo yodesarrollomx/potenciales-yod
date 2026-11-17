@@ -50,6 +50,8 @@ async function reviewStages(editor,writes,model){
   for(const [tag]of legacyHtml.matchAll(/<input\b[^>]*type="range"[^>]*>/g)){const id=tag.match(/\bid="([^"]+)"/)?.[1],value=tag.match(/\bvalue="([^"]+)"/)?.[1];if(id&&Number.isFinite(Number(value)))legacyInputs[id]=Number(value);}
   const preserved=JSON.stringify({caso:{caso_id:'old-synthetic-case',nombre_caso:'OLD_CASE_SENTINEL',version:7},inputs:legacyInputs,escenarios:[{id:'old-synthetic-version',nombre:'OLD_VERSION_SENTINEL',esBase:true,inputs:copy(legacyInputs)}],escActivo:'old-synthetic-version'});
   await context.addInitScript(({key,value})=>{if(!sessionStorage.getItem('intake-test-seeded')){localStorage.setItem(key,value);sessionStorage.setItem('intake-test-seeded','1');}},{key:oldKey,value:preserved});
+  // El editor histórico se prueba aislado. La ruta publicada de alta se cubre en index-entry y ppp2-browser.
+  await context.route('**/ppp-entrada.js*', route=>route.fulfill({contentType:'application/javascript',body:''}));
   await page.goto('https://ppp.test/potenciales-yod/'+intake.models[type].page+'?new=1');
   const form=page.locator('.ppp-intake');await form.getByRole('heading',{name:'Empieza con lo que ya sabes'}).waitFor({timeout:10000}).catch(async error=>{console.error({type,width,errors,body:(await page.locator('body').innerText()).slice(0,1600)});throw error;});
   assert.equal(await form.locator('[name=model_type]').isDisabled(),true);
@@ -148,6 +150,7 @@ async function reviewStages(editor,writes,model){
   if(request.method()==='GET'&&url.searchParams.get('recurso')==='sheet-intake')return route.fulfill({contentType:'application/json',body:JSON.stringify({ok:false,error:'receipt_not_found',request_id:url.searchParams.get('request_id')})});
   return route.fallback();
  });
+ await replayContext.route('**/ppp-entrada.js*',route=>route.fulfill({contentType:'application/javascript',body:''}));
  await replayPage.goto('https://ppp.test/potenciales-yod/residencial.html?new=1');const replayForm=replayPage.locator('.ppp-intake');await replayForm.locator('[name=nombre_caso]').fill('Reenvío sintético');await replayForm.locator('[name=ubicacion]').fill('Ubicación sintética');await replayForm.locator('[name=inSuperficie]').fill('500');await replayForm.getByRole('button',{name:'Abrir mi plan'}).click();await replayForm.getByRole('button',{name:'Comprobar guardado',exact:true}).waitFor();
  assert.equal(await replayForm.getByRole('button',{name:'Reintentar misma solicitud',includeHidden:true}).isVisible(),false);assert.match(await replayForm.locator('[data-intake-status]').textContent(),/ocupado/);
  await replayForm.getByRole('button',{name:'Comprobar guardado',exact:true}).click();await replayForm.getByRole('button',{name:'Reintentar misma solicitud',exact:true}).waitFor();assert.equal(replayPosts.length,1,'receipt lookup never resubmits automatically');

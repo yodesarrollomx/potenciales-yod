@@ -1,15 +1,20 @@
 {
-  "model_revision": "2026-11-16.jarvis-grafo.1",
-  "proposal_id": "CHG-JARVIS-GRAFO-20261116",
-  "summary": "Accesos abre el grafo privado oficial de Jarvis, el HTML instalado y sus fuentes. La vista operativa integra Mercado en Masterbrokers y conserva el PPP vigente.",
+  "model_revision": "2026-11-17.ppp-unico.1",
+  "proposal_id": "CHG-PPP-UNICO-20261117",
+  "summary": "Una entrada para todos los planes nuevos. El Vivero crea un libro limpio por oportunidad y el portal consulta allí los factores, la siguiente pregunta y los escenarios.",
   "components": [
-    "SYS-CONTROL",
+    "SYS-YOD-OS",
+    "SYS-DESPACHO",
+    "GAS-PORTERO",
     "SYS-POTENCIALES",
-    "SYS-YOD-OS"
+    "SYS-PPP2",
+    "GAS-PPP2",
+    "SHEET-PPP2",
+    "SYS-CONTROL"
   ],
   "tests": [
-    "Generación con el exportador oficial Graphify y revisión de destinos del selector.",
-    "Pruebas de Accesos y del control de cambios."
+    "Alta por nombre, reapertura del mismo libro, factor con fuente y comparación de escenarios.",
+    "Acceso histórico por sus enlaces, control de roles y ausencia de expedientes en la plantilla."
   ],
-  "rollback": "Revertir PR de publicación y detener sólo el verificador de grafo. Conservar archivos y permisos de PPP/Mercado."
+  "rollback": "Restituir la referencia anterior de plantilla y revertir la entrada del portal. Conservar los libros ya creados y su registro."
 }
