@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-17T23:07:37.969715+00:00",
+  "checked_at": "2026-11-17T23:12:42.355802+00:00",
   "changes": [
     {
       "file": "01_motor/gateway/session_controls.py",
@@ -39,6 +39,18 @@
       "baseline": "ae02eaf1a42d3646beae4d1577af07b2f85decf03f7414379a1c7383fae247ae"
     },
     {
+      "file": "03_cli_panel/hermes_cli/kanban_pr_acceptance.py",
+      "status": "modified",
+      "sha256": "3b94be9cf168ed3428a632eb9bfaa09ac2e26798a3994a634107e3911412c425",
+      "baseline": "6a1c9bd41a4b36b9a55bff940bd6aeac4e24e9290829e20f10fd5386f89e21df"
+    },
+    {
+      "file": "03_cli_panel/hermes_cli/kanban_pr_acceptance_store.py",
+      "status": "modified",
+      "sha256": "e6738d3d5cf6541f801d17879a353c5323571fe383148dd076952a30d8f64b22",
+      "baseline": "cb5ad362162a645a2f5ae9042b86c9980bcc8a4212bddd6d1fb3d63b46fdc8cc"
+    },
+    {
       "file": "03_cli_panel/hermes_cli/web_server.py",
       "status": "modified",
       "sha256": "15661758c25a85004299a6d68f164bfb37e7e10887dddc443c7c6bc733d1f3a2",
@@ -55,6 +67,10 @@
       "status": "modified",
       "sha256": "20c52fd8bacaafe904e65b5103ad7700cadbee0019ca96caf44a95844258c41c",
       "baseline": "4ab8424f0423a00839c78e7de1c7bec19966bd0a9af8c3a4ce89c4cc16c4d620"
+    },
+    {
+      "file": "03_cli_panel/hermes_cli/kanban_artifact_acceptance.py",
+      "status": "added"
     },
     {
       "file": "03_cli_panel/hermes_cli/web_routers/native_gateway.py",
