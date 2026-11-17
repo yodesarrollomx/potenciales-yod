@@ -232,11 +232,15 @@
   function fallo(r) {
     var e = (r && r.error) || 'red';
     if (RECHAZOS.indexOf(e) >= 0) {
-      raiz.innerHTML = '<div class="p2-error"><h2>Tu sesión ya no sirve aquí</h2><p>Entra de nuevo con tu correo de YOD y vuelve a abrir PPP 2.</p>' +
+      raiz.innerHTML = '<div class="p2-error"><h2>Tu sesión ya no sirve aquí</h2><p>Entra de nuevo con tu correo de YOD y vuelve a abrir el PPP.</p>' +
         '<button class="p2-btn oro" data-accion="entrar">Entrar con mi correo</button></div>';
       return;
     }
-    raiz.innerHTML = '<div class="p2-error"><h2>No pude abrir PPP 2</h2><p>' + esc(ERRORES[e] || 'El servidor no respondió. Revisa tu conexión e intenta de nuevo.') + '</p>' +
+    if (e === 'board') {
+      raiz.innerHTML = '<div class="p2-error"><h2>Tu acceso corresponde al archivo de Potenciales</h2><a class="p2-btn" href="index.html?archivo=1">Abrir mis expedientes anteriores</a></div>';
+      return;
+    }
+    raiz.innerHTML = '<div class="p2-error"><h2>No pude abrir el PPP</h2><p>' + esc(ERRORES[e] || 'El servidor no respondió. Revisa tu conexión e intenta de nuevo.') + '</p>' +
       '<button class="p2-btn" data-accion="reintentar">Intentar de nuevo</button></div>';
   }
   function sinSesion() {
@@ -248,7 +252,7 @@
     if (!token()) { sinSesion(); return; }
     var t = token(), previo = recuerda('vivero', '');
     if (previo) { estado.vivero = previo.data; estado.viveroCopia = { visto: previo.ts, sinRed: false }; pintarVivero(); }
-    else cargando('Abriendo el vivero…');
+    else cargando('Abriendo planes de potencial…');
     leer('ppp2-vivero').then(function (r) {
       if (r && r.ok) memoriza('vivero', '', r, t);
       if (estado.planId) return;                          // ya se fue a un plan
@@ -309,7 +313,11 @@
   }
   function pintarVivero() {
     var v = estado.vivero, puede = v.puede || {};
-    var tarjetas = (v.planes || []).map(function (p) {
+    var anteriores = location.hash === '#/anteriores';
+    var planes = (v.planes || []).filter(function (p) { return anteriores ? p.paso !== 'captura_v3' : p.paso === 'captura_v3'; });
+    var tarjetas = planes.map(function (p) {
+      if (!anteriores) return '<a class="p2-tarjeta" href="#/plan/' + esc(p.plan_id) + '"><h2>' + esc(p.nombre) + '</h2><p>' +
+        esc(p.ubicacion) + '</p><div class="p2-chico">' + esc(p.siguiente_pregunta) + '</div></a>';
       if (p.error) return '<div class="p2-tarjeta"><h2>' + esc(p.nombre) + '</h2><p class="p2-tenue">No pude leer su libro.</p></div>';
       return '<a class="p2-tarjeta" href="#/plan/' + esc(p.plan_id) + '">' +
         '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center">' + edad(p.edad) + chip('V' + p.version + ' · ' + (p.version_estado || ''), claseEstado(p.version_estado)) + '</div>' +
@@ -324,21 +332,27 @@
         chip((p.candados_abiertos || 0) + ' candados abiertos', p.candados_abiertos ? 'rojo' : 'verde') + chip((p.preguntas_abiertas || 0) + ' preguntas abiertas', 'gris') + '</div></a>';
     }).join('');
     raiz.innerHTML = refresco(estado.viveroCopia) +
-      '<div class="p2-cabeza"><div><div class="p2-sobre">Plan de Potencial 2</div><h1>El vivero</h1>' +
-      '<p class="p2-intro">Cada plan nace como semilla y crece con cada dato que se confirma. El plan mismo investiga, pregunta lo que más mueve el resultado y propone versiones; Dirección decide cuál queda vigente.</p></div>' +
-      (puede.editar ? '<button class="p2-btn oro" data-accion="sembrar"><i class="ti ti-seedling"></i> Sembrar un plan</button>' : '') + '</div>' +
-      (tarjetas ? '<div class="p2-rejilla">' + tarjetas + '</div>' : '<div class="p2-vacio">Todavía no hay planes en el vivero.</div>') +
-      '<p class="p2-tenue p2-chico" style="margin-top:24px">El PPP actual sigue igual en Potenciales; PPP 2 vive aparte y no lo toca.</p>';
+      '<div class="p2-cabeza"><div><h1>' + (anteriores ? 'Planes anteriores' : 'Planes de potencial') + '</h1>' +
+      '<p class="p2-intro">' + (anteriores ? 'Expedientes del Vivero pendientes de migración.' : 'Empieza con el nombre del terreno. Cada dato que agregas queda en su libro y define la siguiente pregunta.') + '</p></div>' +
+      (!anteriores && puede.editar && !estado.viveroCopia ? '<button class="p2-btn oro" data-accion="sembrar"><i class="ti ti-seedling"></i> Crear plan en blanco</button>' : '') + '</div>' +
+      (tarjetas ? '<div class="p2-rejilla">' + tarjetas + '</div>' : '<div class="p2-vacio">' + (anteriores ? 'No hay expedientes anteriores en este registro.' : 'Todavía no hay planes en el nuevo sistema.') + '</div>') +
+      ((v.planes || []).some(function (p) { return !!p.error; }) ? '<p role="status">Hay libros que no se pudieron leer. <button class="p2-btn suave" data-accion="refrescar">Volver a consultar</button></p>' : '') +
+      '<nav class="p2-acciones"><a class="p2-btn suave" href="' + (anteriores ? '#/' : '#/anteriores') + '">' + (anteriores ? 'Volver a planes de potencial' : 'Consultar expedientes anteriores') + '</a>' +
+      (anteriores ? '<a class="p2-btn suave" href="index.html?archivo=1">Abrir mapa y archivo histórico</a>' : '') + '</nav>';
+    if (location.hash === '#/nuevo' && !estado.viveroCopia) {
+      history.replaceState(null, '', location.pathname + location.search + '#/');
+      if (puede.editar) dialogoSembrar();
+    }
   }
   function dialogoSembrar() {
-    abrirDialogo('<h2>Sembrar un plan</h2><p class="p2-tenue">Con estos datos nace la semilla. Lo demás lo va preguntando el plan.</p>' +
+    abrirDialogo('<h2>Crear plan en blanco</h2><p class="p2-tenue">Sólo necesitas un nombre. Puedes completar los demás datos después.</p>' +
       '<form class="p2-form" data-form="sembrar">' +
       '<label>Nombre del plan<input name="nombre" required minlength="3" maxlength="80" autocomplete="off"></label>' +
       '<label>Ubicación<input name="ubicacion" maxlength="300"></label>' +
       '<label>Tipo de proyecto<input name="tipo" maxlength="200" placeholder="Vertical, lotes, casas, mixto…"></label>' +
       '<label>Qué se quiere conseguir<textarea name="objetivo" maxlength="500" rows="3"></textarea></label>' +
       '<label>Superficie del terreno (m²)<input name="terreno_m2" inputmode="decimal"></label>' +
-      '<div class="p2-acciones"><button class="p2-btn oro" type="submit">Sembrar</button><button class="p2-btn suave" type="button" data-accion="cerrar">Cancelar</button></div></form>');
+      '<div class="p2-acciones"><button class="p2-btn oro" type="submit">Crear plan</button><button class="p2-btn suave" type="button" data-accion="cerrar">Cancelar</button></div></form>');
   }
 
   /* ───────── plan ───────── */
@@ -347,6 +361,11 @@
      Lo demás (versiones lado a lado, preguntas, rondas y bitácora) vive en el expediente, cerrado hasta que se pide. */
   function pintarPlan() {
     var p = estado.plan, r = p.resumen || {}, v = ver(), puede = p.puede || {};
+    if (r.esquema === 'ppp-libro-v3') {
+      raiz.innerHTML = (estado.fresco ? '' : refresco({ visto: estado.visto, sinRed: estado.sinRed })) +
+        window.PPPUnico.dibujar(p, { esc: esc, fresco: estado.fresco, valor: valorDato });
+      return;
+    }
     var vers = (p.versiones || []).map(function (x) {
       return '<button class="p2-vbtn" data-accion="version" data-v="' + x.numero + '" aria-pressed="' + (x.numero === estado.version) + '">' +
         '<b>V' + x.numero + ' · ' + esc(x.nombre || '') + '</b><span>' + esc(x.estado || '') + (num(x.dueno_recibe) !== null ? ' · dueño ' + mdpCorto(x.dueno_recibe) + ' MDP' : '') +
@@ -1332,8 +1351,9 @@
       }
       toast((r && r.nota) || mensaje || 'Guardado: el libro recalculó.', !!(r && r.nota));
       cerrarDialogo();
-      if (cuerpo.tipo === 'ppp2-sembrar') { estado.vivero = null; location.hash = '#/plan/' + r.plan_id; return r; }
+      if (cuerpo.tipo === 'ppp2-sembrar') { olvida('vivero', ''); estado.vivero = null; location.hash = '#/plan/' + r.plan_id; return r; }
       if (estado.planId) {
+        estado.vivero = null; olvida('vivero', '');
         // la respuesta trae el plan ya leído: se pinta sin volver a pedirlo
         if (r.plan && r.plan.ok === true && r.plan.plan_id === estado.planId) {
           memoriza('plan', estado.planId, r.plan, t);
@@ -1357,12 +1377,13 @@
   function editarDato(claveDato) {
     var d = (estado.plan.datos || []).filter(function (x) { return x.clave === claveDato; })[0];
     if (!d) return;
+    var opciones = estado.plan.resumen.esquema === 'ppp-libro-v3' ? window.PPPUnico.opciones(claveDato, estado.plan.resumen) : null;
     var esNumero = NUMERICAS.indexOf(d.unidad) >= 0;
     var mostrado = d.unidad === '%' && num(d.valor) !== null ? Math.round(d.valor * 10000) / 100 : d.valor;
     abrirDialogo('<h2>' + esc(d.concepto) + '</h2><form class="p2-form" data-form="dato" data-clave="' + esc(d.clave) + '" data-unidad="' + esc(d.unidad) + '">' +
       '<label>Valor ' + (d.unidad && d.unidad !== 'texto' ? '(' + esc(d.unidad === '%' ? '% · escribe 30 para 30%' : d.unidad) + ')' : '') +
-      (esNumero ? '<input name="valor" inputmode="decimal" value="' + esc(mostrado == null ? '' : mostrado) + '">' : '<textarea name="valor" rows="2">' + esc(d.valor || '') + '</textarea>') + '</label>' +
-      '<label>Estado<select name="estado">' + ['confirmado', 'supuesto', 'por confirmar', 'en conflicto', 'derivado', 'falta'].map(function (e) { return '<option' + (e === d.estado ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></label>' +
+      (opciones ? '<select name="valor">' + opciones.map(function (x) { return '<option' + (x === d.valor ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>' : esNumero ? '<input name="valor" inputmode="decimal" value="' + esc(mostrado == null ? '' : mostrado) + '">' : '<textarea name="valor" rows="2">' + esc(d.valor || '') + '</textarea>') + '</label>' +
+      '<label>Estado<select name="estado">' + ['confirmado', 'supuesto', 'por confirmar', 'en conflicto', 'derivado', 'falta'].map(function (e) { return '<option' + (e === (d.estado || (estado.plan.resumen.esquema === 'ppp-libro-v3' ? 'por confirmar' : 'confirmado')) ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></label>' +
       '<label>Fuente<textarea name="fuente" rows="2">' + esc(d.fuente || '') + '</textarea></label>' +
       '<div class="p2-acciones"><button class="p2-btn oro" type="submit">Guardar</button><button class="p2-btn suave" type="button" data-accion="cerrar">Cancelar</button></div></form>');
   }
@@ -1526,7 +1547,9 @@
     var tipo = f.getAttribute('data-form'), d = new FormData(f);
     if (tipo === 'sembrar') {
       var m2 = aNumero(d.get('terreno_m2'), 'm²');
-      enviar({ tipo: 'ppp2-sembrar', nombre: d.get('nombre'), ubicacion: d.get('ubicacion'), tipo_proyecto: d.get('tipo'), objetivo: d.get('objetivo'), terreno_m2: isNaN(m2) ? '' : m2 }, 'Plan sembrado.');
+      var firma = JSON.stringify([d.get('nombre'),d.get('ubicacion'),d.get('tipo'),d.get('objetivo'),m2]);
+      if (f.pppFirma !== firma) { f.pppFirma = firma; f.pppSolicitud = rid(); }
+      enviar({ tipo: 'ppp2-sembrar', request_id: f.pppSolicitud, nombre: d.get('nombre'), ubicacion: d.get('ubicacion'), tipo_proyecto: d.get('tipo'), objetivo: d.get('objetivo'), terreno_m2: isNaN(m2) ? '' : m2, fuente: 'Captura inicial en el PPP' }, 'Plan creado en Sheets.');
       return;
     }
     if (tipo === 'dato') {

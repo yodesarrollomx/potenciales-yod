@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<script src="ppp-entrada.js?v=20261117-ppp-unico"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=20261031-fase1-e2"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/yod-cargador.js?v=20261031-fase1-e2"></script><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex,nofollow">
 <title>Planes de potencial · YoDesarrollo</title>
@@ -11,12 +12,9 @@
 <link rel="stylesheet" href="https://yodesarrollomx.github.io/yod-portal/os/shell.css?v=20261031-fase1-e2">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/leaflet-gesture-handling@1.2.2/dist/leaflet-gesture-handling.min.css">
-<script>
-  // Compatibilidad: los enlaces viejos ?open=ID (correos ya enviados) eran del board mixto.
-  (function(){var q=new URLSearchParams(location.search);var id=q.get('open');if(id){var t=q.get('t')||'mixto';var pag={mixto:'mixto.html',vertical:'mixto.html',macrolotes:'macrolotes.html'}[t]||'mixto.html';location.replace(pag+'?open='+encodeURIComponent(id))}})();
-</script>
-<link rel="stylesheet" href="ppp-home.css?v=20261116-opciones-pago">
-<link rel="stylesheet" href="ppp-catalog.css?v=20261116-opciones-pago">
+
+<link rel="stylesheet" href="ppp-home.css?v=20261117-ppp-unico">
+<link rel="stylesheet" href="ppp-catalog.css?v=20261117-ppp-unico">
 </head>
 <body>
 <header id="pppHomeHeader">
@@ -41,7 +39,7 @@
 </section>
 
   <section class="panel projects-panel" aria-labelledby="projectsTitle">
-    <div class="projects-heading"><div><span class="kick">YoDesarrollo</span><h1 class="serif" id="projectsTitle">Planes de potencial</h1></div><a class="new-plan" href="#planificadores">Nuevo análisis <span aria-hidden="true">+</span></a></div>
+    <div class="projects-heading"><div><span class="kick">YoDesarrollo</span><h1 class="serif" id="projectsTitle">Archivo de planes de potencial</h1></div><a class="new-plan" href="ppp2.html#/nuevo">Crear plan en blanco <span aria-hidden="true">+</span></a></div>
     <label class="project-search">Buscar proyecto<input id="projectSearch" type="search" placeholder="Nombre del proyecto" autocomplete="off"></label>
     <div class="todos"><button id="btnTodos" type="button"><i class="ti ti-folder"></i> Proyectos guardados <span class="n" id="cntTodos">…</span><span class="lt-chevron" aria-hidden="true">▾</span></button>
     <div id="listaTodos"></div></div>
@@ -65,26 +63,6 @@
 
 <a class="archive-link" href="https://docs.google.com/spreadsheets/d/1Ld2ytzwYniIXmxu_TuLViN4hPILSg-xMbFpFgPnqf7Y/edit#gid=2026101901" target="_blank" rel="noopener"><span><b>Archivo de proyectos y análisis previos</b><small>Estudios, propuestas y antecedentes con sus fuentes</small></span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg></a>
 
-<div class="wrap" id="planificadores">
-  <div class="titulo-botones"><h2 class="serif">Nuevo análisis</h2></div>
-  <div class="grid">
-    <article class="ppp on">
-      <a class="ppp-main-link" href="macrolotes.html?new=1"><span class="icono"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V10l6 3V9l6 3V3h4v18H3Z"/><path d="M6 17h1m4 0h1m5 0h1"/></svg></span><h2>Macrolotes</h2><span class="estado">Empezar ficha <span aria-hidden="true">↗</span></span></a>
-    </article>
-    <article class="ppp on">
-      <a class="ppp-main-link" href="mixto.html?new=1"><span class="icono"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V7l9-4v18m0-12h5v12M3 21h18M8 9h3m-3 4h3m-3 4h3m6-4h1m-1 4h1"/></svg></span><h2>Uso mixto</h2><span class="estado">Empezar ficha <span aria-hidden="true">↗</span></span></a>
-    </article>
-    <article class="ppp on">
-      <a class="ppp-main-link" href="residencial.html?new=1"><span class="icono"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Zm6-3v15m6-12v15M3 12l6-3 6 3 6-3"/></svg></span><h2>Lotes residenciales</h2><span class="estado">Empezar ficha <span aria-hidden="true">↗</span></span></a>
-    </article>
-    <article class="ppp on">
-      <a class="ppp-main-link" href="patrimonial.html?new=1"><span class="icono"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V4h8v3M3 12l9 3 9-3m-9 1v4"/></svg></span><h2>Patrimonial</h2><span class="estado">Empezar ficha <span aria-hidden="true">↗</span></span></a>
-    </article>
-    <article class="ppp on">
-      <a class="ppp-main-link" href="unifamiliar.html?new=1"><span class="icono"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h14V9m-10 12v-7h6v7"/></svg></span><h2>Unifamiliar</h2><span class="estado">Empezar ficha <span aria-hidden="true">↗</span></span></a>
-    </article>
-  </div>
-</div>
 <footer class="pie">YoDesarrollo · Aurum Arquitectos</footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -155,9 +133,9 @@
   if(clave){cargar(clave).then(()=>{$('mapGate').classList.add('off');ajusta()},e=>{if(esRechazoDeCredencial(e)&&typeof window!=='undefined'&&window.YodCargador&&window.YodCargador.v&&!window.YodCargador.legacy&&window.YodCargador.sesion&&typeof window.YodCargador.sesion.cerrar==='function'){window.YodCargador.sesion.cerrar({token:claveDeArranque,motivo:String(e&&e.message||e)});$('mgErr').textContent='La clave cambió';return}throw e}).catch(e=>{if(esRechazoDeCredencial(e)){localStorage.removeItem(LSK);$('mgErr').textContent='La clave cambió'}})}
 })();
 </script>
-<script src="ppp-catalog.js?v=20261116-opciones-pago"></script>
-<script src="ppp-libro.js?v=20261116-opciones-pago"></script>
-<script src="portero.js?v=20261116-opciones-pago"></script>
+<script src="ppp-catalog.js?v=20261117-ppp-unico"></script>
+<script src="ppp-libro.js?v=20261117-ppp-unico"></script>
+<script src="portero.js?v=20261117-ppp-unico"></script>
 <script src="https://yodesarrollomx.github.io/yod-portal/os/shell.js?v=20261031-fase1-e2"></script>
 </body>
 </html>

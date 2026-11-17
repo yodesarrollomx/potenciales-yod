@@ -311,7 +311,7 @@ function mundo(opciones) {
         if (drive.archivos[id]) return archivoDoble(id);
         if (drive.carpetas[id]) return carpetaDoble(id);        // como Drive: una carpeta también se abre por su id
         return {
-          makeCopy: () => { const nuevo = 'libro-copia-' + (++copias); libros[nuevo] = libroDeAccesorio(undefined, nuevo); return { getId: () => nuevo }; },
+          makeCopy: () => { const nuevo = 'libro-copia-' + (++copias); libros[nuevo] = libroDeAccesorio(undefined, nuevo); if (op.prepararCopia) op.prepararCopia(libros[nuevo]); return { getId: () => nuevo }; },
           getLastUpdated: () => {
             if (op.driveCaido) throw new Error('Drive no contesta');
             if (!libros[id]) throw new Error('no existe ' + id);

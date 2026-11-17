@@ -63,7 +63,7 @@ async function pagina(navegador, base, w, llave, opciones) {
   const page = await ctx.newPage();
   const errores = [];
   page.on('pageerror', (e) => errores.push(e.message));
-  await page.goto(base + '/ppp2.html' + (op.query || '') + (op.hash || ''));
+  await page.goto(base + '/ppp2.html' + (op.query || '') + (op.hash === undefined ? '#/anteriores' : op.hash));
   return { ctx, page, posts, gets, errores };
 }
 
@@ -99,7 +99,7 @@ async function foto(page, nombre) {
 (async () => {
   const s = await servidor();
   const base = 'http://127.0.0.1:' + s.address().port;
-  const navegador = await chromium.launch();
+  const navegador = await chromium.launch(process.env.BROWSER_EXECUTABLE ? { executablePath: process.env.BROWSER_EXECUTABLE } : {});
   let fallos = 0;
   const solo = process.env.PPP2_SOLO ? new RegExp(process.env.PPP2_SOLO) : null;     // PPP2_SOLO=texto corre sólo esos recorridos
   const caso = async (nombre, fn) => {
@@ -200,16 +200,52 @@ async function foto(page, nombre) {
       await ctx.close();
     });
 
+    await caso('PPP único crea un libro limpio, guarda un factor y vuelve a abrir el mismo folio', async () => {
+      const w = mundo({prepararCopia(libro) {
+        const res=libro.getSheetByName('Resumen'), datos=libro.getSheetByName('Datos');
+        res.getRange(filaDe(res,'esquema'),2).setValue('ppp-libro-v3');
+        res.getRange(filaDe(res,'plan.paso'),2).setValue('captura_v3');
+        for (const clave of ['plan.nombre','plan.objetivo','plan.ubicacion']) datos.getRange(filaDe(datos,clave),3).setValue('');
+        for (const [k,v] of [['ppp.escenario','BASE'],['ppp.decision','Explorar'],['ppp.pregunta','¿Qué quiere conseguir el dueño?'],['ppp.paso_fila',6]]) res.appendRow([k,v]);
+        Object.defineProperty(res.v[filaDe(res,'plan.nombre')-1],1,{configurable:true,get:()=>datos.getRange(filaDe(datos,'plan.nombre'),3).getValue()});
+      }});
+      const {page,ctx,posts}=await pagina(navegador,base,w,ADMIN,{hash:'#/'});
+      await page.getByText('Todavía no hay planes en el nuevo sistema.').waitFor();
+      await page.getByRole('button',{name:'Crear plan en blanco'}).click();
+      const dlg=page.locator('#p2Dialogo');
+      await dlg.locator('[name=nombre]').fill('Terreno ficticio');
+      await dlg.getByRole('button',{name:'Crear plan',exact:true}).click();
+      const link=page.getByRole('link',{name:'Abrir mi libro de Sheets'});
+      await link.waitFor();
+      const urlLibro=await link.getAttribute('href'), urlPlan=page.url();
+      assert.match(urlLibro,/libro-copia-1/);
+      await page.getByRole('button',{name:'Capturar dato'}).click();
+      await dlg.locator('[name=valor]').fill('Comparar venta y renta');
+      await dlg.locator('[name=fuente]').fill('Encargo ficticio');
+      await dlg.getByRole('button',{name:'Guardar',exact:true}).click();
+      await dlg.waitFor({state:'detached'});
+      const datos=w.libros['libro-copia-1'].getSheetByName('Datos');
+      assert.equal(datos.getRange(filaDe(datos,'plan.objetivo'),3).getValue(),'Comparar venta y renta');
+      assert.equal(datos.getRange(filaDe(datos,'plan.objetivo'),6).getValue(),'Encargo ficticio');
+      await page.getByRole('link',{name:'Planes de potencial',exact:true}).click();
+      await page.getByRole('link',{name:/Terreno ficticio/}).click();
+      await link.waitFor();
+      assert.equal(page.url(),urlPlan);assert.equal(await link.getAttribute('href'),urlLibro);
+      assert.equal(posts.filter(b=>b.tipo==='ppp2-sembrar').length,1);
+      assert.equal(w.vivero.getSheetByName('Planes').v.at(-1)[7],'ppp-libro-v3');
+      await ctx.close();
+    });
+
     await caso('el vivero muestra lo que recibe el dueño y lleva al plan', async () => {
       const w = mundo();
       const { page, ctx, errores } = await pagina(navegador, base, w, EDITOR);
-      await page.getByRole('heading', { name: 'El vivero' }).waitFor();
+      await page.getByRole('heading', { name: 'Planes anteriores' }).waitFor();
       const tarjeta = page.locator('a.p2-tarjeta', { hasText: 'Proyecto Ejemplo' });
       await tarjeta.waitFor();
       const viv = JSON.parse(w.ctx.doGet({ parameter: { recurso: 'ppp2-vivero', k: EDITOR } }).contenido).planes[0];
       const esperado = viv.dueno_recibe.toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
       assert.match(await tarjeta.innerText(), new RegExp(esperado.replace('.', '\\.') + ' MDP'));
-      await page.getByRole('button', { name: /Sembrar un plan/ }).waitFor();
+      assert.equal(await page.getByRole('button', { name: 'Crear plan en blanco' }).count(),0);
       await foto(page, 'ppp2-vivero');
       await tarjeta.click();
       await page.locator('.p2-vbtn[aria-pressed="true"]').waitFor();

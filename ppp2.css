@@ -231,3 +231,13 @@ details.p2-modulo summary{cursor:pointer;font-weight:600;padding:6px 0;display:f
 .p2-deshacer .p2-x { border: 0; background: none; color: #fff; font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px; }
 .p2-cuadros .p2-norma { border: 1px solid #e3bdb7; background: var(--p2-rojo-claro); border-radius: 12px; padding: 9px 12px; margin-top: 8px; color: #6d2a22; }
 .p2-cuadros .p2-norma span { flex: 1 1 260px; min-width: 0; }
+
+.ppp-paso,.ppp-resultados>div,.ppp-grupo{border:1px solid var(--p2-linea,#d9ded7);border-radius:12px;padding:16px;margin-bottom:10px}
+.ppp-paso{border-left:4px solid #758554}
+.ppp-resultados{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));gap:10px}
+.ppp-resultados strong,.ppp-factor small{display:block;overflow-wrap:anywhere}
+.ppp-resultados strong{font-size:1.1rem;margin-top:6px}
+.ppp-grupo summary{cursor:pointer;font-weight:650;padding:4px}
+.ppp-factor{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--p2-linea,#d9ded7)}
+.ppp-factor:first-of-type{margin-top:12px}
+.ppp-grupo .p2-btn{flex:none}

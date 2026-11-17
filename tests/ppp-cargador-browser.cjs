@@ -48,11 +48,11 @@ const rejects=async(promise,message)=>{let failed=false;try{await promise;}catch
 async function portada(browser,name){
  const state=nuevoEstado(),context=await browser.newContext({viewport:{width:430,height:932},isMobile:true,hasTouch:true});
  await servidor(context,state);const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto(PAGE+'index.html');await cuenta(page,'15');
+ await page.goto(PAGE+'index.html?archivo=1');await cuenta(page,'15');
  assert.equal(state.calls.lista.length,5,'1.ª visita: una lista por tipo, por red');
  // 2.ª visita: la red tarda 4 s y trae un proyecto más por tipo
  state.delay=4000;state.n=4;const inicio=Date.now();
- await page.goto(PAGE+'index.html');
+ await page.goto(PAGE+'index.html?archivo=1');
  await cuenta(page,'15',3200);
  assert.ok(Date.now()-inicio<3900,'la lista de la visita anterior se pinta antes de que conteste la red');
  await cuenta(page,'20',12000);
@@ -60,12 +60,12 @@ async function portada(browser,name){
  assert.equal(await page.locator('#listaTodos .lt-item').count(),20);
  // ?cargador=legacy: el camino de siempre, sin caché
  state.delay=1500;
- await page.goto(PAGE+'index.html?cargador=legacy');
+ await page.goto(PAGE+'index.html?archivo=1&cargador=legacy');
  await rejects(page.waitForFunction(()=>/^(15|20)$/.test(document.getElementById('cntTodos').textContent),null,{timeout:900}),'con ?cargador=legacy nada se pinta de caché');
  await cuenta(page,'20',9000);
  assert.equal(state.calls.lista.length,15,'legacy: cinco lecturas de red, sin refrescos extra');
  // «Actualizar proyectos guardados»: SIEMPRE a red (si leyera caché mostraría 20 de inmediato)
- state.delay=0;state.n=5;await page.goto(PAGE+'index.html');await cuenta(page,'25',9000);
+ state.delay=0;state.n=5;await page.goto(PAGE+'index.html?archivo=1');await cuenta(page,'25',9000);
  state.delay=1500;state.n=6;const antes=state.calls.lista.length;
  await page.locator('#btnTodos').click();
  await rejects(page.waitForFunction(()=>/^(20|25)$/.test(document.getElementById('cntTodos').textContent),null,{timeout:700}),'actualizar no puede devolver caché');

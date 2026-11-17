@@ -1,9 +1,24 @@
 'use strict';
-const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
-const index=fs.readFileSync(process.env.INDEX_FILE||'index.html','utf8');
-for(const page of ['mixto.html','macrolotes.html','unifamiliar.html','residencial.html','patrimonial.html'])test('tarjeta Nuevo análisis inicia ficha en '+page,()=>{
- const matches=[...index.matchAll(/<a\s+[^>]*class="[^"]*\bppp-main-link\b[^"]*"[^>]*href="([^"]+)"/g)].map(m=>m[1]);
- assert.equal(matches.filter(x=>new URL(x,'https://ppp.test/').pathname.endsWith('/'+page)).length,1,'tarjeta única para cada modalidad');
- const target=matches.find(x=>new URL(x,'https://ppp.test/').pathname.endsWith('/'+page));
- const url=new URL(target,'https://ppp.test/');assert.equal(url.searchParams.get('new'),'1','la tarjeta debe solicitar una ficha nueva');assert.equal(url.searchParams.has('open'),false,'alta no debe abrir un caso guardado');
+const test=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
+const script=fs.readFileSync('ppp-entrada.js','utf8');
+function destino(ruta) {
+  let next='';
+  const location=new URL(ruta,'https://ejemplo.test/potenciales-yod/');location.replace=x=>{next=x;};
+  vm.runInNewContext(script,{URL,URLSearchParams,location,document:{addEventListener(){}}});
+  return next?new URL(next):null;
+}
+test('la raíz abre la única cartera y preserva la ruta de un folio',()=>{
+  assert.equal(destino('index.html#/plan/p2ejemplo01').hash,'#/plan/p2ejemplo01');
+  assert.equal(destino('index.html').pathname,'/potenciales-yod/ppp2.html');
+  assert.equal(destino('index.html?archivo=1'),null);
 });
+for(const page of ['mixto','macrolotes','residencial','unifamiliar','patrimonial']){
+  test('alta única y expediente anterior en '+page,()=>{
+    assert.match(fs.readFileSync(page+'.html','utf8'),/src="ppp-entrada\.js/);
+    assert.equal(destino(page+'.html?new=1').hash,'#/nuevo');
+    assert.equal(destino(page+'.html?open=historico&new=1'),null);
+    const old=destino('index.html?open=histórico&t='+page);
+    assert.equal(old.pathname,'/potenciales-yod/'+page+'.html');
+    assert.equal(old.searchParams.get('open'),'histórico');
+  });
+}
