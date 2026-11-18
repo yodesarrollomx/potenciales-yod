@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-18T07:45:01.509225+00:00",
+  "checked_at": "2026-11-18T07:50:01.690338+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -5201,7 +5201,7 @@
     {
       "file": "03_cli_panel/hermes_cli/web_server.py",
       "status": "modified",
-      "sha256": "031b96a9920ecdb6cbb36d43dc408b322c2b9897c1e6b9db0ea5bd66505c69ec",
+      "sha256": "f126a330b8f1349bdf85cb8efd3bf10b28e6513eb78cc097270041cf04434025",
       "baseline": "450289d43bb48e0df8906881ca4760fc8e4d92cf6e9b63e8fc5890a7231ce047"
     },
     {
@@ -6391,10 +6391,6 @@
       "status": "added"
     },
     {
-      "file": "03_cli_panel/hermes_cli/web_routers/native_gateway.py",
-      "status": "added"
-    },
-    {
       "file": "03_cli_panel/hermes_cli/web_routers/peer.py",
       "status": "added"
     },
@@ -6404,6 +6400,10 @@
     },
     {
       "file": "03_cli_panel/hermes_cli/web_routers/transfer.py",
+      "status": "added"
+    },
+    {
+      "file": "03_cli_panel/hermes_cli/web_routers/native_gateway.py",
       "status": "added"
     },
     {
