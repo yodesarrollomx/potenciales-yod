@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-18T22:25:44.924663+00:00",
+  "checked_at": "2026-11-18T22:30:46.503775+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -5657,7 +5657,7 @@
     {
       "file": "06_yod/yod-voz/dashboard/jarvis.html",
       "status": "modified",
-      "sha256": "6e5542e3181ff9567816262e921f28a3f43bd391aaebf5ab4562f3ddc7beced8",
+      "sha256": "a81d0a68796e2fc57c1d82afb0b1025f30802816c866c0044f5744e5a7bf5b7c",
       "baseline": "4ab8424f0423a00839c78e7de1c7bec19966bd0a9af8c3a4ce89c4cc16c4d620"
     },
     {
@@ -6524,6 +6524,10 @@
     },
     {
       "file": "06_yod/yod-voz/dashboard/miramar-grafo.html",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/miramar-graphify.html",
       "status": "added"
     },
     {
