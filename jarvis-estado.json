@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-18T18:28:00.191237+00:00",
+  "checked_at": "2026-11-18T18:33:01.626126+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -1403,7 +1403,7 @@
     {
       "file": "01_motor/gateway/session_controls.py",
       "status": "modified",
-      "sha256": "f8cbd3af380e1b2490ed07afc96b5c829c01b3814a348ee539c9289b27a5ed92",
+      "sha256": "b4e6c515372a7c40a9ad049c6d8c70b9bf2d48d96a10d532f445f90d86ba65c6",
       "baseline": "44624fbc34c86529db0963eb9dd2183b56b2c8034650053c6a6dc8c3556dc352"
     },
     {
@@ -2651,7 +2651,7 @@
     {
       "file": "02_herramientas/tools/browser_use_cli.py",
       "status": "modified",
-      "sha256": "071954362a632590d0db338d3cf64971b9d112be8696e1804d45e6a5487981c5",
+      "sha256": "ab6745699cbf889fd99bd47f4448f78e5f5add36467fcbad5556ea94674aae25",
       "baseline": "cf58e17addeabb662f02299534f53453122a5a078be883ab8a3a50afc2b0949c"
     },
     {
@@ -5651,13 +5651,13 @@
     {
       "file": "06_yod/yod-voz/dashboard/index.html",
       "status": "modified",
-      "sha256": "2b5ed1310056188d555adfadbb2262c823052f3f8227f10d61eeb778500b9d24",
+      "sha256": "eb00614a58ae128a53458ea7e684c017b71f83a73c40c0eb0cb40723e2efb6ce",
       "baseline": "0fc1320e046fb0e42f63b5c3df79ae42c22a5bda96914a32e673bad857d5a8f1"
     },
     {
       "file": "06_yod/yod-voz/dashboard/jarvis.html",
       "status": "modified",
-      "sha256": "a9ceae6bf08337bc7b9bcee85eae34f5e846641a0702c71147b460578fbd98f0",
+      "sha256": "1c941e69a00c34e8b81ecfc924231692c94e27a0a71211a22802ed110ffe3279",
       "baseline": "4ab8424f0423a00839c78e7de1c7bec19966bd0a9af8c3a4ce89c4cc16c4d620"
     },
     {
@@ -5904,6 +5904,10 @@
     },
     {
       "file": "01_motor/gateway/mesa_preview.py",
+      "status": "added"
+    },
+    {
+      "file": "01_motor/gateway/mesa_chromium_desk.py",
       "status": "added"
     },
     {
