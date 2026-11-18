@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-18T17:42:20.994735+00:00",
+  "checked_at": "2026-11-18T17:47:20.992576+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -2651,7 +2651,7 @@
     {
       "file": "02_herramientas/tools/browser_use_cli.py",
       "status": "modified",
-      "sha256": "d4fc0515d4f48daf931e14fc3e4bed04661de8752ce04ee332be6e6b5a74fac8",
+      "sha256": "071954362a632590d0db338d3cf64971b9d112be8696e1804d45e6a5487981c5",
       "baseline": "cf58e17addeabb662f02299534f53453122a5a078be883ab8a3a50afc2b0949c"
     },
     {
@@ -5651,13 +5651,13 @@
     {
       "file": "06_yod/yod-voz/dashboard/index.html",
       "status": "modified",
-      "sha256": "4251f4f5718c9ece8e433d905046c0469ee45cf248332754c395f230f4ceba32",
+      "sha256": "6d0eef83b35463a3a1fcd7132b5c41852731fe20de5a8550bed19fd2c9a16246",
       "baseline": "0fc1320e046fb0e42f63b5c3df79ae42c22a5bda96914a32e673bad857d5a8f1"
     },
     {
       "file": "06_yod/yod-voz/dashboard/jarvis.html",
       "status": "modified",
-      "sha256": "46816bca768b25dadb23bdd4afb32770240ecc587cbab9dcf103d39c5827a263",
+      "sha256": "5af6f152e0ab82580815ae798f34d0789853c8e9ce8663f3ec2016f7f631f378",
       "baseline": "4ab8424f0423a00839c78e7de1c7bec19966bd0a9af8c3a4ce89c4cc16c4d620"
     },
     {
