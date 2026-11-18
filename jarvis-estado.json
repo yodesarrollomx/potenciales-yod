@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-18T00:59:02.302915+00:00",
+  "checked_at": "2026-11-18T01:03:35.121710+00:00",
   "changes": [
     {
       "file": "01_motor/gateway/session_controls.py",
@@ -67,6 +67,12 @@
       "status": "modified",
       "sha256": "fa98ad8e4dfdf7f64b012b6e50b4498dfd3133bba7daa66e09a6d25d5020163e",
       "baseline": "4ab8424f0423a00839c78e7de1c7bec19966bd0a9af8c3a4ce89c4cc16c4d620"
+    },
+    {
+      "file": "08_mundo/live/web/app.mjs",
+      "status": "modified",
+      "sha256": "591c6019f1e309a438de1e3a200f9c12ab0e6b4b438b8a9330dc8bbf765358c0",
+      "baseline": "60b82bb67cbccbfb1b0e52d6e4573d689ee7741350a33abf3c725611e534c502"
     },
     {
       "file": "03_cli_panel/hermes_cli/kanban_artifact_acceptance.py",
@@ -138,10 +144,6 @@
     },
     {
       "file": "08_mundo/live/web/view.mjs",
-      "status": "added"
-    },
-    {
-      "file": "08_mundo/live/web/app.mjs",
       "status": "added"
     }
   ],
