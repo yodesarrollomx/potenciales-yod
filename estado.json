@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-18T11:53:53.099Z",
+ "generado": "2026-11-18T13:29:01.533Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -42,6 +42,18 @@
    "msg": "board-flujo-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
+   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-cada-hora.yml",
+   "tipo": "flujo",
+   "nodos": [
+    "sala-edicion::github_workflows_sala_cada_hora",
+    "repo:yodesarrollomx/sala-edicion",
+    "SYS-SALA"
+   ],
+   "desde": "2026-11-18T13:19:43Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/44312580619",
+   "msg": "Falló el flujo «Sala · Cada hora» de sala-edicion, trabajo «mesa / mesa», paso 14 «Avisar si algo falló»"
+  },
+  {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-revision.yml",
    "tipo": "flujo",
    "nodos": [
@@ -52,18 +64,6 @@
    "desde": "2026-11-17T22:03:21Z",
    "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/44186170238",
    "msg": "Falló el flujo «Revisión continua de la Sala» de sala-edicion, trabajo «revision», paso 4 «Hidratar revisión anterior y adquirir mutex»"
-  },
-  {
-   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-mesa.yml",
-   "tipo": "flujo",
-   "nodos": [
-    "sala-edicion::github_workflows_sala_mesa",
-    "repo:yodesarrollomx/sala-edicion",
-    "SYS-SALA"
-   ],
-   "desde": "2026-11-16T20:38:25Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/44108420852",
-   "msg": "Falló el flujo «Montador de la mesa» de sala-edicion, trabajo «mesa», paso 14 «Avisar si algo falló»"
   },
   {
    "clave": "chinche:yodesarrollomx/sala-edicion#393",
