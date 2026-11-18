@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-18T17:07:00.110198+00:00",
+  "checked_at": "2026-11-18T17:12:00.214998+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -1403,7 +1403,7 @@
     {
       "file": "01_motor/gateway/session_controls.py",
       "status": "modified",
-      "sha256": "6f8f44e4c69a89d1097feb0e560c922d55db2a6234f02f79e4a55a3195b67356",
+      "sha256": "f8cbd3af380e1b2490ed07afc96b5c829c01b3814a348ee539c9289b27a5ed92",
       "baseline": "44624fbc34c86529db0963eb9dd2183b56b2c8034650053c6a6dc8c3556dc352"
     },
     {
@@ -2651,7 +2651,7 @@
     {
       "file": "02_herramientas/tools/browser_use_cli.py",
       "status": "modified",
-      "sha256": "b1377d90578fa5832302d978e17664f98686b393cc32d6dc93a3f1401d318dbe",
+      "sha256": "d4fc0515d4f48daf931e14fc3e4bed04661de8752ce04ee332be6e6b5a74fac8",
       "baseline": "cf58e17addeabb662f02299534f53453122a5a078be883ab8a3a50afc2b0949c"
     },
     {
@@ -5651,13 +5651,13 @@
     {
       "file": "06_yod/yod-voz/dashboard/index.html",
       "status": "modified",
-      "sha256": "f4724591a2533165165514940e8af1cd5ddeaf09342933e32cdd463ea64f2d14",
+      "sha256": "ae49a33512df8e455a159e3cc1e21f92ee09429f35cf098505205406af5f16bb",
       "baseline": "0fc1320e046fb0e42f63b5c3df79ae42c22a5bda96914a32e673bad857d5a8f1"
     },
     {
       "file": "06_yod/yod-voz/dashboard/jarvis.html",
       "status": "modified",
-      "sha256": "c35da2fef29665602caef5a4626ef9c8cff8354b5d397ae85fd18e6d37eeb998",
+      "sha256": "d7df45521b31716b0c7835abdf72f43ad1b27c9f0f9cabfa5a83e0afe44ccd35",
       "baseline": "4ab8424f0423a00839c78e7de1c7bec19966bd0a9af8c3a4ce89c4cc16c4d620"
     },
     {
@@ -5899,11 +5899,11 @@
       "status": "added"
     },
     {
-      "file": "01_motor/gateway/mesa_preview.py",
+      "file": "01_motor/gateway/mesa_voice.py",
       "status": "added"
     },
     {
-      "file": "01_motor/gateway/mesa_voice.py",
+      "file": "01_motor/gateway/mesa_preview.py",
       "status": "added"
     },
     {
@@ -6111,11 +6111,11 @@
       "status": "added"
     },
     {
-      "file": "02_herramientas/tools/browser_mesa_preview.py",
+      "file": "02_herramientas/tools/mesa_consent.py",
       "status": "added"
     },
     {
-      "file": "02_herramientas/tools/mesa_consent.py",
+      "file": "02_herramientas/tools/browser_mesa_preview.py",
       "status": "added"
     },
     {
@@ -6435,11 +6435,11 @@
       "status": "added"
     },
     {
-      "file": "03_cli_panel/hermes_cli/web_routers/mesa_voice.py",
+      "file": "03_cli_panel/hermes_cli/web_routers/native_gateway.py",
       "status": "added"
     },
     {
-      "file": "03_cli_panel/hermes_cli/web_routers/native_gateway.py",
+      "file": "03_cli_panel/hermes_cli/web_routers/mesa_voice.py",
       "status": "added"
     },
     {
@@ -6499,11 +6499,11 @@
       "status": "added"
     },
     {
-      "file": "06_yod/yod-voz/dashboard/jarvis-work.js",
+      "file": "06_yod/yod-voz/dashboard/jarvis-gateway.js",
       "status": "added"
     },
     {
-      "file": "06_yod/yod-voz/dashboard/jarvis-gateway.js",
+      "file": "06_yod/yod-voz/dashboard/jarvis-work.js",
       "status": "added"
     },
     {
