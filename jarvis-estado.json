@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-18T16:35:00.893680+00:00",
+  "checked_at": "2026-11-18T16:41:39.145739+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -863,7 +863,7 @@
     {
       "file": "01_motor/gateway/control_socket.py",
       "status": "modified",
-      "sha256": "274f716b75b9abfaee0965af62ab9491fc36a219823b629acdf42fadfe69e261",
+      "sha256": "c90103d0716ed44b88c088e0122238cc6b66e5c2a14aaf17208adae76bbe0556",
       "baseline": "37a0f304f7f29a83748098f7150c49ca86bc34df347291c7fc76bf39b5caea82"
     },
     {
@@ -1161,6 +1161,12 @@
       "baseline": "dc849e24047f906ae5457ef403cd7ec520f9483b1f6949f21a1ead94ce91193e"
     },
     {
+      "file": "01_motor/gateway/run_api.py",
+      "status": "modified",
+      "sha256": "1c81ed547b86b6e7cc0d7457241157f674fd59f4e8d8416401bd25b36cd469d0",
+      "baseline": "e02f8840af46e7661b944a11d248ceeb88bc976f11642b94311df98993516da4"
+    },
+    {
       "file": "01_motor/gateway/run_background.py",
       "status": "modified",
       "sha256": "728fa3f938460e0f8eb984e7cf669dc9c09c794523e53d52c9e63f07c8ca26ad",
@@ -1323,6 +1329,12 @@
       "baseline": "73f46b07dca6cd63667b8e6eb59441d340503cc5ec1ccf220ed84f80cb286cc0"
     },
     {
+      "file": "01_motor/gateway/runtime_bootstrap.py",
+      "status": "modified",
+      "sha256": "e99f1f3c84f8b9ff8947021b4592ec30d6000f438126e7c0e6fba368642a404b",
+      "baseline": "1c1b50581275266133df687d625c066a7095fcbbb78b878eb7b770866dd58308"
+    },
+    {
       "file": "01_motor/gateway/runtime_footer.py",
       "status": "modified",
       "sha256": "e3b0818cb0e7edc3b4ebb8b26f0e836fe7e3ac5e41528f3374ce326cf168e267",
@@ -1361,7 +1373,7 @@
     {
       "file": "01_motor/gateway/session_authority.py",
       "status": "modified",
-      "sha256": "7707c8973647ea5bb223b3c0e44f6d7bf21d121a850a3ca194f4575c6dc2625d",
+      "sha256": "8cba60c20d062f1ecc91f06dff697f6b38da352564c7a39b668cadc58cd368e5",
       "baseline": "ec45262a22582fe3a94f99f9b7d73f94a251c52e792dbf9992710baa419fe2c3"
     },
     {
@@ -1391,7 +1403,7 @@
     {
       "file": "01_motor/gateway/session_controls.py",
       "status": "modified",
-      "sha256": "b7317ba18b74c4b23d9d5683551415ac0c7baaae2187762e9fe02c08d3120794",
+      "sha256": "6f8f44e4c69a89d1097feb0e560c922d55db2a6234f02f79e4a55a3195b67356",
       "baseline": "44624fbc34c86529db0963eb9dd2183b56b2c8034650053c6a6dc8c3556dc352"
     },
     {
@@ -1433,7 +1445,7 @@
     {
       "file": "01_motor/gateway/session_ingress.py",
       "status": "modified",
-      "sha256": "b3ca8a13d8cfd80e3d27a0479497aad5ec7306d96fde459759057a1effdb5837",
+      "sha256": "4989cf4253859ff7bfc3ea9783be3dda43cc3a0aee25372b3d03473fd1511eb5",
       "baseline": "a7d7b2b575a85248da4a9a465779b6069293fd88aeaec3a2ceccd9a016013993"
     },
     {
@@ -1985,7 +1997,7 @@
     {
       "file": "01_motor/tui_gateway/ws.py",
       "status": "modified",
-      "sha256": "02282ad57f1bc394dcfd1efbfd6ae50ec80838bd303de7b14defd17774ac8b67",
+      "sha256": "a14bb31dd9df0a2d6ad45362acc978cb7ab7373829f87a5094c5004f2d1378eb",
       "baseline": "f1f3750accad549937a0d34d3c4b0eafdffbb04fc3ea46022415bfbe5f361e2a"
     },
     {
@@ -2639,7 +2651,7 @@
     {
       "file": "02_herramientas/tools/browser_use_cli.py",
       "status": "modified",
-      "sha256": "ff58145227cc9ebd1895b6fe66ff26fa4b8d7b6ada14e638d0bf36b497bcf6f7",
+      "sha256": "b1377d90578fa5832302d978e17664f98686b393cc32d6dc93a3f1401d318dbe",
       "baseline": "cf58e17addeabb662f02299534f53453122a5a078be883ab8a3a50afc2b0949c"
     },
     {
@@ -5099,7 +5111,7 @@
     {
       "file": "03_cli_panel/hermes_cli/web_routers/audio.py",
       "status": "modified",
-      "sha256": "9ffddb1333d5632b30be8f655a1ed9e01ecb8e00cacaf7a2418257684520ced5",
+      "sha256": "638d1e6eddbb9ff9c03c5b46b1e1ef0901bdb987371c47d3f838c18346257f80",
       "baseline": "54a8d9d01c0bfbaa76e51904b7b68ff2f2f864f7815f51c170968dff5d1dd313"
     },
     {
@@ -5615,7 +5627,7 @@
     {
       "file": "05_raiz/model_tools.py",
       "status": "modified",
-      "sha256": "4835d5d6bb5848ad4d9421d2d52d927e38bb9b9a955928b7d5d71b197e6c4a7a",
+      "sha256": "1f13b9cba2f8667640f1cf2e9d16036dda85b9ee1ffdb6fc37e80d3c3f833297",
       "baseline": "d1da6f6d7346ca7c9a4eb67337056492bdc219dc55fb1df7cb1f49cd189a94aa"
     },
     {
@@ -5883,6 +5895,18 @@
       "status": "added"
     },
     {
+      "file": "01_motor/gateway/mesa_dashboard_peer.py",
+      "status": "added"
+    },
+    {
+      "file": "01_motor/gateway/mesa_preview.py",
+      "status": "added"
+    },
+    {
+      "file": "01_motor/gateway/mesa_voice.py",
+      "status": "added"
+    },
+    {
       "file": "01_motor/gateway/platforms/api_server_cron_jobs.py",
       "status": "added"
     },
@@ -6084,6 +6108,14 @@
     },
     {
       "file": "02_herramientas/tools/terminal_tool_sudo_askpass.py",
+      "status": "added"
+    },
+    {
+      "file": "02_herramientas/tools/browser_mesa_preview.py",
+      "status": "added"
+    },
+    {
+      "file": "02_herramientas/tools/mesa_consent.py",
       "status": "added"
     },
     {
@@ -6400,6 +6432,10 @@
     },
     {
       "file": "03_cli_panel/hermes_cli/web_routers/transfer.py",
+      "status": "added"
+    },
+    {
+      "file": "03_cli_panel/hermes_cli/web_routers/mesa_voice.py",
       "status": "added"
     },
     {
