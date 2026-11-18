@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-18T00:53:59.482211+00:00",
+  "checked_at": "2026-11-18T00:59:02.302915+00:00",
   "changes": [
     {
       "file": "01_motor/gateway/session_controls.py",
@@ -90,6 +90,58 @@
     },
     {
       "file": "06_yod/yod-voz/dashboard/jarvis-gateway.js",
+      "status": "added"
+    },
+    {
+      "file": "08_mundo/live/web/office.mjs",
+      "status": "added"
+    },
+    {
+      "file": "08_mundo/live/web/ui-state.mjs",
+      "status": "added"
+    },
+    {
+      "file": "08_mundo/live/web/dom.mjs",
+      "status": "added"
+    },
+    {
+      "file": "08_mundo/live/web/feed.mjs",
+      "status": "added"
+    },
+    {
+      "file": "08_mundo/live/web/transport.mjs",
+      "status": "added"
+    },
+    {
+      "file": "08_mundo/live/web/index.html",
+      "status": "added"
+    },
+    {
+      "file": "08_mundo/live/web/styles.css",
+      "status": "added"
+    },
+    {
+      "file": "08_mundo/live/web/state.mjs",
+      "status": "added"
+    },
+    {
+      "file": "08_mundo/live/web/art.mjs",
+      "status": "added"
+    },
+    {
+      "file": "08_mundo/live/web/presentation.mjs",
+      "status": "added"
+    },
+    {
+      "file": "08_mundo/live/web/work.mjs",
+      "status": "added"
+    },
+    {
+      "file": "08_mundo/live/web/view.mjs",
+      "status": "added"
+    },
+    {
+      "file": "08_mundo/live/web/app.mjs",
       "status": "added"
     }
   ],
