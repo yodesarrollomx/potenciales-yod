@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-19T05:14:32.109099+00:00",
+  "checked_at": "2026-11-19T05:19:36.321600+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -5657,7 +5657,7 @@
     {
       "file": "06_yod/yod-voz/dashboard/jarvis.html",
       "status": "modified",
-      "sha256": "1bde0fe5044237415d1da940922ed8fbf1a6fd46613aa525a876faf6fe81d8f7",
+      "sha256": "3d4ee99c105c1ed9f04d3f5c82fb1ad5e3ad54e4ca4cda3494b9b81fd37b68d6",
       "baseline": "4ab8424f0423a00839c78e7de1c7bec19966bd0a9af8c3a4ce89c4cc16c4d620"
     },
     {
@@ -6563,19 +6563,19 @@
       "status": "added"
     },
     {
-      "file": "06_yod/yod-voz/dashboard/jarvis-voz-cola.js",
-      "status": "added"
-    },
-    {
-      "file": "06_yod/yod-voz/dashboard/jarvis-voz-contexto.js",
-      "status": "added"
-    },
-    {
       "file": "06_yod/yod-voz/dashboard/jarvis-interfaz.css",
       "status": "added"
     },
     {
+      "file": "06_yod/yod-voz/dashboard/jarvis-voz-cola.js",
+      "status": "added"
+    },
+    {
       "file": "06_yod/yod-voz/dashboard/jarvis-gateway.js",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-voz-contexto.js",
       "status": "added"
     },
     {
