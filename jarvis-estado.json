@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-19T05:09:26.469429+00:00",
+  "checked_at": "2026-11-19T05:14:32.109099+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -5111,7 +5111,7 @@
     {
       "file": "03_cli_panel/hermes_cli/web_routers/audio.py",
       "status": "modified",
-      "sha256": "638d1e6eddbb9ff9c03c5b46b1e1ef0901bdb987371c47d3f838c18346257f80",
+      "sha256": "861181508056d25291069b5011f4d9d6b41f574aade7968701908469211e5ee2",
       "baseline": "54a8d9d01c0bfbaa76e51904b7b68ff2f2f864f7815f51c170968dff5d1dd313"
     },
     {
@@ -5657,7 +5657,7 @@
     {
       "file": "06_yod/yod-voz/dashboard/jarvis.html",
       "status": "modified",
-      "sha256": "70c929138eef78a469d8a0b75de9a756112e83b118d16b1bf4c23d54f665286c",
+      "sha256": "1bde0fe5044237415d1da940922ed8fbf1a6fd46613aa525a876faf6fe81d8f7",
       "baseline": "4ab8424f0423a00839c78e7de1c7bec19966bd0a9af8c3a4ce89c4cc16c4d620"
     },
     {
@@ -6451,6 +6451,10 @@
       "status": "added"
     },
     {
+      "file": "03_cli_panel/hermes_cli/web_routers/voice_transcript.py",
+      "status": "added"
+    },
+    {
       "file": "04_web/web/src/components/CockpitSidebarSlot.tsx",
       "status": "added"
     },
@@ -6503,10 +6507,6 @@
       "status": "added"
     },
     {
-      "file": "06_yod/yod-voz/dashboard/jarvis-gateway.js",
-      "status": "added"
-    },
-    {
       "file": "06_yod/yod-voz/dashboard/jarvis-prueba-visor.css",
       "status": "added"
     },
@@ -6551,11 +6551,23 @@
       "status": "added"
     },
     {
-      "file": "06_yod/yod-voz/dashboard/jarvis-voz-contexto.js",
+      "file": "06_yod/yod-voz/dashboard/jarvis-interfaz.js",
       "status": "added"
     },
     {
-      "file": "06_yod/yod-voz/dashboard/jarvis-interfaz.js",
+      "file": "06_yod/yod-voz/dashboard/jarvis-chat.js",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-voz-red.js",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-voz-cola.js",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-voz-contexto.js",
       "status": "added"
     },
     {
@@ -6563,7 +6575,7 @@
       "status": "added"
     },
     {
-      "file": "06_yod/yod-voz/dashboard/jarvis-chat.js",
+      "file": "06_yod/yod-voz/dashboard/jarvis-gateway.js",
       "status": "added"
     },
     {
