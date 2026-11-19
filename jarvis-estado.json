@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-19T07:46:21.717451+00:00",
+  "checked_at": "2026-11-19T07:51:25.218632+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -5663,7 +5663,7 @@
     {
       "file": "06_yod/yod-voz/dashboard/jarvis.html",
       "status": "modified",
-      "sha256": "f667e97a9d5cb71f84c02868924cad3edafe1346a76259e711fde8f18055aecc",
+      "sha256": "f3b094a6a27bbf2978008fe546d1eea0cd919100bb4e3648ea8c6c8020cb92ec",
       "baseline": "4ab8424f0423a00839c78e7de1c7bec19966bd0a9af8c3a4ce89c4cc16c4d620"
     },
     {
@@ -6553,15 +6553,7 @@
       "status": "added"
     },
     {
-      "file": "06_yod/yod-voz/dashboard/jarvis-voz-cola.js",
-      "status": "added"
-    },
-    {
       "file": "06_yod/yod-voz/dashboard/concierge.js",
-      "status": "added"
-    },
-    {
-      "file": "06_yod/yod-voz/dashboard/concierge.css",
       "status": "added"
     },
     {
@@ -6569,19 +6561,7 @@
       "status": "added"
     },
     {
-      "file": "06_yod/yod-voz/dashboard/jarvis-chat.js",
-      "status": "added"
-    },
-    {
-      "file": "06_yod/yod-voz/dashboard/jarvis-interfaz.js",
-      "status": "added"
-    },
-    {
       "file": "06_yod/yod-voz/dashboard/jarvis-work.js",
-      "status": "added"
-    },
-    {
-      "file": "06_yod/yod-voz/dashboard/jarvis-voz-contexto.js",
       "status": "added"
     },
     {
@@ -6594,6 +6574,30 @@
     },
     {
       "file": "06_yod/yod-voz/dashboard/jarvis-native.html",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/concierge-escritura.js",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/concierge.css",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-chat.js",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-interfaz.js",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-voz-cola.js",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-voz-contexto.js",
       "status": "added"
     },
     {
