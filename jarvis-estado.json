@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-19T06:15:15.150338+00:00",
+  "checked_at": "2026-11-19T06:20:21.965824+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -5651,7 +5651,7 @@
     {
       "file": "06_yod/yod-mayordomo-regla/__init__.py",
       "status": "modified",
-      "sha256": "24f913b208ed0834e36ec5dd90769f88dbe28cea32391ee5f511e160de0401f0",
+      "sha256": "a0de9667c78c870f461ceb66b5ce2bb894efc089ea3927041d77034b9f254a56",
       "baseline": "53ccea1433f922e804cda8bcc49521f0f59c2da2c362b66c579762f8dd973869"
     },
     {
@@ -5663,7 +5663,7 @@
     {
       "file": "06_yod/yod-voz/dashboard/jarvis.html",
       "status": "modified",
-      "sha256": "fc93a03e70fdb85464a6b01d7181142c9185c24f51f799a34811001b25228dfd",
+      "sha256": "40b67aaf097747ac2d67765d1a321457766670104664632d3c665761393a8b9a",
       "baseline": "4ab8424f0423a00839c78e7de1c7bec19966bd0a9af8c3a4ce89c4cc16c4d620"
     },
     {
