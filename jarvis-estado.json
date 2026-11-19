@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-19T07:56:25.312146+00:00",
+  "checked_at": "2026-11-19T08:01:26.435277+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -5663,7 +5663,7 @@
     {
       "file": "06_yod/yod-voz/dashboard/jarvis.html",
       "status": "modified",
-      "sha256": "f3b094a6a27bbf2978008fe546d1eea0cd919100bb4e3648ea8c6c8020cb92ec",
+      "sha256": "1e0f6fda026111c6d604b3d74c8d27a9b2c2c12b00a0e9e97b807a688fd33c48",
       "baseline": "4ab8424f0423a00839c78e7de1c7bec19966bd0a9af8c3a4ce89c4cc16c4d620"
     },
     {
@@ -6553,10 +6553,6 @@
       "status": "added"
     },
     {
-      "file": "06_yod/yod-voz/dashboard/concierge.js",
-      "status": "added"
-    },
-    {
       "file": "06_yod/yod-voz/dashboard/plugin_api.py",
       "status": "added"
     },
@@ -6565,19 +6561,11 @@
       "status": "added"
     },
     {
-      "file": "06_yod/yod-voz/dashboard/jarvis-gateway.js",
-      "status": "added"
-    },
-    {
       "file": "06_yod/yod-voz/dashboard/voz-native.html",
       "status": "added"
     },
     {
       "file": "06_yod/yod-voz/dashboard/jarvis-native.html",
-      "status": "added"
-    },
-    {
-      "file": "06_yod/yod-voz/dashboard/concierge-escritura.js",
       "status": "added"
     },
     {
@@ -6593,11 +6581,23 @@
       "status": "added"
     },
     {
-      "file": "06_yod/yod-voz/dashboard/jarvis-voz-cola.js",
+      "file": "06_yod/yod-voz/dashboard/jarvis-gateway.js",
       "status": "added"
     },
     {
       "file": "06_yod/yod-voz/dashboard/jarvis-voz-contexto.js",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/concierge-escritura.js",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/concierge.js",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-voz-cola.js",
       "status": "added"
     },
     {
