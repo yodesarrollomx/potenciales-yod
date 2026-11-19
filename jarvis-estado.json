@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-19T08:01:26.435277+00:00",
+  "checked_at": "2026-11-19T08:06:27.687958+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -5657,13 +5657,13 @@
     {
       "file": "06_yod/yod-voz/dashboard/index.html",
       "status": "modified",
-      "sha256": "60449efc554976fa7f82a7951ddae860fa9f417aadc3044653af5b57ebca3de9",
+      "sha256": "c52ac00249bf52c968aaaabab54fcbea99925deb797379acc50d1893688565df",
       "baseline": "0fc1320e046fb0e42f63b5c3df79ae42c22a5bda96914a32e673bad857d5a8f1"
     },
     {
       "file": "06_yod/yod-voz/dashboard/jarvis.html",
       "status": "modified",
-      "sha256": "1e0f6fda026111c6d604b3d74c8d27a9b2c2c12b00a0e9e97b807a688fd33c48",
+      "sha256": "da1e625130a790cfc998e43c890f2cbd36e8c96aba8d131982a9300b4f3220e5",
       "baseline": "4ab8424f0423a00839c78e7de1c7bec19966bd0a9af8c3a4ce89c4cc16c4d620"
     },
     {
@@ -6561,14 +6561,6 @@
       "status": "added"
     },
     {
-      "file": "06_yod/yod-voz/dashboard/voz-native.html",
-      "status": "added"
-    },
-    {
-      "file": "06_yod/yod-voz/dashboard/jarvis-native.html",
-      "status": "added"
-    },
-    {
       "file": "06_yod/yod-voz/dashboard/concierge.css",
       "status": "added"
     },
@@ -6578,10 +6570,6 @@
     },
     {
       "file": "06_yod/yod-voz/dashboard/jarvis-interfaz.js",
-      "status": "added"
-    },
-    {
-      "file": "06_yod/yod-voz/dashboard/jarvis-gateway.js",
       "status": "added"
     },
     {
@@ -6598,6 +6586,18 @@
     },
     {
       "file": "06_yod/yod-voz/dashboard/jarvis-voz-cola.js",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-native.html",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/voz-native.html",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-gateway.js",
       "status": "added"
     },
     {
