@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-18T23:56:42.808002+00:00",
+  "checked_at": "2026-11-19T00:01:52.540963+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -5657,7 +5657,7 @@
     {
       "file": "06_yod/yod-voz/dashboard/jarvis.html",
       "status": "modified",
-      "sha256": "28b52327a8e3b2d4ee7d38ee18c3cb6a1d86aa516dd6216db7bf6b58f82b20cc",
+      "sha256": "42d0959d8f4c24409d3fd6d81501b42af0a50737d853b25aad3da3ff7392e550",
       "baseline": "4ab8424f0423a00839c78e7de1c7bec19966bd0a9af8c3a4ce89c4cc16c4d620"
     },
     {
@@ -6531,10 +6531,6 @@
       "status": "added"
     },
     {
-      "file": "06_yod/yod-voz/dashboard/jarvis-nodos.js",
-      "status": "added"
-    },
-    {
       "file": "06_yod/yod-voz/dashboard/jarvis-nodos-puente.js",
       "status": "added"
     },
@@ -6543,7 +6539,15 @@
       "status": "added"
     },
     {
+      "file": "06_yod/yod-voz/dashboard/jarvis-nodos.js",
+      "status": "added"
+    },
+    {
       "file": "06_yod/yod-voz/dashboard/jarvis-nodos.css",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-pendientes.js",
       "status": "added"
     },
     {
