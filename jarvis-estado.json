@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-19T19:37:54.259819+00:00",
+  "checked_at": "2026-11-19T19:42:55.986635+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -6598,6 +6598,10 @@
     },
     {
       "file": "06_yod/yod-voz/dashboard/jarvis-voz-contexto.js",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/voz.html",
       "status": "added"
     },
     {
