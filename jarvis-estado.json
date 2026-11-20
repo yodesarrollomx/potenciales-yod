@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-20T05:52:34.063958+00:00",
+  "checked_at": "2026-11-20T05:57:35.653822+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -1463,7 +1463,7 @@
     {
       "file": "01_motor/gateway/session_kanban.py",
       "status": "modified",
-      "sha256": "0c4b50965abb485e3224c7f396187600c24f18e84a69d07c212187854cc233ea",
+      "sha256": "a0adf3218d7c58d75f9210e8f6d84a3c3467da56315c06a58c716f7d7e76964d",
       "baseline": "5b3a75969739c2dc1fcf9c6db39afe5c8811ca9fadfb1cc9bc035de6ae43f998"
     },
     {
@@ -2117,7 +2117,7 @@
     {
       "file": "02_herramientas/plugins/kanban/dashboard/plugin_api.py",
       "status": "modified",
-      "sha256": "551b72362a7a2a6d1796a67b3ed556b0d78b6d6b1ba52964ae63a9a213039cf1",
+      "sha256": "fe5bcd3df2f5738ea378084af7b157cb77c02129ca2fc528c73e78d538b59f63",
       "baseline": "bbf1477f3fe9d6fb3a84e18cdd84c994fbd165e7512bfdfd36d54bd6b735394c"
     },
     {
@@ -5663,7 +5663,7 @@
     {
       "file": "06_yod/yod-voz/dashboard/jarvis.html",
       "status": "modified",
-      "sha256": "3152a0ac60dd96d089a8e73f5d799d62528e6971869ec1c4801dc5cda9131173",
+      "sha256": "3cc05e3bef036f337fbe759d568608711ab4720ad5e4b48ecb7639ace522e031",
       "baseline": "4ab8424f0423a00839c78e7de1c7bec19966bd0a9af8c3a4ce89c4cc16c4d620"
     },
     {
@@ -6430,6 +6430,10 @@
     },
     {
       "file": "03_cli_panel/hermes_cli/update_cmd_force_stop.py",
+      "status": "added"
+    },
+    {
+      "file": "03_cli_panel/hermes_cli/kanban_mesa_control.py",
       "status": "added"
     },
     {
