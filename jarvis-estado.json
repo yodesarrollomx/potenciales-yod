@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-20T20:19:49.420132+00:00",
+  "checked_at": "2026-11-20T20:24:50.943422+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -5663,7 +5663,7 @@
     {
       "file": "06_yod/yod-voz/dashboard/jarvis.html",
       "status": "modified",
-      "sha256": "dfea062e21f45778db09a214c0b5a46460d367647c46f5c5957fecd4151ab4ba",
+      "sha256": "0ed33732ed348e5936e1b7bb2b64c48aa54f4bdca60717e823d798060fae80b7",
       "baseline": "4ab8424f0423a00839c78e7de1c7bec19966bd0a9af8c3a4ce89c4cc16c4d620"
     },
     {
@@ -6622,10 +6622,6 @@
     },
     {
       "file": "06_yod/yod-voz/dashboard/jarvis-potencial-v3-4bfc879077df.html",
-      "status": "added"
-    },
-    {
-      "file": "06_yod/yod-voz/dashboard/jarvis-mesa-candidata.html",
       "status": "added"
     },
     {
