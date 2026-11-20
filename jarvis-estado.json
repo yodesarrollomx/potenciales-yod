@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-20T20:50:01.251052+00:00",
+  "checked_at": "2026-11-20T20:55:03.485020+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -6622,6 +6622,18 @@
     },
     {
       "file": "06_yod/yod-voz/dashboard/jarvis-potencial-v3-4bfc879077df.html",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-interfaz-todo-prueba.js",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-interfaz-todo-prueba.css",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-todo-prueba.html",
       "status": "added"
     },
     {
