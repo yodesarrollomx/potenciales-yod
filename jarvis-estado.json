@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-21T15:00:04.922434+00:00",
+  "checked_at": "2026-11-21T15:05:15.060524+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -6628,6 +6628,14 @@
     },
     {
       "file": "06_yod/yod-voz/dashboard/jarvis-interfaz.css",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-astryx-hoy-798b692f94fd.js",
+      "status": "added"
+    },
+    {
+      "file": "06_yod/yod-voz/dashboard/jarvis-astryx.html",
       "status": "added"
     },
     {
