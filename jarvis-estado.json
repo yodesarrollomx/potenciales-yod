@@ -1,6 +1,6 @@
 {
   "baseline": "2026-11-17T14:43:58.441169+00:00",
-  "checked_at": "2026-11-21T02:47:43.762960+00:00",
+  "checked_at": "2026-11-21T02:52:51.029897+00:00",
   "changes": [
     {
       "file": "01_motor/agent/account_usage.py",
@@ -439,6 +439,12 @@
       "status": "modified",
       "sha256": "1c4b95cf66958151a29e9c4d9d5a8f55a244bd2f084eb45c27c983dedda6421c",
       "baseline": "3769fdca94425898335ea3cabc9b0bb94bc2e39e40827c9dc278cad732e9fbee"
+    },
+    {
+      "file": "01_motor/agent/runtime_session_store.py",
+      "status": "modified",
+      "sha256": "83c0f93587074b6a8aa235b2108003de565b2826d122598483b7c76589fcc1d6",
+      "baseline": "bd6aded4daab5ab5ec68d6dd0eb19c90b1e519ce4200b8bffcb439d862b246a6"
     },
     {
       "file": "01_motor/agent/secret_scope.py",
