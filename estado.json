@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-21T21:54:28.209Z",
+ "generado": "2026-11-22T00:24:33.836Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -52,18 +52,6 @@
    "desde": "2026-11-21T18:32:39Z",
    "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/44952677593",
    "msg": "Falló el flujo «Sala · publicacion=datos-44951937343-1-arranque · sha=19992e0de78c954874bbb12b8a6ea4c4a891ed02» de sala-edicion, trabajo «publicar», paso 12 «Run actions/deploy-pages@v4»"
-  },
-  {
-   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-cada-hora.yml",
-   "tipo": "flujo",
-   "nodos": [
-    "sala-edicion::github_workflows_sala_cada_hora",
-    "repo:yodesarrollomx/sala-edicion",
-    "SYS-SALA"
-   ],
-   "desde": "2026-11-21T18:22:16Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/44951937343",
-   "msg": "Falló el flujo «Sala · Cada hora» de sala-edicion, trabajo «arranque / arranque», paso 11 «Publicar datos y esperar su recibo exacto»"
   },
   {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-mesa.yml",
