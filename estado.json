@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-23T03:45:26.463Z",
+ "generado": "2026-11-23T08:16:57.569Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -40,6 +40,18 @@
    "desde": "2026-11-14T00:43:09Z",
    "url": "https://github.com/yodesarrollomx/board-flujo-yod/commit/1cef2f06d619d43afbc59957eb469520920a8740",
    "msg": "board-flujo-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
+  },
+  {
+   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-cada-hora.yml",
+   "tipo": "flujo",
+   "nodos": [
+    "sala-edicion::github_workflows_sala_cada_hora",
+    "repo:yodesarrollomx/sala-edicion",
+    "SYS-SALA"
+   ],
+   "desde": "2026-11-23T08:01:41Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45135366559",
+   "msg": "Falló el flujo «Sala · Cada hora» de sala-edicion, trabajo «mesa / mesa», paso 14 «Avisar si algo falló»"
   },
   {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-mesa.yml",
