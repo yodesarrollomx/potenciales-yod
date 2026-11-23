@@ -66,6 +66,16 @@ test('apagado por omisión: sin  arbol = sí  en Config el servidor contesta «a
   assert.equal(e.m.h.getLastColumn(), 11, 'nada se escribió'); assert.equal(e.m.hojas.CAMBIOS.getLastRow(), 1);
 });
 
+test('con un servidor que todavía no trae las rutas del árbol (responde «recurso»), la página lo dice en palabras y sigue con su definición', async () => {
+  const mem = { pyod_clave_v1: EDITOR }, almacen = { getItem: (x) => (x in mem ? mem[x] : null), setItem: (x, v) => { mem[x] = String(v); }, removeItem: (x) => { delete mem[x]; } };
+  const traer = async () => ({ json: async () => ({ ok: false, error: 'recurso' }) });
+  const d = await Servidor.nucleo({ endpoint: EP, fetch: traer, almacen, motor: Motor, conexion: Conexion }).definicion();
+  assert.equal(d.modo, 'local'); assert.equal(d.codigo, 'recurso'); assert.match(d.aviso, /todavía no está conectado al libro/); assert.ok(!/«recurso»/.test(d.aviso));
+  const roto = async () => ({ json: async () => { throw new Error('no es JSON'); } });
+  const d2 = await Servidor.nucleo({ endpoint: EP, fetch: roto, almacen, motor: Motor, conexion: Conexion }).definicion();
+  assert.equal(d2.modo, 'local'); assert.equal(d2.codigo, 'red'); assert.match(d2.aviso, /puede estar desactualizada/);
+});
+
 test('sin sesión no se pregunta al servidor; con una sesión que no sirve, el servidor no entrega nada del árbol', async () => {
   const e = entorno();
   const d = await e.cliente('').N.definicion();

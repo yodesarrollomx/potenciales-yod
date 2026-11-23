@@ -11,6 +11,8 @@
   var LLAVE = 'pyod_clave_v1', CLAVE_PLAN = 'ppp-arbol-pantalla-2', CLAVE_CMP = 'ppp-arbol-comparacion-1', CLAVE_ORIGEN = 'ppp-arbol-libro-1';
   var TEXTOS = {
     apagado: 'El árbol todavía no está conectado al libro. Puedes armar el plan aquí; no se guarda en el libro.',
+    recurso: 'El árbol todavía no está conectado al libro. Puedes armar el plan aquí; no se guarda en el libro.',   // un servidor que aún no trae las rutas del árbol
+    interno: 'El servidor tuvo un problema. Puedes armar el plan aquí; por ahora no se guarda en el libro.',
     sin_sesion: 'No hay sesión de YOD OS en este navegador. Puedes armar el plan aquí; no se guarda en el libro.',
     liga: 'Tu sesión ya no es válida. Entra de nuevo a YOD OS para guardar en el libro.',
     expirado: 'Tu sesión venció. Entra de nuevo a YOD OS para guardar en el libro.',
