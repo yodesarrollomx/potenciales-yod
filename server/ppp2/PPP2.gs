@@ -325,7 +325,7 @@ function vivero_get_(s) {
     tarjetas = planes_(true).filter(function (p) { return low_(p.estado) !== 'archivado'; }).map(tarjeta_);
     try { cache.put('vivero', JSON.stringify(tarjetas), PPP2.VIVERO_S); } catch (e) { }
   }
-  return { ok: true, planes: tarjetas, puede: { editar: puede_(s, 'editar'), aprobar: puede_(s, 'aprobar') }, yo: { nombre: s.nombre, rol: s.rol } };
+  return { ok: true, planes: tarjetas, puede: { editar: puede_(s, 'editar'), aprobar: puede_(s, 'aprobar') }, yo: { nombre: s.nombre, rol: s.rol }, arbol: arbolEncendido_(config_()) };
 }
 /* fresco: leer el libro aunque haya algo guardado (la respuesta de una escritura). */
 function plan_get_(s, id, fresco) {
@@ -460,6 +460,7 @@ function doGet(e) {
     var s = canje_(p.k);
     if (!s.ok) return out_({ ok: false, error: s.error });
     if (r === 'ppp2-vivero') return out_(vivero_get_(s));
+    if (r === 'arbol-definicion' || r === 'arbol-columnas' || r === 'arbol-columna') return out_(arbol_get_(s, p));   // Árbol PPP (ArbolPPP.gs): apagado salvo Config!arbol = sí
     if (r === 'ppp2-plan') return out_(plan_get_(s, p.plan));
     return out_({ ok: false, error: 'recurso' });
   } catch (err) {
@@ -474,6 +475,7 @@ function doPost(e) {
     var s = canje_(b.k);
     if (!s.ok) return out_({ ok: false, error: s.error });
     var rid = txt_(b.request_id, 80), cache = CacheService.getScriptCache();
+    if (String(b.tipo) === 'arbol-guarda') return out_(arbol_post_(s, b, rid));   // Árbol PPP (ArbolPPP.gs): su propia pausa, candado y recuerdo; no toca ningún libro de plan
     if (rid) { var prev = cache.get('r_' + hash_(rid)); if (prev) return out_(conPlan_(s, b, JSON.parse(prev), t0)); }
     if (pausa_(config_())) return out_({ ok: false, error: 'pausa' });
     var lock = LockService.getScriptLock();
@@ -1040,6 +1042,8 @@ function diarioClave_(planId) { return 'j_' + planId; }
 function avanceClave_(planId) { return 'g_' + planId; }
 function esperaClave_(planId) { return 'e_' + planId; }
 function pausa_(cfg) { var x = low_(cfg.pausa); return x === 'sí' || x === 'si'; }
+/* El Árbol PPP (ArbolPPP.gs) está apagado hasta que Config diga  arbol = sí. */
+function arbolEncendido_(cfg) { var x = low_(cfg.arbol); return x === 'sí' || x === 'si'; }
 function diarioGuardar_(p, libro, ks, filas, kb, rid, n) {
   var mod = libro.getSheetByName('Modelo'), ver = libro.getSheetByName('Versiones'), col = 4 + ks, celdas = [], campos = {};
   filas.forEach(function (x) { var c = mod.getRange(x.fila, col), f = c.getFormula(); celdas.push([x.fila, f, f ? '' : limpio_(c.getValue()), x.clave]); });

@@ -280,3 +280,49 @@ servidor sólo en lectura sin tocar código: `Config!pausa = sí`.
 el servidor real con dobles de Apps Script (y una API de IA de juguete), un libro inventado (`tests/fixtures/ppp2-libro-ejemplo.json`) y las cifras reales que
 ese libro da para cada combinación de una ronda (`tests/fixtures/ppp2-rejilla.json`). No hagas POST al
 `/exec` de producción para «probar»: escribe en libros reales.
+
+## El Árbol PPP (guardar un plan del árbol como columna del libro Maestro)
+
+Tercer archivo del mismo proyecto: `ArbolPPP.gs` (propuesta `ARBOLPPP`; ver `docs/arbol-ppp.md`). Lee la
+definición del árbol de las pestañas `ARBOL_*` del libro «PPP Maestro», guarda un plan del árbol como **una
+columna en Borrador** de su hoja `MAESTRO` y lee las columnas que el propio árbol guardó. No toca ningún
+libro de plan, ni el visor, ni el latido.
+
+**Nace apagado.** Mientras `Config` no tenga el renglón `arbol` = `sí`, las cuatro rutas responden
+`apagado`, nada se lee ni se escribe en el Maestro y la página del PPP no enseña el enlace al árbol.
+Publicar el código con el árbol apagado no cambia nada de lo que ya funciona.
+
+**Una sola vez, en este orden:**
+
+1. En el editor del proyecto: «+» junto a Archivos → Secuencia de comandos → nombre `ArbolPPP` → pegar
+   `ArbolPPP.gs`. En `Código.gs` va el `PPP2.gs` de este repo (trae las rutas `arbol-…` en `doGet` y
+   `doPost`, y `arbol` en la respuesta del vivero). Guardar y publicar **Versión nueva** sobre la
+   implementación de siempre, con el método de `yod-portal/docs/agentes/publicar-apps-script.md`
+   (leer primero el código vivo; comparar lo guardado con lo desplegado; probar sólo con GET).
+2. Comprobar con el árbol todavía apagado: `…/exec?recurso=ppp2-meta` contesta como siempre y
+   `…/exec?recurso=arbol-definicion&k=<sesión>` contesta `{"ok":false,"error":"apagado"}`.
+3. **Probar en una copia privada del Maestro** antes de apuntar al de verdad: en `Config`, renglones
+   `maestro_id` (el id de la copia, el de su dirección entre `/d/` y `/edit`), `maestro_plantilla` (la
+   letra de la columna plantilla; por omisión `J`) y `arbol` = `sí`. La cuenta que ejecuta el servidor
+   debe poder **editar** ese libro. Desde `arbol-ppp/arbol.html`, con sesión: guardar un plan, abrirlo y
+   revisar en la copia la columna nueva, sus fórmulas y el renglón de `CAMBIOS`.
+4. Sólo entonces, cambiar `maestro_id` al libro Maestro de verdad. Un cambio en `Config` tarda hasta dos
+   minutos en notarse.
+
+**Apagarlo:** `arbol` = `no` (o borrar el renglón). `pausa` = `sí` deja leer y no deja guardar.
+
+Lo que hay que saber:
+
+- **Quién puede:** leer, cualquiera con sesión y el tablero `PT`; guardar, los roles de `roles_editar`.
+  El árbol guarda siempre en `Borrador`; volver vigente una columna se hace a mano en el libro.
+- **Nunca borra ni inserta:** usa la primera columna libre a la derecha de la plantilla. Si no hay,
+  responde `sin_columnas` y hay que agregar columnas a mano.
+- **No pisa lo ajeno:** sólo actualiza una columna que el árbol creó (su renglón `I-06` dice «Árbol
+  PPP») y que sigue en Borrador, y sólo si nadie la cambió desde que se abrió.
+- **Sin fórmulas nuevas:** la columna se copia de la plantilla; el árbol sólo escribe valores en los
+  renglones que no tienen fórmula.
+- **El id del libro vive sólo en `Config`.** Nunca en el código, el repositorio ni un mensaje.
+- **No probado en Google Sheets:** las pruebas del repositorio usan un doble en memoria. Sheets puede
+  convertir un texto en número o fecha al escribirlo; por eso el paso 3 no se salta.
+
+Pruebas: `node arbol-ppp/conexion/pruebas-gs.cjs` y `node --test tests/arbol-ppp-servidor.test.cjs`.

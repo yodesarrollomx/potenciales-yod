@@ -1,7 +1,7 @@
 {
   "model_revision": "2026-11-23.arbol-ppp.1",
   "proposal_id": "CHG-ARBOL-PPP-20261123",
-  "summary": "Agregar en una carpeta propia (arbol-ppp/) el árbol de decisiones del PPP: motor puro de reglas con vista previa rotulada, pantalla táctil, comparador, editor de reglas, umbrales de las nueve pruebas editables por plan, áreas del edificio por plan, adaptadores de la columna de factores, la definición del árbol vertical y sus pruebas. No toca el PPP único, el visor, el servidor, el Portero, el menú, los permisos ni los precios. La página no pide sesión, no lee ningún libro y no guarda en ningún servidor ni libro (conserva el plan, la comparación y las reglas editadas solo en el almacenamiento local del navegador).",
+  "summary": "Agregar el árbol de decisiones del PPP en una carpeta propia (arbol-ppp/): motor puro de reglas con vista previa rotulada, pantalla táctil, comparador, editor de reglas, umbrales de las nueve pruebas editables por plan, áreas del edificio por plan, adaptadores de la columna de factores, la definición del árbol vertical y sus pruebas. Agregar al servidor del PPP 2 cuatro rutas (server/ppp2/ArbolPPP.gs) que leen la definición del libro PPP Maestro, guardan un plan como una columna en Borrador y leen las columnas que el árbol guardó; nacen apagadas hasta que la configuración del vivero diga arbol = sí. El PPP único enseña el enlace al árbol solo si el servidor lo enciende. No cambia el Portero, el menú, los códigos de permiso, los roles ni los precios. El servidor no está publicado.",
   "components": [
     "SYS-ARBOL-PPP",
     "SYS-POTENCIALES",
@@ -15,10 +15,11 @@
   "tests": [
     "node arbol-ppp/pruebas/motor-real.cjs: 260 de 260 con definición y planes inventados.",
     "node arbol-ppp/conexion/pruebas.cjs: 57 de 57 (ida y vuelta de la columna de factores sin diferencias).",
-    "node --check de arbol-ppp/motor.js, pantalla.js, definicion-tablas.js, conexion/conexion.js y construir-artifact.cjs.",
-    "node scripts/versiones.cjs --check y node --test tests/versiones.test.cjs: las etiquetas de arbol-ppp/arbol.html llevan la versión propia.",
-    "git diff --check.",
-    "Pendiente, no demostrado: apertura desde el plan con sesión, lectura de la definición y guardado en el libro por el servidor, concordancia permanente con el libro, prueba en celulares reales y en producción."
+    "node arbol-ppp/conexion/pruebas-gs.cjs: 28 de 28 de server/ppp2/ArbolPPP.gs contra un doble de Sheets (interruptor, permisos, pausa, candado, idempotencia por persona, revisión de la columna, texto literal, sin borrar ni insertar, bitácora, lectura de vuelta).",
+    "node --test tests/arbol-ppp-servidor.test.cjs: 7 de 7 de punta a punta, con doGet y doPost reales sobre dobles: apagado por omisión, sin sesión y sin el tablero PT no entra, guardar y abrir dan las mismas cifras, dos personas no se pisan.",
+    "node --test tests/ppp2-servidor.test.cjs tests/ppp2-ronda.test.cjs tests/ppp2-libro.test.cjs tests/ppp2-consejo.test.cjs tests/ppp2-cache.test.cjs tests/ppp2-lapiz.test.cjs tests/ppp2-pestanas.test.cjs tests/ppp2-visor.test.cjs tests/ppp2-visor-pagina.test.cjs y node tests/ppp2-browser.cjs: sin regresión.",
+    "node --check de los JavaScript de arbol-ppp/ y de ppp2.js; los tres archivos del servidor compilan juntos; node scripts/versiones.cjs --check; git diff --check.",
+    "Pendiente, no demostrado: publicación del servidor, prueba contra Google Sheets en una copia privada del libro, concordancia permanente con el libro, prueba en celulares reales y en producción."
   ],
-  "rollback": "Revertir por revisión el commit que agrega arbol-ppp/, las líneas del flujo de verificación y este registro, volver a fijar el commit anterior del atlas en el workflow y repetir las verificaciones locales. No borrar ni restaurar registros de negocio, Sheets o archivos de clientes."
+  "rollback": "Con el servidor ya publicado: poner arbol = no en la configuración del vivero (apaga las rutas y el enlace sin publicar nada). Para quitar el código: revertir por revisión los commits, volver a fijar el commit anterior del atlas en el workflow, publicar el servidor anterior como versión nueva de la misma implementación y repetir las verificaciones locales. Las columnas que el árbol haya guardado en el libro se conservan: no borrar ni restaurar registros de negocio, Sheets o archivos de clientes."
 }

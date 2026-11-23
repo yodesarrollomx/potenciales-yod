@@ -1,0 +1,27 @@
+/* Árbol PPP · barra del libro (guardar y abrir). Usa las variables de pantalla.css; tema claro y oscuro. */
+:root{--as-alto:0px}
+.as-barra{box-sizing:border-box;max-width:1200px;margin:0 auto;padding:8px max(16px,env(safe-area-inset-right,0px)) 6px max(16px,env(safe-area-inset-left,0px));
+  background:var(--bg);color:var(--ink);font-family:var(--body);font-size:.82rem;line-height:1.35;border-bottom:1px solid var(--line)}
+.as-barra *{box-sizing:border-box}
+.as-fila{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.as-estado{font-weight:700;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.as-estado.libro{border-color:var(--tiempo);color:var(--tiempo)}
+.as-estado.local{border-style:dashed;color:var(--mute)}
+.as-origen{color:var(--mute);min-width:0;overflow-wrap:anywhere;flex:1 1 140px}
+.as-botones{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+.as-btn{font:600 .82rem var(--body);color:var(--ink);border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:0 12px;min-height:40px;cursor:pointer;text-align:left;overflow-wrap:anywhere}
+.as-btn:hover{border-color:var(--ink)}
+.as-btn:focus-visible,.as-panel input:focus-visible{outline:2px solid var(--info);outline-offset:2px}
+.as-btn[disabled]{opacity:.55;cursor:default}
+.as-btn.fuerte{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.as-btn.alerta{border-color:var(--alerta);color:var(--alerta)}
+.as-nota{margin:6px 0 0;color:var(--mute)}
+.as-msg{margin:6px 0 0;font-weight:600}
+.as-panel{margin:8px 0 2px;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;display:grid;gap:8px;max-height:46vh;overflow:auto}
+.as-panel label{display:grid;gap:3px;font-weight:600}
+.as-panel input{font:400 16px var(--body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0 10px;min-height:40px;width:100%}
+.as-panel .as-botones{margin-left:0}
+.as-lista{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.as-lista .as-btn{width:100%;padding:8px 12px}
+/* la pantalla ocupa el alto que deja la barra */
+.as-barra ~ #arbol-ppp .ppp{height:calc(100vh - var(--as-alto));height:calc(100dvh - var(--as-alto));min-height:520px}
