@@ -2,7 +2,7 @@
    publicada del árbol, guarda el plan como una columna en Borrador y abre los planes que el árbol guardó.
    - Sin sesión, con el árbol apagado en el servidor o sin red, la pantalla trabaja con la definición de la página y NO guarda en el libro: lo dice.
    - No calcula nada: la columna la arma conexion.js y las cifras el motor. Nunca borra la credencial del Portero.
-   - La dirección del servidor es la misma de ppp2.js (una prueba las compara). */
+   - La dirección del servidor es la misma de ppp2.js (una prueba las compara) y no se puede cambiar desde la página. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(root); else root.ArbolServidor = factory(root);
 })(typeof window !== 'undefined' ? window : this, function (root) {
@@ -81,7 +81,8 @@
     /* sobre: true = actualizar la columna de origen (con su revisión); false = columna nueva. */
     function guarda(def, plan, datos) {
       datos = datos || {};
-      var cuerpo = { tipo: 'arbol-guarda', nombre: String(datos.nombre || '').trim().slice(0, 120) || 'Plan del árbol', version: String(datos.version || '').trim().slice(0, 40) || 'V1', escenario: 'ARBOL', columna: columnaDe(def, plan) };
+      var cuerpo = { tipo: 'arbol-guarda', nombre: String(datos.nombre || '').trim().slice(0, 120) || 'Plan del árbol', version: String(datos.version || '').trim().slice(0, 40) || 'V1', escenario: 'ARBOL' };
+      try { cuerpo.columna = columnaDe(def, plan); } catch (e) { return Promise.resolve({ ok: false, error: 'definicion' }); }
       var o = origen();
       if (datos.sobre) { if (!o) return Promise.resolve({ ok: false, error: 'columna_invalida' }); cuerpo.columna_existente = o.columna; cuerpo.rev = o.rev; }
       return escribir(cuerpo).then(function (r) {
@@ -95,7 +96,7 @@
       return leer('arbol-columna', { columna: letra }).then(function (r) {
         if (!r.ok) return r;
         var mapa = {}, nombre = '', version = '';
-        (r.valores || []).forEach(function (x) { if (x && typeof x.id === 'string') { mapa[x.id] = x.valor; if (x.id === 'I-01') nombre = String(x.valor); if (x.id === 'I-02') version = String(x.valor); } });
+        (Array.isArray(r.valores) ? r.valores : []).forEach(function (x) { if (x && typeof x.id === 'string') { mapa[x.id] = x.valor; if (x.id === 'I-01') nombre = String(x.valor); if (x.id === 'I-02') version = String(x.valor); } });
         var v; try { v = conexion.columnaAPlan(def, mapa, { motor: motor }); } catch (e) { return { ok: false, error: 'definicion' }; }
         var ev = motor.evalua(def, v.plan, null, { sugerencias: 'no', rutas: 'no' });
         if (!v.plan || !v.plan.valores || !v.plan.valores['T-01'] || (ev.errores || []).length) return { ok: false, error: 'definicion' };
@@ -112,12 +113,19 @@
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function arranca(host, barra, op) {
     op = op || {};
-    var doc = root.document, motor = op.motor || root.ArbolMotor, N = nucleo({ endpoint: op.endpoint || root.PPP2_ENDPOINT, fetch: op.fetch, almacen: op.almacen || root.localStorage, motor: motor, conexion: op.conexion || root.ArbolConexion });
+    var doc = root.document, motor = op.motor || root.ArbolMotor, N = nucleo({ endpoint: op.endpoint, fetch: op.fetch, almacen: op.almacen || root.localStorage, motor: motor, conexion: op.conexion || root.ArbolConexion });
     var est = { modo: 'local', aviso: '', puede: false, def: null, tablas: null, panel: '', lista: null, msg: '', ocupado: false, confirma: '' }, api = null;
+    /* «Empezar de nuevo» deja el plan solo con el predio: ese plan ya no es el que se abrió del libro, así que se suelta el origen y no se puede guardar encima. */
+    function origenVivo() {
+      var o = N.origen(); if (!o || !api) return o;
+      var v = (api.estado().plan || {}).valores || {};
+      if (Object.keys(v).length <= 1) { N.fijaOrigen(null); return null; }
+      return o;
+    }
     function monta() { api = root.ArbolPantalla.montar(host, est.tablas ? { motor: motor, tablas: est.tablas } : { motor: motor }); mide(); }
     function mide() { try { doc.documentElement.style.setProperty('--as-alto', barra.offsetHeight + 'px'); } catch (e) { } }
     function pinta() {
-      var o = N.origen(), h = '<div class="as-fila"><span class="as-estado ' + (est.modo === 'libro' ? 'libro' : 'local') + '">' + (est.modo === 'libro' ? 'Conectado al libro' : 'Sin conexión al libro') + '</span>';
+      var o = origenVivo(), h = '<div class="as-fila"><span class="as-estado ' + (est.modo === 'libro' ? 'libro' : 'local') + '">' + (est.modo === 'libro' ? 'Conectado al libro' : 'Sin conexión al libro') + '</span>';
       if (est.modo === 'libro') {
         h += '<span class="as-origen">' + (o ? 'Plan abierto: «' + esc(o.nombre || 'sin nombre') + '» · columna ' + esc(o.columna) : 'Plan sin guardar') + '</span><span class="as-botones">' +
           (est.puede ? '<button type="button" class="as-btn" data-as="guardar"' + (est.ocupado ? ' disabled' : '') + '>Guardar en el libro</button>' : '') +
@@ -131,8 +139,9 @@
         h += '<form class="as-panel" data-as-form="guardar"><label>Nombre del plan <input name="nombre" maxlength="120" autocomplete="off" value="' + esc(o ? o.nombre : '') + '" placeholder="Por ejemplo: Predio de la esquina"></label>' +
           '<label>Versión <input name="version" maxlength="40" autocomplete="off" value="' + esc(o && o.version ? o.version : 'V1') + '"></label>' +
           '<p class="as-nota">Se guarda como Borrador, en una columna del libro. Lo que marcaste como confirmado vuelve como decidido al abrirlo: el libro guarda el valor, no su estado.</p><div class="as-botones">' +
-          (o ? '<button type="submit" class="as-btn fuerte" name="modo" value="sobre">Guardar cambios en la columna ' + esc(o.columna) + '</button>' : '') +
-          '<button type="submit" class="as-btn' + (o ? '' : ' fuerte') + '" name="modo" value="nueva">Guardar como plan nuevo</button><button type="button" class="as-btn" data-as="cerrar">Cancelar</button></div></form>';
+          '<button type="submit" class="as-btn fuerte">Guardar como plan nuevo</button>' +
+          (o ? '<button type="button" class="as-btn' + (est.confirma === 'sobre' ? ' alerta' : '') + '" data-as="sobre">' + (est.confirma === 'sobre' ? 'Toca otra vez para reemplazar «' + esc(o.nombre || 'sin nombre') + '» en la columna ' + esc(o.columna) : 'Reemplazar «' + esc(o.nombre || 'sin nombre') + '» en la columna ' + esc(o.columna)) + '</button>' : '') +
+          '<button type="button" class="as-btn" data-as="cerrar">Cancelar</button></div></form>';
       }
       if (est.panel === 'abrir') {
         h += '<div class="as-panel"><p class="as-nota">Abrir un plan reemplaza lo que tienes en pantalla.</p>';
@@ -147,17 +156,33 @@
       barra.innerHTML = h; mide();
     }
     function fin(msg) { est.ocupado = false; est.msg = msg; pinta(); }
+    function falla() { fin(texto('red')); }
+    function guardaAhora(sobre) {
+      var f = barra.querySelector('form[data-as-form="guardar"]'); if (!f || est.ocupado || !api) return;
+      if (api.reglas && api.reglas().cambios.length) { est.panel = ''; fin(texto('reglas')); return; }
+      var datos = { nombre: f.nombre.value, version: f.version.value, sobre: !!sobre };
+      est.ocupado = true; est.confirma = ''; est.msg = 'Guardando en el libro…'; pinta();
+      N.guarda(est.def, api.estado().plan, datos).then(function (r) {
+        if (!r.ok) { fin(texto(r.error) + (r.columna ? ' Columna ' + r.columna + '.' : '')); return; }
+        est.panel = ''; fin('Guardado como Borrador en la columna ' + r.columna + ' del libro (' + r.escritos + ' valores).');
+      }).catch(falla);
+    }
     barra.addEventListener('click', function (e) {
       var b = e.target.closest ? e.target.closest('[data-as]') : null; if (!b || est.ocupado) return;
       var a = b.getAttribute('data-as');
       if (a === 'cerrar') { est.panel = ''; est.confirma = ''; pinta(); }
+      else if (a === 'sobre') {
+        if (!origenVivo()) { est.confirma = ''; pinta(); return; }
+        if (est.confirma !== 'sobre') { var fo = barra.querySelector('form[data-as-form="guardar"]'), nom = fo ? fo.nombre.value : '', ver = fo ? fo.version.value : ''; est.confirma = 'sobre'; pinta(); fo = barra.querySelector('form[data-as-form="guardar"]'); if (fo) { fo.nombre.value = nom; fo.version.value = ver; } return; }
+        guardaAhora(true);
+      }
       else if (a === 'guardar') {
         est.msg = ''; est.confirma = '';
         if (api && api.reglas && api.reglas().cambios.length) { est.panel = ''; est.msg = texto('reglas'); } else est.panel = est.panel === 'guardar' ? '' : 'guardar';
         pinta();
       } else if (a === 'abrir') {
         est.msg = ''; est.confirma = ''; est.panel = est.panel === 'abrir' ? '' : 'abrir'; est.lista = null; pinta();
-        if (est.panel === 'abrir') N.lista().then(function (r) { if (est.panel !== 'abrir') return; if (!r.ok) { est.panel = ''; fin(texto(r.error)); return; } est.lista = Array.isArray(r.columnas) ? r.columnas : []; pinta(); });
+        if (est.panel === 'abrir') N.lista().then(function (r) { if (est.panel !== 'abrir') return; if (!r.ok) { est.panel = ''; fin(texto(r.error)); return; } est.lista = Array.isArray(r.columnas) ? r.columnas : []; pinta(); }).catch(falla);
       } else if (a === 'abre') {
         var col = b.getAttribute('data-col');
         if (est.confirma !== col) { est.confirma = col; pinta(); return; }
@@ -166,23 +191,14 @@
           if (!r.ok) { fin(texto(r.error)); return; }
           est.panel = ''; est.confirma = ''; monta();
           fin('Abrí «' + (r.nombre || 'sin nombre') + '» de la columna ' + r.columna + '.' + (r.avisos ? ' ' + r.avisos + (r.avisos === 1 ? ' dato no se pudo leer y quedó' : ' datos no se pudieron leer y quedaron') + ' en referencia.' : ''));
-        });
+        }).catch(falla);
       }
     });
-    barra.addEventListener('submit', function (e) {
-      e.preventDefault(); if (est.ocupado || !api) return;
-      var f = e.target, modo = (e.submitter && e.submitter.value) || 'nueva';
-      if (api.reglas && api.reglas().cambios.length) { est.panel = ''; fin(texto('reglas')); return; }
-      var datos = { nombre: f.nombre.value, version: f.version.value, sobre: modo === 'sobre' };
-      est.ocupado = true; est.msg = 'Guardando en el libro…'; pinta();
-      N.guarda(est.def, api.estado().plan, datos).then(function (r) {
-        if (!r.ok) { fin(texto(r.error) + (r.columna ? ' Columna ' + r.columna + '.' : '')); return; }
-        est.panel = ''; fin('Guardado como Borrador en la columna ' + r.columna + ' del libro (' + r.escritos + ' valores).');
-      });
-    });
+    barra.addEventListener('submit', function (e) { e.preventDefault(); guardaAhora(false); });   // Enter o el botón principal: siempre plan nuevo
+    host.addEventListener('click', function () { setTimeout(function () { var antes = N.origen(); if (antes && !origenVivo() && !est.ocupado) pinta(); }, 0); });
     root.addEventListener('resize', mide);
     monta(); pinta();                                   // primero lo de la página; si el libro contesta, se cambia a su definición
-    return N.definicion().then(function (d) {
+    return N.definicion().catch(function () { return { modo: 'local', codigo: 'red', aviso: texto('red') }; }).then(function (d) {
       est.modo = d.modo; est.aviso = d.aviso || '';
       if (d.modo === 'libro') { est.tablas = d.tablas; est.def = d.definicion; est.puede = d.puede.guardar; monta(); }
       pinta();

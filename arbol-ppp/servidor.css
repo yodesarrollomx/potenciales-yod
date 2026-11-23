@@ -17,7 +17,7 @@
 .as-btn.alerta{border-color:var(--alerta);color:var(--alerta)}
 .as-nota{margin:6px 0 0;color:var(--mute)}
 .as-msg{margin:6px 0 0;font-weight:600}
-.as-panel{margin:8px 0 2px;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;display:grid;gap:8px;max-height:46vh;overflow:auto}
+.as-panel{margin:8px 0 2px;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;display:grid;gap:8px;max-height:60vh;overflow:auto}
 .as-panel label{display:grid;gap:3px;font-weight:600}
 .as-panel input{font:400 16px var(--body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0 10px;min-height:40px;width:100%}
 .as-panel .as-botones{margin-left:0}

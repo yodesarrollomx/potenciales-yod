@@ -160,7 +160,7 @@ prueba('un texto con espacio delante de = + - @ \' se guarda como texto (sin el 
 });
 prueba('lee de vuelta lo escrito: si algo no coincide responde «verificacion» y dice en qué columna quedó', () => {
   const E = armaEntorno(); const h = E.maestro, orig = Rango.prototype.setValues;
-  Rango.prototype.setValues = function (m) { const r = orig.call(this, m); if (this.c === 11 && this.nr > 5) this.h.g['10,11'] = { v: 5 }; return r; };
+  Rango.prototype.setValues = function (m) { const r = orig.call(this, m); if (this.c === 11 && this.r <= 10 && this.r + m.length > 10) this.h.g['10,11'] = { v: 5 }; return r; };
   let r; try { r = post(E, SES.editor, { columna: BASE }, 'ver1'); } finally { Rango.prototype.setValues = orig; }
   assert.strictEqual(r.ok, false); assert.strictEqual(r.error, 'verificacion'); assert.strictEqual(r.columna, 'K'); assert.strictEqual(JSON.stringify(r.no_coinciden), '["T-01"]'); assert(/Revisar: T-01/.test(E.cambios.getRange(2, 6).getValue()));
 });
@@ -215,7 +215,7 @@ prueba('arbol-columna lee una columna del árbol (valores por id y su revisión)
 });
 prueba('si la escritura se corta a medias responde «incompleto», dice la columna y deja renglón en CAMBIOS', () => {
   const E = armaEntorno(), orig = Rango.prototype.setValues;
-  Rango.prototype.setValues = function (m) { if (this.c === 11 && this.nr > 5) throw new Error('falla de Sheets'); return orig.call(this, m); };
+  Rango.prototype.setValues = function (m) { if (this.c === 11) throw new Error('falla de Sheets'); return orig.call(this, m); };
   let r; try { r = post(E, SES.editor, { columna: BASE }, 'inc'); } finally { Rango.prototype.setValues = orig; }
   assert.deepStrictEqual(JSON.parse(JSON.stringify(r)), { ok: false, error: 'incompleto', columna: 'K' }); assert.strictEqual(E.cambios.getLastRow(), 2);
   const f = E.cambios.getRange(2, 1, 1, 6).getValues()[0]; assert(/INCOMPLETA/.test(f[2])); assert.strictEqual(f[3], 'K'); assert(/Revisar la columna K/.test(f[5])); assert.strictEqual(E.bloqueo.liberado, true);
@@ -227,6 +227,48 @@ prueba('una definición de más de 100 KB se guarda en trozos que sí caben y se
   E.hojas.ARBOL_NODOS = new Hoja('ARBOL_NODOS', [['id', 'x'], ['otra', 'cosa']], 8);
   assert.deepStrictEqual(JSON.parse(JSON.stringify(E.ctx.arbol_get_(SES.lector, { recurso: 'arbol-definicion' }))), a, 'sale de la caché');
   delete E.cache.arbol_def_1; assert.deepStrictEqual(E.ctx.arbol_get_(SES.lector, { recurso: 'arbol-definicion' }).tablas.ARBOL_NODOS, [['id', 'x'], ['otra', 'cosa']], 'sin un trozo, lee la hoja');
+});
+prueba('una columna que alguien empezó a mano SIN ponerle nombre no es libre: el árbol no la pisa y usa la siguiente completamente vacía', () => {
+  const E = armaEntorno(); const h = E.maestro;
+  h.put(1, 11, '=IF(K3="","",K3)'); h.put(10, 11, 777); h.put(14, 11, 'nota a mano');   // K: copia de la plantilla con números, todavía sin nombre (su fila 1 se ve vacía)
+  h.put(13, 12, '=L11*2');                                                              // L: solo una fórmula
+  const antes = JSON.parse(JSON.stringify(h.g)); const r = post(E, SES.editor, { columna: BASE }, 'lib1');
+  assert.strictEqual(r.ok, true, JSON.stringify(r)); assert.strictEqual(r.columna, 'M', 'K y L tienen algo: no son libres');
+  Object.keys(antes).forEach((k) => assert.deepStrictEqual(h.g[k], antes[k], 'cambió la celda ' + k)); assert.strictEqual(h.celda(10, 11).v, 777); assert.strictEqual(h.celda(14, 11).v, 'nota a mano');
+  const F = armaEntorno({ cols: 12 }); F.maestro.put(10, 11, 777); F.maestro.put(13, 12, '=L11*2'); const n0 = JSON.stringify(F.maestro.g);
+  assert.strictEqual(post(F, SES.editor, { columna: BASE }, 'lib2').error, 'sin_columnas', 'sin columna vacía no escribe'); assert.strictEqual(JSON.stringify(F.maestro.g), n0);
+});
+prueba('al actualizar solo se escriben las celdas que trae la petición (y la identidad): las fórmulas no se reescriben y lo demás no se toca', () => {
+  const E = armaEntorno(); const r = post(E, SES.editor, { columna: BASE }, 'solo1'); const h = E.maestro, orig = Rango.prototype.setValues, tocadas = [];
+  h.put(15, 11, '00123');                                                             // alguien deja un texto a mano en R-19; la revisión cambia
+  const rev = E.ctx.arbol_get_(SES.lector, { recurso: 'arbol-columna', columna: 'K' }).rev; assert.notStrictEqual(rev, r.rev);
+  Rango.prototype.setValues = function (m) { m.forEach((_, i) => tocadas.push(this.r + i + ',' + this.c)); return orig.call(this, m); };
+  let u; try { u = post(E, SES.editor, { columna: col([['T-01', 2500]]), columna_existente: 'K', rev }, 'solo2'); } finally { Rango.prototype.setValues = orig; }
+  assert.strictEqual(u.ok, true, JSON.stringify(u)); assert.strictEqual(h.celda(10, 11).v, 2500);
+  assert.deepStrictEqual(tocadas.sort(), ['10,11', '3,11', '4,11', '5,11', '6,11', '7,11', '8,11'].sort(), 'solo T-01 y los seis renglones de identidad');
+  assert.strictEqual(h.celda(15, 11).v, '00123', 'el texto a mano sigue igual'); assert.strictEqual(h.celda(12, 11).f, '=K11/K10'); assert.strictEqual(h.celda(11, 11).v, 14000000);
+});
+prueba('un libro sin los renglones de identidad (I-01, I-04, I-06), o con la plantilla que los trae con fórmula, no recibe columnas sin marca: «sin_identidad» y nada escrito', () => {
+  [[3, 'I-01'], [6, 'I-04'], [8, 'I-06']].forEach(([renglon, id]) => {
+    const E = armaEntorno(); delete E.maestro.g[renglon + ',1']; const n0 = JSON.stringify(E.maestro.g);
+    assert.strictEqual(post(E, SES.editor, { columna: BASE }, 'si-' + id).error, 'sin_identidad', 'sin ' + id); assert.strictEqual(JSON.stringify(E.maestro.g), n0); assert.strictEqual(E.cambios.getLastRow(), 1);
+  });
+  const F = armaEntorno(); F.maestro.put(8, 10, '="x"'); const n1 = JSON.stringify(F.maestro.g);
+  assert.strictEqual(post(F, SES.editor, { columna: BASE }, 'si-f').error, 'sin_identidad'); assert.strictEqual(JSON.stringify(F.maestro.g), n1);
+});
+prueba('la columna a actualizar se pide por letra o por número entero: 10.5, «10», «AAAA», -1, NaN, objetos y listas se rechazan sin escribir', () => {
+  const E = armaEntorno(); const r = post(E, SES.editor, { columna: BASE }, 'num1'); const n0 = JSON.stringify(E.maestro.g);
+  [10.5, 11.5, '10', '11', 'AAAA', -1, NaN, Infinity, {}, [11], true, 'K;L', '=K', 'J', 10, 99, 'ZZ'].forEach((c, i) => assert.strictEqual(post(E, SES.editor, { columna: col([['T-01', 1]]), columna_existente: c, rev: r.rev }, 'num-' + i).error, 'columna_invalida', 'columna ' + JSON.stringify(c)));
+  assert.strictEqual(JSON.stringify(E.maestro.g), n0);
+});
+prueba('la bitácora nunca recibe una fórmula: un nombre de persona que empieza con = queda como texto', () => {
+  const E = armaEntorno(); const r = post(E, { ok: true, nombre: '=HYPERLINK("x")', correo: 'rara@ejemplo.invalid', rol: 'editor' }, { columna: BASE }, 'bit1'); assert.strictEqual(r.ok, true, JSON.stringify(r));
+  const c = E.cambios.celda(2, 2); assert.strictEqual(c.v, '=HYPERLINK("x")'); assert(!c.f, 'en CAMBIOS es texto, no fórmula'); assert(!E.maestro.celda(8, 11).f, 'y en I-06 también');
+});
+prueba('si algo truena por dentro, quien pregunta recibe solo «interno», sin el mensaje del error, y el candado se libera', () => {
+  const E = armaEntorno(); E.ctx.SpreadsheetApp.openById = () => { throw new Error('no existe el libro con id secreto'); };
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(E.ctx.arbol_get_(SES.lector, { recurso: 'arbol-columnas' }))), { ok: false, error: 'interno' });
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(post(E, SES.editor, { columna: BASE }, 'int1'))), { ok: false, error: 'interno' }); assert.strictEqual(E.bloqueo.liberado, true);
 });
 prueba('PPP2.gs llama a las rutas del árbol solo después de validar la sesión, y el vivero dice si el árbol está encendido', () => {
   const g = funcion('doGet'), p = funcion('doPost'), v = funcion('vivero_get_');

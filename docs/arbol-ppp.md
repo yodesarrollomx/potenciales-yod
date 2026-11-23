@@ -58,7 +58,7 @@ Con la sesión de YOD OS que ya está en el navegador, la barra de arriba de `ar
 - **Nace apagado.** Mientras la configuración del vivero no diga `arbol = sí`, el servidor responde `apagado`, la página del PPP no enseña el enlace y el árbol trabaja como calculadora suelta.
 - **Sin sesión, apagado o sin red**, la pantalla usa la definición de la página, lo dice («Sin conexión al libro») y no ofrece guardar. No inventa nada.
 - **Permisos del servidor, no de la página.** Leer pide sesión con el tablero `PT`; guardar, los roles que ya editan. No hay códigos ni roles nuevos. La página nunca borra la credencial del Portero.
-- **No pisa.** El árbol solo actualiza una columna que él creó, en Borrador y sin cambios desde que se abrió; si no, avisa y ofrece guardar como plan nuevo.
+- **No toca columnas hechas a mano ni vigentes.** El árbol solo actualiza una columna que él creó, en Borrador y sin cambios desde que se abrió; si no, avisa. Guardar crea por omisión un plan nuevo; reemplazar el plan abierto pide dos toques. Cualquier persona con permiso de editar puede actualizar un borrador del árbol, también el de otra persona.
 - **El libro guarda valores, no estados.** Al abrir un plan guardado, lo que estaba «confirmado» vuelve como «decidido».
 - **Reglas editadas sin publicar no se guardan.** Si hay cambios a las reglas en el navegador, guardar se bloquea: el libro recibe planes calculados con las reglas publicadas.
 

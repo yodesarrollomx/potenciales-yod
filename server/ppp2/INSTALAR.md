@@ -315,12 +315,17 @@ Lo que hay que saber:
 
 - **Quién puede:** leer, cualquiera con sesión y el tablero `PT`; guardar, los roles de `roles_editar`.
   El árbol guarda siempre en `Borrador`; volver vigente una columna se hace a mano en el libro.
-- **Nunca borra ni inserta:** usa la primera columna libre a la derecha de la plantilla. Si no hay,
-  responde `sin_columnas` y hay que agregar columnas a mano.
-- **No pisa lo ajeno:** sólo actualiza una columna que el árbol creó (su renglón `I-06` dice «Árbol
-  PPP») y que sigue en Borrador, y sólo si nadie la cambió desde que se abrió.
-- **Sin fórmulas nuevas:** la columna se copia de la plantilla; el árbol sólo escribe valores en los
-  renglones que no tienen fórmula.
+- **No quita ni inserta columnas ni renglones del libro:** una columna nueva va en la primera columna
+  **completamente vacía** (sin valores ni fórmulas) a la derecha de la plantilla. Si no hay, responde
+  `sin_columnas` y hay que agregar columnas a mano. En `CAMBIOS` sí agrega un renglón por guardado.
+- **No toca columnas hechas a mano ni vigentes:** sólo actualiza una columna que el árbol creó (su
+  renglón `I-06` dice «Árbol PPP») y que sigue en Borrador, y sólo si nadie la cambió desde que se
+  abrió. Cualquier persona con permiso de editar puede actualizar un borrador del árbol, también el
+  de otra persona: queda quién en `I-06` y en `CAMBIOS`.
+- **El libro debe traer los renglones `I-01`, `I-04` e `I-06`** sin fórmula en la plantilla; si no,
+  responde `sin_identidad` y no escribe.
+- **Sin fórmulas nuevas:** la columna se copia de la plantilla; el árbol sólo escribe valores en las
+  celdas que no tienen fórmula. Al actualizar escribe sólo las celdas que trae la petición.
 - **El id del libro vive sólo en `Config`.** Nunca en el código, el repositorio ni un mensaje.
 - **No probado en Google Sheets:** las pruebas del repositorio usan un doble en memoria. Sheets puede
   convertir un texto en número o fecha al escribirlo; por eso el paso 3 no se salta.

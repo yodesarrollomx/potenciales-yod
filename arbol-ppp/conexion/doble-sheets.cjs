@@ -11,7 +11,7 @@ class Hoja {
   getLastColumn() { let m = 0; Object.keys(this.g).forEach((k) => { m = Math.max(m, +k.split(',')[1]); }); return m; }
   getMaxColumns() { return this.maxC; }
   getDataRange() { return this.getRange(1, 1, this.getLastRow(), this.getLastColumn()); }
-  appendRow(fila) { const r = this.getLastRow() + 1; fila.forEach((x, j) => this.put(r, j + 1, typeof x === 'string' && x[0] === "'" ? x.slice(1) : x)); }
+  appendRow(fila) { const r = this.getLastRow() + 1; fila.forEach((x, j) => { if (typeof x === 'string' && x[0] === "'") this.g[r + ',' + (j + 1)] = { v: x.slice(1) }; else if (x !== '' && x !== null && x !== undefined) this.put(r, j + 1, x); }); }
   getRange(r, c, nr, nc) { return new Rango(this, r, c, nr || 1, nc || 1); }
 }
 class Rango {

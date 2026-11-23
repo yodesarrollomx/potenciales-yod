@@ -18,8 +18,11 @@
  *   - Sin fórmulas nuevas: la columna nueva se copia de la plantilla del propio libro. Solo se escriben valores en renglones sin fórmula; un renglón que tiene
  *     fórmula en la plantilla no se toca aunque la petición traiga un valor (se avisa en `ignorados`).
  *   - Un texto que empieza con = + - @ ' (aunque traiga un espacio delante) se escribe como texto literal. Un número que no es finito se rechaza.
- *   - Nunca borra: no quita columnas, filas ni pestañas; sin columna libre responde 'sin_columnas'. Solo actualiza una columna que el propio árbol creó
- *     (marca «Árbol PPP» en I-06 y estado Borrador) y solo si `rev` es la de esa columna al leerla: si alguien la cambió, responde 'revision'.
+ *   - No quita ni inserta columnas, filas ni pestañas. Una columna nueva va en la primera COMPLETAMENTE vacía a la derecha de la plantilla (sin valores
+ *     ni fórmulas); si no hay, responde 'sin_columnas'. Solo actualiza una columna que el árbol creó (marca «Árbol PPP» en I-06 y estado Borrador) y solo
+ *     si `rev` es la de esa columna al leerla: si alguien la cambió, responde 'revision'. Cualquier persona con permiso de editar puede actualizar un
+ *     borrador del árbol, también el de otra persona: queda quién en I-06 y en CAMBIOS. Las columnas hechas a mano y las vigentes no se tocan.
+ *   - Al escribir solo toca celdas sin fórmula: las de la petición y, en una columna nueva, las que la plantilla traía de muestra (se dejan vacías).
  *   - Bitácora: una fila en CAMBIOS por cada guardado, también cuando la escritura queda incompleta.
  *   - Lee de vuelta lo escrito y lo compara; si algo no coincide responde 'verificacion' y dice en qué columna.
  */
@@ -34,6 +37,9 @@ var ARBOL = {
 
 /* ───────────── entradas (se llaman desde doGet y doPost de PPP2.gs, después de canje_) ───────────── */
 function arbol_get_(s, p) {
+  try { return arbol_lee_(s, p); } catch (e) { return { ok: false, error: 'interno' }; }   // a quien pregunta no se le cuenta por qué falló
+}
+function arbol_lee_(s, p) {
   if (!arbolEncendido_(config_())) return { ok: false, error: 'apagado' };
   if (!puede_(s, 'leer')) return { ok: false, error: 'permiso' };
   var r = String(p.recurso || '');
@@ -58,8 +64,8 @@ function arbol_post_(s, b, rid) {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(ARBOL.BLOQUEO_MS)) return { ok: false, error: 'ocupado' };
   var res;
-  try { res = arbol_guarda_(s, b, rid); } finally { lock.releaseLock(); }
-  if (rid && res && res.ok) { try { cache.put(ck, JSON.stringify(res), ARBOL.IDEM_S); } catch (e) { } }
+  try { res = arbol_guarda_(s, b, rid); } catch (e) { res = { ok: false, error: 'interno' }; } finally { lock.releaseLock(); }
+  if (rid && res && res.ok) { try { cache.put(ck, JSON.stringify(res), ARBOL.IDEM_S); } catch (e2) { } }
   return res;
 }
 
@@ -196,59 +202,76 @@ function arbol_guarda_(s, b, rid) {
     } else return { ok: false, error: 'valor', id: id };
   }
 
-  /* la columna: una propia del árbol que se actualiza, o la primera libre a la derecha de la plantilla */
+  /* la identidad es lo que distingue una columna del árbol: sin esos renglones (o si la plantilla los trae con fórmula) no se escribe nada */
+  if (!('I-01' in fila) || !('I-04' in fila) || !('I-06' in fila)) return { ok: false, error: 'sin_identidad' };
   var plantilla = arbol_letraACol_(String(config_().maestro_plantilla || 'J'));
+  if (!(plantilla >= 2) || plantilla > h.getMaxColumns()) return { ok: false, error: 'sin_plantilla' };
+  var fPlantilla = h.getRange(1, plantilla, ult, 1).getFormulas();
+  if (fPlantilla[fila['I-04'] - 1][0] || fPlantilla[fila['I-06'] - 1][0]) return { ok: false, error: 'sin_identidad' };
+
+  /* la columna: una propia del árbol que se actualiza, o la primera completamente vacía a la derecha de la plantilla */
   var col, nueva = false;
-  if (b.columna_existente) {
-    var letraPedida = String(b.columna_existente).trim().toUpperCase();
-    col = /^[A-Z]{1,3}$/.test(letraPedida) ? arbol_letraACol_(letraPedida) : Number(b.columna_existente);
-    if (!(col > plantilla) || col > h.getMaxColumns()) return { ok: false, error: 'columna_invalida' };
-    if (!('I-04' in fila) || !('I-06' in fila)) return { ok: false, error: 'sin_identidad' };
+  if (b.columna_existente !== undefined && b.columna_existente !== null && b.columna_existente !== '') {
+    var pedida = b.columna_existente;
+    if (typeof pedida === 'string' && /^[A-Za-z]{1,3}$/.test(pedida.trim())) col = arbol_letraACol_(pedida.trim());
+    else if (typeof pedida === 'number' && isFinite(pedida) && Math.floor(pedida) === pedida) col = pedida;
+    else return { ok: false, error: 'columna_invalida' };
+    if (!(col > plantilla) || col > h.getLastColumn()) return { ok: false, error: 'columna_invalida' };
     var est = low_(h.getRange(fila['I-04'], col).getValue());
     if (!arbol_esPropia_(h, m, col) || est !== low_(ARBOL.ESTADO)) return { ok: false, error: 'columna_ajena' };   // no se sobrescribe lo hecho a mano ni lo vigente
     var revHoy = arbol_rev_(h.getRange(1, col, ult, 1).getValues(), h.getRange(1, col, ult, 1).getFormulas());
     if (String(b.rev || '') !== revHoy) return { ok: false, error: 'revision', rev: revHoy };                      // alguien la cambió desde que se leyó: no se pisa
   } else {
-    var ancho = h.getLastColumn(), libre = ancho + 1;
-    for (var c = plantilla + 1; c <= ancho; c++) if (String(h.getRange(ARBOL.PRIMER_RENGLON_IDENT, c).getValue()).trim() === '' && String(h.getRange(1, c).getDisplayValue()).trim() === '') { libre = c; break; }
+    /* libre = sin NINGÚN valor ni fórmula en toda la columna: una columna que alguien empezó a mano, aunque no tenga nombre, no es libre */
+    var ancho = h.getLastColumn(), libre = Math.max(ancho, plantilla) + 1;
+    if (ancho > plantilla) {
+      var n = ancho - plantilla, alto = Math.max(ult, h.getLastRow()), vv = h.getRange(1, plantilla + 1, alto, n).getValues(), ff = h.getRange(1, plantilla + 1, alto, n).getFormulas();
+      for (var c = 0; c < n; c++) {
+        var vacia = true;
+        for (var q = 0; q < alto && vacia; q++) if (ff[q][c] || !(vv[q][c] === '' || vv[q][c] === null)) vacia = false;
+        if (vacia) { libre = plantilla + 1 + c; break; }
+      }
+    }
     if (libre > h.getMaxColumns()) return { ok: false, error: 'sin_columnas' };   // nunca se inserta ni se borra: se avisa
     col = libre; nueva = true;
   }
 
   var letra = arbol_colALetra_(col), cam = libro.getSheetByName(ARBOL.CAMBIOS);
   var anota = function (que, pendiente) { if (cam) cam.appendRow([hoyISO_(), actor_(s), txt_(que, 300), letra, 'Árbol PPP', txt_(pendiente || '', 300)].map(arbol_literal_)); };
-  var ignorados = [], escritos = 0, formulas, leido, mal = [];
+  var ignorados = [], escritos = 0, mal = [];
   try {
-    /* copiar la plantilla (fórmulas y formato) y escribir solo valores donde no hay fórmula */
+    /* columna nueva: se copia la plantilla (fórmulas y formato). Después solo se escriben celdas SIN fórmula, una por una o por tramos seguidos:
+       las fórmulas no se reescriben y, al actualizar, lo que la petición no trae se queda como está. */
     if (nueva) h.getRange(1, plantilla, ult, 1).copyTo(h.getRange(1, col, ult, 1));
-    formulas = h.getRange(1, col, ult, 1).getFormulas().map(function (r) { return r[0]; });
+    var formulas = h.getRange(1, col, ult, 1).getFormulas().map(function (r) { return r[0]; });
     var actual = h.getRange(1, col, ult, 1).getValues().map(function (r) { return r[0]; });
     var ident = { 'I-01': b.nombre || 'Árbol · plan', 'I-02': b.version || 'V1', 'I-03': b.escenario || 'ARBOL', 'I-04': ARBOL.ESTADO, 'I-06': ARBOL.MARCA + ' · ' + actor_(s), 'I-05': hoyISO_() };
     Object.keys(ident).forEach(function (id) { if (id in fila && !formulas[fila[id] - 1]) valores[id] = arbol_literal_(txt_(ident[id], 200)); });
-    var bloque = [];
+    var porRenglon = {};
+    Object.keys(valores).forEach(function (id3) { if (formulas[fila[id3] - 1]) ignorados.push(id3); else porRenglon[fila[id3]] = valores[id3]; });
+    var tramo = null, tramos = [];
     for (var r = 1; r <= ult; r++) {
-      var id2 = ids[r - 1], f = formulas[r - 1];
-      if (f) bloque.push([f]);                                                          // fórmula: se conserva tal cual
-      else if (r >= ARBOL.PRIMER_RENGLON_IDENT && id2 && id2 in valores && fila[id2] === r) { bloque.push([valores[id2]]); escritos++; }
-      else bloque.push([nueva ? '' : arbol_literal_(actual[r - 1])]);                  // lo demás: como estaba (o vacío en una columna nueva); un texto «=…» ya protegido se vuelve a proteger
+      var toca = false, v2 = '';
+      if (formulas[r - 1]) toca = false;                                                              // fórmula: no se toca
+      else if (r in porRenglon) { toca = true; v2 = porRenglon[r]; escritos++; }
+      else if (nueva && !(actual[r - 1] === '' || actual[r - 1] === null)) { toca = true; v2 = ''; }   // columna nueva: lo que la plantilla traía de muestra se deja vacío
+      if (toca) { if (tramo && tramo.fin === r - 1) { tramo.fin = r; tramo.vals.push([v2]); } else { tramo = { ini: r, fin: r, vals: [[v2]] }; tramos.push(tramo); } }
     }
-    Object.keys(valores).forEach(function (id3) { if (formulas[fila[id3] - 1]) ignorados.push(id3); });
-    h.getRange(1, col, ult, 1).setValues(bloque);
+    tramos.forEach(function (t) { h.getRange(t.ini, col, t.vals.length, 1).setValues(t.vals); });
 
-    /* leer de vuelta y comparar (valores escritos, no los de fórmulas) */
-    leido = h.getRange(1, col, ult, 1).getValues().map(function (r3) { return r3[0]; });
-    Object.keys(valores).forEach(function (id4) {
-      if (formulas[fila[id4] - 1]) return;
-      var esp = valores[id4], got = arbol_texto_(leido[fila[id4] - 1]);
+    /* leer de vuelta y comparar lo escrito */
+    var leido = h.getRange(1, col, ult, 1).getValues().map(function (r3) { return r3[0]; });
+    Object.keys(porRenglon).forEach(function (rr) {
+      var esp = porRenglon[rr], got = arbol_texto_(leido[Number(rr) - 1]);
       if (typeof esp === 'string' && esp.charAt(0) === "'") esp = esp.slice(1);
-      if (esp === '' ? String(got) !== '' : (typeof esp === 'number' ? Math.abs(Number(got) - esp) > 1e-9 * Math.max(1, Math.abs(esp)) : String(got) !== String(esp))) mal.push(id4);
+      if (esp === '' ? String(got) !== '' : (typeof esp === 'number' ? Math.abs(Number(got) - esp) > 1e-9 * Math.max(1, Math.abs(esp)) : String(got) !== String(esp))) mal.push(ids[Number(rr) - 1]);
     });
   } catch (err) {
     /* la escritura se cortó: se deja dicho en la bitácora en qué columna, para que una persona la revise */
     try { anota('Escritura INCOMPLETA del Árbol PPP en la columna ' + letra + (nueva ? ' (columna nueva)' : '') + '.', 'Revisar la columna ' + letra + ': puede haber quedado a medias.'); } catch (e2) { }
     return { ok: false, error: 'incompleto', columna: letra };
   }
-  anota((nueva ? 'Columna nueva' : 'Columna actualizada') + ' del Árbol PPP: ' + escritos + ' valores; fórmulas de la plantilla sin tocar.', mal.length ? 'Revisar: ' + mal.slice(0, 10).join(', ') : '');
+  anota((nueva ? 'Columna nueva' : 'Columna actualizada') + ' del Árbol PPP: ' + escritos + ' valores; fórmulas sin tocar.', mal.length ? 'Revisar: ' + mal.slice(0, 10).join(', ') : '');
   if (mal.length) return { ok: false, error: 'verificacion', columna: letra, no_coinciden: mal.slice(0, 20) };
   var rev = arbol_rev_(h.getRange(1, col, ult, 1).getValues(), h.getRange(1, col, ult, 1).getFormulas());
   return { ok: true, hecho: 'arbol-guarda', columna: letra, nueva: nueva, escritos: escritos, ignorados: ignorados.slice(0, 50), estado: ARBOL.ESTADO, rev: rev };
