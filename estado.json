@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-23T17:34:39.841Z",
+ "generado": "2026-11-23T20:35:37.639Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -42,18 +42,6 @@
    "msg": "board-flujo-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
-   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/publicar.yml",
-   "tipo": "flujo",
-   "nodos": [
-    "sala-edicion::github_workflows_publicar",
-    "repo:yodesarrollomx/sala-edicion",
-    "SYS-SALA"
-   ],
-   "desde": "2026-11-23T15:33:44Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45206605037",
-   "msg": "Falló el flujo «Sala · publicacion=datos-45204576132-1-arranque · sha=19992e0de78c954874bbb12b8a6ea4c4a891ed02» de sala-edicion, trabajo «publicar», paso 6 «Validar versión de datos y mutex antes de construir»"
-  },
-  {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-cada-hora.yml",
    "tipo": "flujo",
    "nodos": [
@@ -62,8 +50,8 @@
     "SYS-SALA"
    ],
    "desde": "2026-11-23T15:22:54Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45204576132",
-   "msg": "Falló el flujo «Sala · Cada hora» de sala-edicion, trabajo «arranque / arranque», paso 11 «Publicar datos y esperar su recibo exacto»"
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45259765641",
+   "msg": "Falló el flujo «Sala · Cada hora» de sala-edicion, trabajo «mesa / mesa», paso 14 «Avisar si algo falló»"
   },
   {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-mesa.yml",
@@ -74,7 +62,7 @@
     "SYS-SALA"
    ],
    "desde": "2026-11-22T17:59:27Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45196929069",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45245198653",
    "msg": "Falló el flujo «Montador de la mesa» de sala-edicion, trabajo «mesa», paso 14 «Avisar si algo falló»"
   },
   {
