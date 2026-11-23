@@ -1,0 +1,46 @@
+/* Árbol PPP · vestido de YOD OS. Sólo lo carga arbol.html (dentro del marco del portal);
+   artifact.html sigue con los colores del prototipo. No cambia ninguna regla de pantalla.css:
+   sólo reasigna sus variables a la paleta del portal (os/styles.css) y ajusta el alto al marco.
+   Siempre claro, como el portal: arbol.html trae data-theme="light", que apaga el bloque oscuro de pantalla.css. */
+:root[data-theme="light"]{
+  --bg:#f6f3ed; --panel:#ffffff; --ink:#17140f; --mute:#5f594e; --line:#e1dacb; --ghost:#9a9382; --alerta:#9c6410;
+  /* las siete tarjetas: los mismos tonos que el tema claro de los tableros (portero.js) */
+  --terreno:#2f5fc0; --producto:#b8455e; --tiempo:#2e7d44; --costo:#9c6410; --dinero:#5f55c2; --reparto:#0f7e95; --riesgo:#c23a34; --confirmar:#17140f;
+  --sombra:rgba(35,29,20,.12); --rojo:#a94438; --info:#9a7b3f;
+  --display:'Instrument Sans',system-ui,sans-serif; --body:'Instrument Sans',system-ui,sans-serif;
+  color-scheme:light;
+}
+
+/* El portero pinta `.ppp` y todo `header` con su tema claro (y con !important): aquí manda el portal. */
+body.yod-on .ppp{background:var(--bg)!important}
+body.yod-on .ppp header.ppp-top{background:transparent!important;border-bottom:0!important;box-shadow:none!important;position:static}
+/* El botón de tema claro/oscuro no aplica: el portal es siempre claro. */
+#temaBtn{display:none!important}
+
+/* Títulos como en el portal: Instrument Serif. */
+.ppp h1{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:1.65rem;letter-spacing:.01em}
+.ppp h1 .ppp-proy{font-family:'Instrument Sans',system-ui,sans-serif}
+.tarj{border-radius:10px}
+
+/* Botones de la barra del libro: el principal en tinta, como el portal; foco dorado. */
+.as-btn{border-radius:9px}
+.as-btn:hover{border-color:var(--info)}
+
+/* El alto: la pantalla ocupa lo que dejan la barra del marco (64 px más su línea; 56 en teléfono) y la barra del libro. */
+body.yod-on .as-barra ~ #arbol-ppp .ppp{
+  height:calc(100vh - var(--as-alto) - 65px - env(safe-area-inset-top,0px));
+  height:calc(100dvh - var(--as-alto) - 65px - env(safe-area-inset-top,0px))}
+@media(max-width:900px){
+  body.yod-on .as-barra ~ #arbol-ppp .ppp{
+    height:calc(100vh - var(--as-alto) - 57px - env(safe-area-inset-top,0px));
+    height:calc(100dvh - var(--as-alto) - 57px - env(safe-area-inset-top,0px))}
+}
+
+/* Botones flotantes del portal (chinche 📌 y engrane ⚙️, abajo a la derecha). El de tema está oculto aquí,
+   así que la chinche baja a su lugar; y en teléfono los controles del mapa pasan a la izquierda para no quedar debajo. */
+body.yod-on:has(#temaBtn) .chn-pastilla{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+body.yod-on #engraneBtn{bottom:calc(14px + env(safe-area-inset-bottom,0px))!important}   /* el portero lo deja a 64 px, encima del de tema */
+body.yod-on:has(#engraneBtn) .chn-pastilla{bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+@media(max-width:900px){
+  body.yod-on .ppp-ctrl{right:auto;left:8px;align-items:flex-start}
+}

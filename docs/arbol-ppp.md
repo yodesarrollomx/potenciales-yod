@@ -56,7 +56,7 @@ Las tres primeras son guiones propios: imprimen el total y salen con código 1 s
 Con la sesión de YOD OS que ya está en el navegador, la barra de arriba de `arbol.html` pide al servidor del PPP 2 la definición publicada, guarda el plan como **una columna en Borrador** del libro Maestro y abre los planes que el árbol guardó. Archivos: `arbol-ppp/servidor.js` (el puente), `servidor.css`, `arranque.js` y, en el servidor, `server/ppp2/ArbolPPP.gs`.
 
 - **Nace apagado.** Mientras la configuración del vivero no diga `arbol = sí`, el servidor responde `apagado`, la página del PPP no enseña el enlace y el árbol trabaja como calculadora suelta.
-- **Sin sesión, apagado o sin red**, la pantalla usa la definición de la página, lo dice («Sin conexión al libro») y no ofrece guardar. No inventa nada.
+- **Apagado o sin red**, la pantalla usa la definición de la página, lo dice («Sin conexión al libro») y no ofrece guardar. No inventa nada. Desde el 23-nov-2026 `arbol.html` pide sesión como el resto de YOD OS (Portero); la calculadora sin sesión es `artifact.html`.
 - **Permisos del servidor, no de la página.** Leer pide sesión con el tablero `PT`; guardar, los roles que ya editan. No hay códigos ni roles nuevos. La página nunca borra la credencial del Portero.
 - **No toca columnas hechas a mano ni vigentes.** El árbol solo actualiza una columna que él creó, en Borrador y sin cambios desde que se abrió; si no, avisa. Guardar crea por omisión un plan nuevo; reemplazar el plan abierto pide dos toques. Cualquier persona con permiso de editar puede actualizar un borrador del árbol, también el de otra persona.
 - **El libro guarda valores, no estados.** Al abrir un plan guardado, lo que estaba «confirmado» vuelve como «decidido».
@@ -78,3 +78,12 @@ Nada de lo siguiente está hecho; una prueba en Node o con dobles no demuestra f
 ## Reversión
 
 Revertir por revisión el commit que agrega `arbol-ppp/` y repetir las verificaciones. No hay datos de negocio, hojas ni archivos de clientes que restaurar.
+
+## Dentro de YOD OS (23-nov-2026)
+
+`arbol.html` se abre con el marco del portal, igual que `ppp2.html`: barra lateral de tableros, barra de arriba con buscador, identidad y «YOD OS › PPP › Árbol» (PPP lleva a la lista de planes), y la puerta del Portero.
+
+- **Colores y letras:** `arbol-ppp/marco.css` sólo reasigna las variables de `pantalla.css` a la paleta del portal (papel, tinta y dorado; Instrument Serif en títulos e Instrument Sans en lo demás) y las siete tarjetas a los tonos del tema claro de los tableros. Siempre claro: `arbol.html` trae `data-theme="light"` y el botón de tema del Portero se oculta. `artifact.html` sigue con los colores del prototipo.
+- **El alto:** la pantalla ocupa lo que dejan la barra del marco (65 px; 57 en teléfono) y la barra del libro, que `arranque.js` vuelve a medir cada vez que cambia.
+- **Botones flotantes:** el engrane y la chinche quedan apilados abajo a la derecha; en teléfono los controles del mapa pasan a la izquierda para no quedar debajo.
+- **Entrada:** en la lista de planes del PPP, «Armar un plan con el árbol» va junto a «Crear plan en blanco», sólo si el servidor dice `arbol = sí`.
