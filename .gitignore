@@ -6,3 +6,7 @@ mockup.html
 # Python
 __pycache__/
 *.pyc
+
+# Árbol PPP: archivos que genera arbol-ppp/construir-artifact.cjs
+arbol-ppp/artifact.html
+arbol-ppp/definicion-vertical.js

@@ -82,6 +82,13 @@ jobs:
           node --check visor-explica.js
           node --check visor-explica-grafo.js
           node --test tests/visor-explica.test.cjs
+          node --check arbol-ppp/motor.js
+          node --check arbol-ppp/pantalla.js
+          node --check arbol-ppp/definicion-tablas.js
+          node --check arbol-ppp/conexion/conexion.js
+          node --check arbol-ppp/construir-artifact.cjs
+          node arbol-ppp/pruebas/motor-real.cjs
+          node arbol-ppp/conexion/pruebas.cjs
           git diff --check
       - name: MCP · protocolo y operaciones sobre el servidor PPP aislado
         run: |

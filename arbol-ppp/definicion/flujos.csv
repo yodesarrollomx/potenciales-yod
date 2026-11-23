@@ -1,0 +1,14 @@
+flujo,concepto,signo,monto,perfil,desde,hasta,parametros
+F-01,Tierra y cierre,-,T-04 + C-15,puntual,0,,
+F-01,Indirectos e imprevistos,-,C-12 + C-13,parejo,1,K-07,
+F-01,Obra,-,C-07,parejo,K-05,K-07,
+F-01,Comisiones,-,C-14,parejo,K-02,K-02 + K-04 - 1,
+F-01,Ventas cobradas,+,PT-07,cobranza_por_venta,,,enganche=K-08;durante_obra=K-09;saldo=K-10;rezago=K-11;inicio_ventas=K-02;meses_venta=K-04;fin_obra=K-07
+F-02,@config,,,config,,,meses_max=60;base_mes=1
+F-02,Cobranza,+,PT-07,cobranza_libro,,,tipologias=todas;enganche=K-08;durante_obra=K-09;individualizar=K-15;meses_saldos=K-11;saldo_posterior=K-14;inicio_ventas=K-02;meses_venta=K-04;fin_obra=K-07;obra_total=C-07
+F-02,Obra,-,C-07,curva_obra,,,inicio=K-05;duracion=K-06;desviacion=K-16
+F-02,Indirectos,-,C-12,indirectos_libro,,,predesarrollo=K-01;parte_predesarrollo=C-19;obra_total=C-07
+F-02,Imprevistos,-,C-13,proporcional_a_obra,,,obra_total=C-07
+F-02,Comisiones,-,C-10,porcentaje_de_cobranza,,,
+F-02,Cierre de tierra,-,C-15,puntual,1,,
+F-02,Dinero,,,banco_capital,,,usa_banco=D-09;capital=D-15;rendimiento=D-01;tasa_banco=D-04;apertura=D-05;linea=D-10;caja_minima=D-16 * C-16;devolver_con_obra=D-17;inicio_obra=K-05;fin_obra=K-07;unidades=PT-01
