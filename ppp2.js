@@ -334,12 +334,13 @@
     raiz.innerHTML = refresco(estado.viveroCopia) +
       '<div class="p2-cabeza"><div><h1>' + (anteriores ? 'Planes anteriores' : 'Planes de potencial') + '</h1>' +
       '<p class="p2-intro">' + (anteriores ? 'Expedientes del Vivero pendientes de migración.' : 'Empieza con el nombre del terreno. Cada dato que agregas queda en su libro y define la siguiente pregunta.') + '</p></div>' +
-      (!anteriores && puede.editar && !estado.viveroCopia ? '<button class="p2-btn oro" data-accion="sembrar"><i class="ti ti-seedling"></i> Crear plan en blanco</button>' : '') + '</div>' +
+      '<div class="p2-acciones">' +
+      (!anteriores && v.arbol === true ? '<a class="p2-btn suave" href="arbol-ppp/arbol.html"><i class="ti ti-binary-tree-2"></i> Armar un plan con el árbol</a>' : '') +   // sólo si el servidor dice que el árbol está encendido (Config!arbol = sí)
+      (!anteriores && puede.editar && !estado.viveroCopia ? '<button class="p2-btn oro" data-accion="sembrar"><i class="ti ti-seedling"></i> Crear plan en blanco</button>' : '') + '</div></div>' +
       (tarjetas ? '<div class="p2-rejilla">' + tarjetas + '</div>' : '<div class="p2-vacio">' + (anteriores ? 'No hay expedientes anteriores en este registro.' : 'Todavía no hay planes en el nuevo sistema.') + '</div>') +
       ((v.planes || []).some(function (p) { return !!p.error; }) ? '<p role="status">Hay libros que no se pudieron leer. <button class="p2-btn suave" data-accion="refrescar">Volver a consultar</button></p>' : '') +
       '<nav class="p2-acciones"><a class="p2-btn suave" href="' + (anteriores ? '#/' : '#/anteriores') + '">' + (anteriores ? 'Volver a planes de potencial' : 'Consultar expedientes anteriores') + '</a>' +
-      (anteriores ? '<a class="p2-btn suave" href="index.html?archivo=1">Abrir mapa y archivo histórico</a>' : '') +
-      (!anteriores && v.arbol === true ? '<a class="p2-btn suave" href="arbol-ppp/arbol.html">Armar un plan con el árbol</a>' : '') + '</nav>';   // sólo si el servidor dice que el árbol está encendido (Config!arbol = sí)
+      (anteriores ? '<a class="p2-btn suave" href="index.html?archivo=1">Abrir mapa y archivo histórico</a>' : '') + '</nav>';
     if (location.hash === '#/nuevo' && !estado.viveroCopia) {
       history.replaceState(null, '', location.pathname + location.search + '#/');
       if (puede.editar) dialogoSembrar();

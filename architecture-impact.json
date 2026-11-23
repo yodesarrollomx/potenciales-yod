@@ -1,25 +1,19 @@
 {
   "model_revision": "2026-11-23.arbol-ppp.1",
   "proposal_id": "CHG-ARBOL-PPP-20261123",
-  "summary": "Agregar el árbol de decisiones del PPP en una carpeta propia (arbol-ppp/): motor puro de reglas con vista previa rotulada, pantalla táctil, comparador, editor de reglas, umbrales de las nueve pruebas editables por plan, áreas del edificio por plan, adaptadores de la columna de factores, la definición del árbol vertical y sus pruebas. Agregar al servidor del PPP 2 cuatro rutas (server/ppp2/ArbolPPP.gs) que leen la definición del libro PPP Maestro, guardan un plan como una columna en Borrador y leen las columnas que el árbol guardó; nacen apagadas hasta que la configuración del vivero diga arbol = sí. El PPP único enseña el enlace al árbol solo si el servidor lo enciende. No cambia el Portero, el menú, los códigos de permiso, los roles ni los precios. El servidor no está publicado.",
+  "summary": "Vestir el árbol del PPP con YOD OS: arbol-ppp/arbol.html carga el marco compartido del portal (barra lateral de tableros, barra de arriba con buscador e identidad, «YOD OS › PPP › Árbol») y el Portero, como ppp2.html; una hoja propia (arbol-ppp/marco.css) reasigna los colores y letras del árbol a la paleta del portal (papel, tinta y dorado; Instrument Serif y Sans), siempre en claro, y ajusta el alto al marco. arranque.js vuelve a medir la barra del libro cuando cambia de alto. En la lista de planes del PPP el botón del árbol sube junto a «Crear plan en blanco» (sigue saliendo sólo si el servidor dice arbol = sí). artifact.html y pantalla.css no cambian. No cambia el servidor, el Portero, el menú, los códigos de permiso ni los roles; sube la etiqueta propia de versiones.",
   "components": [
     "SYS-ARBOL-PPP",
     "SYS-POTENCIALES",
     "SYS-PPP2",
-    "GAS-PPP2",
-    "SHEET-PPP2",
-    "SHEET-PPP-MAESTRO",
-    "SYS-YOD-OS",
-    "SYS-CONTROL"
+    "SYS-YOD-OS"
   ],
   "tests": [
-    "node arbol-ppp/pruebas/motor-real.cjs: 260 de 260 con definición y planes inventados.",
-    "node arbol-ppp/conexion/pruebas.cjs: 57 de 57 (ida y vuelta de la columna de factores sin diferencias).",
-    "node arbol-ppp/conexion/pruebas-gs.cjs: 34 de 34 de server/ppp2/ArbolPPP.gs contra un doble de Sheets (interruptor, permisos, pausa, candado, idempotencia por persona, revisión de la columna, columna libre solo si está completamente vacía, escribir solo las celdas de la petición, libro sin identidad, texto literal también en la bitácora, sin quitar ni insertar, lectura de vuelta, errores sin detalle).",
-    "node --test tests/arbol-ppp-servidor.test.cjs: 8 de 8 de punta a punta, con doGet y doPost reales sobre dobles: apagado por omisión, sin sesión y sin el tablero PT no entra, guardar y abrir dan las mismas cifras, dos personas no se pisan.",
-    "node --test tests/ppp2-servidor.test.cjs tests/ppp2-ronda.test.cjs tests/ppp2-libro.test.cjs tests/ppp2-consejo.test.cjs tests/ppp2-cache.test.cjs tests/ppp2-lapiz.test.cjs tests/ppp2-pestanas.test.cjs tests/ppp2-visor.test.cjs tests/ppp2-visor-pagina.test.cjs y node tests/ppp2-browser.cjs: sin regresión.",
-    "node --check de los JavaScript de arbol-ppp/ y de ppp2.js; los tres archivos del servidor compilan juntos; node scripts/versiones.cjs --check; git diff --check.",
-    "Pendiente, no demostrado: publicación del servidor, prueba contra Google Sheets en una copia privada del libro, concordancia permanente con el libro, prueba en celulares reales y en producción."
+    "node scripts/versiones.cjs --check: 162 etiquetas con la versión esperada.",
+    "node --test tests/arbol-ppp-servidor.test.cjs tests/access-gates.cjs tests/ppp-session-guard.test.cjs tests/ppp-cargador.test.cjs tests/ppp-cierre-cargador.test.cjs tests/ppp-ui.test.cjs: 148 de 148.",
+    "node arbol-ppp/pruebas/motor-real.cjs y node arbol-ppp/conexion/pruebas.cjs: sin regresión; node --check de ppp2.js y arbol-ppp/arranque.js; git diff --check.",
+    "Vista previa en el navegador con sesión de Dirección (marco y hoja inyectados sobre la página publicada): marco completo, migas «YOD OS › PPP › Árbol», sin desplazamiento a lo alto ni a lo ancho a 1534 px y a 390 px, botones flotantes sin tapar los controles del mapa.",
+    "Pendiente, no demostrado: la página ya publicada desde main y un iPhone real."
   ],
-  "rollback": "Con el servidor ya publicado: poner arbol = no en la configuración del vivero (apaga las rutas y el enlace sin publicar nada). Para quitar el código: revertir por revisión los commits, volver a fijar el commit anterior del atlas en el workflow, publicar el servidor anterior como versión nueva de la misma implementación y repetir las verificaciones locales. Las columnas que el árbol haya guardado en el libro se conservan: no borrar ni restaurar registros de negocio, Sheets o archivos de clientes."
+  "rollback": "Revertir el commit por revisión: arbol.html vuelve a la página suelta con los colores del prototipo. No hay datos ni servidor que restaurar."
 }
