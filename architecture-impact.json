@@ -7,7 +7,8 @@
     "SYS-POTENCIALES",
     "SYS-PPP2",
     "SYS-YOD-OS",
-    "SYS-CONTROL"
+    "SYS-CONTROL",
+    "GAS-PPP2"
   ],
   "tests": [
     "node scripts/versiones.cjs --check: 162 etiquetas con la versión esperada.",
