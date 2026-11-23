@@ -1,12 +1,13 @@
 {
   "model_revision": "2026-11-23.arbol-ppp.1",
   "proposal_id": "CHG-ARBOL-PPP-20261123",
-  "summary": "Vestir el árbol del PPP con YOD OS: arbol-ppp/arbol.html carga el marco compartido del portal (barra lateral de tableros, barra de arriba con buscador e identidad, «YOD OS › PPP › Árbol») y el Portero, como ppp2.html; una hoja propia (arbol-ppp/marco.css) reasigna los colores y letras del árbol a la paleta del portal (papel, tinta y dorado; Instrument Serif y Sans), siempre en claro, y ajusta el alto al marco. arranque.js vuelve a medir la barra del libro cuando cambia de alto. En la lista de planes del PPP el botón del árbol sube junto a «Crear plan en blanco» (sigue saliendo sólo si el servidor dice arbol = sí). artifact.html y pantalla.css no cambian. No cambia el servidor, el Portero, el menú, los códigos de permiso ni los roles; sube la etiqueta propia de versiones.",
+  "summary": "Vestir el árbol del PPP con YOD OS: arbol-ppp/arbol.html carga el marco compartido del portal (barra lateral de tableros, barra de arriba con buscador e identidad, «YOD OS › PPP › Árbol») y el Portero, como ppp2.html; una hoja propia (arbol-ppp/marco.css) reasigna los colores y letras del árbol a la paleta del portal (papel, tinta y dorado; Instrument Serif y Sans), siempre en claro, y ajusta el alto al marco. arranque.js vuelve a medir la barra del libro cuando cambia de alto. En la lista de planes del PPP el botón del árbol sube junto a «Crear plan en blanco» (sigue saliendo sólo si el servidor dice arbol = sí). artifact.html y pantalla.css no cambian. No cambia el servidor, el Portero, el menú, los códigos de permiso ni los roles; sube la etiqueta propia de versiones. La nueva etiqueta toca el ?v= de todas las páginas del repo, accesos.html incluida, sin cambiar su contenido.",
   "components": [
     "SYS-ARBOL-PPP",
     "SYS-POTENCIALES",
     "SYS-PPP2",
-    "SYS-YOD-OS"
+    "SYS-YOD-OS",
+    "SYS-CONTROL"
   ],
   "tests": [
     "node scripts/versiones.cjs --check: 162 etiquetas con la versión esperada.",
