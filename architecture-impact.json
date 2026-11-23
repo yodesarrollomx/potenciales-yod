@@ -1,20 +1,24 @@
 {
-  "model_revision": "2026-11-17.ppp-unico.1",
-  "proposal_id": "CHG-PPP-UNICO-20261117",
-  "summary": "Una entrada para todos los planes nuevos. El Vivero crea un libro limpio por oportunidad y el portal consulta allí los factores, la siguiente pregunta y los escenarios.",
+  "model_revision": "2026-11-23.arbol-ppp.1",
+  "proposal_id": "CHG-ARBOL-PPP-20261123",
+  "summary": "Agregar en una carpeta propia (arbol-ppp/) el árbol de decisiones del PPP: motor puro de reglas con vista previa rotulada, pantalla táctil, comparador, editor de reglas, umbrales de las nueve pruebas editables por plan, áreas del edificio por plan, adaptadores de la columna de factores, la definición del árbol vertical y sus pruebas. No toca el PPP único, el visor, el servidor, el Portero, el menú, los permisos ni los precios. La página no pide sesión, no lee ningún libro y no guarda en ningún servidor ni libro (conserva el plan, la comparación y las reglas editadas solo en el almacenamiento local del navegador).",
   "components": [
-    "SYS-YOD-OS",
-    "SYS-DESPACHO",
-    "GAS-PORTERO",
+    "SYS-ARBOL-PPP",
     "SYS-POTENCIALES",
     "SYS-PPP2",
     "GAS-PPP2",
     "SHEET-PPP2",
+    "SHEET-PPP-MAESTRO",
+    "SYS-YOD-OS",
     "SYS-CONTROL"
   ],
   "tests": [
-    "Alta por nombre, reapertura del mismo libro, factor con fuente y comparación de escenarios.",
-    "Acceso histórico por sus enlaces, control de roles y ausencia de expedientes en la plantilla."
+    "node arbol-ppp/pruebas/motor-real.cjs: 260 de 260 con definición y planes inventados.",
+    "node arbol-ppp/conexion/pruebas.cjs: 57 de 57 (ida y vuelta de la columna de factores sin diferencias).",
+    "node --check de arbol-ppp/motor.js, pantalla.js, definicion-tablas.js, conexion/conexion.js y construir-artifact.cjs.",
+    "node scripts/versiones.cjs --check y node --test tests/versiones.test.cjs: las etiquetas de arbol-ppp/arbol.html llevan la versión propia.",
+    "git diff --check.",
+    "Pendiente, no demostrado: apertura desde el plan con sesión, lectura de la definición y guardado en el libro por el servidor, concordancia permanente con el libro, prueba en celulares reales y en producción."
   ],
-  "rollback": "Restituir la referencia anterior de plantilla y revertir la entrada del portal. Conservar los libros ya creados y su registro."
+  "rollback": "Revertir por revisión el commit que agrega arbol-ppp/, las líneas del flujo de verificación y este registro, volver a fijar el commit anterior del atlas en el workflow y repetir las verificaciones locales. No borrar ni restaurar registros de negocio, Sheets o archivos de clientes."
 }

@@ -1,0 +1,2 @@
+id,nombre,max_abiertas,modulos,version,max_sugerencias,tope_corridas,tope_ms
+vertical,Vertical · departamentos,3,comun/predio;comun/norma;vertical/forma;vertical/producto;vertical/costos;comun/tiempos;comun/dinero;comun/reparto;comun/resultados;comun/pruebas-riesgo,2,5,300,250

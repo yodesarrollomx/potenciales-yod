@@ -1,0 +1,37 @@
+nodo,clave,nombre,implica,valor,escribe,solo_si,orden,componentes,fuente,fecha_fuente,por_omision
+E-15,sencillo,Sencillo,Escaleras y pasillo corto; sin elevador ni áreas comunes (cerca de 78% vendible),,,,1,pasillos,prototipo-arbol.html (nodo `efi`: 78%),,
+E-15,elevador,Con elevador,"Elevador, pasillos y cuarto de servicios (cerca de 70% vendible)",,,,2,pasillos;elevadores;servicios,prototipo-arbol.html (nodo `efi`: 70%),,
+E-15,amenidades,Con amenidades,"Lobby, salón, gimnasio y terraza común, además de lo anterior (cerca de 62% vendible en un edificio mediano; depende del tamaño del predio)",,,,3,pasillos;elevadores;servicios;lobby;salon;gimnasio;terraza,prototipo-arbol.html (nodo `efi`: 62%),,
+E-15,motor_ppp,Eficiencia del motor del PPP (82%),"Solo circulaciones, sin elevador ni áreas comunes: la eficiencia de vivienda que trae el motor del PPP",,,,4,pasillos=18%,"potenciales-yod/mixto.html:416 (control «Eficiencia Vivienda (%)», valor 82)",,
+E-16,a_nivel,A nivel,En el terreno libre o planta baja,3500,E-10=0;E-11=E-09;C-02=19750;C-03=3500,,1,,,,
+E-16,mitad_y_mitad,Mitad y mitad,"Parte a nivel, parte en sótano",11500,E-10=piso(E-09 / 2);E-11=E-09 - piso(E-09 / 2);C-02=11500;C-03=11500,,2,,,,
+E-16,en_sotano,En sótano,Todo excavado; cuesta casi como la torre,19750,E-10=E-09;E-11=0;C-02=19750;C-03=3500,,3,,,,
+P1-05,estudio,Estudio o 1 recámara,Para una persona o pareja,48,,,1,,,,
+P1-05,dos_rec,2 recámaras,Familia chica; tamaño de referencia inicial,74,,,2,,,,
+P1-05,tres_rec,3 recámaras,Familia; unidad amplia,98,,,3,,,,
+P1-08,calibrado,Calibrado con 3 planes de referencia,4% de las unidades por mes (se ajusta a 0.3 y 30 al mes si el tamaño lo saca de ahí),PT-01 * 0.04,,,1,,Calibrado con 3 planes de referencia: 4% de las unidades por mes,,si
+P1-08,prototipo,Valor fijo de referencia inicial,"Un solo valor fijo: 1.2 unidades al mes, sea cual sea el tamaño del edificio",1.2,,,2,,prototipo-arbol.html (nodo `ritmo`: 1.2 al mes),,no
+C-01,prototipo,Referencia inicial,"Costo de obra de referencia inicial: $19,500 por m²",19500,,,1,,"prototipo-arbol.html (nodo `obra`: 19,500)",,si
+C-01,motor_ppp,Motor del PPP,"Control «Obra Rasante ($/m²)» del motor vertical: $22,000 por m²",22000,,,2,,"potenciales-yod/mixto.html:467 (control `inCostRas`, valor 22000)",,no
+C-08,prototipo_libro,Prototipo y libro PPP 2,El prototipo junta indirectos e imprevistos en 18%; el libro PPP 2 los separa en 12% y 6%,0.12,,,1,,prototipo-arbol.html (nodo `ind`: 18% juntos con imprevistos) y ppp2/libro/generar.py:142 (`costo.indirectos`),,si
+C-08,motor_ppp,Motor del PPP,Control «Indirectos (Proy/Licencias %)» del motor vertical: 8%,0.08,,,2,,"potenciales-yod/mixto.html:469 (control `inInd`, valor 8)",,no
+C-09,prototipo_libro,Prototipo y libro PPP 2,Parte de los 18% del prototipo; el libro PPP 2 trae 6%,0.06,,,1,,prototipo-arbol.html (parte de `ind` = 18%) y ppp2/libro/generar.py:143 (`costo.imprevistos`),,si
+C-09,motor_ppp,Motor del PPP,Control «Imprevistos (%)» del motor vertical: 7%,0.07,,,2,,"potenciales-yod/mixto.html:470 (control `inImp`, valor 7)",,no
+C-10,prototipo,Prototipo y motor del PPP,Constante del código: 5% de las ventas,0.05,,,1,,"prototipo-arbol.html (función `calcula`: `ventas * .05`) y potenciales-yod/mixto.html:474 (control «Comercialización (%)», valor 5)",,si
+C-10,libro_ppp2,Libro PPP 2,Referencia del oficio de la plantilla del libro: 4.7%,0.047,,,2,,"ppp2/libro/generar.py:144 (clave `costo.comision`, hoja Datos)",,no
+C-11,prototipo_libro,Prototipo y libro PPP 2,Constante del prototipo: 4% de la tierra; el libro PPP 2 también trae 4%,0.04,,,1,,prototipo-arbol.html (función `calcula`: `tierra * .04`) y ppp2/libro/generar.py:145 (`costo.cierre`),,si
+C-11,motor_ppp,Motor del PPP,Control «Cierre / adquisición de tierra (%)» del motor vertical: 3%,0.03,,,2,,"potenciales-yod/mixto.html:472 (control `inCierreTierra`, valor 3)",,no
+K-13,lo_antes,Cuanto antes,Con poca preventa; pones más dinero,0.2,,,1,,,,
+K-13,un_tercio,Con un tercio vendido,Referencia inicial,0.33,,,2,,,,
+K-13,la_mitad,Con la mitad vendida,"Menos dinero propio, más espera",0.5,,,3,,,,
+K-09,prototipo,Prototipo,El prototipo no cobra durante la obra: 0%,0,,,1,,prototipo-arbol.html (la función `calcula` solo cobra enganche y saldo; D7 §5.3),,si
+K-09,motor_ppp,Motor del PPP,Control «Pagos en Obra (%)» del motor vertical: 20%,0.2,,,2,,"potenciales-yod/mixto.html:455 (control `inObra`, valor 20)",,no
+D-09,con_banco,Con crédito del banco,"El banco presta hasta el menor de tres topes (obra, costo con terreno y ventas); hay intereses y comisión de apertura",'si',,,1,,,,
+D-09,sin_banco,Sin banco,Todo el dinero sale de las ventas y del capital; las pruebas de línea de banco no aplican,'no',,,2,,,,
+D-01,libro_ppp2,Libro PPP 2,Rendimiento anual del capital (tasa fija) del libro: 15%,0.15,,,1,,ppp2/libro/generar.py:167 (clave `din.tasa_capital`),,si
+D-01,motor_ppp,Motor del PPP,"Control «Retorno preferente anual sobre capital (%)» del motor vertical: 10%; es un concepto cercano, no idéntico",0.1,,,2,,"potenciales-yod/mixto.html:498 (control `inPref`, valor 10)",,no
+D-11,libro_ppp2,Libro PPP 2,Guía de mercado del libro y umbral de la prueba 7: 35%,0.35,,,1,,"ppp2/libro/generar.py:177 (clave `din.preventa_minima`, «Guía de mercado»)",,si
+D-11,motor_ppp,Motor del PPP,Control «Preventa mínima para iniciar obra (%)» del motor vertical: 30%,0.3,,,2,,"potenciales-yod/mixto.html:495 (control `inMinPreventaObra`, valor 30)",,no
+S-03,tierra_30,Tierra + 30%,Cobra su tierra y 30% de la utilidad,0.3,,,1,,,,
+S-03,tierra_mitad,Tierra + mitad,Cobra su tierra y la mitad,0.5,,,2,,,,
+S-03,tierra_70,Tierra + 70%,Cobra su tierra y 70%,0.7,,,3,,,,
