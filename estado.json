@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-23T14:50:55.006Z",
+ "generado": "2026-11-23T17:22:26.821Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -18,7 +18,7 @@
     "repo:yodesarrollomx/potenciales-yod"
    ],
    "desde": "2026-11-13T02:10:58Z",
-   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/ccfb4f49afed753f3a0bd5c82c1c4f7a3a8ae593",
+   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/7a0397299c7232d3ef5814a4a9af821747c64199",
    "msg": "potenciales-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
@@ -40,6 +40,30 @@
    "desde": "2026-11-14T00:43:09Z",
    "url": "https://github.com/yodesarrollomx/board-flujo-yod/commit/1cef2f06d619d43afbc59957eb469520920a8740",
    "msg": "board-flujo-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
+  },
+  {
+   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/publicar.yml",
+   "tipo": "flujo",
+   "nodos": [
+    "sala-edicion::github_workflows_publicar",
+    "repo:yodesarrollomx/sala-edicion",
+    "SYS-SALA"
+   ],
+   "desde": "2026-11-23T15:33:44Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45206605037",
+   "msg": "Falló el flujo «Sala · publicacion=datos-45204576132-1-arranque · sha=19992e0de78c954874bbb12b8a6ea4c4a891ed02» de sala-edicion, trabajo «publicar», paso 6 «Validar versión de datos y mutex antes de construir»"
+  },
+  {
+   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-cada-hora.yml",
+   "tipo": "flujo",
+   "nodos": [
+    "sala-edicion::github_workflows_sala_cada_hora",
+    "repo:yodesarrollomx/sala-edicion",
+    "SYS-SALA"
+   ],
+   "desde": "2026-11-23T15:22:54Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45204576132",
+   "msg": "Falló el flujo «Sala · Cada hora» de sala-edicion, trabajo «arranque / arranque», paso 11 «Publicar datos y esperar su recibo exacto»"
   },
   {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-mesa.yml",
