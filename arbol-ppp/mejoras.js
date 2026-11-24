@@ -302,19 +302,34 @@ function __mejorasArbol() {
   };
 
   /* ───── avisos de la franja: botón «Enterado» ───── */
+  /* Sólo se anuncian los que bloquean («No pasa»). Los que no bloquean quedan plegados en un contador,
+     y lo que se quita con ✓ se queda quitado en este navegador (por plan) hasta que se pida verlo. */
+  const planClave = () => { const mo = modelo(), n = mo && mo.l.find((x) => x.id === 'T-01'); return 'vp_quitados_v1:' + (n && n.valor != null ? n.valor : ''); };
+  const leeQuit = () => { try { return JSON.parse(localStorage.getItem(planClave()) || '{}') || {}; } catch (e) { return {}; } };
+  const guardaQuit = (q) => { try { localStorage.setItem(planClave(), JSON.stringify(q)); } catch (e) { /* sin memoria: vale sólo en esta visita */ } };
   function avisos() {
     const fr = $('.ppp-franja'); if (!fr) return;
-    const chips = $$('.fr-chips button, .fr-chips [role=button]', fr).filter((b) => !b.classList.contains('vp-ok'));
-    let ocultos = 0;
+    if (est.planQ !== planClave()) { est.planQ = planClave(); est.visto = leeQuit(); est.verMas = false; }
+    const chips = $$('.fr-chips .fr-chip', fr);
+    let quitados = 0, suaves = 0, vivos = 0;
     chips.forEach((b) => {
-      const clave = b.textContent.trim();
-      if (!b.nextElementSibling || !b.nextElementSibling.classList.contains('vp-ok')) { const ok = el('button', 'vp-ok', '✓'); ok.type = 'button'; ok.title = 'Enterado: ocultar este aviso'; ok.setAttribute('aria-label', 'Enterado: ocultar el aviso de ' + clave); ok.onclick = (ev) => { ev.stopPropagation(); est.visto[clave] = true; avisos(); }; b.after(ok); }
-      const oc = !!est.visto[clave]; if (oc) ocultos++;
+      const clave = b.textContent.trim(), bloquea = b.classList.contains('alto');
+      if (!b.nextElementSibling || !b.nextElementSibling.classList.contains('vp-ok')) { const ok = el('button', 'vp-ok', '✓'); ok.type = 'button'; ok.title = 'Quitar este aviso'; ok.setAttribute('aria-label', 'Quitar el aviso de ' + clave); ok.onclick = (ev) => { ev.stopPropagation(); est.visto[clave] = true; guardaQuit(est.visto); avisos(); }; b.after(ok); }
+      const q = !!est.visto[clave]; if (q) quitados++; else if (!bloquea) suaves++;
+      const oc = !est.verMas && (q || !bloquea); if (!oc) vivos++;
       [b, b.nextElementSibling].forEach((e2) => oc ? e2.setAttribute('data-vp-oculto', '') : e2.removeAttribute('data-vp-oculto'));
     });
+    const t = $('.fr-t', fr);
+    if (t) { vivos ? t.removeAttribute('data-vp-oculto') : t.setAttribute('data-vp-oculto', ''); const txt = t.innerHTML.replace(/\s*·\s*(?:<b>)?\d+ avisos?(?: nuevos?)?(?:<\/b>)?(?: por este cambio<\/b>)? \(no bloquean\)/, ''); if (txt !== t.innerHTML) t.innerHTML = txt; }
     let v = $('.vp-vistos', fr);
-    if (ocultos) { if (!v) { v = el('button', 'vp-vistos'); v.type = 'button'; v.onclick = () => { est.visto = {}; avisos(); }; fr.append(v); } v.textContent = ocultos + ' enterado' + (ocultos > 1 ? 's' : '') + ' · ver'; }
-    else if (v) v.remove();
+    const resto = suaves + quitados;
+    if (resto) {
+      if (!v) { v = el('button', 'vp-vistos'); v.type = 'button'; v.onclick = () => { est.verMas = !est.verMas; avisos(); }; fr.append(v); }
+      const partes = []; if (suaves) partes.push(suaves + (suaves > 1 ? ' avisos que no bloquean' : ' aviso que no bloquea')); if (quitados) partes.push(quitados + (quitados > 1 ? ' quitados' : ' quitado'));
+      const txt = est.verMas ? 'Ocultar' : partes.join(' · ') + ' · ver'; if (v.textContent !== txt) v.textContent = txt;
+      let r = $('.vp-regresa', fr);
+      if (est.verMas && quitados) { if (!r) { r = el('button', 'vp-vistos vp-regresa', 'Regresar los quitados'); r.type = 'button'; r.onclick = () => { est.visto = {}; guardaQuit(est.visto); avisos(); }; fr.append(r); } } else if (r) r.remove();
+    } else { if (v) v.remove(); const r = $('.vp-regresa', fr); if (r) r.remove(); }
   }
 
   /* ───── tarjetas de arriba: despliegan sus datos ───── */
