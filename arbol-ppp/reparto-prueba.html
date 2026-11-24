@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=20261031-fase1-e2"></script>
+<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-cargador.js?v=20261031-fase1-e2"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Árbol PPP · reparto en copia de prueba · YoDesarrollo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="pantalla.css?v=20261123-arbol-marco">
+<style>
+  /* SPPP · T-10 · página de prueba del módulo de repartos (corrección 1, dictamen T-11): el Árbol a la izquierda, el estado del reparto a la derecha */
+  body { margin: 0; font-family: 'Instrument Sans', system-ui, sans-serif; color: #231d14; background: #fbf8f2; }
+  .rp-aviso { margin: 0; padding: 8px 14px; font-size: 13px; background: #f3e6c8; border-bottom: 1px solid #e1d3ae; }
+  .rp-marco { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 0; height: calc(100vh - 36px); }
+  #arbol-ppp { min-width: 0; height: 100%; overflow: hidden; }
+  #reparto-estado { overflow: auto; border-left: 1px solid #e1dacb; padding: 12px 14px; font-size: 13px; background: #fffdf9; }
+  .rp-estado h2 { font-size: 16px; margin: 0 0 6px; } .rp-estado h3 { font-size: 13px; margin: 12px 0 4px; }
+  .rp-estado[data-estado^="AUTORIZABLE"] h2 { color: #2b5b39; } .rp-estado[data-estado^="NO AUTORIZABLE"] h2, .rp-estado[data-estado^="INVÁLIDO"] h2, .rp-estado[data-estado^="BLOQUEADO"] h2 { color: #7f2f26; }
+  .rp-tabla { width: 100%; border-collapse: collapse; } .rp-tabla th, .rp-tabla td { text-align: left; vertical-align: top; padding: 3px 4px; border-bottom: 1px solid #eee6d6; font-weight: 400; }
+  .rp-tabla th { color: #6e675a; width: 46%; } .rp-motivos li { margin-bottom: 4px; } .rp-alcance { color: #6e675a; margin: 0 0 8px; }
+  @media (max-width: 900px) { .rp-marco { grid-template-columns: 1fr; height: auto; } #arbol-ppp { height: 70vh; } #reparto-estado { border-left: 0; border-top: 1px solid #e1dacb; } }
+</style>
+</head>
+<body>
+<p class="rp-aviso" role="note">Copia de prueba del módulo de repartos (SPPP · T-10): sólo vertical en venta; renta y el Hub quedan bloqueados. Esta página no guarda en el libro ni toca el PPP Maestro.</p>
+<div class="rp-marco">
+  <div id="arbol-ppp"></div>
+  <aside id="reparto-estado" aria-live="polite" aria-label="Estado del reparto del plan en pantalla"></aside>
+</div>
+<script src="reparto.js?v=20261123-arbol-marco"></script>
+<script src="motor.js?v=20261123-arbol-marco"></script>
+<script src="definicion-tablas.js?v=20261123-arbol-marco"></script>
+<script src="definicion-reparto.js?v=20261123-arbol-marco"></script>
+<script src="pantalla.js?v=20261123-arbol-marco"></script>
+<script src="reparto-prueba.js?v=20261123-arbol-marco"></script>
+<script src="../portero.js?v=20261123-arbol-marco"></script>
+</body>
+</html>

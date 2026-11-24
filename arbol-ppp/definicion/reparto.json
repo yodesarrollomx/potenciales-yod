@@ -1,0 +1,812 @@
+{
+ "esquema": "arbol-ppp-extension-1",
+ "nombre": "Módulo de repartos · vertical en venta (SPPP · T-10, copia de prueba)",
+ "generado": "2026-11-24",
+ "autor": "Alfil Claude (Opus 5.5) · T-10",
+ "nota": "Extensión de vertical.json: nodos S-12, S-13 y S-17 a S-24 (parámetros) y R-26 a R-35 (salidas del módulo de repartos, motor = reparto.<medida>). Se carga con Motor.carga(vertical.json, { extension: reparto.json }); sin la extensión el Árbol queda como estaba (130 nodos) y el reparto sale vacío. Las mismas filas, para las pestañas ARBOL_NODOS y ARBOL_FACTORES, están en reparto_nodos.csv y reparto_factores.csv. Fuente: diseño de repartos v3 (T-08) §d, dictámenes T-08 v3 y T-09 v2 y la decisión de Alejandro en P-02 (opción A por omisión). Nada en producción; no darlos de alta en el Maestro hasta aprobar T-10.",
+ "nodos": [
+  {
+   "id": "S-12",
+   "modulo": "comun/reparto",
+   "tipo": "regla_oficio",
+   "titulo": "¿Los indirectos ya incluyen los honorarios de la alianza?",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "S-03",
+   "unidad": {
+    "clase": "texto",
+    "etiqueta": "no, si o desconocido"
+   },
+   "que_es": "Si los indirectos (C-08) ya traen los honorarios de la alianza (S-06). Con S-06 mayor que cero hay que decidirlo: la referencia no cuenta como declaración y «desconocido» bloquea el reparto (CF-01).",
+   "referencia": {
+    "valor": "'desconocido'",
+    "origen": "Diseño de repartos v3 (T-08) §d: un solo enum (no, si, desconocido); Moréo no sabía si sus indirectos ya incluían el fee (parada P-04)."
+   },
+   "orden": 925,
+   "oculto": true,
+   "lista": [
+    "no",
+    "si",
+    "desconocido"
+   ],
+   "version": 1
+  },
+  {
+   "id": "S-13",
+   "modulo": "comun/reparto",
+   "tipo": "regla_oficio",
+   "titulo": "Esquema de gestión",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "S-03",
+   "unidad": {
+    "clase": "texto",
+    "etiqueta": "A o B"
+   },
+   "que_es": "A: honorarios integrados (catálogo, fila 51). B: gerencia externa (fila 50) y honorarios reducidos (fila 85). Con S-06 mayor que cero hay que decidirlo; el esquema B no existe en F-02 y se bloquea.",
+   "referencia": {
+    "valor": "'A'",
+    "origen": "Diseño de repartos v3 (T-08) §d y catálogo de costos v2, filas 50, 51 y 85 (Aplicación y candados B46:B50)."
+   },
+   "orden": 926,
+   "oculto": true,
+   "lista": [
+    "A",
+    "B"
+   ],
+   "version": 1
+  },
+  {
+   "id": "S-17",
+   "modulo": "comun/reparto",
+   "tipo": "regla_oficio",
+   "titulo": "Liberación de la caja mínima",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "S-03",
+   "unidad": {
+    "clase": "texto",
+    "etiqueta": "no o al liquidar"
+   },
+   "que_es": "La caja mínima (D-16) es una reserva: sólo se reparte en el corte final y con un acuerdo pactado de liberarla al liquidar.",
+   "referencia": {
+    "valor": "'no'",
+    "origen": "Diseño de repartos v3 (T-08) §b y dictamen T-08 v2 B1."
+   },
+   "orden": 927,
+   "oculto": true,
+   "lista": [
+    "no",
+    "al_liquidar"
+   ],
+   "version": 1
+  },
+  {
+   "id": "S-18",
+   "modulo": "comun/reparto",
+   "tipo": "regla_oficio",
+   "titulo": "Fondeador del respaldo",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "S-03",
+   "unidad": {
+    "clase": "texto",
+    "etiqueta": "texto"
+   },
+   "que_es": "Quién respalda el déficit después del capital y el banco: «ninguno» o «parte=SP; tope=30000000; tasa=0.15; pacto=pactado». La parte debe estar registrada y llevar tope, tasa y estado del pacto; si falta algo, el reparto es inválido. La tasa debe ser el rendimiento del capital (D-01), con el que F-02 cuesta el respaldo; si es otra, el reparto se bloquea.",
+   "referencia": {
+    "valor": "'ninguno'",
+    "origen": "Diseño de repartos v3 (T-08) §d (S-18), dictamen T-08 v2 B2 y dictamen T-11 v1 B06."
+   },
+   "orden": 928,
+   "oculto": true,
+   "version": 1
+  },
+  {
+   "id": "S-19",
+   "modulo": "comun/reparto",
+   "tipo": "regla_oficio",
+   "titulo": "¿Hay regla pactada de prioridad para la tierra en especie?",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "S-03",
+   "unidad": {
+    "clase": "si_no",
+    "etiqueta": "sí o no"
+   },
+   "que_es": "Con S-02 = no, el dueño sólo cobra su tierra primero si hay una regla de prioridad pactada; sin ella se bloquea el reparto (CF-10) y los campos se rotulan «incluye tierra aportada sin regla pactada».",
+   "referencia": {
+    "valor": "'no'",
+    "origen": "Dictamen T-08 v1 B3 y dictamen T-09 v2 C1."
+   },
+   "orden": 929,
+   "oculto": true,
+   "version": 1
+  },
+  {
+   "id": "S-20",
+   "modulo": "comun/reparto",
+   "tipo": "regla_oficio",
+   "titulo": "Imputación de los pagos al capital",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "S-03",
+   "unidad": {
+    "clase": "texto",
+    "etiqueta": "principal primero o a prorrata"
+   },
+   "que_es": "Cómo se imputa lo que F-02 ya le pagó al capital hasta el corte: primero al principal o a prorrata entre principal y rendimiento. Es una regla que se pacta.",
+   "referencia": {
+    "valor": "'principal_primero'",
+    "origen": "Diseño de repartos v3 (T-08) §c, paso 3, y dictamen T-08 v2 M3."
+   },
+   "orden": 930,
+   "oculto": true,
+   "lista": [
+    "principal_primero",
+    "prorrata"
+   ],
+   "version": 1
+  },
+  {
+   "id": "S-21",
+   "modulo": "comun/reparto",
+   "tipo": "regla_oficio",
+   "titulo": "Mes de corte del reparto",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "S-03",
+   "unidad": {
+    "clase": "mes",
+    "etiqueta": "mes"
+   },
+   "que_es": "Un solo mes para todo el reparto: caja, caja mínima, acreedores, cartera, imputación, autorización y fecha. Antes del primer mes de cierre el corte es intermedio y no autoriza nada.",
+   "referencia": {
+    "valor": 60,
+    "origen": "Diseño de repartos v3 (T-08) §b: por omisión, el último mes del horizonte de F-02."
+   },
+   "rango": {
+    "min": 1,
+    "max": 60,
+    "paso": 1
+   },
+   "orden": 931,
+   "oculto": true,
+   "version": 1
+  },
+  {
+   "id": "S-22",
+   "modulo": "comun/reparto",
+   "tipo": "regla_oficio",
+   "titulo": "IVA del vertical (tipología y modalidad)",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "S-03",
+   "unidad": {
+    "clase": "texto",
+    "etiqueta": "texto"
+   },
+   "que_es": "Tipología y modalidad del IVA no acreditable. En la copia de prueba sólo existe «ya incorporado» en vivienda o comercial; proxy, real y mixto se bloquean por nombre (CF-06).",
+   "referencia": {
+    "valor": "'vivienda_ya_incorporado'",
+    "origen": "Diseño de repartos v3 (T-08) §d (S-22) y catálogo de costos v2, filas 87 a 90."
+   },
+   "orden": 932,
+   "oculto": true,
+   "lista": [
+    "vivienda_ya_incorporado",
+    "comercial_ya_incorporado",
+    "vivienda_proxy",
+    "vivienda_real",
+    "comercial_proxy",
+    "comercial_real",
+    "mixto_ya_incorporado",
+    "mixto_proxy",
+    "mixto_real"
+   ],
+   "version": 1
+  },
+  {
+   "id": "S-23",
+   "modulo": "comun/reparto",
+   "tipo": "regla_oficio",
+   "titulo": "Estado del pacto de los acuerdos de reparto",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "S-03",
+   "unidad": {
+    "clase": "texto",
+    "etiqueta": "estado del pacto"
+   },
+   "que_es": "Sólo «pactado» autoriza pagos. Nada está firmado: el reparto se simula y lo autorizado queda en cero con su motivo.",
+   "referencia": {
+    "valor": "'pendiente'",
+    "origen": "Parada P-02 (decisión de Alejandro): la opción elegida fija la simulación, no el pacto."
+   },
+   "orden": 933,
+   "oculto": true,
+   "lista": [
+    "pactado",
+    "acordado_avanzar",
+    "propuesto",
+    "pendiente",
+    "supuesto"
+   ],
+   "version": 1
+  },
+  {
+   "id": "S-24",
+   "modulo": "comun/reparto",
+   "tipo": "regla_oficio",
+   "titulo": "Opción de reparto (parada P-02)",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "S-03",
+   "unidad": {
+    "clase": "texto",
+    "etiqueta": "A, B o C"
+   },
+   "que_es": "La opción de P-02 gobierna el reparto. A «50/50 y tercios»: preferente simple de 15 %, tierra pagada, excedente mitad dueño y mitad alianza, y la alianza en tercios (YoDesarrollo, Puebla Arquitectos y Avermont). B: como A, con la matriz del Acuerdo Marco. C: preferente simple de 12 % y excedente 30/20/50, con la matriz. El plan debe traer el excedente (S-03 y S-05) y el rendimiento (D-01) de la opción o el reparto se bloquea; aplicarla al plan recalcula F-02. F-02 capitaliza cada mes: sólo se autoriza si las partes pactan el preferente como lo calcula F-02.",
+   "referencia": {
+    "valor": "'A'",
+    "origen": "Decisión de Alejandro en la parada P-02 (opción A por omisión); B y C del diseño de repartos v3 §h; dictamen T-11 v1 B01."
+   },
+   "orden": 934,
+   "oculto": true,
+   "lista": [
+    "A",
+    "B",
+    "C"
+   ],
+   "version": 1
+  },
+  {
+   "id": "R-26",
+   "modulo": "comun/reparto",
+   "tipo": "calculado",
+   "titulo": "Caja disponible en el corte",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "R-22",
+   "unidad": {
+    "clase": "mxn",
+    "etiqueta": "millones",
+    "escala": 1000000
+   },
+   "que_es": "La caja de F-02 en el mes de corte (S-21), antes de pagar acreedores, reservas y socios.",
+   "motor": "reparto.caja_disponible",
+   "orden": 1035,
+   "oculto": true,
+   "version": 1
+  },
+  {
+   "id": "R-27",
+   "modulo": "comun/reparto",
+   "tipo": "calculado",
+   "titulo": "Obligaciones exigibles con terceros en el corte",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "R-22",
+   "unidad": {
+    "clase": "mxn",
+    "etiqueta": "millones",
+    "escala": 1000000
+   },
+   "que_es": "Banco, respaldo, ISR y demás acreedores del corte, cada uno con exigible, pagado y saldo (el detalle va en la tarjeta).",
+   "motor": "reparto.obligaciones",
+   "orden": 1036,
+   "oculto": true,
+   "version": 1
+  },
+  {
+   "id": "R-28",
+   "modulo": "comun/reparto",
+   "tipo": "calculado",
+   "titulo": "Reservas requeridas en el corte",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "R-22",
+   "unidad": {
+    "clase": "mxn",
+    "etiqueta": "millones",
+    "escala": 1000000
+   },
+   "que_es": "Caja mínima (D-16) y demás reservas del corte, con requerida, retenida, liberada y faltante (el detalle va en la tarjeta).",
+   "motor": "reparto.reservas",
+   "orden": 1037,
+   "oculto": true,
+   "version": 1
+  },
+  {
+   "id": "R-29",
+   "modulo": "comun/reparto",
+   "tipo": "calculado",
+   "titulo": "Caja repartible",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "R-22",
+   "unidad": {
+    "clase": "mxn",
+    "etiqueta": "millones",
+    "escala": 1000000
+   },
+   "que_es": "Caja disponible menos lo pagado a acreedores y lo retenido en reservas, más lo liberado. Si queda saldo de algún acreedor es cero.",
+   "motor": "reparto.caja_repartible",
+   "orden": 1038,
+   "oculto": true,
+   "version": 1
+  },
+  {
+   "id": "R-30",
+   "modulo": "comun/reparto",
+   "tipo": "calculado",
+   "titulo": "Utilidad económica",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "R-22",
+   "unidad": {
+    "clase": "mxn",
+    "etiqueta": "millones",
+    "escala": 1000000
+   },
+   "que_es": "Resultado a repartir (R-20) menos la tierra a su valor y los honorarios de la alianza, menos el ISR si se declara. No resta el preferente.",
+   "motor": "reparto.utilidad_economica",
+   "orden": 1039,
+   "oculto": true,
+   "version": 1
+  },
+  {
+   "id": "R-31",
+   "modulo": "comun/reparto",
+   "tipo": "calculado",
+   "titulo": "Estado del reparto",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "R-22",
+   "unidad": {
+    "clase": "texto",
+    "etiqueta": "texto"
+   },
+   "que_es": "AUTORIZABLE, AUTORIZABLE sólo pasos 3 y 4, NO AUTORIZABLE, INVÁLIDO o BLOQUEADO (fuera de alcance). Los importes siempre se separan en simulado, autorizado y pagado.",
+   "motor": "reparto.estado",
+   "orden": 1040,
+   "oculto": true,
+   "version": 1
+  },
+  {
+   "id": "R-32",
+   "modulo": "comun/reparto",
+   "tipo": "calculado",
+   "titulo": "Fecha de reparto autorizable",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "R-22",
+   "unidad": {
+    "clase": "mes",
+    "etiqueta": "mes"
+   },
+   "que_es": "El mes del corte cuando se autoriza todo el reparto; vacío si no. Nunca es el hito del motor (mes_reparto) de otro corte.",
+   "motor": "reparto.fecha_autorizable",
+   "orden": 1041,
+   "oculto": true,
+   "version": 1
+  },
+  {
+   "id": "R-33",
+   "modulo": "comun/reparto",
+   "tipo": "calculado",
+   "titulo": "Suma repartida (simulada)",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "R-22",
+   "unidad": {
+    "clase": "mxn",
+    "etiqueta": "millones",
+    "escala": 1000000
+   },
+   "que_es": "Lo que reparte la cascada en el corte; debe ser igual a la caja repartible (R-29).",
+   "motor": "reparto.suma_repartida",
+   "orden": 1042,
+   "oculto": true,
+   "version": 1
+  },
+  {
+   "id": "R-34",
+   "modulo": "comun/reparto",
+   "tipo": "calculado",
+   "titulo": "Candados y motivos del reparto",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "R-22",
+   "unidad": {
+    "clase": "texto",
+    "etiqueta": "texto"
+   },
+   "que_es": "Códigos de lo que impide autorizar (V, P-02, CF-01 a CF-10, SV, PACTO, PAGO, CORTE, RECEPTOR, ALCANCE, M3); el texto completo va en la tarjeta.",
+   "motor": "reparto.candados",
+   "orden": 1043,
+   "oculto": true,
+   "version": 1
+  },
+  {
+   "id": "R-35",
+   "modulo": "comun/reparto",
+   "tipo": "calculado",
+   "titulo": "Corte del reparto",
+   "tarjetas": [
+    "Reparto"
+   ],
+   "de": "R-22",
+   "unidad": {
+    "clase": "texto",
+    "etiqueta": "texto"
+   },
+   "que_es": "Tipo de corte (final, intermedio o truncado), mes del corte y primer mes de cierre de F-02.",
+   "motor": "reparto.corte",
+   "orden": 1044,
+   "oculto": true,
+   "version": 1
+  }
+ ],
+ "factores": [
+  {
+   "id": "S-12",
+   "nombre": "¿Los indirectos ya incluyen los honorarios de la alianza?",
+   "unidad_maestro": "texto",
+   "origen_maestro": "captura",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10.",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "S-13",
+   "nombre": "Esquema de gestión",
+   "unidad_maestro": "texto",
+   "origen_maestro": "captura",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10.",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "S-17",
+   "nombre": "Liberación de la caja mínima",
+   "unidad_maestro": "texto",
+   "origen_maestro": "captura",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10.",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "S-18",
+   "nombre": "Fondeador del respaldo",
+   "unidad_maestro": "texto",
+   "origen_maestro": "captura",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10.",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "S-19",
+   "nombre": "¿Hay regla pactada de prioridad para la tierra en especie?",
+   "unidad_maestro": "sí/no",
+   "origen_maestro": "captura",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10.",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "S-20",
+   "nombre": "Imputación de los pagos al capital",
+   "unidad_maestro": "texto",
+   "origen_maestro": "captura",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10.",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "S-21",
+   "nombre": "Mes de corte del reparto",
+   "unidad_maestro": "mes",
+   "origen_maestro": "captura",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10.",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "S-22",
+   "nombre": "IVA del vertical (tipología y modalidad)",
+   "unidad_maestro": "texto",
+   "origen_maestro": "captura",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10.",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "S-23",
+   "nombre": "Estado del pacto de los acuerdos de reparto",
+   "unidad_maestro": "texto",
+   "origen_maestro": "captura",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10.",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "S-24",
+   "nombre": "Opción de reparto (parada P-02)",
+   "unidad_maestro": "texto",
+   "origen_maestro": "captura",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10.",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "R-26",
+   "nombre": "Caja disponible en el corte",
+   "unidad_maestro": "MXN (factor nuevo)",
+   "origen_maestro": "formula",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10. Lo calcula el módulo de repartos (motor = reparto.caja_disponible).",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "R-27",
+   "nombre": "Obligaciones exigibles con terceros en el corte",
+   "unidad_maestro": "MXN (factor nuevo)",
+   "origen_maestro": "formula",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10. Lo calcula el módulo de repartos (motor = reparto.obligaciones).",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "R-28",
+   "nombre": "Reservas requeridas en el corte",
+   "unidad_maestro": "MXN (factor nuevo)",
+   "origen_maestro": "formula",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10. Lo calcula el módulo de repartos (motor = reparto.reservas).",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "R-29",
+   "nombre": "Caja repartible",
+   "unidad_maestro": "MXN (factor nuevo)",
+   "origen_maestro": "formula",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10. Lo calcula el módulo de repartos (motor = reparto.caja_repartible).",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "R-30",
+   "nombre": "Utilidad económica",
+   "unidad_maestro": "MXN (factor nuevo)",
+   "origen_maestro": "formula",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10. Lo calcula el módulo de repartos (motor = reparto.utilidad_economica).",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "R-31",
+   "nombre": "Estado del reparto",
+   "unidad_maestro": "texto",
+   "origen_maestro": "formula",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10. Lo calcula el módulo de repartos (motor = reparto.estado).",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "R-32",
+   "nombre": "Fecha de reparto autorizable",
+   "unidad_maestro": "mes",
+   "origen_maestro": "formula",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10. Lo calcula el módulo de repartos (motor = reparto.fecha_autorizable).",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "R-33",
+   "nombre": "Suma repartida (simulada)",
+   "unidad_maestro": "MXN (factor nuevo)",
+   "origen_maestro": "formula",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10. Lo calcula el módulo de repartos (motor = reparto.suma_repartida).",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "R-34",
+   "nombre": "Candados y motivos del reparto",
+   "unidad_maestro": "texto",
+   "origen_maestro": "formula",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10. Lo calcula el módulo de repartos (motor = reparto.candados).",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "R-35",
+   "nombre": "Corte del reparto",
+   "unidad_maestro": "texto",
+   "origen_maestro": "formula",
+   "tarjeta": "Reparto",
+   "campo_visor": "",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "Factor nuevo (T-10, copia de prueba del módulo de repartos): no darlo de alta en el Maestro hasta aprobar T-10. Lo calcula el módulo de repartos (motor = reparto.corte).",
+   "etiqueta_corta": "",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  }
+ ]
+}

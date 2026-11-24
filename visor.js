@@ -370,10 +370,34 @@
     });
     return o;
   }
+  /* Reparto de la copia de prueba del Árbol (SPPP · T-10, corrección 1 por el dictamen T-11). Sólo existe si el paquete trae «cascada»;
+     sin él (todos los paquetes del libro), el visor pinta igual que siempre. Con él: el mes del motor es un hito de referencia (N-02), la fecha
+     que se presenta es la del corte autorizado y un pago sólo existe si está registrado; un negativo es «pérdida asignada (teórica)» (C1) y un
+     reparto inválido o bloqueado lo dice en lugar de presentar cifras como pagos. */
+  function repartoT10(d) {
+    var c = d && d.cascada;
+    if (!c || typeof c !== 'object' || Array.isArray(c)) return null;
+    var f = c.fechas || {}, val = function (x) { return x && num(x.valor) !== null ? x.valor : null; };
+    var estado = typeof c.estado === 'string' && c.estado ? c.estado : 'SIN CALCULAR';
+    var hito = val(f.hito_motor); if (hito === null) hito = num((d.v || {}).mes_reparto);
+    return { estado: estado, bloqueado: !c.ok || /^(INVÁLIDO|BLOQUEADO|SIN CALCULAR)/.test(estado), autorizable: /^AUTORIZABLE/.test(estado),
+      motivos: (Array.isArray(c.motivos) ? c.motivos : (c.motivo ? [c.motivo] : [])).slice(0, 4), hito: hito, corte: val(f.corte_autorizado), pago: val(f.pago_registrado), campos: c.campos || {} };
+  }
+  function publicaT10(RC, k) { return !!RC && !RC.bloqueado && !!RC.campos[k] && RC.campos[k].rotulo === 'publicable'; }
+  function recibeT10(RC, k, x, txt) {
+    if (!RC) return txt;
+    if (num(x) !== null && x < 0) return 'pérdida asignada ' + mdp(x) + ' (teórica)';
+    return txt + (publicaT10(RC, k) ? '' : ' (teórico)');
+  }
+  function fechaT10(RC) {
+    if (RC.pago) return 'pago registrado al dueño: mes ' + RC.pago;
+    if (RC.corte) return 'corte autorizado: mes ' + RC.corte + ' (sin pago registrado)';
+    return 'sin corte autorizado' + (RC.hito ? ' (hito del motor: mes ' + RC.hito + ', referencia)' : '');
+  }
   function cTiempo(d) {
     var v = d.v || {}, N = Math.max(1, (d.flujo && d.flujo.meses) || num(v.mes_reparto) || 1), o = [];
     var firmas = fila(d, 'firmas'), saldos = fila(d, 'saldos'), vi = primero(firmas), vf = ultimo(firmas), ei = primero(saldos), ef = ultimo(saldos);
-    var oi = num(v.obra_inicio), of = num(v.fin_obra), rep = num(v.mes_reparto), prev = num(v.rv_preventa), pmin = num(dato(d, 'din.preventa_minima'));
+    var RC = repartoT10(d), oi = num(v.obra_inicio), of = num(v.fin_obra), rep = RC ? (RC.corte || RC.hito) : num(v.mes_reparto), prev = num(v.rv_preventa), pmin = num(dato(d, 'din.preventa_minima'));
     var unidades = total(d, 'firmas'), mesesVenta = vi && vf ? vf - vi + 1 : 0, corto = prev !== null && pmin !== null && prev < pmin;
     var rows = [['Ventas', vi, vf, TIE, 'Meses con firmas', L('Flujo', 'unidades que se firman'), 'flujo.firmas'], ['Obra', oi, of, CAP, 'Meses de obra', L('Versiones', 'obra_inicio y fin_obra'), 'v.fin_obra'], ['Escrituras', ei, ef, CLI, 'Meses en que se cobran los saldos', L('Flujo', 'saldos al escriturar'), 'flujo.saldos']];
     /* la parte que corre con el tiempo (barras, arranque, reparto, eje) y la que se queda (nombres de renglón) */
@@ -395,7 +419,12 @@
         p.push('<g' + T(r[0], [['Del mes', a], ['Al mes', b], ['Duración', txt]].concat(i === 0 && unidades ? [['Unidades que se firman', ent(unidades)]] : []), r[5], r[6]) + '><rect x="' + f1(R.X(a)) + '" y="' + y + '" width="' + f1(w) + '" height="10" rx="3" fill="' + r[3] + '"></rect>' +
           (w >= ancho(txt, 7.5, true) + 8 ? '<text x="' + f1(R.X(a) + 4) + '" y="' + (y + 7.6) + '" font-size="7.5" font-weight="600" fill="#fffdf9">' + txt + '</text>' : '') + '</g>');
       });
-      if (rep) {
+      if (rep && RC) {
+        /* N-02: el corte autorizado se marca lleno; sin corte, el hito del motor va hueco y dice que es referencia */
+        var cxT = clamp(R.XE(rep) - 3.5, R.x0 + 4, R.x1 - 2), trT = T('Reparto · ' + RC.estado, [['Corte autorizado', RC.corte ? 'mes ' + RC.corte : 'sin fecha autorizada'], ['Hito del motor (referencia del Árbol)', RC.hito ? 'mes ' + RC.hito : '—'], ['Pago registrado', RC.pago ? 'mes ' + RC.pago : 'sin pago registrado']], L('Versiones', 'mes_reparto'), 'v.mes_reparto');
+        f.push('<text' + trT + ' x="0" y="71.5" font-size="8.5" font-weight="700" fill="' + INK + '">Reparto</text>');
+        p.push('<g' + trT + '><circle cx="' + f1(cxT) + '" cy="69" r="3.5" fill="' + (RC.corte ? INK : 'none') + '" stroke="' + INK + '" stroke-width="0.9"></circle><text x="' + f1(cxT - 6.5) + '" y="71.6" text-anchor="end" font-size="7.5" font-weight="700" fill="' + INK + '">' + (RC.corte ? 'corte ' + RC.corte : 'hito ' + rep + ' (ref.)') + '</text></g>');
+      } else if (rep) {
         var cx = clamp(R.XE(rep) - 3.5, R.x0 + 4, R.x1 - 2), tr = T('Reparto', [['Mes del reparto', 'mes ' + rep], ['El dueño recibe lo último en el mes', num(v.dueno_meses) || '—']], L('Versiones', 'mes_reparto'), 'v.mes_reparto');
         f.push('<text' + tr + ' x="0" y="71.5" font-size="8.5" font-weight="700" fill="' + INK + '">Reparto</text>');
         p.push('<g' + tr + '><circle cx="' + f1(cx) + '" cy="69" r="3.5" fill="' + INK + '"></circle><text x="' + f1(cx - 6.5) + '" y="71.6" text-anchor="end" font-size="7.5" font-weight="700" fill="' + INK + '">mes ' + rep + '</text></g>');
@@ -404,7 +433,9 @@
       return f.join('') + panWrap('T', p.join(''), R, 0, 92);
     }
     var kpis = [
-      [rep ? String(rep) : '—', 'meses de plazo', 'firma a reparto', T('Plazo', [['Mes del reparto', rep || '—']], L('Versiones', 'mes_reparto'), 'v.mes_reparto')],
+      RC ? (RC.corte ? [String(RC.corte), 'mes del corte', 'reparto autorizado', T('Corte autorizado', [['Corte autorizado', 'mes ' + RC.corte], ['Hito del motor (referencia)', RC.hito ? 'mes ' + RC.hito : '—']], L('Versiones', 'mes_reparto'), 'v.mes_reparto')]
+        : [RC.hito ? String(RC.hito) : '—', 'hito del motor', 'referencia, sin autorizar', T('Hito del motor', [['Hito del motor (referencia del Árbol)', RC.hito ? 'mes ' + RC.hito : '—'], ['Corte autorizado', 'sin fecha autorizada'], ['Estado del reparto', RC.estado]], L('Versiones', 'mes_reparto'), 'v.mes_reparto')])
+      : [rep ? String(rep) : '—', 'meses de plazo', 'firma a reparto', T('Plazo', [['Mes del reparto', rep || '—']], L('Versiones', 'mes_reparto'), 'v.mes_reparto')],
       [pct(prev), 'preventa', pmin !== null ? 'mínimo ' + pct(pmin, 0) : '', T('Preventa al arrancar la obra', [['Preventa firmada', pct(prev)], ['Mínimo', pct(pmin, 0)]], L('Versiones', 'rv_preventa'), 'v.rv_preventa')],
       [mesesVenta && unidades ? f1(unidades / mesesVenta) : '—', 'unidades al mes', mesesVenta ? pct(1 / mesesVenta) + ' del total' : '',
         T('Ritmo de venta', [['Unidades', ent(unidades)], ['Meses de venta', mesesVenta || '—'], ['Unidades ÷ meses', mesesVenta && unidades ? f1(unidades / mesesVenta) : '—']], L('Flujo', 'unidades que se firman'), 'visor.ritmo')]
@@ -420,15 +451,18 @@
       id: 'tiempo', n: 3, titulo: 'Tiempo', sub: 'etapas y cifras', w: 184, wG: 184, hG: 136,
       svg: d.flujo && d.flujo.meses && (vi || oi || rep) ? grafica(false) + o.join('') : sinDatos(184, 'Aún no hay calendario calculado'),
       svgG: d.flujo && d.flujo.meses && (vi || oi || rep) ? grafica(true) + o.join('') : sinDatos(184, 'Aún no hay calendario calculado'),
-      aria: 'Tiempo: ventas del mes ' + vi + ' al ' + vf + ', obra del ' + oi + ' al ' + of + ', reparto en el mes ' + rep,
+      aria: 'Tiempo: ventas del mes ' + vi + ' al ' + vf + ', obra del ' + oi + ' al ' + of + (RC ? ', ' + (RC.corte ? 'corte de reparto autorizado en el mes ' + RC.corte : 'sin corte de reparto autorizado' + (RC.hito ? ' (hito del motor: mes ' + RC.hito + ', referencia)' : '')) : ', reparto en el mes ' + rep),
       detalle: [{ h: 'Calendario (meses del plan)', filas: [
         ['Ventas', vi ? 'mes ' + vi + ' a ' + vf : '—', (mesesVenta ? mesesVenta + ' meses · ' : '') + L('Flujo', 'unidades que se firman'), 'flujo.firmas'],
         ['Obra', oi ? 'mes ' + oi + ' a ' + of : '—', L('Versiones', 'obra_inicio y fin_obra'), 'v.fin_obra'],
         ['Escrituras', ei ? 'mes ' + ei + ' a ' + ef : '—', L('Flujo', 'saldos al escriturar'), 'flujo.saldos'],
         ['Banco liquidado', num(v.banco_mes) ? 'mes ' + v.banco_mes : '—', L('Versiones', 'banco_mes'), 'v.banco_mes'],
         ['Capital liquidado', num(v.capital_mes) ? 'mes ' + v.capital_mes : '—', L('Versiones', 'capital_mes'), 'v.capital_mes'],
-        ['Reparto', rep ? 'mes ' + rep : '—', L('Versiones', 'mes_reparto'), 'v.mes_reparto']
-      ] }, { h: 'Ritmo', filas: [
+      ].concat(RC ? [
+        ['Hito del motor (referencia del Árbol)', RC.hito ? 'mes ' + RC.hito : '—', L('Versiones', 'mes_reparto'), 'v.mes_reparto'],
+        ['Corte autorizado', RC.corte ? 'mes ' + RC.corte : 'sin fecha autorizada', 'Reparto · ' + RC.estado, 'cascada.fechas'],
+        ['Pago registrado al dueño', RC.pago ? 'mes ' + RC.pago : 'sin pago registrado', 'Libro de pagos (fuera del Árbol)', 'cascada.fechas']
+      ] : [['Reparto', rep ? 'mes ' + rep : '—', L('Versiones', 'mes_reparto'), 'v.mes_reparto']]) }, { h: 'Ritmo', filas: [
         ['Preventa al arrancar la obra', pct(prev), 'mínimo ' + pct(pmin, 0) + ' · ' + L('Versiones', 'rv_preventa'), 'v.rv_preventa'],
         ['Unidades por mes', mesesVenta && unidades ? f1(unidades / mesesVenta) : '—', mesesVenta && unidades ? ent(unidades) + ' unidades ÷ ' + mesesVenta + ' meses' : L('Flujo', 'unidades que se firman'), 'visor.ritmo']
       ] }]
@@ -761,14 +795,15 @@
 
   /* ───────────────────────── 6 · Reparto (cuadro doble) ───────────────────────── */
   function cReparto(d) {
-    var v = d.v || {}, rp = d.reparto || {}, o = [], X0 = 96;
+    var v = d.v || {}, rp = d.reparto || {}, o = [], X0 = 96, RC = repartoT10(d);
     var pone = num(v.dueno_aporta) || 0, recibe = num(v.dueno_recibe) || 0, capital = num(v.capital) || 0, capRecibe = total(d, 'pago_capital') || (capital + (num(v.rend_capital) || 0));
     var alianza = num(v.alianza_recibe) || 0, sc = Math.min(1.7, 186 / Math.max(1, pone, recibe, capital, capRecibe, alianza));
-    var rows = [['Dueño', v.pago_especie ? 'anticipo + viviendas' : 'pone su terreno', TIE, ORO, pone, 'pone ' + mdp(pone), recibe, 'recibe ' + mdp(recibe), num(v.dueno_veces) ? '×' + v.dueno_veces.toFixed(2) : '',
-      T('Dueño del terreno', [['Aporta su tierra', mdp(pone)], ['Recibe en total', mdp(recibe)], ['Veces el valor de su tierra', num(v.dueno_veces) ? v.dueno_veces.toFixed(2) + '×' : '—'], ['Recibe lo último en el mes', num(v.dueno_meses) || '—']], L('Versiones', 'dueno_aporta, dueno_recibe y dueno_veces'), 'v.dueno_recibe')]];
+    var rows = [['Dueño', v.pago_especie ? 'anticipo + viviendas' : 'pone su terreno', TIE, ORO, pone, 'pone ' + mdp(pone), recibe, recibeT10(RC, 'dueno_recibe', recibe, 'recibe ' + mdp(recibe)), num(v.dueno_veces) ? '×' + v.dueno_veces.toFixed(2) : '',
+      T('Dueño del terreno', [['Aporta su tierra', mdp(pone)], [RC && recibe < 0 ? 'Pérdida asignada (teórica)' : 'Recibe en total' + (RC && !publicaT10(RC, 'dueno_recibe') ? ' (teórico)' : ''), mdp(recibe)], ['Veces el valor de su tierra', num(v.dueno_veces) ? v.dueno_veces.toFixed(2) + '×' : '—']].concat(RC
+        ? [['Estado del reparto', RC.estado], ['Fecha', fechaT10(RC)]] : [['Recibe lo último en el mes', num(v.dueno_meses) || '—']]), L('Versiones', 'dueno_aporta, dueno_recibe y dueno_veces'), 'v.dueno_recibe')]];
     if (capital > 0.05) rows.push(['Capital', 'pone efectivo', CAP, CAPT, capital, 'pone ' + mdp(capital), capRecibe, 'recibe ' + mdp(capRecibe), '×' + (capRecibe / capital).toFixed(2),
       T('Capital', [['Aporta', mdp(capital)], ['Recibe con su rendimiento', mdp(capRecibe)], ['Rendimiento', mdp(num(v.rend_capital))], ['Tasa anual', pct(num(rp.tasa_capital), 0)], ['Liquidado en el mes', num(v.capital_mes) || '—']], Ly(L('Versiones', 'capital y rend_capital'), 'Flujo V' + d.version + ' · capital: pago' + Lded('Flujo', 'capital: pago')), 'flujo.pago_capital')]);
-    rows.push(['Alianza', 'pone trabajo y gestión', CLI, CLIT, 0, 'sin dinero propio', alianza, 'recibe ' + mdp(alianza) + ' de utilidad', '',
+    rows.push(['Alianza', 'pone trabajo y gestión', CLI, CLIT, 0, 'sin dinero propio', alianza, recibeT10(RC, 'alianza_recibe', alianza, 'recibe ' + mdp(alianza) + ' de utilidad'), '',
       T('Alianza desarrolladora', [['Recibe', mdp(alianza)], ['Su parte de la utilidad', pct(num(rp.parte_alianza), 0)]], L('Versiones', 'alianza_recibe'), 'v.alianza_recibe')]);
     var paso = rows.length === 3 ? 39 : 52;
     rows.forEach(function (r, i) {
@@ -788,7 +823,8 @@
     var pd = num(rp.parte_dueno), pa = num(rp.parte_alianza), pc = num(rp.parte_capital) || 0;
     orden.push(pd !== null ? (pd === pa && !pc ? 'utilidad mitad y mitad' : 'utilidad ' + pct(pd, 0) + ' dueño · ' + pct(pa, 0) + ' alianza' + (pc ? ' · ' + pct(pc, 0) + ' capital' : '')) : 'utilidad');
     o.push('<text' + T('Esquema de reparto', [['Esquema', rp.esquema || (d.plan && d.plan.esquema) || '—'], ['Parte del dueño', pct(pd, 0)], ['Parte de la alianza', pct(pa, 0)], ['Parte del capital', pct(pc, 0)], ['¿Se paga la tierra antes de repartir?', rp.paga_tierra ? 'sí' : 'no']], L('Reparto'), 'reparto.esquema') +
-      ' x="0" y="132" font-size="7.6" fill="' + MUTED + '">Orden de cobro: ' + orden.join(' → ') + (num(v.dueno_meses) ? ' · el dueño cobra en el mes ' + v.dueno_meses : '') + '</text>');
+      ' x="0" y="132" font-size="7.6" fill="' + MUTED + '">Orden de cobro: ' + orden.join(' → ') + (RC ? ' · ' + fechaT10(RC) : (num(v.dueno_meses) ? ' · el dueño cobra en el mes ' + v.dueno_meses : '')) + '</text>');
+    if (RC && (RC.bloqueado || !RC.autorizable)) o.push('<text x="0" y="10" font-size="7.4" font-weight="700" fill="' + BADT + '">' + esc(corta('Reparto ' + (RC.bloqueado ? RC.estado : 'teórico, sin autorización de pago'), 60)) + '</text>');
     /* El mismo cuadro, en alto, para el pop-up del teléfono: cada quien en su renglón, con las barras a todo lo ancho. */
     var g = ['<text x="220" y="7" text-anchor="end" font-size="6" fill="' + MUTED + '">veces lo que puso</text>'], tope = Math.max(1, pone, recibe, capital, capRecibe, alianza), sg = 150 / tope;
     rows.forEach(function (r, i) {
@@ -803,16 +839,17 @@
     });
     var yo = 12 + rows.length * 46 + 6;
     g.push('<text x="0" y="' + yo + '" font-size="6.6" fill="' + MUTED + '">Orden de cobro: ' + orden.join(' → ') + '</text>' +
-      (num(v.dueno_meses) ? '<text x="0" y="' + (yo + 9.5) + '" font-size="6.6" fill="' + MUTED + '">El dueño cobra en el mes ' + v.dueno_meses + '</text>' : ''));
+      (RC ? '<text x="0" y="' + (yo + 9.5) + '" font-size="6.6" fill="' + MUTED + '">' + esc(fechaT10(RC).charAt(0).toUpperCase() + fechaT10(RC).slice(1)) + '</text>' : (num(v.dueno_meses) ? '<text x="0" y="' + (yo + 9.5) + '" font-size="6.6" fill="' + MUTED + '">El dueño cobra en el mes ' + v.dueno_meses + '</text>' : '')));
     return {
-      id: 'reparto', n: 6, titulo: 'Reparto', sub: esc(corta(rp.esquema || (d.plan && d.plan.esquema) || 'pones y recibes', 44)), svg: pone || recibe || alianza ? o.join('') : sinDatos(396, 'Aún no hay reparto calculado', 'Cuando el plan tenga su esquema, aquí se verá quién pone y quién recibe.'), w: 396, doble: true,
+      id: 'reparto', n: 6, titulo: 'Reparto', sub: esc(corta((RC ? (RC.bloqueado ? 'bloqueado · ' : !RC.autorizable ? 'teórico · ' : '') : '') + (rp.esquema || (d.plan && d.plan.esquema) || 'pones y recibes'), 44)), svg: pone || recibe || alianza ? o.join('') : sinDatos(396, 'Aún no hay reparto calculado', 'Cuando el plan tenga su esquema, aquí se verá quién pone y quién recibe.'), w: 396, doble: true,
       svgG: pone || recibe || alianza ? g.join('') : sinDatos(220, 'Aún no hay reparto calculado'), wG: 220, hG: pone || recibe || alianza ? yo + 13 : 136,
-      aria: 'Reparto: el dueño pone ' + mdp(pone) + ' y recibe ' + mdp(recibe) + '; la alianza recibe ' + mdp(alianza),
+      aria: RC ? 'Reparto (' + RC.estado + '): el dueño pone ' + mdp(pone) + (recibe < 0 ? ' y tiene una pérdida asignada teórica de ' + mdp(recibe) : ' y recibe ' + mdp(recibe) + (publicaT10(RC, 'dueno_recibe') ? '' : ' (teórico)')) + '; la alianza ' + (alianza < 0 ? 'tiene una pérdida asignada teórica de ' + mdp(alianza) : 'recibe ' + mdp(alianza) + (publicaT10(RC, 'alianza_recibe') ? '' : ' (teórico)')) + '; ' + fechaT10(RC)
+        : 'Reparto: el dueño pone ' + mdp(pone) + ' y recibe ' + mdp(recibe) + '; la alianza recibe ' + mdp(alianza),
       detalle: [{ h: 'Quién pone y quién recibe (MDP)', filas: [
-        ['Dueño · aporta su tierra', mdp(pone), L('Versiones', 'dueno_aporta'), 'v.dueno_aporta'], ['Dueño · recibe en total', mdp(recibe), L('Versiones', 'dueno_recibe'), 'v.dueno_recibe'],
+        ['Dueño · aporta su tierra', mdp(pone), L('Versiones', 'dueno_aporta'), 'v.dueno_aporta'], [RC && recibe < 0 ? 'Dueño · pérdida asignada (teórica)' : 'Dueño · recibe en total' + (RC && !publicaT10(RC, 'dueno_recibe') ? ' (teórico)' : ''), mdp(recibe), L('Versiones', 'dueno_recibe'), 'v.dueno_recibe'],
         ['Dueño · veces su tierra', num(v.dueno_veces) ? v.dueno_veces.toFixed(2) + '×' : '—', L('Versiones', 'dueno_veces'), 'v.dueno_veces'],
         ['Capital · aporta', mdp(capital), L('Versiones', 'capital'), 'v.capital'], ['Capital · recibe con rendimiento', mdp(capRecibe), L('Flujo', 'capital: pago'), 'flujo.pago_capital'],
-        ['Alianza · recibe', mdp(alianza), L('Versiones', 'alianza_recibe'), 'v.alianza_recibe'], ['Resultado a repartir', mdp(num(v.resultado_repartir)), L('Versiones', 'resultado_repartir'), 'v.resultado_repartir']
+        [RC && alianza < 0 ? 'Alianza · pérdida asignada (teórica)' : 'Alianza · recibe' + (RC && !publicaT10(RC, 'alianza_recibe') ? ' (teórico)' : ''), mdp(alianza), L('Versiones', 'alianza_recibe'), 'v.alianza_recibe'], ['Resultado a repartir', mdp(num(v.resultado_repartir)), L('Versiones', 'resultado_repartir'), 'v.resultado_repartir']
       ].concat(v.pago_especie ? [
         ['Anticipo incluido en el pago total', mdp(num(v.pago_anticipo)), L('Versiones', 'pago_anticipo'), 'v.pago_anticipo'],
         ['Resto en viviendas, sin cobro de terceros', mdp(num(v.pago_vivienda)), L('Versiones', 'pago_vivienda'), 'v.pago_vivienda'],
@@ -820,8 +857,10 @@
       ] : []) }, { h: 'Esquema', filas: [
         [rp.esquema || (d.plan && d.plan.esquema) || '—', '', L('Reparto', 'esquema elegido'), 'reparto.esquema'],
         ['Utilidad para el dueño', pct(pd, 0), L('Reparto')], ['Utilidad para la alianza', pct(pa, 0), L('Reparto')],
-        ['Tasa anual del capital antes de repartir', pct(num(rp.tasa_capital), 0), L('Reparto')], ['Mes del reparto', num(v.mes_reparto) || '—', L('Versiones', 'mes_reparto'), 'v.mes_reparto']
-      ] }]
+        ['Tasa anual del capital antes de repartir', pct(num(rp.tasa_capital), 0), L('Reparto')]
+      ].concat(RC ? [['Hito del motor (referencia del Árbol)', RC.hito ? 'mes ' + RC.hito : '—', L('Versiones', 'mes_reparto'), 'v.mes_reparto'], ['Corte autorizado', RC.corte ? 'mes ' + RC.corte : 'sin fecha autorizada', 'Reparto · ' + RC.estado, 'cascada.fechas']]
+        : [['Mes del reparto', num(v.mes_reparto) || '—', L('Versiones', 'mes_reparto'), 'v.mes_reparto']]) }].concat(RC ? [{ h: 'Estado del reparto (copia de prueba del Árbol)', filas: [['Estado', RC.estado, 'Árbol PPP · módulo de repartos', 'cascada.estado'], ['Fecha', fechaT10(RC), 'Árbol PPP · módulo de repartos', 'cascada.fechas']]
+        .concat(RC.motivos.map(function (m, i) { return ['Motivo ' + (i + 1), corta(m, 160), 'Árbol PPP · módulo de repartos', 'cascada.motivos']; })) }] : [])
     };
   }
 

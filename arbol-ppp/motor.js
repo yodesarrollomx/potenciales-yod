@@ -5,6 +5,12 @@
    Contrato hacia afuera (D7 Anexo B): carga, evalua, sugiere, compara. Cosas nuevas que se agregan sin tocar el contrato:
    paqueteVisor (paquete «ppp2-visor-v1», D9 §3/§10), valida (alias de carga que solo devuelve el diagnóstico),
    planConCambio (el plan que debe guardar la pantalla después de una acción) y analiza/evaluaExpresion (para el editor).
+   SPPP · T-10 (copia de prueba del módulo de repartos, sólo vertical en venta): carga(definición, { extension: definicion/reparto.json })
+   agrega S-12, S-13, S-17 a S-24 y R-26 a R-35; registraReparto(módulo) recibe reparto.js (en el navegador basta cargarlo antes);
+   reparto(definición, plan) devuelve el caso, los parámetros y el resultado; la tarjeta «Reparto» y el paquete traen el bloque «cascada».
+   Corrección 1 (dictamen T-11): planConOpcion(definición, plan, 'A'|'B'|'C') aplica al plan la estructura de P-02 (S-24, S-03, S-05 y D-01) y F-02
+   se recalcula; extiende(entrada, extensión) arma la definición extendida para la página de prueba (reparto-prueba.html). SIN la extensión,
+   la tarjeta y el paquete quedan idénticos a los del commit base.
 
    Convenciones (resumen; el detalle está en D-motor-notas.md):
    - Desconocido = null (lógica de tres valores). Solo un «verdadero» activa algo.
@@ -618,6 +624,31 @@
     return cr;
   }
 
+  /* T-10: una extensión (definicion/reparto.json o sus filas reparto_nodos.csv y reparto_factores.csv) agrega nodos y factores a la
+     definición sin tocar vertical.json. El JSON se extiende con JSON y las pestañas con pestañas (filas con nombre o matrices de Sheets). */
+  function extiendeDefinicion(entrada, ext, errores) {
+    const err = (m) => { errores.push({ pestana: 'ARBOL_NODOS', fila: 0, columna: '', codigo: 'extension_invalida', mensaje: m }); return null; };
+    try { if (typeof entrada === 'string') entrada = JSON.parse(entrada); if (typeof ext === 'string') ext = JSON.parse(ext); } catch (e) { return err('La extensión o la definición no es un JSON válido: ' + e.message); }
+    if (!entrada || typeof entrada !== 'object' || !ext || typeof ext !== 'object') return err('Falta la definición o la extensión.');
+    const tablas = (o) => Object.keys(o).some((k) => COLUMNAS[k] || COLUMNAS[k.toUpperCase()]);
+    if (!tablas(entrada)) {
+      if (!Array.isArray(ext.nodos)) return err('La extensión de un JSON debe traer «nodos» (y puede traer «factores»).');
+      const out = Object.assign({}, entrada);
+      out.nodos = (entrada.nodos || []).concat(clonar(ext.nodos));
+      out.factores = (entrada.factores || []).concat(clonar(ext.factores || []));
+      return out;
+    }
+    if (!tablas(ext)) return err('La extensión de las pestañas ARBOL_* debe venir en pestañas (ARBOL_NODOS y ARBOL_FACTORES).');
+    const out = Object.assign({}, entrada);
+    Object.keys(ext).forEach((t) => {
+      const base = entrada[t], add = ext[t]; if (!Array.isArray(add) || !add.length) return;
+      if (!Array.isArray(base)) { out[t] = clonar(add); return; }
+      const matrizB = Array.isArray(base[0]), matrizA = Array.isArray(add[0]);
+      const filasA = matrizA ? add.slice(1).map((f) => add[0].reduce((o, c, i) => { o[c] = f[i] === undefined ? '' : f[i]; return o; }, {})) : add;
+      out[t] = matrizB ? base.concat(filasA.map((f) => base[0].map((c) => (f[c] === undefined ? '' : f[c])))) : base.concat(clonar(filasA));
+    });
+    return out;
+  }
   function normalizaEntrada(entrada, errores) {
     if (typeof entrada === 'string') { try { entrada = JSON.parse(entrada); } catch (e) { errores.push({ pestana: 'ARBOL_NODOS', fila: 0, columna: '', codigo: 'json_invalido', mensaje: 'El texto no es un JSON válido: ' + e.message }); return null; } }
     if (!entrada || typeof entrada !== 'object') { errores.push({ pestana: 'ARBOL_NODOS', fila: 0, columna: '', codigo: 'sin_definicion', mensaje: 'No se recibió ninguna definición.' }); return null; }
@@ -1007,6 +1038,7 @@
         }
       } else if (c.tipo === 'calculado') {
         if (!c.formula && !c.motor) E_('ARBOL_NODOS', n._fila, 'formula', 'El calculado ' + c.id + ' no tiene fórmula.', 'campo_obligatorio');
+        if (c.motor && (c.motor.indexOf('reparto.') !== 0 || MEDIDAS_REPARTO.indexOf(c.motor.slice(8)) < 0)) E_('ARBOL_NODOS', n._fila, 'motor', 'El calculado ' + c.id + ' pide al motor «' + c.motor + '», que no existe (reparto.' + MEDIDAS_REPARTO.join(', reparto.') + ').', 'motor_invalido');
       }
       if (c.tipo !== 'se_decide' && c.opciones.length && !tieneFuentes && c.tipo === 'calculado') E_('ARBOL_OPCIONES', 0, 'nodo', 'Un calculado (' + c.id + ') no lleva opciones.', 'opciones_invalidas');
       if (c.compuesto) {
@@ -1395,12 +1427,12 @@
       this.D = D; this.plan = plan; this.ctx = ctx; const N = D.N; this.N = N;
       this.v = new Array(N); this.est = new Array(N); this.opc = new Array(N); this.rf = new Array(N); this.mn = new Array(N); this.mx = new Array(N); this.pa = new Array(N);
       this.vis = new Uint8Array(N); this.firm = new Array(N); this.comps = new Array(N); this.notas = new Array(N); this.fuera = new Array(N); this.motivo = new Array(N); this.refAj = new Array(N);
-      this.vv = undefined; this.cacheFlujo = {}; this.abiertas = []; this.esperan = []; this.reabiertas = []; this.avisosAreas = [];
+      this.vv = undefined; this.cacheFlujo = {}; this.cacheReparto = undefined; this.abiertas = []; this.esperan = []; this.reabiertas = []; this.avisosAreas = [];
     }
     reinicia() {
       const N = this.N;
       for (let i = 0; i < N; i++) { this.v[i] = null; this.est[i] = null; this.opc[i] = null; this.rf[i] = null; this.mn[i] = null; this.mx[i] = null; this.pa[i] = null; this.vis[i] = 0; this.firm[i] = true; this.comps[i] = null; this.notas[i] = null; this.fuera[i] = false; this.motivo[i] = null; this.refAj[i] = null; }
-      this.cacheFlujo = {}; this.abiertas = []; this.esperan = []; this.reabiertas = []; this.avisosAreas = [];
+      this.cacheFlujo = {}; this.cacheReparto = undefined; this.abiertas = []; this.esperan = []; this.reabiertas = []; this.avisosAreas = [];
     }
     get(id) { const i = this.D.ix.get(id); return i === undefined ? null : (this.v[i] === undefined ? null : this.v[i]); }
     flujo(fid, medida, arg) {
@@ -2087,7 +2119,9 @@
       else aparcados[id] = { valor: reg.valor, estado: reg.estado, opcion: reg.opcion, razon: 'Su rama dejó de estar a la vista.', revision: ((aparcados[id] && aparcados[id].revision) || 0) + 1 };
     });
     const comp = {}; Object.keys(plan2.componentes || {}).forEach((id) => { if (valores[id]) comp[id] = plan2.componentes[id]; });
-    return { tipo: plan2.tipo || D.tipo.id, contexto: plan2.contexto ? Object.assign({}, plan2.contexto) : undefined, valores, componentes: comp, aparcados, datos: plan2.datos || {} };
+    const out = { tipo: plan2.tipo || D.tipo.id, contexto: plan2.contexto ? Object.assign({}, plan2.contexto) : undefined, valores, componentes: comp, aparcados, datos: plan2.datos || {} };
+    if (plan2.reparto !== undefined) out.reparto = clonar(plan2.reparto);   // registro del reparto (T-10): sólo si el plan lo trae
+    return out;
   }
 
   /* ── armado del Resultado ── */
@@ -2174,6 +2208,7 @@
         cifras.push({ clave: 'RV-10', etiqueta: 'Pruebas', id: 'RV-10', valor: vis ? E.v[j] : null, valor_visor: vis ? E.v[j] : null, unidad: { clase: 'n', etiqueta: 'de 9 pruebas' }, estado: 'estimado', campo_visor: null });
       }
       out[t] = { encendida, cifras };
+      if (t === 'Reparto') rotulaTarjetaReparto(E, out[t]);
       if (t === 'Riesgo y estado') {
         /* decisión C: si algún umbral no es el del libro, la tarjeta lo dice con las mismas palabras que la prueba */
         const propios = E.revision().filter((x) => x.umbral_propio).map((x) => ({ n: x.n, umbral_texto: x.umbral_texto, libro_texto: x.umbral_libro_texto, nota: x.nota }));
@@ -2774,6 +2809,7 @@
     const D = definicion && definicion._interna; opciones = opciones || {};
     if (!D) throw new Error('Definición no válida: llama primero a carga().');
     const plan0 = normalizaPlan(plan), E = corre(D, plan0);
+    aplicaReparto(E);   // T-10
     const res = armaResultado(D, E, null, [], { sugerencias: 'no', rutas: 'no' }, plan0, []);
     const v = {}; CLAVES_V.forEach((k) => { v[k] = null; });
     const datos = {}; CLAVES_DATOS.forEach((k) => { datos[k] = { valor: null, estado: 'falta' }; });
@@ -2899,6 +2935,7 @@
     paquete.umbrales_propios = umbralesPropios;
     if (umbralesPropios.length) paquete.origen += ' · umbrales propios en ' + (umbralesPropios.length === 1 ? 'la prueba ' : 'las pruebas ') + umbralesPropios.map((x) => x.prueba).join(', ').replace(/, ([^,]*)$/, ' y $1') + ' (distintos de los del libro)';
     paquete.v.resultado_repartir = paquete.v.resultado_repartir === undefined ? null : paquete.v.resultado_repartir;
+    empaquetaReparto(E, paquete);   // T-10: cascada, rótulos de los campos del visor y fechas según N-02
     let tam = JSON.stringify(paquete).length;
     if (tam > 50000) { Object.keys(deducido).slice(100).forEach((k) => delete deducido[k]); tam = JSON.stringify(paquete).length; avisos.push('El paquete pasaba de 50,000 caracteres: se recortaron marcas de «deducido».'); }
     if (tam > 50000) avisos.push('El paquete mide ' + tam + ' caracteres y el visor acepta 50,000.');
@@ -2907,6 +2944,255 @@
     const valores = {};
     D.ids.forEach((id, j) => { valores[id] = { valor: E.v[j] === undefined ? null : E.v[j], estado: E.est[j] || null, visible: E.vis[j] === 1, clase: D.kind[j] }; });
     return { paquete, avisos, caracteres: tam, valores };
+  }
+
+  /* ═════════════════════════ MÓDULO DE REPARTOS (SPPP · T-10 · copia de prueba) ═════════════════════════
+     El cálculo vive en reparto.js (ArbolReparto); aquí sólo se arma el «caso» con F-02 y los nodos del plan, se leen los parámetros
+     S-12, S-13 y S-17 a S-24 y el registro del reparto (plan.reparto: pagos, ISR, demás acreedores, reservas, clases de capital y líneas),
+     y se publican R-26 a R-35, la tarjeta «Reparto» y el paquete del visor con sus rótulos. Sólo vertical en venta; renta y el Hub se
+     bloquean de forma explícita. Si reparto.js no está cargado, el reparto queda vacío (nunca en cero) y lo dice. */
+  /* El motor sigue sin dependencias: en el navegador toma ArbolReparto de la página (reparto.js va antes que motor.js); en Node quien carga
+     el motor le pasa el módulo con Motor.registraReparto (ver pruebas/motor-real.cjs). Sin módulo, el reparto queda vacío y lo dice. */
+  let REPARTO_MOD = null;
+  function moduloReparto() {
+    if (REPARTO_MOD) return REPARTO_MOD;
+    const g = typeof globalThis !== 'undefined' ? globalThis : (typeof self !== 'undefined' ? self : null);
+    if (g && g.ArbolReparto && typeof g.ArbolReparto.repartoVertical === 'function') return g.ArbolReparto;
+    if (typeof self !== 'undefined' && self && self.ArbolReparto && typeof self.ArbolReparto.repartoVertical === 'function') return self.ArbolReparto;
+    return null;
+  }
+  function registraReparto(mod) {
+    if (mod === null) { REPARTO_MOD = null; return false; }
+    if (!mod || typeof mod.repartoVertical !== 'function') throw new Error('Módulo de repartos inválido: falta repartoVertical.');
+    REPARTO_MOD = mod; return true;
+  }
+  /* lo que el reparto lee del plan evaluado para armar su caso (R-26 a R-35 se llenan después de evaluar, ver aplicaReparto) */
+  const PARAMS_REPARTO = ['S-12', 'S-13', 'S-17', 'S-18', 'S-19', 'S-20', 'S-21', 'S-22', 'S-23', 'S-24'];
+  const NODOS_CASO_REPARTO = ['T-04', 'PT-07', 'PT-01', 'D-01', 'D-17', 'D-22', 'S-02', 'S-03', 'S-04', 'S-05', 'S-06', 'R-13', 'R-14', 'R-15', 'R-16', 'R-17', 'R-19', 'R-20', 'R-21', 'R-22', 'R-23', 'R-24', 'R-25', 'RV-06',
+    'K-07', 'K-12', 'P1-03', 'C-04', 'C-07', 'C-12', 'C-13', 'C-14', 'C-15', 'C-16', 'C-17', 'C-19', 'D-05', 'D-10', 'D-21', 'E-05'];
+  const REPARTO_LEE = NODOS_CASO_REPARTO.concat(PARAMS_REPARTO);
+  const MEDIDAS_REPARTO = ['caja_disponible', 'obligaciones', 'reservas', 'caja_repartible', 'utilidad_economica', 'estado', 'fecha_autorizable', 'suma_repartida', 'candados', 'corte'];
+
+  /* Fechas del visor con las MISMAS reglas que paqueteVisor (banco, capital, respaldo, último cobro, mes de reparto y recorte al horizonte).
+     Una prueba compara estas fechas con las del paquete en varios planes para que no se separen. */
+  function visorFechas(E, r) {
+    const D = E.D, M = r.M, med = r.med;
+    const val = (id) => { const j = D.ix.get(id); return j !== undefined && E.vis[j] === 1 && E.v[j] !== null && E.v[j] !== undefined ? E.v[j] : null; };
+    const ultMes = (k) => { const s = r.series[k]; if (!s) return null; for (let m = M; m >= 1; m--) if (Math.abs(s[m] / 1e6) > 0.0005) return m; return null; };
+    const v = { fin_obra: val('K-07'), ultimo_cobro: val('K-12'), banco_mes: med.mes_liquidacion_banco === undefined ? null : med.mes_liquidacion_banco, capital_mes: null, respaldo_mes: null, mes_reparto: null, dueno_meses: null, dueno_anos: null,
+      fuera_horizonte: med.fuera_horizonte === undefined ? null : med.fuera_horizonte, horizonte_excedido: false, fuera_del_eje: {} };
+    const uc = ultMes('cobranza'); if (uc !== null) v.ultimo_cobro = uc;
+    v.capital_mes = ultMes('pago_capital'); v.respaldo_mes = ultMes('pago_respaldo');
+    const c = [v.banco_mes, v.capital_mes, v.respaldo_mes, v.ultimo_cobro].filter(esNum);
+    if (c.length) v.mes_reparto = Math.max.apply(null, c);
+    if (esNum(v.mes_reparto)) { v.dueno_meses = v.mes_reparto; v.dueno_anos = v.mes_reparto / 12; }
+    const k12 = val('K-12'), kfin = val('K-07');
+    if ((esNum(med.fuera_horizonte) && med.fuera_horizonte > 0) || (esNum(k12) && k12 > M) || (esNum(kfin) && kfin > M)) {
+      v.horizonte_excedido = true;
+      ['fin_obra', 'banco_mes', 'capital_mes', 'respaldo_mes', 'ultimo_cobro', 'mes_reparto', 'dueno_meses'].forEach((k) => { if (esNum(v[k]) && v[k] > M) { v.fuera_del_eje[k] = v[k]; v[k] = M; } });
+      if (esNum(v.dueno_meses)) v.dueno_anos = v.dueno_meses / 12;
+    }
+    return v;
+  }
+  function casoReparto(E) {
+    const D = E.D, fid = D.tipo.flujoBanco || 'F-02';
+    if (!D.flujos[fid]) return null;
+    E.flujo(fid, 'banco_maximo'); const r = E.cacheFlujo[fid];
+    if (!r || !r.ok) return null;
+    const M = r.M, series = {};
+    Object.keys(r.series).forEach((k) => { const s = r.series[k], a = [null]; for (let m = 1; m <= M; m++) a.push(s[m]); series[k] = a; });
+    const nodos = {}; NODOS_CASO_REPARTO.forEach((id) => { const j = D.ix.get(id); nodos[id] = j === undefined || E.v[j] === undefined ? null : E.v[j]; });
+    const r20 = nodos['R-20'], dd22 = nodos['D-22'];
+    const rr = esNum(r20) ? r20 / 1e6 : (esNum(dd22) && esNum(r.med.rendimiento_capital) ? (dd22 + r.med.rendimiento_capital) / 1e6 : null);
+    return { M, series, nodos, visor: visorFechas(E, r), paquete_v: { resultado_repartir: rr }, tipo: D.tipo.id, tipo_plan: E.plan && E.plan.tipo !== undefined ? E.plan.tipo : null, destino: nodos['P1-03'],
+      med: { cuadra: r.med.cuadra, cobranza_total: r.cobranzaTotal, costo_dinero: r.med.costo_dinero, rendimiento_capital: r.med.rendimiento_capital } };
+  }
+  /* S-18: «ninguno» o «parte=SP; tope=30000000; tasa=0.15; pacto=pactado» (el módulo valida parte registrada, tope, tasa y pacto) */
+  function leeFondeador(txt) {
+    if (txt === null || txt === undefined) return null;
+    const t = String(txt).trim(); if (t === '' || /^ninguno$/i.test(t)) return null;
+    if (t.indexOf('=') < 0) return t;   // mal capturado: el módulo lo rechaza
+    const o = {}; t.split(';').forEach((par) => { const k = par.split('='); if (k.length < 2) return; const llave = k[0].trim(), x = k.slice(1).join('=').trim(); if (llave === 'parte') o.parte = x; else if (llave === 'tope') o.tope = x === '' ? null : Number(x); else if (llave === 'tasa') o.tasa = x === '' ? null : Number(x); else if (llave === 'pacto') o.estado_pacto = x; else o[llave] = x; });
+    return o;
+  }
+  function leeIva(txt) {   // S-22: «tipología_modalidad», p. ej. vivienda_ya_incorporado
+    if (typeof txt !== 'string' || !txt) return null;
+    const i = txt.indexOf('_'); return i < 0 ? { tipologia: txt, modalidad: '' } : { tipologia: txt.slice(0, i), modalidad: txt.slice(i + 1) };
+  }
+  function parametrosReparto(E, caso) {
+    const D = E.D, g = (id) => { const j = D.ix.get(id); return j === undefined || E.v[j] === undefined ? null : E.v[j]; };
+    const firme = (id) => { const j = D.ix.get(id); return j !== undefined && E.v[j] !== null && E.v[j] !== undefined && firmeE(E.est[j]); };
+    const reg = (E.plan && E.plan.reparto) || {};
+    const p = {
+      mes_corte: g('S-21'), liberar_caja_minima: g('S-17'), fondeador_respaldo: leeFondeador(g('S-18')), prioridad_tierra_pactada: g('S-19') === 'si',
+      fee_en_indirectos: firme('S-12') ? g('S-12') : null,      // la referencia no es una declaración: con S-06 > 0 hay que decidir S-12 y S-13
+      gestion_esquema: firme('S-13') ? g('S-13') : null,
+      imputacion: g('S-20'), iva: leeIva(g('S-22')), estado_pacto_acuerdos: g('S-23'), opcion_reparto: g('S-24')
+    };
+    ['pagos_registrados', 'isr', 'otros_acreedores', 'reservas', 'clases_capital', 'regla_clases', 'capital_arrastre', 'lineas', 'fechas_pago', 'reparto_interno',
+      'preferente_f02', 'comision_venta', 'acuerdos_receptor'].forEach((k) => { if (reg[k] !== undefined) p[k] = clonar(reg[k]); });
+    return p;
+  }
+  function calculaReparto(E) {
+    if (!PARAMS_REPARTO.every((id) => E.D.ix.has(id))) return { ok: false, motivo: 'La definición no trae el módulo de repartos (definicion/reparto.json con S-12 a S-24 y R-26 a R-35): el reparto queda vacío y nada se autoriza.' };
+    const R = moduloReparto();
+    if (!R) return { ok: false, motivo: 'El módulo de repartos (reparto.js) no está cargado: el reparto queda vacío y nada se autoriza.' };
+    const caso = casoReparto(E);
+    if (!caso) return { ok: false, motivo: 'Sin flujo F-02 completo: el reparto queda vacío.' };
+    const parametros = parametrosReparto(E, caso);
+    let resultado;
+    try { resultado = R.repartoVertical(caso, parametros); } catch (e) { return { ok: false, motivo: 'El reparto falló: ' + e.message }; }
+    return { ok: true, caso, parametros, resultado, version: R.VERSION };
+  }
+  /* R-26 a R-35 son calculados con «motor = reparto.<medida>»: no tienen fórmula y se llenan DESPUÉS de evaluar el plan (evalua, paqueteVisor
+     y la API reparto), así no corren en las sugerencias ni en el comparador. Sólo se muestran si su padre está a la vista y la medida existe. */
+  function aplicaReparto(E) {
+    const D = E.D, nodos = D.cn.filter((c) => c.tipo === 'calculado' && c.motor && c.motor.indexOf('reparto.') === 0);
+    if (!nodos.length) return;
+    if (E.cacheReparto === undefined) E.cacheReparto = calculaReparto(E);
+    nodos.forEach((c) => {
+      const i = c.i, pj = D.ix.get(c.de);
+      if (pj !== undefined && (!E.vis[pj] || E.v[pj] === null)) return;
+      const x = medidaReparto(E.cacheReparto, c.motor.slice(8));
+      if (x === null || x === undefined) return;
+      E.v[i] = x; E.vis[i] = 1; E.firm[i] = false;
+    });
+  }
+  function medidaReparto(rr, medida) {
+    if (!rr || !rr.ok) return medida === 'estado' ? 'SIN CALCULAR · ' + ((rr && rr.motivo) || 'sin datos') : null;
+    const x = rr.resultado, calculado = !!x.salida;
+    const sumaV = (o) => Object.keys(o || {}).reduce((s, k) => s + o[k], 0);
+    switch (medida) {
+      case 'estado': return x.estado;
+      case 'candados': { const cods = []; (x.motivos || []).forEach((m) => { const c = m.split(' · ')[0]; if (cods.indexOf(c) < 0) cods.push(c); }); (x.motivos_utilidades || []).forEach((m) => { const c = m.split(' · ')[0] + ' (utilidades)'; if (cods.indexOf(c) < 0) cods.push(c); }); return cods.length ? cods.join(' · ') : 'ninguno'; }
+      case 'corte': return calculado ? x.corte + ' · corte en el mes ' + x.mes_corte + (x.primer_mes_cierre !== null ? ' · primer mes de cierre ' + x.primer_mes_cierre : ' · sin cierre en el horizonte') : null;
+      case 'fecha_autorizable': return calculado ? x.fecha_autorizable : null;
+      default: break;
+    }
+    if (!calculado) return null;   // inválido o fuera de alcance: vacío, nunca cero
+    if (medida === 'caja_disponible') return x.cd;
+    if (medida === 'obligaciones') return x.obligaciones;
+    if (medida === 'reservas') return x.reservas_requeridas;
+    if (medida === 'caja_repartible') return x.cr;
+    if (medida === 'utilidad_economica') return x.utilidad_economica;
+    if (medida === 'suma_repartida') return sumaV(x.simulado);
+    return null;
+  }
+  const textoRotulo = (x) => (!x ? null : x.estado === 'publicable' ? 'publicable' : 'teórico, sin autorización de pago · ' + x.motivos.join('; '));
+  /* Bloque compacto de la cascada para la tarjeta y el paquete (mismo contenido en los dos) */
+  function bloqueCascada(rr) {
+    if (!rr || !rr.ok) return { ok: false, estado: 'SIN CALCULAR', motivo: rr ? rr.motivo : 'sin datos', motivos: [rr ? rr.motivo : 'sin datos'] };
+    const x = rr.resultado, sumaV = (o) => Object.keys(o || {}).reduce((s, k) => s + o[k], 0), R = moduloReparto();
+    const b = { ok: true, version: rr.version, estado: x.estado, opcion_reparto: x.opcion_reparto, opcion_titulo: x.opcion_titulo || null, motivos: x.motivos, motivos_utilidades: x.motivos_utilidades || [],
+      no_implementado: x.no_implementado, alcance: 'vertical en venta (copia de prueba T-10); renta y el Hub quedan fuera y se bloquean',
+      /* O02 (T-11): el estado de cada dato de las fichas (vertical y Hub, C2 del dictamen T-09 v2) se entrega al lector en la tarjeta y el paquete */
+      fichas: R && R.FICHAS ? { filas: R.FICHAS.map((f) => [f.id, f.dato, f.estado_vertical, f.estado_hub]), regla: 'el Hub nunca supera al vertical', fallas: R.validaEstadosHub() } : null };
+    if (!x.salida) {
+      /* sin salida (inválido o fuera de alcance): el hito del motor se informa como referencia; no hay corte autorizado ni pago */
+      const hito = rr.caso && rr.caso.visor && esNum(rr.caso.visor.mes_reparto) ? rr.caso.visor.mes_reparto : null;
+      b.fechas = { hito_motor: { valor: hito, estado: 'teórico', rol: 'hito del motor', fuente: 'motor (hito del Árbol)', motivos: ['referencia del Árbol (hito del motor), no es fecha autorizada'] },
+        corte_autorizado: { valor: null, estado: 'teórico', rol: 'corte autorizado', fuente: 'corte del reparto (S-21)', motivos: [x.estado] }, pago_registrado: { valor: null, estado: 'sin registro', rol: 'pago registrado', fuente: 'libro de pagos (fuera del Árbol)', motivos: ['sin pago registrado'] } };
+      return b;
+    }
+    const pq = x.salida.paquete, f = (k) => (pq[k] ? { valor: pq[k].valor, estado: pq[k].estado, rol: pq[k].rol || null, fuente: pq[k].fuente, motivos: pq[k].motivos } : null);
+    return Object.assign(b, {
+      corte: x.corte, mes_corte: x.mes_corte, primer_mes_cierre: x.primer_mes_cierre, cartera_por_cobrar: x.cartera_por_cobrar, egresos_pendientes: x.egresos_pendientes,
+      caja_disponible: x.cd, acreedores: x.acreedores, reservas: [x.reserva].concat(x.reservas_otras || []), caja_repartible: x.cr,
+      totales: { simulado: sumaV(x.simulado), autorizado: sumaV(x.autorizado), pagado: sumaV(x.pagado) },
+      por_parte: { DUENO: x.dueno, ALIANZA: x.alianza, CAPITAL: x.capital_cascada }, alianza_por_socio: x.alianza_por_socio, conciliacion: x.conciliacion,
+      fechas: { hito_motor: f('mes_reparto'), corte_autorizado: f('fecha_corte_autorizado'), dueno_meses: f('dueno_meses'), dueno_anos: f('dueno_anos'), pago_registrado: f('fecha_pago_registrado') },
+      campos: Object.keys(pq).reduce((o, k) => { o[k] = { valor: pq[k].valor, estado: pq[k].estado, fuente: pq[k].fuente, rotulo: textoRotulo(pq[k]) || pq[k].estado }; return o; }, {}),
+      legado: Object.keys(x.salida.legado).reduce((o, k) => { o[k] = { valor: x.salida.legado[k].valor, estado: x.salida.legado[k].estado, motivo: x.salida.legado[k].motivos.join('; ') }; return o; }, {}),
+      reconciliado: x.salida.reconciliado, notas: x.notas, capital: { principal_pendiente: x.principal_pendiente, preferente_pendiente: x.preferente_pendiente, por_clase: x.capital_por_clase, capitalizacion: x.capitalizacion },
+      lineas: x.lineas || []
+    });
+  }
+  /* tarjeta «Reparto»: cada cifra lleva su rótulo (publicable o «teórico, sin autorización de pago» con motivos: pérdida asignada, tierra
+     aportada sin regla pactada, corte no autorizable). Con tierra en especie y pacto, la tarjeta publica la cascada pactada reconciliada
+     y guarda el valor del motor como legado teórico (B3). */
+  const tieneExtension = (D) => PARAMS_REPARTO.every((id) => D.ix.has(id));
+  function rotulaTarjetaReparto(E, tarjeta) {
+    if (!tieneExtension(E.D)) return;   // O01 (T-11): sin la extensión, la tarjeta queda idéntica a la del commit base
+    if (E.cacheReparto === undefined) E.cacheReparto = calculaReparto(E);
+    const rr = E.cacheReparto;
+    tarjeta.cascada = bloqueCascada(rr);
+    if (!rr || !rr.ok || !rr.resultado.salida) { tarjeta.cifras.forEach((c) => { if (['R-22', 'R-23', 'R-24', 'R-25'].indexOf(c.id) >= 0) { c.estado_reparto = 'teórico'; c.rotulo = 'teórico, sin autorización de pago · ' + (rr && rr.ok ? rr.resultado.estado + ' · ' + rr.resultado.motivos.slice(0, 2).join('; ') : (rr ? rr.motivo : 'sin reparto')); if (esNum(c.valor) && c.valor < 0) c.etiqueta_reparto = 'Pérdida asignada (teórica) · ' + c.etiqueta; } }); return; }
+    const t = rr.resultado.salida.tarjeta;
+    tarjeta.cifras.forEach((c) => {
+      const x = t[c.id]; if (!x) return;
+      c.estado_reparto = x.estado; c.fuente_reparto = x.fuente; c.rotulo = textoRotulo(x);
+      if (esNum(x.valor) && x.valor < 0) c.etiqueta_reparto = 'Pérdida asignada (teórica) · ' + c.etiqueta;
+      if (x.fuente === 'cascada pactada reconciliada' && !igualV(x.valor, c.valor)) { const fz = E.D.factores.find((q) => q.id === c.id); c.legado = { valor: c.valor, valor_visor: c.valor_visor, estado: 'teórico', motivo: 'legado del motor sin la prioridad pactada de la tierra' }; c.valor = x.valor; c.valor_visor = fz && fz.conversion === '/1000000' ? x.valor / 1e6 : x.valor; }
+    });
+  }
+  /* paquete del visor: bloque «cascada», rótulos en «deducido» y fechas según N-02 (hito del motor, corte autorizado y pago registrado) */
+  function empaquetaReparto(E, paquete) {
+    if (!tieneExtension(E.D)) return;   // O01 (T-11): sin la extensión, el paquete queda idéntico al del commit base
+    if (E.cacheReparto === undefined) E.cacheReparto = calculaReparto(E);
+    const rr = E.cacheReparto, v = paquete.v, ded = paquete.deducido;
+    paquete.cascada = bloqueCascada(rr);
+    const nota = (k, txt) => { ded['v.' + k] = (ded['v.' + k] ? ded['v.' + k] + ' · ' : '') + txt; };
+    if (!rr || !rr.ok || !rr.resultado.salida) {
+      /* B04 (T-11): con datos inválidos, fuera de alcance o sin módulo, el bloqueo se conserva en lo que lee el visor: ninguna cifra es pago */
+      const por = rr && rr.ok ? rr.resultado.estado + ': ' + rr.resultado.motivos.slice(0, 2).join('; ') : 'SIN CALCULAR: ' + (rr ? rr.motivo : 'sin datos');
+      ['dueno_recibe', 'alianza_recibe', 'inversion_recibe', 'dueno_veces'].forEach((k) => { if (k in v) nota(k, 'Reparto ' + por + ' · cifra teórica del motor, sin autorización de pago' + (esNum(v[k]) && v[k] < 0 ? ' · se muestra como «pérdida asignada (teórica)», nunca bajo «recibe»' : '')); });
+      if ('mes_reparto' in v) nota('mes_reparto', 'Hito del motor (referencia del Árbol); sin corte autorizado: reparto ' + por + '.');
+      ['dueno_meses', 'dueno_anos'].forEach((k) => { if (k in v) nota(k, 'Referencia del Árbol (hito del motor), no es fecha autorizada: reparto ' + por + '.'); });
+      return;
+    }
+    const pq = rr.resultado.salida.paquete;
+    Object.keys(rr.resultado.salida.paquete).forEach((k) => {
+      const x = pq[k]; if (!(k in v) || !x) return;
+      if (['dueno_recibe', 'alianza_recibe', 'inversion_recibe', 'dueno_veces'].indexOf(k) >= 0) {
+        if (x.fuente === 'cascada pactada reconciliada') { const nuevo = k === 'dueno_veces' ? x.valor : x.valor / 1e6; if (!igualV(nuevo, v[k])) { nota(k, 'Cascada pactada reconciliada (T-10); el motor dice ' + miles(v[k], k === 'dueno_veces' ? 3 : 2) + ' sin la prioridad pactada de la tierra (legado, teórico).'); v[k] = nuevo; } }
+        nota(k, 'Reparto: ' + (x.estado === 'publicable' ? 'publicable' : textoRotulo(x)) + (esNum(x.valor) && x.valor < 0 ? ' · se muestra como «pérdida asignada (teórica)», nunca bajo «recibe»' : ''));
+      }
+    });
+    /* N-02: el mes de reparto del motor es el hito del Árbol; nunca se presenta como fecha autorizada de otro corte */
+    nota('mes_reparto', 'Hito del motor (referencia del Árbol): ' + (pq.mes_reparto.estado === 'publicable' ? 'coincide con el corte autorizado.' : textoRotulo(pq.mes_reparto) + '.') + (pq.fecha_corte_autorizado.valor !== null ? ' Corte autorizado: mes ' + pq.fecha_corte_autorizado.valor + '.' : ' Sin corte autorizado.'));
+    if (pq.fecha_corte_autorizado.valor !== null) {
+      if (!igualV(v.dueno_meses, pq.dueno_meses.valor)) { nota('dueno_meses', 'Corte autorizado (S-21): mes ' + pq.dueno_meses.valor + '; el hito del motor era ' + v.dueno_meses + '.'); v.dueno_meses = pq.dueno_meses.valor; }
+      if (!igualV(v.dueno_anos, pq.dueno_anos.valor)) { nota('dueno_anos', 'Corte autorizado (S-21) entre 12; el hito del motor era ' + miles(v.dueno_anos, 2) + '.'); v.dueno_anos = pq.dueno_anos.valor; }
+    } else { nota('dueno_meses', 'Referencia del Árbol (hito del motor): ' + textoRotulo(pq.dueno_meses) + '.'); nota('dueno_anos', 'Referencia del Árbol (hito del motor): teórico, sin autorización de pago.'); }
+  }
+  /* API: el reparto de un plan (caso armado con F-02, parámetros leídos del plan y resultado del módulo) */
+  function reparto(definicion, plan) {
+    const D = definicion && definicion._interna;
+    if (!D) return { ok: false, motivo: 'Definición no válida: llama primero a carga().' };
+    const E = corre(D, normalizaPlan(plan));
+    aplicaReparto(E);
+    if (E.cacheReparto === undefined) E.cacheReparto = calculaReparto(E);
+    const rr = E.cacheReparto, nodos = {};
+    D.cn.forEach((c) => { if (c.motor && c.motor.indexOf('reparto.') === 0) nodos[c.id] = E.vis[c.i] ? E.v[c.i] : null; });
+    return Object.assign({}, rr, { bloque: bloqueCascada(rr), nodos });
+  }
+  /* B01 (T-11): aplica al plan la estructura de una opción de P-02 (S-24, S-03, S-05 y D-01) y lo vuelve a evaluar: F-02 se recalcula con el
+     rendimiento de la opción y la tarjeta usa su excedente. El preferente simple que pactan las opciones no lo cambia esto (F-02 capitaliza cada mes). */
+  function planConOpcion(definicion, plan, opcion) {
+    const D = definicion && definicion._interna;
+    if (!D) throw new Error('Definición no válida: llama primero a carga().');
+    if (!tieneExtension(D)) throw new Error('La definición no trae el módulo de repartos (definicion/reparto.json).');
+    const R = moduloReparto(); if (!R) throw new Error('El módulo de repartos (reparto.js) no está cargado.');
+    if (!Object.prototype.hasOwnProperty.call(R.OPCIONES, opcion)) throw new Error('Opción de P-02 desconocida: ' + opcion + ' (A, B o C).');
+    const op = R.OPCIONES[opcion], cambios = [['S-24', opcion], ['S-03', op.excedente.DUENO], ['S-05', op.excedente.CAPITAL], ['D-01', op.preferente.tasa]];
+    let p = plan; const errores = [];
+    cambios.forEach(([id, valor]) => {
+      /* un nodo con opciones (S-03: «Tierra + 30 %», «Tierra + mitad»…) se decide por la opción que vale exactamente lo de P-02; si no la hay, se reporta */
+      const j = D.ix.get(id), c = j === undefined ? null : D.cn[j], ops = c && Array.isArray(c.opciones) ? c.opciones : [];
+      const vOp = (x) => (typeof x.valor === 'number' ? x.valor : x.valor && x.valor.base && x.valor.base.ast && x.valor.base.ast.t === 'num' ? x.valor.base.ast.v : null);
+      const o = typeof valor === 'number' ? ops.find((x) => vOp(x) !== null && Math.abs(vOp(x) - valor) < 1e-12) : null;
+      const cambio = o ? { opcion: o.clave, estado: 'decidido' } : { valor, estado: 'decidido' };
+      const r = evalua(definicion, p, { [id]: cambio }, { sugerencias: 'no', rutas: 'no' }); (r.errores || []).forEach((e) => errores.push(e)); p = r.plan;
+    });
+    if (plan && plan.reparto !== undefined) p = Object.assign({}, p, { reparto: clonar(plan.reparto) });
+    return { plan: p, errores, opcion, estructura: { excedente: Object.assign({}, op.excedente), preferente: Object.assign({}, op.preferente) } };
+  }
+  function extiende(entrada, ext) { const errores = []; const out = extiendeDefinicion(entrada, ext, errores); return { definicion: out, errores }; }
+  function visorFechasPublica(definicion, plan) {
+    const D = definicion && definicion._interna; if (!D) return null;
+    const E = corre(D, normalizaPlan(plan)), fid = D.tipo.flujoBanco || 'F-02';
+    if (!D.flujos[fid]) return null; E.flujo(fid, 'banco_maximo'); const r = E.cacheFlujo[fid];
+    return r && r.ok ? visorFechas(E, r) : null;
   }
 
   /* ═════════════════════════ API PÚBLICA ═════════════════════════ */
@@ -2923,6 +3209,7 @@
 
   function carga(entrada, opciones) {
     const errores = [], avisos = [];
+    if (opciones && opciones.extension) { entrada = extiendeDefinicion(entrada, opciones.extension, errores); if (errores.length) return { definicion: null, huella: null, errores, advertencias: avisos }; }
     const cr = normalizaEntrada(entrada, errores);
     if (!cr) return { definicion: null, huella: null, errores, advertencias: avisos };
     let comp = null;
@@ -2950,6 +3237,7 @@
     const Ea = hay ? corre(D, p0) : null;
     const plan2 = hay ? aplicaCambio(D, Ea, p0, cambio, errores) : p0;
     const E = corre(D, plan2);
+    if (Ea) aplicaReparto(Ea); aplicaReparto(E);   // T-10: R-26 a R-35 (módulo de repartos) después de evaluar
     erroresDeEstado(E).forEach((e) => errores.push(e));
     if (E.sinConverger) errores.push({ codigo: 'ciclo_de_reglas', mensaje: 'Las reglas no se estabilizaron (ciclo de reglas): revise las condiciones de aparición.' });
     return armaResultado(D, E, Ea, errores, opciones, plan2, hay ? Object.keys(cambio).filter((k) => k !== '@contexto') : []);
@@ -3155,5 +3443,6 @@
     return { orden: D.orden.map((i) => D.ids[i]), aristas, dependientes: (id) => recorre(id, 'abajo'), ancestros: (id) => recorre(id, 'arriba'), ciclos: [] };
   }
 
-  return { carga, valida, evalua, sugiere, compara, paqueteVisor, planConCambio, grafo, analiza, evaluaExpresion, editaDefinicion, REGLAS_VEREDICTO, ROTULO, VERSION: VERSION_MOTOR, TARJETAS, PRUEBAS_LIBRO, AREAS, areasACelda, celdaAAreas, nuevaClaveArea, validaNombreArea };
+  return { carga, valida, evalua, sugiere, compara, paqueteVisor, planConCambio, grafo, analiza, evaluaExpresion, editaDefinicion, REGLAS_VEREDICTO, ROTULO, VERSION: VERSION_MOTOR, TARJETAS, PRUEBAS_LIBRO, AREAS, areasACelda, celdaAAreas, nuevaClaveArea, validaNombreArea,
+    reparto, registraReparto, visorFechas: visorFechasPublica, MEDIDAS_REPARTO, REPARTO_LEE, moduloReparto: () => moduloReparto(), planConOpcion, extiende };
 });
