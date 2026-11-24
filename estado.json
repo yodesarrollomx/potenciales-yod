@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-24T22:27:09.540Z",
+ "generado": "2026-11-24T22:37:39.790Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -10,6 +10,18 @@
    "desde": "2026-11-13T02:09:31Z",
    "url": "https://github.com/yodesarrollomx/yod-portal/commit/e189a5b6a58b17652c37079d5e79351a1662c777",
    "msg": "yod-portal cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
+  },
+  {
+   "clave": "pagina:yodesarrollomx/yod-portal",
+   "tipo": "pagina",
+   "nodos": [
+    "repo:yodesarrollomx/yod-portal",
+    "SYS-CONTROL",
+    "SYS-YOD-OS"
+   ],
+   "desde": "2026-11-24T22:37:12.655Z",
+   "url": "https://yodesarrollomx.github.io/yod-portal/",
+   "msg": "La página de yod-portal respondió 503"
   },
   {
    "clave": "cambio:yodesarrollomx/potenciales-yod",
@@ -40,6 +52,18 @@
    "desde": "2026-11-14T00:43:09Z",
    "url": "https://github.com/yodesarrollomx/board-flujo-yod/commit/1cef2f06d619d43afbc59957eb469520920a8740",
    "msg": "board-flujo-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
+  },
+  {
+   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-salud-canario.yml",
+   "tipo": "flujo",
+   "nodos": [
+    "sala-edicion::github_workflows_sala_salud_canario",
+    "repo:yodesarrollomx/sala-edicion",
+    "SYS-SALA"
+   ],
+   "desde": "2026-11-24T22:35:51Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45502416260",
+   "msg": "Falló el flujo «Sala · pruebas pequeñas de motores y Drive» de sala-edicion, trabajo «canario», paso 7 «Probar, publicar resultados sanitizados y releer recibo»"
   },
   {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-mesa.yml",
