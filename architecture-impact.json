@@ -4,7 +4,8 @@
   "summary": "Continuación de la propuesta ARBOLPPP. Pantalla del Árbol PPP: nueva capa arbol-ppp/mejoras.js (cargada por arbol.html después de arranque.js) que sólo cambia cómo se ve y se navega la pantalla: el grafo ocupa todo el espacio, las tarjetas de arriba quedan como pastillas chicas y transparentes que despliegan sus datos, la tarjeta del dato se puede cerrar, tiene encabezado fijo, separadores (Cambiar, Conexiones, Fuente, Comparar), ajustes secundarios plegados en «Más ajustes», botones que llevan al nodo aunque su rama esté plegada (usa la API pública de la pantalla: seleccionar, alterna, centrar, estado), unidad % o m² en el COS, avisos con «Enterado» y acomodo para teléfono (hoja inferior). Los documentos enlazados son del caso Calzada de los Ángeles y sólo se muestran con ese predio. No cambia el motor, la definición, el cálculo, el servidor, el Portero ni lo que se guarda en el libro.",
   "components": [
     "SYS-ARBOL-PPP",
-    "SYS-POTENCIALES"
+    "SYS-POTENCIALES",
+    "SYS-PPP2"
   ],
   "tests": [
     "node --check arbol-ppp/mejoras.js.",
