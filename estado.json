@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-24T22:37:39.790Z",
+ "generado": "2026-11-24T23:30:52.780Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -10,18 +10,6 @@
    "desde": "2026-11-13T02:09:31Z",
    "url": "https://github.com/yodesarrollomx/yod-portal/commit/e189a5b6a58b17652c37079d5e79351a1662c777",
    "msg": "yod-portal cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
-  },
-  {
-   "clave": "pagina:yodesarrollomx/yod-portal",
-   "tipo": "pagina",
-   "nodos": [
-    "repo:yodesarrollomx/yod-portal",
-    "SYS-CONTROL",
-    "SYS-YOD-OS"
-   ],
-   "desde": "2026-11-24T22:37:12.655Z",
-   "url": "https://yodesarrollomx.github.io/yod-portal/",
-   "msg": "La página de yod-portal respondió 503"
   },
   {
    "clave": "cambio:yodesarrollomx/potenciales-yod",
@@ -52,6 +40,30 @@
    "desde": "2026-11-14T00:43:09Z",
    "url": "https://github.com/yodesarrollomx/board-flujo-yod/commit/1cef2f06d619d43afbc59957eb469520920a8740",
    "msg": "board-flujo-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
+  },
+  {
+   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/publicar.yml",
+   "tipo": "flujo",
+   "nodos": [
+    "sala-edicion::github_workflows_publicar",
+    "repo:yodesarrollomx/sala-edicion",
+    "SYS-SALA"
+   ],
+   "desde": "2026-11-24T23:07:24Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45507186873",
+   "msg": "Falló el flujo «Sala · publicacion=datos-45505161954-1-relevo · sha=19992e0de78c954874bbb12b8a6ea4c4a891ed02» de sala-edicion, trabajo «publicar», paso 12 «Run actions/deploy-pages@v4»"
+  },
+  {
+   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-diario.yml",
+   "tipo": "flujo",
+   "nodos": [
+    "sala-edicion::github_workflows_sala_diario",
+    "repo:yodesarrollomx/sala-edicion",
+    "SYS-SALA"
+   ],
+   "desde": "2026-11-24T22:53:58Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45505161954",
+   "msg": "Falló el flujo «Sala · Diario» de sala-edicion, trabajo «relevo / relevo», paso 8 «Publicar datos y esperar su recibo exacto»"
   },
   {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-salud-canario.yml",
