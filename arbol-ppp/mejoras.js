@@ -436,6 +436,7 @@ html,body{overflow:hidden!important;height:100%!important}
 .vp-tabs button{border-radius:12px 12px 0 0!important;transform:translateY(4px)!important;height:38px!important;padding:0 11px!important;font-size:12.5px!important;box-shadow:none!important}
 .vp-tabs button[aria-selected=true]{height:44px!important;transform:none!important}
 .vp-abrir{right:12px!important;bottom:14px!important}
+.ppp-panel .op i{font-size:.85rem !important}.ppp-panel .op{column-gap:8px !important}
 .vp-menu{left:8px!important;right:8px!important;min-width:0!important;max-height:56vh!important}
 }
 `;
@@ -449,7 +450,7 @@ html,body{overflow:hidden!important;height:100%!important}
     if (m !== eraMovil) { eraMovil = m; fix = 0; W.dispatchEvent(new Event('resize')); }
     if (m) raiz.style.setProperty('--mtop', Math.round(raiz.getBoundingClientRect().top + W.scrollY) + 'px'); else raiz.style.removeProperty('--mtop');
     const p = $('.ppp-panel');
-    const visible = p && !raiz.hasAttribute('data-sin-panel') && p.offsetParent !== null;
+    const visible = p && !raiz.hasAttribute('data-sin-panel') && p.getClientRects().length > 0;
     raiz.style.setProperty('--sheet', m && visible ? p.getBoundingClientRect().height + 'px' : '0px');
     if (!p || !visible) return;
     if (m) { const r = p.getBoundingClientRect(), bar = $('.vp-tabs'); if (bar) { bar.style.top = (r.top - 44) + 'px'; bar.style.height = '44px'; } }
