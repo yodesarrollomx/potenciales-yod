@@ -1,21 +1,18 @@
 {
   "model_revision": "2026-11-23.arbol-ppp.1",
   "proposal_id": "CHG-ARBOL-PPP-20261123",
-  "summary": "Vestir el árbol del PPP con YOD OS: arbol-ppp/arbol.html carga el marco compartido del portal (barra lateral de tableros, barra de arriba con buscador e identidad, «YOD OS › PPP › Árbol») y el Portero, como ppp2.html; una hoja propia (arbol-ppp/marco.css) reasigna los colores y letras del árbol a la paleta del portal (papel, tinta y dorado; Instrument Serif y Sans), siempre en claro, y ajusta el alto al marco. arranque.js vuelve a medir la barra del libro cuando cambia de alto. En la lista de planes del PPP el botón del árbol sube junto a «Crear plan en blanco» (sigue saliendo sólo si el servidor dice arbol = sí). artifact.html y pantalla.css no cambian. No cambia el servidor, el Portero, el menú, los códigos de permiso ni los roles; sube la etiqueta propia de versiones. La nueva etiqueta toca el ?v= de todas las páginas del repo, accesos.html incluida, sin cambiar su contenido.",
+  "summary": "Continuación de la propuesta ARBOLPPP. Módulo de repartos por socio en el Árbol del PPP (Super PPP, entrega T-10 v2 de la partida Ajedrez de tareas): arbol-ppp/reparto.js, definicion-reparto.js y definicion/reparto* agregan el reparto de utilidad entre dueño del terreno, alianza y capital; arbol-ppp/motor.js expone Motor.reparto sin cambiar el cálculo de los planes existentes; arbol-ppp/pruebas/motor-real.cjs sube a 547 pruebas. visor.js sólo actúa cuando el paquete trae «cascada», que hoy no trae ningún paquete del libro, por lo que las pantallas publicadas pintan igual. arbol-ppp/reparto-prueba.html es una página de prueba sin enlace desde la aplicación. Estado de la revisión independiente (dictamen T-11 v2): el cálculo se acepta para simulación interna por la API; la página de prueba y el cuadro del visor NO están aprobados para presentar y quedan inactivos hasta su corrección. No cambia el servidor, el Portero, los permisos ni la etiqueta de versiones; no autoriza ni registra pagos.",
   "components": [
     "SYS-ARBOL-PPP",
     "SYS-POTENCIALES",
-    "SYS-PPP2",
-    "SYS-YOD-OS",
-    "SYS-CONTROL",
-    "GAS-PPP2"
+    "SYS-PPP2"
   ],
   "tests": [
-    "node scripts/versiones.cjs --check: 162 etiquetas con la versión esperada.",
-    "node --test tests/arbol-ppp-servidor.test.cjs tests/access-gates.cjs tests/ppp-session-guard.test.cjs tests/ppp-cargador.test.cjs tests/ppp-cierre-cargador.test.cjs tests/ppp-ui.test.cjs: 148 de 148.",
-    "node arbol-ppp/pruebas/motor-real.cjs y node arbol-ppp/conexion/pruebas.cjs: sin regresión; node --check de ppp2.js y arbol-ppp/arranque.js; git diff --check.",
-    "Vista previa en el navegador con sesión de Dirección (marco y hoja inyectados sobre la página publicada): marco completo, migas «YOD OS › PPP › Árbol», sin desplazamiento a lo alto ni a lo ancho a 1534 px y a 390 px, botones flotantes sin tapar los controles del mapa.",
-    "Pendiente, no demostrado: la página ya publicada desde main y un iPhone real."
+    "node arbol-ppp/pruebas/motor-real.cjs: 547 de 547 con el cambio; la suite original (260) sigue pasando sobre el motor nuevo.",
+    "node scripts/versiones.cjs --check: 172 etiquetas con la versión esperada.",
+    "Dictamen independiente T-11 v2 (Reina de otra compañía): cálculo aceptado para simulación; página de prueba y cuadro del visor rechazados para presentación.",
+    "Corrida real por la API (caso Calzada de los Ángeles, T-12): 61 aserciones, salida reproducida byte por byte por el Rey y por la Reina.",
+    "Pendiente, no demostrado: el cuadro del visor con un paquete que traiga «cascada» y la página de prueba sin red."
   ],
-  "rollback": "Revertir el commit por revisión: arbol.html vuelve a la página suelta con los colores del prototipo. No hay datos ni servidor que restaurar."
+  "rollback": "Revertir el commit por revisión: el motor vuelve a no tener Motor.reparto y el visor a su versión anterior. No hay datos ni servidor que restaurar."
 }

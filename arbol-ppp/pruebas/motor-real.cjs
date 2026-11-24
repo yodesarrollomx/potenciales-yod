@@ -1523,6 +1523,803 @@ prueba('G3 · el editor de reglas rechaza, con un mensaje en palabras, los texto
   cifra('G3 · editaDefinicion rechaza ' + malos.length + ' textos con = + - @ en 3 columnas de nodos, en opciones (cambio y alta); números y textos normales pasan');
 });
 
+/* ═══════════════════ 28 · T-10 · MÓDULO DE REPARTOS (copia de prueba; nada en producción) ═══════════════════
+   Diseño de repartos v3 (T-08) con las condiciones de los dictámenes T-08 v3 (N-02, B2, M3, M5 y reparto de un solo receptor inválido)
+   y T-09 v2 (C1, C2, N1 y N3). Las aserciones V, A y R de t08v3_reparto.py se pasan aquí con sus mismas etiquetas, sobre los casos del
+   motor real (no sobre un archivo exportado). Sólo vertical en venta: renta y el Hub se bloquean de forma explícita. */
+grupo('28 · T-10 · Módulo de repartos: vertical en venta en copia de prueba (diseño v3, dictámenes T-08 v3 y T-09 v2, decisión P-02)');
+/* Port de TODAS las aserciones de t08v3_reparto.py (A, N01, R, P, G2, V, V0, A0 y M5, con sus mismas etiquetas) más N-02, la decisión P-02 y el
+   reparto de un solo receptor inválido. R = módulo reparto.js; C = casos del motor real {id: caso}; prueba(nombre, condición, detalle). */
+function pruebasRepartoT10(R, C, prueba, extra) {
+  extra = extra || {};
+  const HECHAS = [];
+  const P = (nombre, cond, detalle) => { HECHAS.push(nombre); prueba(nombre, !!cond, detalle === undefined ? '' : (typeof detalle === 'string' ? detalle : JSON.stringify(detalle))); };
+  const tiene = (lista, prefijo, texto) => (lista || []).some((x) => x.indexOf(prefijo) === 0 && x.indexOf(texto || '') >= 0);
+  const sumaV = (o) => Object.keys(o || {}).reduce((s, k) => s + o[k], 0);
+  const igualO = (a, b) => JSON.stringify(Object.keys(a).sort().map((k) => [k, a[k]])) === JSON.stringify(Object.keys(b).sort().map((k) => [k, b[k]]));
+  const esc = R.escenario, corre = R.cascada, BASE = R.BASE;
+  const clona = (x) => JSON.parse(JSON.stringify(x));
+  const PE_PRUEBA = { medida: 'm2_construido', cantidad: 21700, proxy: false, nota: 'dato de prueba: sólo para probar el candado, no es superficie de La Colorada' };
+  const REGLA_COT_PRUEBA = { estado_pacto: 'pactado', texto: 'regla de prueba: una cotización aprobada sustituye al catálogo' };
+  const serviciosPactados = (cambios) => BASE.servicios.map((s) => {
+    const s2 = Object.assign(clona(s), { estado_pacto: 'pactado' });
+    if (s.id === 'proyecto_ejecutivo') s2.cotizacion = { monto: 11182500, documento: 'cotización de prueba (no real)', fecha: '2026-11-23', estado_pacto: 'pactado' };
+    Object.assign(s2, (cambios || {})[s.id] || {});
+    return s2;
+  });
+  const pactado = (kw) => esc(Object.assign({ fee: { estado_pacto: 'pactado' }, estado_pacto_capital: 'pactado', estado_pacto_excedente: 'pactado', tierra_regla: { estado_pacto: 'pactado' }, servicios: serviciosPactados(), regla_cotizacion: REGLA_COT_PRUEBA }, kw || {}));
+  const SIN = R.SIN, ALIADOS = R.ALIADOS;
+
+  /* ═════════ Ejemplo sintético (A, N01, R) ═════════ */
+  const Rs = {};
+  Rs.base = corre(esc()); Rs.bajas = corre(esc(R.BAJAS)); Rs.duplicado = corre(esc(R.DUPLICADO));
+  const b = Rs.base, l = Rs.bajas, d = Rs.duplicado;
+  P('A1 base: suma repartida = CR', b.identidades['I2 suma repartida = caja repartible']);
+  P('A1 base: identidades I1–I6 ejecutadas y en verde', Object.keys(b.identidades).every((k) => b.identidades[k] === true), b.identidades);
+  P('A1 base: autorizado 0 porque los acuerdos no están firmados', sumaV(b.autorizado) === 0 && tiene(b.motivos, 'PACTO'));
+  P('A1c base: el tope del proyecto ejecutivo se rotula como proxy (m² de GLA en lugar de m² construido)', tiene(b.candados, 'CF-09', 'proxy'), b.candados);
+  const bp = corre(pactado()); Rs.base_pactado = bp;
+  P('A1b base con todo pactado y cotización aprobada por regla expresa: autorizado = simulado', bp.autorizable && igualO(bp.autorizado, bp.recibido), bp.motivos);
+  P('A2 ventas bajas: suma = CR y pasos sin cubrir', l.identidades['I2 suma repartida = caja repartible'] && Object.keys(l.no_cubierto).some((k) => l.no_cubierto[k] > 0));
+  P('A3 fee duplicado: CF-01 y autorizado 0', tiene(d.candados, 'CF-01') && sumaV(d.autorizado) === 0);
+  const m = corre(esc({ nombre: 'Moréo desconocido', fee_en_indirectos: 'desconocido' })); Rs.moreo = m;
+  P('A4 inclusión desconocida: CF-01 sin error de tipo', tiene(m.candados, 'CF-01', 'no se sabe') && sumaV(m.autorizado) === 0);
+  const bi = corre(esc(Object.assign({}, R.BAJAS, { nombre: 'Banco insoluto', noi_siguiente: 5000000 }))); Rs.banco_insoluto = bi;
+  P('A5 banco insoluto: el faltante incluye la deuda viva', bi.acreedores[0].saldo > 0 && bi.faltante_acreedores >= bi.acreedores[0].saldo && bi.cr === 0, bi.acreedores[0]);
+  P('A5 banco insoluto: nada autorizado', sumaV(bi.autorizado) === 0);
+  const l0 = corre(esc({ nombre: 'Sin banco ni respaldo', linea_banco: 0 })); Rs.sin_fondeador = l0;
+  P('A6 línea 0 sin respaldo: no aborta y marca déficit sin fondeador', l0.sin_fondeador > 0 && sumaV(l0.autorizado) === 0);
+  const l1 = corre(esc({ nombre: 'Sin banco con socio patrimonial', linea_banco: 0, respaldo: { parte: 'SP', tope: 150000000, tasa: 0.15, estado_pacto: 'pendiente' } })); Rs.socio_patrimonial = l1;
+  P('A7 línea 0 con respaldo comprometido: sin déficit y respaldo liquidado', l1.sin_fondeador === 0 && l1.resp_disp > 0 && l1.acreedores[1].saldo === 0, l1.acreedores);
+  const p0 = corre(esc({ nombre: 'Pesos 0/0/0', reparto_interno: { YOD: 0, PG: 0, AVM: 0 } }));
+  P('A8 pesos internos 0/0/0: inválido, no se calcula', p0.estado.indexOf('INVÁLIDO') === 0);
+  const p1 = corre(esc({ nombre: 'Excedente 110/−10/0', excedente: { DUENO: 1.1, ALIANZA: -0.1, CAPITAL: 0 } }));
+  P('A9 excedente 110/−10/0: inválido, no se calcula', p1.estado.indexOf('INVÁLIDO') === 0);
+  const ga = corre(esc({ nombre: 'A con gerencia', gestion: { gerencia_50: 1000000 } }));
+  P('A10 esquema A con gerencia (50): CF-02', tiene(ga.candados, 'CF-02'));
+  const gb = corre(esc({ nombre: 'B con supervisión no separada', gestion: { esquema: 'B', gerencia_50: 1000000, supervision_46: 500000, supervision_separada: false } }));
+  P('A11 esquema B con supervisión sin alcance separado: CF-02', tiene(gb.candados, 'CF-02', 'supervisión (46)'));
+  const gt = corre(esc({ nombre: 'Tope de gestión', fee: { tasa: 0.15 } }));
+  P('A11b gestión sobre el tope de 6 %: CF-02', tiene(gt.candados, 'CF-02', 'rebasa el tope'));
+  const gok = corre(esc({ nombre: 'B válido', gestion: { esquema: 'B', gerencia_50: 1000000, supervision_46: 500000, supervision_separada: true } }));
+  P('A11c esquema B válido: sin CF-02', !tiene(gok.candados, 'CF-02'), gok.candados);
+  const g85 = corre(esc({ nombre: 'B con fee de 2.5 % de ventas', gestion: { esquema: 'B', gerencia_50: 1000000 }, fee: { base: 'pct_ingresos', tasa: 0.025 } }));
+  P('A11d (B4 · 51/85) esquema B con fee sobre el valor alto de la fila 85 (2 % de ventas): CF-02', tiene(g85.candados, 'CF-02', 'fila 85'), g85.candados);
+  P('A11e (B4 · 51/85) la base del fee se lleva a % de ventas netas y se informa', tiene(b.notas, 'NOTA', 'fila 51'), b.notas);
+  const g50 = corre(esc({ nombre: 'Gerencia sobre el alto', gestion: { esquema: 'B', gerencia_50: 12000000, supervision_46: 500000, supervision_separada: true } }));
+  P('A11f (B4 · 50) gerencia sobre el valor alto de 4.5 % de costo directo: CF-02', tiene(g50.candados, 'CF-02', 'gerencia (50)'), g50.candados);
+  const cm = corre(esc({ nombre: 'Master con 53', comercial: { canal: 'master', pct_86: 0.05 } }));
+  P('A12 canal master con comisión 53: CF-03', tiene(cm.candados, 'CF-03'));
+  const ca = corre(esc({ nombre: 'Comercialización doble', acuerdo_marco: R.ACUERDO_MARCO, comercial: { beneficiario_53: 'AVM' } }));
+  P('A12b comercialización en la matriz y comisión 53 a la misma parte: CF-03', tiene(ca.candados, 'CF-03', 'comisión de venta (53)'));
+  const c52 = corre(esc({ nombre: 'Captación doble', acuerdo_marco: R.ACUERDO_MARCO, captacion_52: 2000000 }));
+  P('A13 fila 52 con captación dentro del fee: CF-04', tiene(c52.candados, 'CF-04'));
+  const iv = corre(esc({ nombre: 'IVA proxy sobre bruto', iva: { tipologia: 'vivienda', modalidad: 'proxy', obra_bruta: true } }));
+  P('A14 vivienda, proxy sobre obra bruta: CF-06', tiene(iv.candados, 'CF-06'));
+  const iv2 = corre(esc({ nombre: 'IVA ya incorporado', iva: { tipologia: 'vivienda', modalidad: 'ya_incorporado', obra_bruta: true } }));
+  P('A14b vivienda, ya incorporado sobre obra bruta: sin CF-06', !tiene(iv2.candados, 'CF-06'), iv2.candados);
+  const iv3 = corre(esc({ nombre: 'IVA real sin CFDI', iva: { tipologia: 'vivienda', modalidad: 'real', iva_real: null } }));
+  P('A14c vivienda, real sin CFDI: CF-06', tiene(iv3.candados, 'CF-06', 'CFDI'));
+  const iv4 = corre(esc({ nombre: 'IVA real sobre obra bruta', iva: { tipologia: 'vivienda', modalidad: 'real', obra_bruta: true, iva_real: 5000000 } })); Rs.iva_real_bruto = iv4;
+  P('R-B4b1 (Reina) IVA real sobre obra bruta: CF-06 y nada autorizado', tiene(iv4.candados, 'CF-06', 'contaría dos veces') && sumaV(iv4.autorizado) === 0, iv4.candados);
+  const iv5 = corre(esc({ nombre: 'Mixto sin IVA común', iva: { tipologia: 'mixto', modalidad: 'proxy', obra_bruta: false, base_88: 1000000, obra_habitacional: 100000000 } })); Rs.mixto_sin_comun = iv5;
+  P('R-B4b2 (Reina) mixto sin IVA de gastos comunes: CF-06 (antes daba cero sin candado)', tiene(iv5.candados, 'CF-06', 'gastos comunes'), iv5.candados);
+  const iv6 = corre(esc({ nombre: 'Mixto completo', iva: { tipologia: 'mixto', modalidad: 'proxy', obra_bruta: false, base_88: 1000000, obra_habitacional: 100000000, base_comun: 20000000, pct_no_acreditable_comun: 0.4, bases: { 88: ['honorarios'], 90: ['administracion'] } } })); Rs.mixto_completo = iv6;
+  P('A14f mixto completo: IVA 87 + 88 + 90 en costos, sin CF-06 e identidades en verde', igualO(iv6.iva, { f87: 8500000, f88: 160000, f90: 1280000 }) && !tiene(iv6.candados, 'CF-06') && Object.keys(iv6.identidades).every((k) => iv6.identidades[k] === true), [iv6.iva, iv6.candados]);
+  const iv7 = corre(esc({ nombre: 'Costo en dos bases', iva: { tipologia: 'vivienda', modalidad: 'proxy', obra_bruta: false, bases: { 88: ['obra'] } } }));
+  P('A14g el mismo costo en las bases 87 y 88: CF-06 (bases excluyentes por costo)', tiene(iv7.candados, 'CF-06', 'dos bases'), iv7.candados);
+  const iv8 = corre(esc({ nombre: 'Incorporado con obra neta', iva: { tipologia: 'vivienda', modalidad: 'ya_incorporado', obra_bruta: false } }));
+  P('A14h «ya incorporado» con obra capturada neta: CF-06', tiene(iv8.candados, 'CF-06', 'ya incorporado'), iv8.candados);
+  const caro = [Object.assign(clona(BASE.servicios[0]), { precio_pct_obra: null, precio: 24000000, base: PE_PRUEBA }), clona(BASE.servicios[1])];
+  const oc = corre(esc({ nombre: 'Comisión encima del precio', servicios: caro, acuerdo_marco: Object.assign({}, R.ACUERDO_MARCO, { comision_dentro_del_precio: false }) }));
+  P('A15 comisión del originador encima del precio de mercado: CF-09', tiene(oc.candados, 'CF-09', 'tope de mercado'), oc.candados);
+  const od = corre(esc({ nombre: 'Comisión dentro del precio', servicios: caro, acuerdo_marco: R.ACUERDO_MARCO }));
+  P('A15b la misma comisión dentro del precio: sin CF-09', !tiene(od.candados, 'CF-09'), od.candados);
+  const sr = [clona(BASE.servicios[0]), Object.assign(clona(BASE.servicios[1]), { id: 'colocacion_deuda', catalogo: '—' })];
+  const os_ = corre(esc({ nombre: 'Servicio sin referencia', servicios: sr }));
+  P('A15c servicio sin ID de catálogo ni precio: CF-09', tiene(os_.candados, 'CF-09', 'ID de catálogo'));
+  const am = corre(esc({ nombre: 'Acuerdo Marco', acuerdo_marco: R.ACUERDO_MARCO })); Rs.acuerdo_marco = am;
+  P('A16 matriz con «sin asignar»: importe sin receptor deja la autorización en 0', tiene(am.motivos, 'RECEPTOR') && sumaV(am.autorizado) === 0);
+  P('A16b comisiones del originador suman cero', am.identidades['I5 comisiones del originador suman cero']);
+  const co = corre(esc(R.DUENO_BASES.c2[1])); Rs.al_cobro = co;
+  P('A17 pago al dueño al cobro: identidades ejecutadas (ninguna omitida)', Object.keys(co.identidades).every((k) => co.identidades[k] === true), co.identidades);
+  const cc = corre(esc({ nombre: 'Compromiso mayor que lo aportado', capital: { CAP_A: 400000000, CAP_B: 5000000 } })); Rs.compromiso = cc;
+  P('A18 capital comprometido 405 MDP: el puente usa lo aportado y cuadra', cc.cap_aportado < 405000000 && Object.keys(cc.identidades).every((k) => cc.identidades[k] === true), [cc.cap_aportado, cc.identidades]);
+  P('A18b ninguna clase aporta más que su compromiso', Object.keys(BASE.capital).every((k) => b.aportes_cap[k] <= BASE.capital[k]) && igualO(b.aportes_cap, BASE.capital), b.aportes_cap);
+  P('A19 redondeo: 1 entre tres va a la primera fila', igualO(R.reparte(1, { x: 1, y: 1, z: 1 }), { x: 1, y: 0, z: 0 }));
+  P('A19b redondeo: 2 entre tres van a las dos primeras', igualO(R.reparte(2, { x: 1, y: 1, z: 1 }), { x: 1, y: 1, z: 0 }));
+  let ok = false; try { R.reparte(5, { x: 0, y: 0 }); } catch (e) { ok = true; }
+  P('A19c redondeo: pesos en cero lanzan error en vez de perder pesos', ok);
+  const sub = corre(esc({ nombre: 'Fee subordinado al 100 %', fee: { pct_a_costo: 0 } })); Rs.fee_sub = sub;
+  const suma = (xs) => xs.reduce((a, b2) => a + b2, 0);
+  const dEg = suma(b.costos) - suma(sub.costos);
+  P('A20 (M8p) el cambio de egresos es exactamente el fee a costo calendarizado', dEg === b.fee_costo_tot, dEg + ' vs ' + b.fee_costo_tot);
+  const ts = corre(esc({ nombre: 'Tierra en especie sin regla', tierra_regla: { paga_tierra: 'no', prioridad_pactada: false } })); Rs.tierra_especie = ts;
+  P('A21 tierra en especie sin regla: CF-10', tiene(ts.candados, 'CF-10'));
+  const pg = corre(esc({ nombre: 'Pago sin autorización', pagos_registrados: { DUENO: 1000 } }));
+  P('A22 pago registrado sin autorización: se reporta y se conserva', tiene(pg.motivos, 'PAGO') && pg.pagado.DUENO === 1000);
+  const it = corre(esc(Object.assign({}, R.BAJAS, { nombre: 'Corte intermedio con ventas bajas', corte: 'intermedio' }))); Rs.intermedio = it;
+  P('A23 corte intermedio con pasos sin cubrir: nada autorizado', sumaV(it.autorizado) === 0 && tiene(it.motivos, 'SV', 'corte intermedio'));
+  /* B5 · receptores y pagos */
+  let fx = null, err = null;
+  try { fx = corre(esc({ nombre: 'Receptor FANTASMA', reparto_interno: { YOD: 1, PG: 1, FANTASMA: 1 } })); } catch (e) { err = e.message; }
+  Rs.fantasma = fx;
+  P('R-B5a (Reina) receptor FANTASMA en reparto_interno: INVÁLIDO sin KeyError y autorización 0', err === null && fx.estado.indexOf('INVÁLIDO') === 0 && sumaV(fx.autorizado) === 0 && tiene(fx.motivos, 'V', 'FANTASMA'), err || fx.motivos);
+  [['matriz', { acuerdo_marco: Object.assign({}, R.ACUERDO_MARCO, { matriz: R.MATRIZ_MOREO.map((f) => [f[0], f[1], f[2] === SIN ? 'FANTASMA' : f[2], f[3]]) }) }],
+    ['originador', { acuerdo_marco: Object.assign({}, R.ACUERDO_MARCO, { originador: 'FANTASMA' }) }],
+    ['servicio', { servicios: [Object.assign(clona(BASE.servicios[0]), { prestador: 'FANTASMA' }), clona(BASE.servicios[1])] }],
+    ['comisión 53', { comercial: { beneficiario_53: 'FANTASMA' } }],
+    ['respaldo', { respaldo: { parte: 'FANTASMA', tope: 1, tasa: 0.1, estado_pacto: 'pendiente' } }],
+    ['pagos', { pagos_registrados: { FANTASMA: 1 } }]].forEach(([nm, kw]) => {
+    let okk = false, det = '';
+    try { const fz = corre(esc(Object.assign({ nombre: 'FANTASMA en ' + nm }, kw))); okk = fz.estado.indexOf('INVÁLIDO') === 0 && sumaV(fz.autorizado) === 0; det = fz.motivos.slice(0, 2); } catch (e) { det = e.message; }
+    P('R-B5a2 receptor FANTASMA en ' + nm + ': INVÁLIDO sin excepción', okk, det);
+  });
+  const sp = corre(pactado({ nombre: 'Sobrepago al dueño', pagos_registrados: { DUENO: 999999999 } })); Rs.sobrepago = sp;
+  P('R-B5b (Reina) pago del dueño de 999,999,999 con todo pactado: evidencia conservada, sobrepago y autorización total 0',
+    sp.pagado.DUENO === 999999999 && tiene(sp.motivos, 'PAGO', 'sobrepago') && sumaV(sp.autorizado) === 0 && !sp.autorizable && /autorizado no$/.test(sp.estado), sp.estado + ' ' + sumaV(sp.autorizado));
+  const pp = corre(pactado({ nombre: 'Pago parcial al dueño', pagos_registrados: { DUENO: 10000000 } })); Rs.pago_parcial = pp;
+  P('R-B5c pago parcial al dueño: sólo se autoriza el saldo y cuadra por parte (derecho = pagado + disponible)',
+    pp.autorizable && pp.autorizado.DUENO === pp.recibido.DUENO - 10000000 && sumaV(pp.autorizado) === pp.cr - 10000000 && Object.keys(pp.conciliacion).every((k) => pp.conciliacion[k].derecho === pp.conciliacion[k].pagado + pp.conciliacion[k].disponible_reintento), pp.motivos);
+  /* B4 · enum único en toda entrada */
+  [['fee_en_indirectos «pendiente»', { fee_en_indirectos: 'pendiente' }], ['esquema de gestión «C»', { gestion: { esquema: 'C' } }],
+    ['modalidad de IVA «pendiente»', { iva: { modalidad: 'pendiente' } }], ['estado de pacto «firmado»', { fee: { estado_pacto: 'firmado' } }],
+    ['liberación de reserva «si» como texto', { reservas: [{ id: 'posventa', pct_obra: 0.008, liberacion_autorizada: 'si' }] }],
+    ['regla del excedente «igual»', { acuerdo_marco: Object.assign({}, R.ACUERDO_MARCO, { regla_excedente: 'igual' }) }]].forEach(([nm, kw]) => {
+    const x = corre(esc(Object.assign({ nombre: nm }, kw)));
+    P('R-B4a enum: ' + nm + ' invalida y no autoriza', x.estado.indexOf('INVÁLIDO') === 0 && sumaV(x.autorizado) === 0, x.estado);
+  });
+  /* N-01 · CF-09 verificable */
+  const n1 = corre(pactado({ nombre: 'Fila ausente con precio', servicios: serviciosPactados({ factibilidad_credito: { catalogo: '—', mercado: 100000 } }) })); Rs.n01_fila_ausente = n1;
+  P('R-N01a (Reina) fila ausente («—») con precio de mercado presente: CF-09 y autorización 0', tiene(n1.candados, 'CF-09', 'no se acepta sin ID') && sumaV(n1.autorizado) === 0, n1.candados);
+  const n2 = corre(pactado({ nombre: 'Fila ajena', servicios: serviciosPactados({ factibilidad_credito: { catalogo: 'F-102' } }) }));
+  P('R-N01b fila ajena al servicio (102, estudio de mercado, para factibilidad): CF-09', tiene(n2.candados, 'CF-09', 'ajena'), n2.candados);
+  const exacto = [Object.assign(clona(BASE.servicios[0]), { precio_pct_obra: null, precio: 24629500, base: PE_PRUEBA }), clona(BASE.servicios[1])];
+  const cIn = corre(esc({ nombre: 'Comisión contenida en el tope', servicios: exacto, acuerdo_marco: R.ACUERDO_MARCO }));
+  const cOut = corre(esc({ nombre: 'Comisión por fuera en el tope', servicios: exacto, acuerdo_marco: Object.assign({}, R.ACUERDO_MARCO, { comision_dentro_del_precio: false }) }));
+  const cUp = corre(esc({ nombre: 'Precio bruto encima del tope', servicios: [Object.assign(clona(exacto[0]), { precio: 24629501 }), clona(exacto[1])], acuerdo_marco: R.ACUERDO_MARCO }));
+  P('R-N01c comisión contenida en el precio bruto: en el tope pasa; por fuera bloquea; un peso encima del tope bloquea aunque vaya dentro',
+    !tiene(cIn.candados, 'CF-09') && tiene(cOut.candados, 'CF-09', 'tope de mercado') && tiene(cUp.candados, 'CF-09', 'tope de mercado'), [cIn.candados, cOut.candados, cUp.candados]);
+  P('R-N01c2 la comisión contenida sale del prestador y suma cero', cIn.comis.PG === -R.r(R.qm(24629500, 0.05)) && sumaV(cIn.comis) === 0);
+  const n4 = corre(pactado({ nombre: 'Precio vencido', servicios: serviciosPactados({ factibilidad_credito: { fecha_precio: '2027-07-01' } }) }));
+  P('N01d precio fuera de la vigencia del catálogo: CF-09', tiene(n4.candados, 'CF-09', 'vigencia'), n4.candados);
+  const n5 = corre(pactado({ nombre: 'Unidad distinta', servicios: serviciosPactados({ factibilidad_credito: { unidad: 'MXN por m² construido' } }) }));
+  P('N01e unidad distinta de la del catálogo: CF-09', tiene(n5.candados, 'CF-09', 'unidad'), n5.candados);
+  const n6 = corre(pactado({ nombre: 'Cotización sin regla', regla_cotizacion: null }));
+  P('N01f cotización sin regla expresa pactada: CF-09', tiene(n6.candados, 'CF-09', 'sin regla expresa'), n6.candados);
+  const n7 = corre(esc({ nombre: 'Base de m² construidos de prueba', servicios: [Object.assign(clona(BASE.servicios[0]), { base: PE_PRUEBA }), clona(BASE.servicios[1])] }));
+  P('N01g con base en m² construidos (dato de prueba) el tope se verifica sin proxy: sin CF-09', !tiene(n7.candados, 'CF-09'), n7.candados);
+  const tri = [0, 1, 2].map((i) => Object.keys(R.FILAS_5_9).reduce((s, k) => s + R.FILAS_5_9[k][i], 0));
+  P('N01h el paquete 5–9 suma las cinco filas del catálogo y coincide con la fila 83 (545 / 1,135 / 2,145)',
+    JSON.stringify(tri) === '[545,1135,2145]' && JSON.stringify([R.CATALOGO['PE-5-9'].bajo, R.CATALOGO['PE-5-9'].medio, R.CATALOGO['PE-5-9'].alto]) === '[545,1135,2145]');
+  const ap = corre(esc({ nombre: 'Excedente pendiente', acuerdo_marco: Object.assign({}, R.ACUERDO_MARCO, { regla_excedente: 'pendiente' }) })); Rs.excedente_pendiente = ap;
+  P('A24 regla del excedente pendiente: el fee sigue la matriz, el excedente de la alianza queda sin receptor y bloquea',
+    ap.simulado[SIN].p7 > 0 && ALIADOS.every((k) => ap.simulado[k].p7 === 0) && ALIADOS.every((k) => ap.simulado[k].p5 === am.simulado[k].p5) && tiene(ap.motivos, 'RECEPTOR'), ap.simulado[SIN]);
+  P('A24b la regla del excedente tiene su propio estado de pacto', tiene(am.motivos, 'PACTO', 'regla del excedente de la alianza'));
+  /* T-10 · dictamen T-08 v3, B5: el reparto de un solo receptor inválido */
+  let solo = null, errSolo = null;
+  try { solo = corre(esc({ nombre: 'Un solo receptor FANTASMA', reparto_interno: { FANTASMA: 1 } })); } catch (e) { errSolo = e.message; }
+  Rs.solo_fantasma = solo;
+  P('T10-B5 (dictamen T-08 v3) reparto interno con un solo receptor inválido: INVÁLIDO sin excepción, autorización 0 y el motivo lo nombra',
+    errSolo === null && solo.estado.indexOf('INVÁLIDO') === 0 && sumaV(solo.autorizado) === 0 && tiene(solo.motivos, 'V', "'FANTASMA'"), errSolo || solo.motivos);
+  Object.keys(Rs).forEach((nm) => {
+    const v = Rs[nm]; if (!v || !v.simulado) return;
+    P('A0 sin pagos negativos · ' + nm, Object.keys(v.simulado).every((k) => Object.keys(v.simulado[k]).every((s) => v.simulado[k][s] >= 0)));
+    P('A0 identidades I1–I6 · ' + nm, Object.keys(v.identidades).every((k) => v.identidades[k] === true), v.identidades);
+  });
+
+  /* ═════════ P-02 (opciones A, B y C; bases del dueño) ═════════ */
+  const P02_V2 = {
+    A_base: { AVM: 9629386, CAP_A: 236581622, CAP_B: 7169140, DUENO: 84448163, FC: 0, JV: 100000, PG: 20811888, [SIN]: 0, YOD: 9629388 },
+    A_bajas: { AVM: 1656666, CAP_A: 165000000, CAP_B: 1028198, DUENO: 0, FC: 0, JV: 100000, PG: 12839167, [SIN]: 0, YOD: 1656667 },
+    B_base: { AVM: 6630639, CAP_A: 236581622, CAP_B: 7169140, DUENO: 84448163, FC: 0, JV: 4139343, PG: 14378836, [SIN]: 7510922, YOD: 7510922 },
+    B_bajas: { AVM: 1607825, CAP_A: 165000000, CAP_B: 1028198, DUENO: 0, FC: 0, JV: 790800, PG: 11269475, [SIN]: 1292200, YOD: 1292200 },
+    C_base: { AVM: 4862677, CAP_A: 247814324, CAP_B: 7509525, DUENO: 81293943, FC: 0, JV: 2960701, PG: 13284383, [SIN]: 5322017, YOD: 5322017 },
+    C_bajas: { AVM: 1607825, CAP_A: 165000000, CAP_B: 1028198, DUENO: 0, FC: 0, JV: 790800, PG: 11269475, [SIN]: 1292200, YOD: 1292200 }
+  };
+  const OP = {};
+  Object.keys(R.OPCIONES).forEach((k) => {
+    OP[k] = { titulo: R.OPCIONES[k].titulo, base: corre(R.escenarioOpcion(k)), bajas: corre(R.escenarioOpcion(k, R.BAJAS)) };
+    ['base', 'bajas'].forEach((sc) => {
+      const x = OP[k][sc], esp = P02_V2[k + '_' + sc];
+      P('P' + k + ' ' + sc + ': identidades', Object.keys(x.identidades).every((q) => x.identidades[q] === true), x.identidades);
+      P('P' + k + ' ' + sc + ': cifras por socio iguales a la v2 al peso', Object.keys(esp).every((p) => x.total[p] === esp[p]), Object.keys(esp).filter((p) => x.total[p] !== esp[p]).map((p) => [p, x.total[p], esp[p]]));
+    });
+  });
+  P('P-02 decisión de Alejandro: la opción A es la de omisión y coincide con el ejemplo base; B y C siguen disponibles', R.OPCION_POR_OMISION === 'A' && igualO(corre(R.escenarioOpcion()).total, b.total) && ['A', 'B', 'C'].every((k) => R.OPCIONES[k]) && JSON.stringify(R.ENUM_OPCION_REPARTO) === '["A","B","C"]');
+  const DB = {};
+  Object.keys(R.DUENO_BASES).forEach((k) => {
+    const c = R.DUENO_BASES[k][1];
+    DB[k] = { base: corre(esc(c)), bajas: corre(esc(Object.assign({}, R.BAJAS, c))) };
+    ['base', 'bajas'].forEach((sc) => P('G2-' + k + ' ' + sc + ': identidades', Object.keys(DB[k][sc].identidades).every((q) => DB[k][sc].identidades[q] === true), DB[k][sc].identidades));
+  });
+  if (extra.alTerminarSintetico) extra.alTerminarSintetico(Rs, OP, DB);
+
+  /* ═════════ Vertical sobre F-02 (V) ═════════ */
+  const Rv = {};
+  if (C) {
+    /* corrección 1 (T-11): los casos ya aplican su opción de P-02 (planConOpcion) y se declaran el preferente como lo calcula F-02 y la comisión de venta */
+    const KW_V = Object.assign({ iva: { tipologia: 'vivienda', modalidad: 'ya_incorporado' }, fee_en_indirectos: 'no', gestion_esquema: 'A' }, extra.declaraB2 === false ? {} : { isr: { estado: 'transparente' }, otros_acreedores: { estado: 'ninguno' }, reservas: { estado: 'ninguna' } }, extra.kwExtra || {});
+    const KW_CASO = extra.kwCaso || {};
+    const RV = (caso, kw, cid) => R.repartoVertical(caso, Object.assign({}, KW_V, (cid && KW_CASO[cid]) || {}, kw || {}));
+    const corrV = (nombre, cid, kw) => { Rv[nombre] = Object.assign({ caso: cid }, RV(C[cid], kw, cid)); return Rv[nombre]; };
+    const a = corrV('muestra_retenida', 'muestra');
+    P('V1 muestra con caja mínima retenida: CR = caja − caja mínima', a.cr === a.cd - a.reserva.requerida, a.cr);
+    P('V1 muestra retenida: suma = CR y autorizado 0 (sin firma)', a.identidades['suma repartida = CR'] && sumaV(a.autorizado) === 0);
+    const S = C.muestra.series;
+    const b38 = corrV('muestra_corte_38', 'muestra', { mes_corte: 38, liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true });
+    P('R-B1a (Reina) corte en el mes 38: intermedio, D-16 retenida y nada autorizado (antes autorizaba 40,458,512 con caja de 22,536,762)',
+      b38.corte === 'intermedio' && b38.reserva.liberada === 0 && sumaV(b38.autorizado) === 0 && b38.fecha_autorizable === null && b38.cd === 22536762 && b38.cartera_por_cobrar === 18865000 && tiene(b38.motivos, 'CORTE'), [b38.corte, b38.cd, b38.motivos]);
+    const bv = corrV('muestra_liberada_pactada', 'muestra', { mes_corte: 39, liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true });
+    P('V2 (corregida) corte en el mes 39: final, caja del propio mes, dueño = R-22 y alianza = R-24 (±1)',
+      bv.corte === 'final' && bv.cd === R.pz(S.caja[39]) && Math.abs(bv.dueno - bv.R22) <= 1 && Math.abs(bv.alianza - bv.R24) <= 1, [bv.dueno, bv.R22, bv.alianza, bv.R24]);
+    P('V2 (corregida) corte 39: autorizado = simulado = 40,458,512 y fecha autorizable 39 = mes_reparto 39',
+      bv.autorizable && !bv.motivos_utilidades.length && igualO(bv.autorizado, bv.simulado) && sumaV(bv.autorizado) === 40458512 && bv.fecha_autorizable === 39 && bv.mes_reparto === 39 && bv.primer_mes_cierre === 39, [bv.motivos, bv.fecha_autorizable]);
+    P('V2 CR − saldo de capital = D-22', bv.identidades['CR − saldo de capital = D-22 (±1 peso)'] === true);
+    const b60 = corrV('muestra_corte_60', 'muestra', { liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true });
+    P('V2b corte en el mes 60: mismas cifras que el 39 y su fecha es la del corte (60)', igualO(b60.autorizado, bv.autorizado) && b60.fecha_autorizable === 60);
+    /* N-02 (dictamen T-08 v3): el visor no presenta el mes 39 del motor como fecha autorizada del corte 60 */
+    const pq60 = b60.salida.paquete, pq39 = bv.salida.paquete;
+    const fechasPublicables = (pq) => R.CAMPOS_FECHA.filter((k) => pq[k] && pq[k].estado === 'publicable').map((k) => [k, pq[k].valor]);
+    P('N-02 (dictamen T-08 v3) corte 60 autorizado: ninguna fecha publicable vale 39; mes_reparto 39 queda teórico como referencia del Árbol y las fechas autorizadas son 60 y 5 años',
+      fechasPublicables(pq60).every(([k, v]) => v !== 39 && v !== 3.25) && pq60.mes_reparto.valor === 39 && pq60.mes_reparto.estado === 'teórico' && /referencia del Árbol/.test(pq60.mes_reparto.motivos.join(' '))
+      && pq60.fecha_corte_autorizado.valor === 60 && pq60.fecha_corte_autorizado.estado === 'publicable' && pq60.dueno_meses.valor === 60 && pq60.dueno_meses.estado === 'publicable' && pq60.dueno_anos.valor === 5 && pq60.dueno_anos.estado === 'publicable', [fechasPublicables(pq60), pq60.mes_reparto]);
+    P('N-02 el paquete distingue el hito del motor, el corte autorizado y el pago registrado (rol de cada fecha)',
+      pq60.mes_reparto.rol === 'hito del motor' && pq60.fecha_corte_autorizado.rol === 'corte autorizado' && pq60.dueno_meses.rol === 'corte autorizado' && pq60.dueno_meses.hito_motor === 39 && pq60.fecha_pago_registrado.rol === 'pago registrado' && pq60.fecha_pago_registrado.valor === null);
+    P('N-02 corte 39 autorizado: el hito del motor coincide con el corte y entonces sí es publicable', pq39.mes_reparto.valor === 39 && pq39.mes_reparto.estado === 'publicable' && pq39.fecha_corte_autorizado.valor === 39 && pq39.dueno_meses.valor === 39);
+    P('N-02 sin autorización ninguna fecha es publicable (corte 60 sin firma)', fechasPublicables(a.salida.paquete).length === 0 && a.salida.paquete.fecha_corte_autorizado.valor === null);
+    /* propiedad de corte único en todo el calendario */
+    Object.keys(C).forEach((cid) => {
+      const caso = C[cid], malos = [];
+      for (let mm = 1; mm <= caso.M; mm++) {
+        const x = RV(caso, { mes_corte: mm, liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true, prioridad_tierra_pactada: true });
+        const tot = sumaV(x.autorizado), p57 = Object.keys(x.autorizado).filter((k) => R.PASO[k] >= 5).reduce((s, k) => s + x.autorizado[k], 0);
+        if (tot > Math.max(0, R.pz(caso.series.caja[mm]))) malos.push([mm, 'excede caja']);
+        if (x.corte !== 'final' && (tot > 0 || x.reserva.liberada > 0)) malos.push([mm, 'autoriza o libera antes del cierre']);
+        if (p57 > 0 && x.corte !== 'final') malos.push([mm, 'pasos 5–7 fuera de corte final']);
+        if (x.salida && R.CAMPOS_FECHA.some((k) => x.salida.paquete[k] && x.salida.paquete[k].estado === 'publicable' && x.salida.paquete[k].valor !== mm && x.salida.paquete[k].valor !== mm / 12)) malos.push([mm, 'fecha publicable distinta del corte (N-02)']);
+      }
+      P('R-B1b propiedad de corte único en los ' + caso.M + ' meses · ' + cid, !malos.length, malos.slice(0, 3));
+    });
+    const c = corrV('N1_retenida', 'N1', { acuerdos_pactados: true });
+    P('V3 N1 retenida: CR 0 y nada autorizado', c.cr === 0 && sumaV(c.autorizado) === 0, c.cr);
+    P('V3 N1 retenida: campos del visor teóricos y nota de reserva retenida', R.CAMPOS_VISOR.every((k) => c.rotulos[k] !== 'publicable') && c.notas.some((x) => x.indexOf('RESERVA') === 0));
+    const dd = corrV('N1_liberada', 'N1', { liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true });
+    P('V4 N1 liberada: 1,156,991 a principal y 4,321,019 a preferente', dd.simulado.capital_principal === 1156991 && dd.simulado.capital_preferente === 4321019, dd.simulado);
+    P('V4 N1 liberada y pactada: se autoriza devolver el capital (5,478,010) y nada de utilidades', dd.autorizado.capital_principal + dd.autorizado.capital_preferente === 5478010 && dd.dueno === 0 && dd.alianza === 0 && dd.fecha_autorizable === null && dd.motivos_utilidades.length > 0, dd.motivos);
+    const dn = corrV('N1_liberada_sin_firma', 'N1', { liberar_caja_minima: 'al_liquidar' });
+    P('V4b N1 liberada sin firma: autorizado 0', sumaV(dn.autorizado) === 0);
+    const e = corrV('tierra_especie_sin_pacto', 'muestra_tierra_especie', { liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true });
+    P('V5 tierra en especie sin pacto: CF-10, nada autorizado, R-21 a R-25 teóricos con el motivo de tierra', tiene(e.motivos, 'CF-10') && !e.autorizable
+      && ['R-22', 'R-23', 'R-24', 'R-25'].every((k) => e.salida.tarjeta[k].estado === 'teórico' && e.salida.tarjeta[k].motivos.indexOf('incluye tierra aportada sin regla pactada') >= 0));
+    P('V5 tierra en especie: dueño simulado = R-22 (12,137,554 ±1)', Math.abs(e.dueno - e.R22) <= 1, [e.dueno, e.R22]);
+    const f = corrV('N1_tierra_especie', 'N1_tierra_especie', { acuerdos_pactados: true });
+    P('V6 (C1) N1 tierra en especie: R-22 negativo conserva los dos motivos, tierra sin regla y pérdida asignada',
+      f.salida.paquete.dueno_recibe.estado === 'teórico' && f.salida.paquete.dueno_recibe.motivos.indexOf('incluye tierra aportada sin regla pactada') >= 0 && f.salida.paquete.dueno_recibe.motivos.indexOf('pérdida asignada (teórica)') >= 0 && !f.autorizable, f.salida.paquete.dueno_recibe);
+    const g = corrV('tierra_especie_con_pacto', 'muestra_tierra_especie', { mes_corte: 39, liberar_caja_minima: 'al_liquidar', prioridad_tierra_pactada: true, acuerdos_pactados: true });
+    const t_ = g.salida.tarjeta, pq = g.salida.paquete, lg = g.salida.legado, mu = C.muestra.nodos;
+    /* opción A (corrección 1, T-11): el excedente es 50/50. Sin pacto de tierra el motor reparte la caja de 40,458,512 sin pagar la tierra: mitad y mitad */
+    P('R-B3a (Reina) tierra en especie con pacto: R-22 legado y R-24 legado (opción A: 40,458,512 ÷ 2 = 20,229,256 cada uno) quedan teóricos, no publicables',
+      lg['R-22'].estado === 'teórico' && lg['R-24'].estado === 'teórico' && Math.round(lg['R-22'].valor) === 20229256 && Math.round(lg['R-24'].valor) === 20229256 && 2 * 20229256 === 40458512, Object.keys(lg).map((k) => [k, lg[k].estado]));
+    P('R-B3b tarjeta «Reparto» con pacto: publica la cascada pactada de la opción A (dueño 14,000,000 + 26,458,512 ÷ 2 = 27,229,256, alianza 13,229,256, veces 1.945, capital 7,921,595) igual al motor con S-02 = sí',
+      g.salida.reconciliado && ['R-22', 'R-23', 'R-24', 'R-25'].every((k) => t_[k].estado === 'publicable' && t_[k].fuente === 'cascada pactada reconciliada')
+      && t_['R-22'].valor === 14000000 + (40458512 - 14000000) / 2 && t_['R-24'].valor === (40458512 - 14000000) / 2 && Math.abs(t_['R-23'].valor - 27229256 / 14000000) < 1e-9 && Math.round(t_['R-25'].valor) === 7921595
+      && ['R-22', 'R-23', 'R-24', 'R-25'].every((k) => Math.abs(t_[k].valor - mu[k]) <= (k === 'R-23' ? 0.001 : 1)), Object.keys(t_).map((k) => [k, t_[k].valor, t_[k].estado]));
+    P('R-B3c paquete del visor con pacto: dueno_recibe, dueno_veces, alianza_recibe e inversion_recibe salen de la cascada pactada; R-13 a R-17 teóricos',
+      Object.keys(R.CAMPO_NODO).every((k) => pq[k].fuente === 'cascada pactada reconciliada' && pq[k].estado === 'publicable') && R.SIMPLIFICADOS.every((k) => !lg[k] || lg[k].estado === 'teórico'), Object.keys(R.CAMPO_NODO).map((k) => [k, pq[k].valor, pq[k].estado, pq[k].fuente]));
+    P('V7 con pacto: el dueño cobra su tierra primero, igual que S-02 = sí, y se autoriza', Math.abs(g.dueno - bv.dueno) <= 1 && g.autorizable, [g.dueno, g.motivos]);
+    const h = corrV('capital_20_tierra_especie', 'muestra_capital_20_tierra_especie', { liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true });
+    P('V8 (C1) capital 20 % con tierra en especie sin pacto: R-25 e inversion_recibe teóricos con el motivo de tierra',
+      h.salida.tarjeta['R-25'].estado === 'teórico' && h.salida.paquete.inversion_recibe.motivos.indexOf('incluye tierra aportada sin regla pactada') >= 0);
+    const hp = corrV('capital_20_tierra_especie_con_pacto', 'muestra_capital_20_tierra_especie', { liberar_caja_minima: 'al_liquidar', prioridad_tierra_pactada: true, acuerdos_pactados: true });
+    const m20 = C.muestra_capital_20.nodos;
+    /* opción C (12 % y 30/20/50): F-02 se recalculó con D-01 = 12 %; la cascada pactada publica el excedente por terceras partes de la opción y coincide con el motor con S-02 = sí */
+    const restoC = hp.simulado.dueno_parte + hp.simulado.alianza_parte + hp.simulado.capital_parte;
+    P('V8b (C1) capital con parte (opción C) con pacto: publica R-24 = 20 % y R-25 = capital + 50 % del excedente (motor con S-02 = sí, ±1); legados teóricos',
+      Math.abs(hp.salida.tarjeta['R-24'].valor - m20['R-24']) <= 1 && Math.abs(hp.salida.tarjeta['R-25'].valor - m20['R-25']) <= 1 && Math.abs(hp.simulado.alianza_parte - 0.2 * restoC) <= 1 && Math.abs(hp.simulado.capital_parte - 0.5 * restoC) <= 1
+      && Math.abs(hp.simulado.dueno_parte - 0.3 * restoC) <= 1 && hp.salida.tarjeta['R-25'].estado === 'publicable' && hp.salida.legado['R-25'].estado === 'teórico' && hp.salida.legado['R-24'].estado === 'teórico'
+      && Math.abs(hp.salida.legado['R-24'].valor * 3 - hp.salida.legado['R-22'].valor * 2) <= 1, [hp.salida.tarjeta['R-24'].valor, hp.salida.tarjeta['R-25'].valor, restoC]);
+    const i1 = corrV('fee_inclusion_desconocida', 'muestra_fee_5', { liberar_caja_minima: 'al_liquidar', fee_en_indirectos: 'desconocido', acuerdos_pactados: true });
+    P('V9 fee 5 % con inclusión desconocida: CF-01 y nada autorizado', tiene(i1.motivos, 'CF-01') && !i1.autorizable);
+    const i2 = corrV('fee_sin_inclusion', 'muestra_fee_5', { liberar_caja_minima: 'al_liquidar', fee_en_indirectos: 'no', acuerdos_pactados: true });
+    P('V9b fee 5 % sin inclusión: alianza = R-24 (±1) y autorizable', Math.abs(i2.alianza - i2.R24) <= 1 && i2.autorizable, [i2.alianza, i2.R24, i2.motivos]);
+    let i3 = null; err = null;
+    try { i3 = corrV('fee_inclusion_pendiente', 'muestra_fee_5', { liberar_caja_minima: 'al_liquidar', fee_en_indirectos: 'pendiente', acuerdos_pactados: true }); } catch (x) { err = x.message; }
+    P('R-B4a2 (Reina) vertical con fee 5 % e inclusión «pendiente»: INVÁLIDO y nada autorizado (antes autorizaba 40,458,512)', err === null && i3.estado.indexOf('INVÁLIDO') === 0 && sumaV(i3.autorizado) === 0, err || i3.motivos);
+    const i4 = corrV('fee_inclusion_ausente', 'muestra_fee_5', { liberar_caja_minima: 'al_liquidar', fee_en_indirectos: null, acuerdos_pactados: true });
+    P('V9d vertical con fee positivo sin declarar la inclusión: dato requerido ausente, INVÁLIDO', i4.estado.indexOf('INVÁLIDO') === 0);
+    const i5 = corrV('gestion_B', 'muestra_fee_5', { liberar_caja_minima: 'al_liquidar', gestion_esquema: 'B', acuerdos_pactados: true });
+    const i6 = corrV('iva_proxy', 'muestra', { mes_corte: 39, liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true, iva: { tipologia: 'vivienda', modalidad: 'proxy' } });
+    const i7 = corrV('iva_mixto', 'muestra', { mes_corte: 39, liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true, iva: { tipologia: 'mixto', modalidad: 'ya_incorporado' } });
+    P('V9e lo que el vertical no implementa se bloquea explícitamente: gestión B (CF-02), IVA proxy (CF-06) y mixto (CF-06)',
+      tiene(i5.motivos, 'CF-02', 'no implementado') && tiene(i6.motivos, 'CF-06', 'no implementado') && tiene(i7.motivos, 'CF-06', 'no implementado') && !(i5.autorizable || i6.autorizable || i7.autorizable));
+    const j = corrV('banco_insoluto', 'banco_insoluto', { liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true });
+    P('V10 banco insoluto: el faltante incluye banco y respaldo vivos; CR 0; horizonte truncado', j.faltante_acreedores > 0 && j.cr === 0 && j.corte === 'truncado' && j.acreedores[0].saldo === 0 && j.acreedores[1].saldo > 0, j.acreedores);
+    const k = corrV('respaldo_sin_fondeador', 'respaldo', { liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true });
+    P('V11 respaldo sin fondeador: bloquea aunque F-02 lo haya pagado', tiene(k.motivos, 'SV', 'déficit sin fondeador') && !k.autorizable);
+    const kk = corrV('respaldo_con_fondeador', 'respaldo', { liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true, fondeador_respaldo: { parte: 'SP', tope: 30000000, tasa: 0.15, estado_pacto: 'pactado' } });
+    P('V11b respaldo con socio patrimonial pactado (parte, tope y tasa): ya no bloquea por fondeador', !tiene(kk.motivos, 'SV', 'déficit sin fondeador'), kk.motivos);
+    const k2 = corrV('respaldo_fondeador_incompleto', 'respaldo', { liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true, fondeador_respaldo: { tope: 30000000, estado_pacto: 'pactado' } });
+    const k3 = corrV('respaldo_fondeador_fantasma', 'respaldo', { liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true, fondeador_respaldo: { parte: 'FANTASMA', tope: 30000000, tasa: 0.15, estado_pacto: 'pactado' } });
+    P('V11c fondeador sólo con tope y «pactado», o con parte FANTASMA: INVÁLIDO', k2.estado.indexOf('INVÁLIDO') === 0 && k3.estado.indexOf('INVÁLIDO') === 0);
+    const lpr = corrV('N1_prorrata', 'N1', { liberar_caja_minima: 'al_liquidar', imputacion: 'prorrata', acuerdos_pactados: true });
+    P('V12 imputación versionada: principal primero y prorrata reconstruyen el saldo de F-02', dd.identidades['saldo de capital reconstruido hasta el corte (≤ 0.01 peso)'] && lpr.identidades['saldo de capital reconstruido hasta el corte (≤ 0.01 peso)']);
+    P('V12b la regla de imputación cambia principal y preferente pendientes', lpr.principal_pendiente !== dd.principal_pendiente || lpr.preferente_pendiente !== dd.preferente_pendiente, [lpr.principal_pendiente, dd.principal_pendiente]);
+    const rv = corrV('respaldo_vivo', 'respaldo_vivo', { liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true });
+    P('V13 respaldo vivo al mes 60: se paga con la caja antes que la reserva y bloquea por déficit sin fondeador', rv.acreedores[1].pagado === rv.acreedores[1].exigible && rv.acreedores[1].exigible > 0 && tiene(rv.motivos, 'SV', 'déficit sin fondeador') && sumaV(rv.autorizado) === 0, rv.acreedores);
+    const roto = clona(C.muestra); roto.nodos['S-03'] = null;
+    const roto2 = clona(C.muestra); delete roto2.series.caja_minima;
+    let x1 = null, x2 = null; err = null;
+    try { x1 = RV(roto); x2 = RV(roto2); } catch (x) { err = x.message; }
+    P('V14 dato requerido ausente (nodo S-03 nulo o serie caja_minima borrada): INVÁLIDO sin excepción', err === null && x1.estado.indexOf('INVÁLIDO') === 0 && x2.estado.indexOf('INVÁLIDO') === 0, err || [x1.errores, x2.errores]);
+    const v61 = RV(C.muestra, { mes_corte: 61 });
+    P('V14b mes de corte fuera del horizonte: INVÁLIDO', v61.estado.indexOf('INVÁLIDO') === 0);
+    const s1 = corrV('vertical_sobrepago', 'muestra', { mes_corte: 39, liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true, pagos_registrados: { DUENO: 999999999 } });
+    P('V15 vertical con sobrepago al dueño: evidencia conservada y nada autorizado', s1.pagado.DUENO === 999999999 && tiene(s1.motivos, 'PAGO', 'sobrepago') && sumaV(s1.autorizado) === 0);
+    const s2 = corrV('vertical_pago_parcial', 'muestra', { mes_corte: 39, liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true, pagos_registrados: { DUENO: 14000000 } });
+    P('V15b vertical con pago parcial al dueño: se autoriza el saldo y cuadra por parte',
+      s2.autorizable && s2.autorizado.dueno_tierra === 0 && s2.conciliacion.DUENO.disponible_reintento === s2.dueno - 14000000 && Object.keys(s2.conciliacion).every((q) => s2.conciliacion[q].derecho === s2.conciliacion[q].pagado + s2.conciliacion[q].disponible_reintento), s2.conciliacion);
+    const s3 = corrV('vertical_pago_fantasma', 'muestra', { mes_corte: 39, pagos_registrados: { FANTASMA: 1 } });
+    P('V15c vertical con pago a una parte no registrada: INVÁLIDO', s3.estado.indexOf('INVÁLIDO') === 0);
+    if (extra.alTerminarVertical) extra.alTerminarVertical(Rv, RV, KW_V);
+    Object.keys(Rv).forEach((nm) => {
+      const x = Rv[nm]; if (!x.salida) return;
+      P('V0 suma = CR · ' + nm, x.identidades['suma repartida = CR']);
+      P('V0 sin negativos · ' + nm, Object.keys(x.simulado).every((q) => x.simulado[q] >= 0));
+      if (C[x.caso].nodos['S-02'] === 'no') {
+        const malos = Object.keys(x.salida.tarjeta).map((q) => [q, x.salida.tarjeta[q]]).concat(Object.keys(x.salida.paquete).map((q) => [q, x.salida.paquete[q]])).filter(([q, v]) => v.estado === 'publicable' && v.fuente === 'motor (legado)').map(([q]) => q);
+        P('R-B3d ningún campo legado publicable con S-02 = no · ' + nm, !malos.length && Object.keys(x.salida.legado).every((q) => x.salida.legado[q].estado === 'teórico'), malos);
+      }
+    });
+  }
+  P('M5 etiquetas de prueba únicas', new Set(HECHAS).size === HECHAS.length, HECHAS.filter((h, i) => HECHAS.indexOf(h) !== i));
+  return { HECHAS, Rs, OP, DB, Rv };
+}
+
+/* El motor recibe el módulo (sin require dentro de motor.js) y se carga la definición con la extensión del reparto. */
+const REP = require(path.join(APP, 'reparto.js'));
+Motor.registraReparto(REP);
+const REPJSON = JSON.parse(fs.readFileSync(path.join(APP, 'definicion', 'reparto.json'), 'utf8'));
+const REPTAB = { ARBOL_NODOS: leeCsv(fs.readFileSync(path.join(APP, 'definicion', 'reparto_nodos.csv'), 'utf8')), ARBOL_FACTORES: leeCsv(fs.readFileSync(path.join(APP, 'definicion', 'reparto_factores.csv'), 'utf8')) };
+const C10 = Motor.carga(JSON.parse(JSON.stringify(VERT)), { extension: REPJSON }), DEF10 = C10.definicion;
+const CT10 = Motor.carga(JSON.parse(JSON.stringify(TABLAS)), { extension: REPTAB }), DEFT10 = CT10.definicion;
+const NUEVOS10 = ['S-12', 'S-13', 'S-17', 'S-18', 'S-19', 'S-20', 'S-21', 'S-22', 'S-23', 'S-24', 'R-26', 'R-27', 'R-28', 'R-29', 'R-30', 'R-31', 'R-32', 'R-33', 'R-34', 'R-35'];
+const plan10 = (predio, respuestas, datos) => {
+  let plan = { tipo: 'vertical', valores: { 'T-01': { estado: 'confirmado', valor: predio } } };
+  respuestas.forEach(([id, op]) => { plan = Motor.evalua(DEF10, plan, { [id]: { opcion: op, estado: 'decidido' } }, SIN).plan; });
+  Object.keys(datos || {}).forEach((id) => { plan = Motor.evalua(DEF10, plan, { [id]: { valor: datos[id], estado: 'decidido' } }, SIN).plan; });
+  return plan;
+};
+const con10 = (plan, cambios, registro) => { let p = plan; Object.keys(cambios || {}).forEach((id) => { p = Motor.evalua(DEF10, p, { [id]: { valor: cambios[id], estado: 'decidido' } }, SIN).plan; }); if (registro) p = Object.assign({}, p, { reparto: registro }); return p; };
+/* los diez casos de aceptación del exportador t08v3_exporta_motor.cjs (mismos planes de la suite con un cambio cada uno) */
+const CASOS10 = [
+  ['muestra', 2000, 'base', { 'T-04': 14 }], ['N1', 2000, 'base', { 'T-04': 14, 'P1-06': 40000 }], ['muestra_tierra_especie', 2000, 'base', { 'T-04': 14, 'S-02': 'no' }],
+  ['N1_tierra_especie', 2000, 'base', { 'T-04': 14, 'P1-06': 40000, 'S-02': 'no' }], ['muestra_capital_20', 2000, 'base', { 'T-04': 14, 'S-05': 0.2 }],
+  ['muestra_capital_20_tierra_especie', 2000, 'base', { 'T-04': 14, 'S-05': 0.2, 'S-02': 'no' }], ['muestra_fee_5', 2000, 'base', { 'T-04': 14, 'S-06': 0.05 }],
+  ['respaldo_vivo', 2000, 'base', { 'T-04': 14, 'P1-06': 30000 }], ['banco_insoluto', 2000, 'base', { 'T-04': 14, 'P1-06': 25000 }],
+  ['respaldo', 3000, 'prob', { 'T-04': 36, 'P1-08': 1.5, 'P1-06': 70000, 'D-15': 14, 'K-13': 0.40 }]
+];
+const PLANES10 = {}, CASOS = {}, REPS = {};
+CASOS10.forEach(([id, predio, resp, datos]) => { PLANES10[id] = plan10(predio, resp === 'prob' ? RESPUESTAS_PROB : RESPUESTAS, datos); REPS[id] = Motor.reparto(DEF10, PLANES10[id]); CASOS[id] = REPS[id].caso; });
+const sumaO = (o) => Object.keys(o || {}).reduce((s, k) => s + o[k], 0);
+const V10 = (plan, id) => Motor.paqueteVisor(DEF10, plan, { informe: true }).valores[id].valor;   // valor de cualquier factor, también oculto
+const B2_DECLARADO = { isr: { estado: 'transparente' }, otros_acreedores: { estado: 'ninguno' }, reservas: { estado: 'ninguna' } };
+/* ── corrección 1 de T-10 (dictamen T-11 v1) ── B01: la opción de P-02 gobierna la estructura. Los planes de prueba aplican su opción con planConOpcion
+   (A en todos; C en los dos de capital con parte del excedente, que A no tiene) y el registro declara además lo que T-11 exige para autorizar:
+   el pacto del preferente como lo calcula F-02 (B01) y el beneficiario y canal de la comisión de venta (CF-03, B03). */
+const OPCION10 = { muestra_capital_20: 'C', muestra_capital_20_tierra_especie: 'C' };
+const PLANES10A = {}, CASOSA = {};
+Object.keys(PLANES10).forEach((id) => { const r = Motor.planConOpcion(DEF10, PLANES10[id], OPCION10[id] || 'A'); PLANES10A[id] = r.plan; PLANES10A[id]._errores = r.errores; CASOSA[id] = Motor.reparto(DEF10, r.plan).caso; });
+const DECL = Object.assign({}, B2_DECLARADO, { preferente_f02: 'pactado', comision_venta: { beneficiario: 'TERCERO', canal: 'externo' } });
+const INTERNO_TERCIOS = { modo: 'pesos', partes: { YOD: 1, PG: 1, AVM: 1 }, estado_pacto: 'pactado' };   // en C la matriz deja «sin asignar»: se pacta un reparto interno
+const KW_CASO_C = { muestra_capital_20: { opcion_reparto: 'C', reparto_interno: INTERNO_TERCIOS }, muestra_capital_20_tierra_especie: { opcion_reparto: 'C', reparto_interno: INTERNO_TERCIOS } };
+
+prueba('T-10 · la extensión carga sin errores: 150 nodos (130 + S-12, S-13, S-17 a S-24 y R-26 a R-35) y vertical.json sigue con 130', () => {
+  assert.deepStrictEqual(C10.errores, []); assert.deepStrictEqual(CT10.errores, [], JSON.stringify(CT10.errores.slice(0, 3)));
+  assert.strictEqual(DEF10.nodos.length, 150); assert.strictEqual(DEF._interna.cn.length, 130); NUEVOS10.forEach((id) => assert(DEF10.nodos.indexOf(id) >= 0, id));
+  NUEVOS10.forEach((id) => { const c = DEF10._interna.cn[DEF10._interna.ix.get(id)]; assert(c.oculto === true && c.tarjetas.indexOf('Reparto') >= 0, id); });
+  assert.strictEqual(REPJSON.nodos.length, 20); assert.strictEqual(REPTAB.ARBOL_NODOS.length, 20); assert.strictEqual(REPTAB.ARBOL_FACTORES.length, 20);
+  const r = Motor.carga(JSON.parse(JSON.stringify(VERT)), { extension: { nodos: [Object.assign({}, REPJSON.nodos[10], { motor: 'reparto.inventada' })] } }); assert(r.errores.some((e) => e.codigo === 'motor_invalido'), 'una medida inexistente se rechaza');
+  cifra('T-10 · extensión del reparto: 20 nodos ocultos en definicion/reparto.json (y reparto_nodos.csv, reparto_factores.csv); vertical.json intacto (130 nodos)');
+});
+prueba('T-10 · tablas y JSON de la extensión dan el mismo reparto en la muestra (R-26 a R-35, tarjeta y paquete)', () => {
+  const p = con10(PLANES10.muestra, { 'S-21': 39, 'S-17': 'al_liquidar', 'S-23': 'pactado' }, B2_DECLARADO);
+  const a = Motor.reparto(DEF10, p), b = Motor.reparto(DEFT10, p);
+  assert.deepStrictEqual(a.nodos, b.nodos); assert.strictEqual(JSON.stringify(a.resultado.autorizado), JSON.stringify(b.resultado.autorizado));
+  assert.strictEqual(JSON.stringify(Motor.paqueteVisor(DEF10, p).cascada), JSON.stringify(Motor.paqueteVisor(DEFT10, p).cascada));
+  const ea = Motor.evalua(DEF10, p, null, SIN), eb = Motor.evalua(DEFT10, p, null, SIN); assert.strictEqual(JSON.stringify(ea.tarjetas.Reparto), JSON.stringify(eb.tarjetas.Reparto));
+});
+prueba('T-10 · los parámetros nuevos van ocultos: no cambian lo que se pide ni lo que falta por confirmar, ni las cifras de la tarjeta Reparto', () => {
+  const a = Motor.evalua(DEF, BASE, null, SIN), b = Motor.evalua(DEF10, BASE, null, SIN);
+  assert.deepStrictEqual(a.por_confirmar, b.por_confirmar); assert.deepStrictEqual(a.abiertas, b.abiertas); assert.deepStrictEqual(a.nodos.map((n) => n.id), b.nodos.map((n) => n.id));
+  assert.deepStrictEqual(b.tarjetas.Reparto.cifras.map((c) => c.id), ['R-23', 'R-22', 'R-24', 'R-25', 'T-04']); b.tarjetas.Reparto.cifras.forEach((c, i) => assert.strictEqual(c.valor, a.tarjetas.Reparto.cifras[i].valor, c.id));
+});
+/* O01 (dictamen T-11): huellas sha256 (16 caracteres) de la tarjeta «Reparto», de todas las tarjetas y del paquete del visor que da el motor del
+   COMMIT BASE 7a03972 (git show 7a03972:arbol-ppp/motor.js) con vertical.json sin extensión, sobre estos mismos planes. El motor parchado sin la
+   extensión debe dar exactamente lo mismo: el contrato legado no cambia. */
+const HUELLAS_BASE = {"muestra": ["c8092467e3cc8ae3", "bd03d97ea072adb4", "ad1096f5eedccbb0"], "N1": ["7cfb71a94f7a6a9d", "cba425c829ef41ad", "0f06bd89c9acb11c"], "muestra_tierra_especie": ["ddb4f3076596f32d", "15b2c45e29405001", "281ddc59b7b1aa81"], "N1_tierra_especie": ["126c7526a8af083c", "1e244da075f5d19d", "fef30fb5cf3a3a1d"], "muestra_capital_20": ["16ff8a04931a2475", "8898aa5702f1b9f2", "3f284e400dfc4449"], "muestra_capital_20_tierra_especie": ["992d562052268bbf", "541ca7b4657fd2c3", "50d3ae35475200dd"], "muestra_fee_5": ["3a13507c5977ece8", "963fe01660668e3a", "8c44cf0c7de1c200"], "respaldo_vivo": ["c1273312c57ec53e", "f8977edcfc4f4206", "65e43ef95ac4128c"], "banco_insoluto": ["d389a27f0b967897", "12d3e8b6cf08640f", "0b40a388a396c14c"], "respaldo": ["53ea20c313f74da5", "fea79727b1ac54ab", "c07390989e4d7cf1"], "BASE": ["c8092467e3cc8ae3", "bd03d97ea072adb4", "ad1096f5eedccbb0"], "PROB": ["894ea84d362097c1", "4373bea5c55b09c5", "6b5c05772d0ee911"]};
+prueba('O01 (dictamen T-11) · sin la extensión, la tarjeta «Reparto», todas las tarjetas y el paquete del visor son IDÉNTICOS a los del commit base (12 planes)', () => {
+  const huella = (x) => require('crypto').createHash('sha256').update(JSON.stringify(x)).digest('hex').slice(0, 16);
+  Object.entries(Object.assign({}, PLANES10, { BASE, PROB })).forEach(([id, plan]) => {
+    const e = Motor.evalua(DEF, plan, null, SIN), h = [huella(e.tarjetas.Reparto), huella(e.tarjetas), huella(Motor.paqueteVisor(DEF, plan))];
+    assert.deepStrictEqual(h, HUELLAS_BASE[id], id + ': ' + JSON.stringify(h));
+  });
+  cifra('O01 · sin la extensión, tarjeta «Reparto», tarjetas y paquete del visor idénticos al commit base 7a03972 en 12 planes (huella sha256)');
+});
+prueba('T-10 · sin la extensión (o sin reparto.js) el reparto sale vacío y lo dice; la tarjeta y el paquete no traen nada nuevo', () => {
+  const r = Motor.reparto(DEF, BASE); assert.strictEqual(r.ok, false); assert(/no trae el módulo de repartos/.test(r.motivo));
+  const t = Motor.evalua(DEF, BASE, null, SIN).tarjetas.Reparto; assert.strictEqual(t.cascada, undefined); t.cifras.forEach((c) => assert(c.rotulo === undefined && c.estado_reparto === undefined, c.id));
+  const p = Motor.paqueteVisor(DEF, BASE); assert.strictEqual(p.cascada, undefined);
+  Motor.registraReparto(null); try { const q = Motor.reparto(DEF10, BASE); assert.strictEqual(q.ok, false); assert(/no está cargado/.test(q.motivo)); assert.strictEqual(Motor.reparto(DEF10, BASE).nodos['R-29'], null, 'vacío, nunca cero'); } finally { Motor.registraReparto(REP); }
+});
+
+/* ── M5 · ejecución completa con los casos del motor real (sin exportar): horizonte, ck_flujo y ck_cobranza (N1 del dictamen T-09 v2) y cifras de control ── */
+prueba('M5 · los diez casos del exportador salen del motor con horizonte de 60 meses, meses en base uno y cifras en pesos', () => {
+  Object.keys(CASOS).forEach((id) => { const c = CASOS[id]; assert(c && c.M === 60, id); assert.strictEqual(c.series.caja[0], null); assert.strictEqual(c.series.caja.length, 61); assert(REPS[id].ok, id + ': ' + REPS[id].motivo); });
+});
+prueba('N1 (dictamen T-09 v2) · ck_flujo y ck_cobranza: diferencia menor o igual a 1 peso sobre el TOTAL del horizonte, además del criterio mensual', () => {
+  Object.keys(CASOS).forEach((id) => {
+    const c = CASOS[id], S = c.series; let tot = 0, maxMes = 0;
+    for (let m = 1; m <= c.M; m++) {
+      const d = (S.caja[m] - (m === 1 ? 0 : S.caja[m - 1])) - (S.cobranza[m] - S.egresos[m] - S.interes[m] - S.apertura[m] + S.cap_aporta[m] + S.disposicion[m] + S.respaldo[m] - S.pago_banco[m] - S.pago_respaldo[m] - S.pago_capital[m]);
+      tot += Math.abs(d); maxMes = Math.max(maxMes, Math.abs(d));
+    }
+    assert(Math.abs(c.med.cuadra) <= 1, id + ': ck_flujo del motor ' + c.med.cuadra); assert(Math.abs(c.med.cobranza_total - c.nodos['PT-07']) <= 1, id + ': ck_cobranza ' + (c.med.cobranza_total - c.nodos['PT-07']));
+    assert(tot <= 1, id + ': suma de diferencias mensuales de caja ' + tot); assert(maxMes <= 1, id + ': diferencia mensual ' + maxMes);
+    const v = Motor.paqueteVisor(DEF10, PLANES10[id]).v; assert(Math.abs(v.ck_flujo) * 1e6 <= 1 && Math.abs(v.ck_cobranza) * 1e6 <= 1, id + ': ck del paquete');
+  });
+  cifra('N1 · ck_flujo y ck_cobranza ≤ 1 peso sobre el horizonte y por mes en los 10 casos (la caja mes a mes se recalcula con cobranza, egresos, dinero y pagos)');
+});
+prueba('M5 · cifras de control de los dictámenes T-06 v2, T-08 v1, T-08 v2 y T-09 v2 reproducidas dentro de la suite', () => {
+  const P = (id, k) => CASOS[id].nodos[k], S = (id, k, m) => CASOS[id].series[k][m], peso = (a, b, et) => assert(a !== null && Math.abs(a - b) < 1, et + ': ' + a + ' ≠ ' + b);
+  peso(S('N1', 'caja', 60), 5478010, 'N1 caja mes 60'); peso(S('N1', 'caja_minima', 60), 5478010, 'N1 caja mínima'); peso(S('N1', 'saldo_capital', 60), 12542105.3846777, 'N1 saldo de capital'); peso(P('N1', 'R-22'), 7680771.38459669, 'N1 R-22');
+  peso(P('muestra', 'R-22'), 21937553.745453194, 'muestra R-22'); peso(P('muestra', 'R-24'), 18520958.739390787, 'muestra R-24');
+  peso(S('muestra', 'caja', 38), 22536762, 'B1 caja mes 38'); peso(S('muestra', 'caja', 39), 40458512, 'B1 caja mes 39'); peso(S('muestra', 'cobranza', 39), 18865000, 'B1 cobranza mes 39');
+  peso(P('muestra_tierra_especie', 'R-22'), 12137553.745453194, 'tierra en especie R-22'); peso(P('muestra_tierra_especie', 'R-24'), 28320958.739390787, 'tierra en especie R-24');
+  peso(P('muestra_capital_20', 'R-24'), 13229256.4, 'C1 R-24 con S-05 0.2'); peso(P('muestra_capital_20', 'R-25'), 13213297.3, 'C1 R-25 con S-05 0.2');
+  peso(P('muestra_capital_20_tierra_especie', 'R-24'), 20229256.4, 'C1 R-24 tierra en especie'); peso(P('muestra_capital_20_tierra_especie', 'R-25'), 16013297.4, 'C1 R-25 tierra en especie');
+  assert(S('banco_insoluto', 'saldo_banco', 60) > 1 && CASOS.banco_insoluto.visor.mes_reparto > 60, 'banco insoluto: deuda viva y mes_reparto fuera del horizonte'); peso(P('N1_tierra_especie', 'R-22'), -2119228.6154030957, 'N1 tierra en especie R-22');
+  Object.keys(PLANES10).forEach((id) => { const t = Motor.evalua(DEF10, PLANES10[id], null, SIN).tarjetas.Reparto; ['R-22', 'R-23', 'R-24', 'R-25'].forEach((k) => { const c = t.cifras.find((q) => q.id === k); assert(c && Math.abs(c.valor - CASOS[id].nodos[k]) < 1e-6, id + ' tarjeta ' + k); }); });
+});
+prueba('M5 · las fechas que usa el reparto son las mismas que publica el paquete del visor (banco, capital, respaldo, último cobro, mes de reparto y recorte)', () => {
+  const lento = Motor.evalua(DEF10, PROB, { 'P1-08': { valor: 0.6, estado: 'decidido' } }, SIN).plan;
+  Object.keys(PLANES10).map((id) => [id, PLANES10[id]]).concat([['BASE', BASE], ['PROB', PROB], ['lento', lento]]).forEach(([id, plan]) => {
+    const f = Motor.visorFechas(DEF10, plan), v = Motor.paqueteVisor(DEF10, plan).v;
+    ['fin_obra', 'ultimo_cobro', 'banco_mes', 'capital_mes', 'respaldo_mes', 'mes_reparto', 'dueno_meses', 'dueno_anos', 'fuera_horizonte'].forEach((k) => assert(f[k] === v[k] || (typeof f[k] === 'number' && Math.abs(f[k] - v[k]) < 1e-12), id + ' ' + k + ': ' + f[k] + ' vs ' + v[k]));
+  });
+  assert(Motor.visorFechas(DEF10, lento).horizonte_excedido === true, 'el plan lento se sale del horizonte');
+});
+
+/* ── las aserciones V, A y R de los guiones v3, sobre los casos del motor real ── */
+let HECHAS10 = [];
+try {
+  const salida = pruebasRepartoT10(REP, CASOSA, (n, ok, d) => prueba(n, () => assert(ok, d)), { kwExtra: { preferente_f02: 'pactado', comision_venta: { beneficiario: 'TERCERO', canal: 'externo' } }, kwCaso: KW_CASO_C });
+  HECHAS10 = salida.HECHAS;
+  cifra('T-10 · guiones v3 portados: ' + HECHAS10.length + ' aserciones (las 243 de t08v3_reparto.py con sus etiquetas, más N-02, P-02 y el receptor único inválido) sobre los 10 casos del motor real');
+} catch (e) { prueba('T-10 · el bloque de aserciones portadas termina sin excepción', () => { throw e; }); }
+
+/* ── integración en el Árbol: nodos, tarjeta «Reparto» y paquete del visor ── */
+/* P39R y P60R son los planes de las sondas del dictamen T-11 (muestra 30/70/0 con sólo B2 declarado). P39 y P60: la misma muestra con la opción A
+   aplicada (planConOpcion: S-03 «Tierra + mitad», S-05 0 y D-01 15 %) y lo que T-11 exige declarar (preferente como F-02 y comisión de venta). */
+const P39R = con10(PLANES10.muestra, { 'S-21': 39, 'S-17': 'al_liquidar', 'S-23': 'pactado' }, B2_DECLARADO);
+const P60R = con10(PLANES10.muestra, { 'S-17': 'al_liquidar', 'S-23': 'pactado' }, B2_DECLARADO);
+const P39 = con10(PLANES10A.muestra, { 'S-21': 39, 'S-17': 'al_liquidar', 'S-23': 'pactado' }, DECL);
+const P60 = con10(PLANES10A.muestra, { 'S-17': 'al_liquidar', 'S-23': 'pactado' }, DECL);
+prueba('T-10 · por el Árbol (S-21 = 39, S-17 al liquidar, S-23 pactado y B2 declarado): R-26 a R-35 iguales al módulo corrido sobre el mismo caso', () => {
+  const r = Motor.reparto(DEF10, P39), x = REP.repartoVertical(r.caso, Object.assign({}, r.parametros));
+  assert.strictEqual(r.nodos['R-31'], 'AUTORIZABLE'); assert.strictEqual(r.nodos['R-32'], 39); assert.strictEqual(r.nodos['R-29'], 40458512); assert.strictEqual(r.nodos['R-26'], 40458512); assert.strictEqual(r.nodos['R-33'], 40458512);
+  assert.strictEqual(r.nodos['R-27'], 0); assert.strictEqual(r.nodos['R-28'], 5588260); assert.strictEqual(r.nodos['R-34'], 'ninguno'); assert(/^final · corte en el mes 39 · primer mes de cierre 39$/.test(r.nodos['R-35']));
+  assert.strictEqual(JSON.stringify(r.resultado.autorizado), JSON.stringify(x.autorizado)); assert.strictEqual(sumaO(x.autorizado), 40458512);
+  const e = Motor.evalua(DEF10, P39, null, SIN); assert.strictEqual(e.tarjetas.Reparto.cascada.totales.autorizado, 40458512); assert.strictEqual(e.tarjetas.Reparto.cascada.fechas.corte_autorizado.valor, 39);
+  assert.strictEqual(x.dueno, 27229256); assert.strictEqual(x.alianza, 13229256);
+  cifra('T-10 · muestra por el Árbol con la opción A: corte 39 final, caja repartible $40,458,512, autorizado $40,458,512 (dueño $27,229,256 = tierra + mitad del resto; alianza $13,229,256), R-32 = 39');
+});
+prueba('T-10 · por omisión nada está firmado: el Árbol simula y lo autorizado es cero con su motivo (decisión P-02: la opción fija la simulación)', () => {
+  const r = Motor.reparto(DEF10, PLANES10.muestra), t = Motor.evalua(DEF10, PLANES10.muestra, null, SIN).tarjetas.Reparto;
+  assert.strictEqual(r.parametros.opcion_reparto, 'A'); assert.strictEqual(r.parametros.estado_pacto_acuerdos, 'pendiente'); assert.strictEqual(sumaO(r.resultado.autorizado), 0);
+  assert(r.resultado.motivos.some((m) => /^PACTO · acuerdos de reparto sin firma/.test(m))); assert.strictEqual(t.cascada.totales.simulado, 34870252); assert.strictEqual(t.cascada.totales.autorizado, 0);
+  assert(t.cifras.filter((c) => c.id !== 'T-04').every((c) => c.estado_reparto === 'teórico' && /sin autorización de pago/.test(c.rotulo)));
+});
+prueba('N-02 (dictamen T-08 v3) · paquete del visor con corte 60 autorizado: el mes 39 del motor queda como referencia del Árbol y nunca como fecha autorizada', () => {
+  const inf = Motor.paqueteVisor(DEF10, P60, { informe: true }), p = inf.paquete, f = p.cascada.fechas;
+  assert.strictEqual(p.cascada.estado, 'AUTORIZABLE'); assert.strictEqual(f.hito_motor.valor, 39); assert.strictEqual(f.hito_motor.estado, 'teórico'); assert(/referencia del Árbol/.test(f.hito_motor.motivos.join(' ')));
+  assert.strictEqual(f.corte_autorizado.valor, 60); assert.strictEqual(f.corte_autorizado.estado, 'publicable'); assert.strictEqual(f.dueno_meses.valor, 60); assert.strictEqual(f.dueno_anos.valor, 5);
+  Object.keys(f).forEach((k) => { if (f[k] && f[k].estado === 'publicable') assert(f[k].valor !== 39 && f[k].valor !== 3.25, 'fecha publicable ' + k + ' = ' + f[k].valor); });
+  assert.strictEqual(p.v.mes_reparto, 39); assert(/Hito del motor \(referencia del Árbol\)/.test(p.deducido['v.mes_reparto']) && /Corte autorizado: mes 60/.test(p.deducido['v.mes_reparto']));
+  assert.strictEqual(p.v.dueno_meses, 60); assert.strictEqual(p.v.dueno_anos, 5); assert(/hito del motor era 39/.test(p.deducido['v.dueno_meses']));
+  assert.strictEqual(f.pago_registrado.valor, null); assert.strictEqual(f.pago_registrado.rol, 'pago registrado');
+  const q = Motor.paqueteVisor(DEF10, P39); assert.strictEqual(q.cascada.fechas.hito_motor.estado, 'publicable'); assert.strictEqual(q.v.dueno_meses, 39);
+  const s = Motor.paqueteVisor(DEF10, PLANES10.muestra); assert.strictEqual(s.v.dueno_meses, 39); assert(/teórico, sin autorización de pago/.test(s.deducido['v.dueno_meses'])); assert.strictEqual(s.cascada.fechas.corte_autorizado.valor, null);
+  assert(JSON.stringify(p).length <= 50000, 'el paquete con la cascada cabe en 50,000 caracteres: ' + JSON.stringify(p).length);
+  cifra('N-02 · corte 60 autorizado: hito del motor 39 (teórico, referencia del Árbol), corte autorizado 60, dueño en 60 meses (5 años); paquete de ' + JSON.stringify(p).length + ' caracteres');
+});
+prueba('B3 y C1 · tierra en especie con pacto (S-02 = no, S-19 = sí): tarjeta y paquete publican la cascada pactada; el motor queda como legado teórico y M8b no cambia', () => {
+  const p = con10(PLANES10A.muestra_tierra_especie, { 'S-21': 39, 'S-17': 'al_liquidar', 'S-23': 'pactado', 'S-19': 'si' }, DECL);
+  const e = Motor.evalua(DEF10, p, null, SIN), t = e.tarjetas.Reparto, c22 = t.cifras.find((c) => c.id === 'R-22'), c24 = t.cifras.find((c) => c.id === 'R-24');
+  assert(c22.valor === 27229256 && c22.estado_reparto === 'publicable' && c22.fuente_reparto === 'cascada pactada reconciliada' && Math.round(c22.legado.valor) === 20229256, JSON.stringify(c22));
+  assert(c24.valor === 13229256 && Math.round(c24.legado.valor) === 20229256); casi(c22.valor_visor, c22.valor / 1e6, 1e-12);
+  assert(Math.abs(val(e, 'R-22') - 0.5 * (12137553.745453194 / 0.3)) < 1, 'el nodo R-22 sigue con la fórmula del motor (M8b): la mitad de la caja sin pagar la tierra');
+  const v = Motor.paqueteVisor(DEF10, p); assert(Math.abs(v.v.dueno_recibe - 27.229256) < 1e-6 && Math.abs(v.v.alianza_recibe - 13.229256) < 1e-6); assert(/Cascada pactada reconciliada/.test(v.deducido['v.dueno_recibe']));
+  assert.strictEqual(v.cascada.legado['R-22'].estado, 'teórico'); assert(t.cifras.every((c) => c.valor_visor === { 'R-23': v.v.dueno_veces, 'R-22': v.v.dueno_recibe, 'R-24': v.v.alianza_recibe, 'R-25': v.v.inversion_recibe, 'T-04': v.v.tierra }[c.id]), 'pantalla y paquete dicen lo mismo');
+});
+prueba('C1 · rótulos sin pacto: «incluye tierra aportada sin regla pactada» y, si es negativo, «pérdida asignada (teórica)», nunca bajo «recibe»', () => {
+  const t = Motor.evalua(DEF10, PLANES10.N1_tierra_especie, null, SIN).tarjetas.Reparto, c22 = t.cifras.find((c) => c.id === 'R-22');
+  assert(c22.valor < 0 && /incluye tierra aportada sin regla pactada/.test(c22.rotulo) && /pérdida asignada \(teórica\)/.test(c22.rotulo) && /^Pérdida asignada \(teórica\)/.test(c22.etiqueta_reparto), JSON.stringify(c22));
+  const t2 = Motor.evalua(DEF10, PLANES10.muestra_capital_20_tierra_especie, null, SIN).tarjetas.Reparto; assert(/incluye tierra aportada sin regla pactada/.test(t2.cifras.find((c) => c.id === 'R-25').rotulo));
+  const v = Motor.paqueteVisor(DEF10, PLANES10.N1_tierra_especie); assert(/pérdida asignada \(teórica\)/.test(v.deducido['v.dueno_recibe']) && /nunca bajo «recibe»/.test(v.deducido['v.dueno_recibe']));
+});
+prueba('B4 por el Árbol · S-12 «pendiente» o sin decidir con honorarios de 5 % dejan el reparto INVÁLIDO; S-13 = B y S-22 proxy o mixto se bloquean por nombre', () => {
+  const f = PLANES10A.muestra_fee_5, R1 = (c) => Motor.reparto(DEF10, con10(f, c, DECL));
+  const a = R1({ 'S-12': 'pendiente', 'S-13': 'A' }); assert(/^INVÁLIDO/.test(a.resultado.estado) && a.nodos['R-31'] === 'INVÁLIDO · no se calcula' && a.nodos['R-29'] === null, a.nodos['R-31']);
+  const b = R1({ 'S-13': 'A' }); assert(b.resultado.errores.some((m) => /dato requerido ausente: inclusión del fee/.test(m)), 'la referencia de S-12 no cuenta como declaración');
+  const c = R1({ 'S-12': 'no', 'S-13': 'B', 'S-23': 'pactado', 'S-17': 'al_liquidar' }); assert(c.resultado.motivos.some((m) => /^CF-02 · esquema B .*no implementado/.test(m)) && c.nodos['R-31'] === 'NO AUTORIZABLE');
+  const d = R1({ 'S-12': 'no', 'S-13': 'A', 'S-23': 'pactado', 'S-17': 'al_liquidar', 'S-22': 'mixto_ya_incorporado' }); assert(d.resultado.motivos.some((m) => /^CF-06 · IVA mixto/.test(m)));
+  const g = R1({ 'S-12': 'no', 'S-13': 'A', 'S-23': 'pactado', 'S-17': 'al_liquidar' }); assert.strictEqual(g.nodos['R-31'], 'AUTORIZABLE'); assert.strictEqual(sumaO(g.resultado.autorizado), 40458512);
+  const h = Motor.evalua(DEF10, PLANES10.muestra, { 'S-21': { valor: 61, estado: 'decidido' } }, SIN); assert(h.errores.some((x) => x.codigo === 'fuera_de_rango'), 'el Árbol ajusta S-21 a 60'); assert.strictEqual(Motor.reparto(DEF10, h.plan).resultado.mes_corte, 60);
+});
+prueba('B5 y B2 por el Árbol · S-18 fondeador: parte registrada, tope, tasa y pacto; incompleto o con parte FANTASMA es inválido', () => {
+  const pr = con10(PLANES10A.respaldo, { 'S-17': 'al_liquidar', 'S-23': 'pactado' }, DECL), R1 = (txt) => Motor.reparto(DEF10, con10(pr, { 'S-18': txt }));
+  assert(Motor.reparto(DEF10, pr).resultado.motivos.some((m) => /déficit sin fondeador/.test(m)));
+  const ok = R1('parte=SP; tope=30000000; tasa=0.15; pacto=pactado'); assert(!ok.resultado.motivos.some((m) => /déficit sin fondeador/.test(m)), JSON.stringify(ok.resultado.motivos)); assert.strictEqual(ok.nodos['R-31'], 'AUTORIZABLE');
+  ['parte=FANTASMA; tope=30000000; tasa=0.15; pacto=pactado', 'tope=30000000; pacto=pactado', 'parte=SP; tope=30000000; tasa=0.15; pacto=firmado', 'SP con 30 millones'].forEach((txt) => assert(/^INVÁLIDO/.test(R1(txt).resultado.estado), txt));
+  assert(/^PACTO · respaldo comprometido sin firma/.test(R1('parte=SP; tope=30000000; tasa=0.15; pacto=propuesto').resultado.motivos.find((m) => /^PACTO · respaldo/.test(m))));
+  /* B06 (dictamen T-11): la tasa del compromiso debe ser el D-01 con que F-02 cuesta el respaldo; con 0 % o 100 % el plan no representa el compromiso */
+  [0, 1].forEach((tasa) => { const x = R1('parte=SP; tope=30000000; tasa=' + tasa + '; pacto=pactado'); assert(x.resultado.motivos.some((m) => /^PACTO · el respaldo comprometido a .* no coincide con el costo que usa F-02 \(D-01 = 15\.0 %/.test(m)) && x.nodos['R-31'] === 'NO AUTORIZABLE' && sumaO(x.resultado.autorizado) === 0, String(tasa)); });
+  assert.strictEqual(sumaO(ok.resultado.autorizado), ok.resultado.cr, 'con la tasa de F-02 (15 %) sí autoriza');
+  cifra('B06 · respaldo: tasa 0 % o 100 % bloquea («no coincide con el costo que usa F-02»); 15 % = D-01 autoriza $' + REP.miles(ok.resultado.cr));
+});
+prueba('B2 · ISR, demás acreedores y reservas del corte con estado explícito: sin declarar no autoriza; declarados entran a la cascada', () => {
+  const base = con10(PLANES10A.muestra, { 'S-21': 39, 'S-17': 'al_liquidar', 'S-23': 'pactado' }), B2_DECLARADO = DECL;
+  const sin = Motor.reparto(DEF10, base).resultado;
+  ['ISR del vehículo', 'demás acreedores', 'reservas del corte'].forEach((t) => assert(sin.motivos.some((m) => m.indexOf('SV · ' + t) === 0 && /dato desconocido/.test(m)), t));
+  assert(sin.acreedores.some((a) => a.id === 'ISR' && a.estado === 'dato desconocido')); assert.strictEqual(sumaO(sin.autorizado), 0);
+  const isr = Motor.reparto(DEF10, Object.assign({}, base, { reparto: Object.assign({}, B2_DECLARADO, { isr: { estado: 'monto', monto: 1000000 } }) })).resultado;
+  const fi = isr.acreedores.find((a) => a.id === 'ISR'); assert(fi.exigible === 1000000 && fi.pagado === 1000000 && fi.saldo === 0); assert.strictEqual(isr.cr, 40458512 - 1000000); assert.strictEqual(isr.identidades['CR − saldo de capital = D-22 (±1 peso)'], true);
+  assert(!isr.salida.reconciliado && isr.salida.tarjeta['R-22'].motivos.indexOf('sin reconciliar con la cascada del corte') >= 0, 'con ISR el campo del motor deja de reconciliar y queda teórico');
+  const otros = Motor.reparto(DEF10, Object.assign({}, base, { reparto: Object.assign({}, B2_DECLARADO, { otros_acreedores: { estado: 'lista', lista: [{ id: 'proveedor', parte: 'TERCERO', exigible: 250000 }] } }) })).resultado;
+  assert(otros.acreedores.some((a) => a.id === 'proveedor' && a.pagado === 250000) && otros.cr === 40458512 - 250000);
+  const fan = Motor.reparto(DEF10, Object.assign({}, base, { reparto: Object.assign({}, B2_DECLARADO, { otros_acreedores: { estado: 'lista', lista: [{ id: 'x', parte: 'FANTASMA', exigible: 1 }] } }) })).resultado; assert(/^INVÁLIDO/.test(fan.estado));
+  const res = (lib) => Motor.reparto(DEF10, Object.assign({}, base, { reparto: Object.assign({}, B2_DECLARADO, { reservas: { estado: 'lista', lista: [{ id: 'posventa', requerida: 500000, liberacion: lib }] } }) })).resultado;
+  assert.strictEqual(res('no').cr, 40458512 - 500000); assert.strictEqual(res('al_liquidar').cr, 40458512); assert(/^INVÁLIDO/.test(res('si').estado), 'enum estricto');
+  assert(/^INVÁLIDO/.test(Motor.reparto(DEF10, Object.assign({}, base, { reparto: { isr: { estado: 'pendiente' } } })).resultado.estado));
+  cifra('B2 · sin declarar ISR, demás acreedores y reservas el corte queda en «dato desconocido» y no autoriza; ISR de $1,000,000 baja la caja repartible a $39,458,512');
+});
+prueba('M3 · imputación por clase con capitalización mensual, regla y enum estrictos, y arrastre entre cortes', () => {
+  const c = CASOSA.N1, kw = (x) => Object.assign({ iva: { tipologia: 'vivienda', modalidad: 'ya_incorporado' }, fee_en_indirectos: 'no', gestion_esquema: 'A', liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true }, DECL, x || {});
+  const una = REP.repartoVertical(c, kw()), pp = REP.repartoVertical(c, kw({ clases_capital: [{ clase: 'CAP_A', parte: 0.97 }, { clase: 'CAP_B', parte: 0.03 }], regla_clases: 'pari_passu' }));
+  const sp = (o, k) => Object.keys(o).reduce((s, x) => s + o[x][k], 0);
+  assert(Math.abs(sp(pp.capital_por_clase, 'principal') - una.principal_pendiente) <= 1 && Math.abs(sp(pp.capital_por_clase, 'preferente') - una.preferente_pendiente) <= 1, 'pari passu reproduce el agregado');
+  assert(pp.identidades['saldo de capital reconstruido hasta el corte (≤ 0.01 peso)'] && Math.abs(pp.capital_por_clase.CAP_A.principal / una.principal_pendiente - 0.97) < 1e-6);
+  const pre = REP.repartoVertical(c, kw({ clases_capital: [{ clase: 'CAP_A', parte: 0.5 }, { clase: 'CAP_B', parte: 0.5 }], regla_clases: 'prelacion' }));
+  assert(pre.identidades['saldo de capital reconstruido hasta el corte (≤ 0.01 peso)'] && Math.abs(pre.principal_pendiente + pre.preferente_pendiente - (una.principal_pendiente + una.preferente_pendiente)) <= 1);
+  assert(pre.capital_por_clase.CAP_A.principal + pre.capital_por_clase.CAP_A.preferente < pre.capital_por_clase.CAP_B.principal + pre.capital_por_clase.CAP_B.preferente, 'por prelación la clase A cobra primero');
+  [{ regla_clases: 'pari-passu' }, { clases_capital: [{ clase: 'CAP_A', parte: 0.9 }] }, { clases_capital: [{ clase: 'CAP_Z', parte: 1 }] }, { imputacion: 'principal-primero' }].forEach((x) => assert(/^INVÁLIDO/.test(REP.repartoVertical(c, kw(x)).estado), JSON.stringify(x)));
+  assert(Math.abs(una.tasa_efectiva_anual - (Math.pow(1 + 0.15 / 12, 12) - 1)) < 1e-12 && Math.abs(una.tasa_efectiva_anual - 0.16075) < 1e-4 && una.capitalizacion === 'mensual');
+  const S = c.series; let maxd = 0; const tc = c.nodos['D-01'];
+  for (let m1 = 1; m1 < 60; m1++) { const a = REP.reconstruyeCapital(S, m1, tc, 'principal_primero', null, 'pari_passu', null), b = REP.reconstruyeCapital(S, 60, tc, 'principal_primero', null, 'pari_passu', a.arrastre), d = REP.reconstruyeCapital(S, 60, tc, 'principal_primero', null, 'pari_passu', null); maxd = Math.max(maxd, Math.abs(b.pr - d.pr), Math.abs(b.ac - d.ac)); }
+  assert(maxd <= 0.01, 'continuar desde cualquier corte da lo mismo que reconstruir de cero: ' + maxd);
+  const c39 = REP.repartoVertical(c, kw({ mes_corte: 39 })), c60 = REP.repartoVertical(c, kw({ capital_arrastre: c39.capital_arrastre }));
+  assert.strictEqual(c60.arrastre_cuadra, true); const mal = JSON.parse(JSON.stringify(c39.capital_arrastre)); mal.clases.CAPITAL.pr += 1000;
+  assert(REP.repartoVertical(c, kw({ capital_arrastre: mal })).motivos.some((m) => /el arrastre del capital del corte 39 no cuadra/.test(m)));
+  const m39 = REP.repartoVertical(CASOSA.muestra, kw({ mes_corte: 39 })), pag = { DUENO: m39.conciliacion.DUENO.autorizado, ALIANZA: m39.conciliacion.ALIANZA.autorizado, CAPITAL: m39.conciliacion.CAPITAL.autorizado };
+  const m60 = REP.repartoVertical(CASOSA.muestra, kw({ pagos_registrados: pag }));
+  assert(m60.autorizable && sumaO(m60.autorizado) === 0 && Object.keys(m60.conciliacion).every((k) => m60.conciliacion[k].derecho === m60.conciliacion[k].pagado + m60.conciliacion[k].disponible_reintento), 'los pagos del corte 39 se arrastran al 60: no se autoriza dos veces');
+  cifra('M3 · N1: dos clases pari passu reproducen principal $' + REP.miles(una.principal_pendiente) + ' y preferente $' + REP.miles(una.preferente_pendiente) + '; capitalización mensual 15 % = ' + (una.tasa_efectiva_anual * 100).toFixed(2) + ' % efectivo; arrastre en 59 cortes ≤ 0.01 peso');
+});
+/* B02 (dictamen T-11): línea de servicio con beneficiario completa (catálogo, base verificable con E-05, fecha y pacto) */
+const lineaPE = (id, e05, extra) => Object.assign({ id, beneficiario: 'PG', monto: 3000000, sustituye: 'C-08', agregado_original: 10486800, catalogo: 'PE-5-9', alcance: 'proyecto_ejecutivo',
+  base: { medida: 'm2_construido', cantidad: Math.round(e05), proxy: false }, fecha_precio: '2026-11-23', estado_pacto: 'pactado' }, extra || {});
+prueba('CF-07 · una línea con beneficiario que sustituye parte de un agregado bloquea si el agregado no baja; pasa cuando baja al menos su monto y entonces su egreso sale del corte', () => {
+  const c12 = Motor.reparto(DEF10, P39).caso.nodos['C-12'], c07 = Motor.reparto(DEF10, P39).caso.nodos['C-07'], e05 = Motor.reparto(DEF10, P39).caso.nodos['E-05'], c08 = V10(P39, 'C-08');
+  assert.strictEqual(Math.round(c12), 10486800); assert.strictEqual(Math.round(c07), 87390000);
+  const conL = (plan, ls) => Object.assign({}, plan, { reparto: Object.assign({}, DECL, { lineas: ls }) });
+  const a = Motor.reparto(DEF10, conL(P39, [lineaPE('proyecto_ejecutivo', e05)]));
+  assert(a.resultado.motivos.some((m) => /^CF-07 · las líneas de C-08 suman 3,000,000 y C-12 sólo bajó 0/.test(m)) && a.nodos['R-31'] === 'NO AUTORIZABLE');
+  const p1 = Motor.evalua(DEF10, P39, { 'C-08': { valor: (10486800 - 3000000) / 87390000, estado: 'decidido' } }, SIN).plan;
+  const b = Motor.reparto(DEF10, conL(p1, [lineaPE('proyecto_ejecutivo', e05)]));
+  assert(!b.resultado.motivos.length, JSON.stringify(b.resultado.motivos)); assert(b.resultado.lineas[0].cf07 === 'pasa' && b.resultado.lineas[0].bajada === 3000000 && b.resultado.lineas[0].tope_mercado === 1135 * Math.round(e05));
+  assert.strictEqual(b.resultado.cr, 44071695 - 3000000); assert(b.resultado.acreedores.some((x) => x.id === 'línea «proyecto_ejecutivo»' && x.parte === 'PG' && x.pagado === 3000000));
+  assert(/^INVÁLIDO/.test(Motor.reparto(DEF10, conL(P39, [lineaPE('x', e05, { beneficiario: 'FANTASMA' })])).resultado.estado));
+  assert(/^INVÁLIDO/.test(Motor.reparto(DEF10, conL(P39, [lineaPE('x', e05, { sustituye: 'C-09' })])).resultado.estado));
+  cifra('CF-07 · línea de $3,000,000 de PG contra C-08: bloquea con indirectos de $10,486,800 sin bajar (C-08 = ' + (c08 * 100).toFixed(1) + ' %); al bajarlos pasa y su egreso sale del corte: caja repartible $44,071,695 − $3,000,000 = $41,071,695');
+});
+prueba('P-02 · opción A por omisión (tercios iguales en la alianza); B y C siguen disponibles y, con la matriz, el 26 % sin asignar bloquea', () => {
+  const a = Motor.reparto(DEF10, P39), al = a.resultado.alianza_por_socio.autorizado;
+  assert.strictEqual(a.resultado.opcion_reparto, 'A'); assert(al.YOD === 4409752 && al.PG === 4409752 && al.AVM === 4409752 && al.YOD + al.PG + al.AVM === 13229256, JSON.stringify(al));
+  ['B', 'C'].forEach((op) => { const r = Motor.reparto(DEF10, Motor.planConOpcion(DEF10, P39, op).plan); assert(r.resultado.alianza_por_socio.simulado.SIN_ASIGNAR > 0 && r.resultado.motivos.some((m) => /^RECEPTOR/.test(m)) && r.nodos['R-31'] === 'NO AUTORIZABLE', op); });
+  assert(/^INVÁLIDO/.test(Motor.reparto(DEF10, con10(P39, { 'S-24': 'D' })).resultado.estado));
+  const n = a.resultado.notas.join(' '); assert(/opción A \(50\/50 y tercios\): excedente 50\/50\/0 aplicado en el paso 7/.test(n) && /el plan la trae/.test(n), n);
+  const solo = Motor.reparto(DEF10, Object.assign({}, P39, { reparto: Object.assign({}, DECL, { reparto_interno: { modo: 'pesos', partes: { FANTASMA: 1 }, estado_pacto: 'pactado' } }) })); assert(/^INVÁLIDO/.test(solo.resultado.estado) && solo.resultado.errores.some((m) => /FANTASMA/.test(m)), 'un solo receptor inválido en la alianza');
+});
+prueba('Alcance · renta y el Hub NO se implementan: destino distinto de «Venta» bloquea el reparto de forma explícita', () => {
+  const r = Motor.reparto(DEF10, con10(P39, { 'P1-03': 'Renta' }));
+  assert.strictEqual(r.resultado.estado, 'BLOQUEADO · fuera de alcance'); assert(r.resultado.motivos.some((m) => /^ALCANCE · destino «Renta»/.test(m))); assert.strictEqual(r.nodos['R-29'], null); assert.strictEqual(r.nodos['R-31'], 'BLOQUEADO · fuera de alcance');
+  assert(REP.NO_IMPLEMENTADO.some((t) => /renta/.test(t) && /Hub/.test(t))); assert(/^BLOQUEADO/.test(REP.repartoVertical(Object.assign({}, CASOS.muestra, { tipo: 'patrimonial' }), {}).estado));
+});
+prueba('C2 (dictamen T-09 v2) · el estado de un dato del Hub nunca supera al del vertical; I1 y P1 «Patrón reutilizable (sólo superficie y norma)» y P4 «Hueco»', () => {
+  assert.deepStrictEqual(REP.validaEstadosHub(), []); const F = (id) => REP.FICHAS.find((f) => f.id === id);
+  assert.strictEqual(F('I1').estado_hub, 'Patrón reutilizable (sólo superficie y norma)'); assert.strictEqual(F('P1').estado_hub, 'Patrón reutilizable (sólo superficie y norma)'); assert.strictEqual(F('P4').estado_hub, 'Hueco'); assert.strictEqual(REP.FICHAS.length, 19);
+  const mal = REP.FICHAS.map((f) => (f.id === 'I1' ? Object.assign({}, f, { estado_hub: 'Existe · Datos base' }) : f.id === 'P4' ? Object.assign({}, f, { estado_hub: 'Patrón reutilizable' }) : f));
+  const m = REP.validaEstadosHub(mal); assert(m.length === 2 && /I1/.test(m[0]) && /P4/.test(m[1]), JSON.stringify(m));
+});
+prueba('N3 (dictamen T-09 v2) · mapa de conciliación de costos: C-04 y C-06 con la obra, C-08 y C-19 con los indirectos, C-10 con la comisión, C-11 con el cierre, D-05 y D-21 con el costo del dinero', () => {
+  const chk = (plan, et) => {
+    const c = Motor.reparto(DEF10, plan).caso, S = c.series, N = c.nodos, sum = (k, a, b) => { let s = 0; for (let m = a || 1; m <= (b || c.M); m++) s += S[k][m]; return s; }, peso = (a, b, t) => assert(Math.abs(a - b) <= 1, et + ' · ' + t + ': ' + a + ' vs ' + b);
+    peso(sum('obra'), N['C-07'], 'obra = C-07'); peso(sum('indirectos'), N['C-12'], 'indirectos = C-12'); peso(sum('imprevistos'), N['C-13'], 'imprevistos = C-13');
+    peso(sum('comisiones'), N['C-14'], 'comisiones = C-14'); peso(sum('comisiones'), V10(plan, 'C-10') * sum('cobranza'), 'comisiones = C-10 × cobranza'); peso(sum('cierre'), N['C-15'], 'cierre = C-15');
+    peso(sum('egresos'), N['C-16'], 'egresos = C-16'); peso(sum('apertura'), sum('disposicion') > 0 ? V10(plan, 'D-05') * N['D-10'] : 0, 'apertura = D-05 × línea (si se dispone)');
+    peso(N['D-21'], sum('interes') + sum('apertura') + c.med.rendimiento_capital + sum('pago_respaldo') - sum('respaldo'), 'D-21 = intereses + apertura + rendimiento del capital + costo del respaldo');
+    let parte = 0; for (let m = 1; m <= c.M; m++) parte += S.indirectos[m] - (1 - N['C-19']) * N['C-12'] * (S.obra[m] / N['C-07']); peso(parte, N['C-19'] * N['C-12'], 'la parte de predesarrollo de los indirectos es C-19 × C-12');
+  };
+  chk(BASE, 'muestra'); chk(PROB, 'con problemas');
+  const conExt = Motor.evalua(DEF10, BASE, { 'C-04': { valor: 1, estado: 'decidido' } }, SIN), d07 = V10(conExt.plan, 'C-07') - V10(BASE, 'C-07');   // C-04 va en millones en la vista
+  assert(Math.abs(d07 - 1000000 * (1 + V10(conExt.plan, 'C-05'))) < 1, 'C-04 entra una sola vez a la obra (C-07): ' + d07); chk(conExt.plan, 'con exteriores');
+  const d6 = JSON.parse(JSON.stringify(BASE)); d6.datos = { 'C-06': 90000000 }; const r6 = Motor.reparto(DEF10, d6).caso; assert(Math.abs(r6.nodos['C-07'] - 90000000) < 1 && Math.abs(r6.series.obra.slice(1).reduce((a, b) => a + b, 0) - 90000000) < 1, 'C-06 (captura directa) sustituye a la obra calculada');
+});
+prueba('M5 · las etiquetas de las pruebas portadas son únicas y ninguna choca con las de la suite original', () => {
+  assert(HECHAS10.length >= 249, 'aserciones portadas: ' + HECHAS10.length); assert.strictEqual(new Set(HECHAS10).size, HECHAS10.length);
+});
+
+/* ═══════════════════ 29 · T-10 corrección 1 · las sondas del dictamen T-11 v1 como aserciones negativas ═══════════════════
+   Cada prueba reproduce la sonda de la Reina (mismos planes P39R y P60R del grupo 28, mismo registro) y comprueba que el defecto ya no ocurre;
+   cuando el comportamiento correcto es bloquear, se comprueba el bloqueo y su motivo. Las cifras son de control (montos de prueba, no pactos). */
+grupo('29 · T-10 corrección 1 · sondas del dictamen T-11 v1 (B01–B07, O01, O02 y mutaciones sobrevivientes)');
+const VZ = require(path.join(APP, '..', 'visor.js'));
+const textoVisor = (pq) => { const x = VZ.pinta(pq, [], { sinElige: true }); return x.html + ' ' + JSON.stringify(x.cuadros.map((c) => [c.aria, c.sub, c.detalle])); };
+prueba('B01 · sonda: S-24 A, B y C sobre P39 ya no dan la misma estructura; las tres bloquean porque el plan (30/70/0) no trae la opción y el preferente simple no lo representa F-02', () => {
+  const r = {}; ['A', 'B', 'C'].forEach((op) => { r[op] = Motor.reparto(DEF10, con10(P39R, { 'S-24': op })).resultado; });
+  const t = (x) => [x.simulado.dueno_tierra + x.simulado.dueno_parte, x.simulado.alianza_fee + x.simulado.alianza_parte, x.simulado.capital_parte];
+  assert.deepStrictEqual(t(r.A), [27229256, 13229256, 0]); assert.deepStrictEqual(t(r.B), [27229256, 13229256, 0]); assert.deepStrictEqual(t(r.C), [21937554, 5291702, 13229256]);
+  assert.deepStrictEqual(r.A.alianza_por_socio.simulado, { YOD: 4409752, PG: 4409752, AVM: 4409752 }); assert(r.B.alianza_por_socio.simulado.SIN_ASIGNAR > 0 && r.C.alianza_por_socio.simulado.SIN_ASIGNAR > 0);
+  ['A', 'B', 'C'].forEach((op) => {
+    assert.strictEqual(sumaO(r[op].autorizado), 0, op); assert(r[op].motivos.some((m) => /^P-02 · el plan reparte el excedente 30\/70\/0/.test(m)), op);
+    assert(r[op].motivos.some((m) => /^P-02 · la opción . pacta un preferente simple .* capitaliza cada mes .* variante no representable en F-02, bloqueada/.test(m)), op);
+  });
+  assert(r.C.motivos.some((m) => /^P-02 · F-02 calculó el capital con D-01 = 15\.0 % y la opción C pacta un preferente de 12 %/.test(m)) && !r.A.motivos.some((m) => /D-01 = 15\.0 % y la opción/.test(m)));
+  cifra('B01 · S-24 sobre la muestra 30/70/0: A y B simulan dueño $27,229,256 / alianza $13,229,256 / capital $0; C simula $21,937,554 / $5,291,702 / $13,229,256; las tres bloquean (P-02)');
+});
+prueba('B01 · con la opción aplicada al plan (planConOpcion) A autoriza 50/50 en tercios y C autoriza 30/20/50 con F-02 recalculado al 12 %, con controles de importe', () => {
+  const ra = Motor.reparto(DEF10, P39), xa = ra.resultado;
+  assert(xa.autorizable && sumaO(xa.autorizado) === 40458512 && xa.dueno === 14000000 + (40458512 - 14000000) / 2 && xa.alianza === (40458512 - 14000000) / 2 && xa.simulado.capital_parte === 0, JSON.stringify(xa.motivos));
+  const pc = Motor.planConOpcion(DEF10, PLANES10.muestra, 'C'); assert.deepStrictEqual(pc.errores, []);
+  const P39C = con10(pc.plan, { 'S-21': 39, 'S-17': 'al_liquidar', 'S-23': 'pactado' }, Object.assign({}, DECL, { reparto_interno: INTERNO_TERCIOS }));
+  const rc = Motor.reparto(DEF10, P39C), xc = rc.resultado, nc = rc.caso.nodos;
+  assert(nc['S-03'] === 0.3 && nc['S-05'] === 0.5 && nc['D-01'] === 0.12 && rc.parametros.opcion_reparto === 'C');
+  assert(rc.caso.med.rendimiento_capital < ra.caso.med.rendimiento_capital, 'F-02 se recalculó: al 12 % el capital gana menos que al 15 %');
+  const resto = xc.cr - xc.principal_pendiente - xc.preferente_pendiente - xc.simulado.alianza_fee - xc.simulado.dueno_tierra;
+  assert(xc.autorizable && sumaO(xc.autorizado) === xc.cr, JSON.stringify(xc.motivos));
+  assert(Math.abs(xc.simulado.dueno_parte - 0.3 * resto) <= 1 && Math.abs(xc.simulado.alianza_parte - 0.2 * resto) <= 1 && Math.abs(xc.simulado.capital_parte - 0.5 * resto) <= 1, JSON.stringify(xc.simulado));
+  assert(xc.salida.reconciliado && xc.salida.tarjeta['R-22'].estado === 'publicable', 'con la opción aplicada, el motor (S-03 30 %, S-05 50 %) y la cascada coinciden');
+  cifra('B01 · opción A aplicada: dueño $27,229,256, alianza $13,229,256 (tercios de $4,409,752); opción C aplicada: F-02 al 12 %, caja repartible $' + REP.miles(xc.cr) + ', excedente $' + REP.miles(resto) + ' en 30/20/50');
+});
+prueba('B01 · el preferente como lo calcula F-02 se pacta: sin declararlo bloquea, «propuesto» bloquea por firma y un valor fuera del catálogo invalida', () => {
+  const con = (pf) => Motor.reparto(DEF10, Object.assign({}, P39, { reparto: Object.assign({}, DECL, { preferente_f02: pf }) })).resultado;
+  assert(con(null).motivos.some((m) => /^P-02 · la opción A pacta un preferente simple de 15 %/.test(m)) && sumaO(con(null).autorizado) === 0);
+  assert(con('propuesto').motivos.some((m) => /^PACTO · preferente como lo calcula F-02/.test(m))); assert(/^INVÁLIDO/.test(con('firmado').estado));
+});
+prueba('B02 · sonda: dos líneas de 3 M contra el mismo C-08 ya no validan las dos; sin referencia de catálogo bloquean (CF-09); el egreso válido baja la caja con su beneficiario', () => {
+  const baja = con10(P39, { 'C-08': (10486800 - 3000000) / 87390000 }), e05 = Motor.reparto(DEF10, P39).caso.nodos['E-05'];
+  const conL = (ls) => Motor.reparto(DEF10, Object.assign({}, baja, { reparto: Object.assign({}, DECL, ls ? { lineas: ls } : {}) })).resultado;
+  const reina = (id) => ({ id, beneficiario: 'PG', monto: 3000000, sustituye: 'C-08', agregado_original: 10486800, estado_pacto: 'pactado' });
+  assert.strictEqual(conL(null).cr, 44071695);
+  const s1 = conL([reina('L1')]); assert(s1.motivos.some((m) => /^CF-09 · la línea «L1» no trae una referencia válida del catálogo/.test(m)) && sumaO(s1.autorizado) === 0);
+  const s2 = conL([reina('L1'), reina('L2')]); assert(s2.motivos.some((m) => /^CF-07 · las líneas de C-08 suman 6,000,000 y C-12 sólo bajó 3,000,000/.test(m)) && sumaO(s2.autorizado) === 0);
+  const u = conL([lineaPE('L1', e05)]); assert(u.autorizable && u.cr === 41071695 && sumaO(u.autorizado) === 41071695, JSON.stringify(u.motivos));
+  const d = conL([lineaPE('L1', e05), lineaPE('L2', e05)]); assert(d.motivos.filter((m) => /^CF-07 · las líneas de C-08 suman 6,000,000/.test(m)).length === 2 && sumaO(d.autorizado) === 0);
+  assert(/^INVÁLIDO/.test(conL([lineaPE('L1', e05), lineaPE('L2', e05, { agregado_original: 10000000 })]).estado), 'un mismo agregado con dos originales distintos invalida');
+  assert(conL([lineaPE('L1', e05, { base: { medida: 'm2_construido', cantidad: 21700, proxy: false } })]).motivos.some((m) => /no es la construcción del plan \(E-05/.test(m)), 'la base del tope se verifica contra E-05');
+  assert(conL([lineaPE('L1', e05, { catalogo: 'F-103', alcance: 'factibilidad_credito', base: { medida: 'evento', cantidad: 1, proxy: false } })]).motivos.some((m) => /cuesta 3,000,000, más que su tope de mercado \(100,000/.test(m)), 'el tope de catálogo se aplica');
+  assert(conL([lineaPE('L1', e05, { sustituye: 'C-10', agregado_original: 1 })]).motivos.some((m) => /no forma parte de C-10/.test(m)), 'una fila del catálogo sólo sustituye su agregado');
+  assert(conL([lineaPE('L1', e05, { estado_pacto: 'propuesto' })]).motivos.some((m) => /^PACTO · línea «L1» sin firma/.test(m)));
+  cifra('B02 · C-08 bajado $3,000,000: sin líneas caja $44,071,695; una línea con catálogo $41,071,695 (egreso a PG en el corte); dos líneas de $3,000,000 bloquean por CF-07; sin catálogo bloquea por CF-09');
+});
+prueba('B03 · sonda: JV sin aporte ni acuerdo ya no recibe; 40 % capturado como porcentaje invalida (no se normaliza); los pesos se declaran y se pactan', () => {
+  const con = (reg) => Motor.reparto(DEF10, Object.assign({}, P39, { reparto: Object.assign({}, DECL, reg) })).resultado;
+  assert(/^INVÁLIDO/.test(con({ reparto_interno: { JV: 1 } }).estado) && /^INVÁLIDO/.test(con({ reparto_interno: { YOD: 0.2, PG: 0.2 } }).estado), 'la forma del dictamen sin modo ni pacto invalida');
+  const jv = con({ reparto_interno: { modo: 'porcentajes', partes: { JV: 1 }, estado_pacto: 'pactado' } });
+  assert(jv.motivos.some((m) => /^RECEPTOR · Jorge Vizcaíno recibiría 13,229,256 sin aporte ni acuerdo registrado/.test(m)) && sumaO(jv.autorizado) === 0 && jv.alianza_por_socio.autorizado.JV === 0);
+  const jva = con({ reparto_interno: { modo: 'porcentajes', partes: { JV: 1 }, estado_pacto: 'pactado' }, acuerdos_receptor: { JV: { base: 'acuerdo', concepto: 'estructuración de capital (acuerdo de prueba)', estado_pacto: 'pactado' } } });
+  assert(jva.autorizable && jva.alianza_por_socio.autorizado.JV === 13229256, JSON.stringify(jva.motivos));
+  assert(con({ reparto_interno: { modo: 'porcentajes', partes: { JV: 1 }, estado_pacto: 'pactado' }, acuerdos_receptor: { JV: { base: 'acuerdo', concepto: 'x', estado_pacto: 'propuesto' } } }).motivos.some((m) => /^PACTO · el acuerdo por el que recibe Jorge Vizcaíno/.test(m)));
+  const p40 = con({ reparto_interno: { modo: 'porcentajes', partes: { YOD: 0.2, PG: 0.2 }, estado_pacto: 'pactado' } }); assert(/^INVÁLIDO/.test(p40.estado) && p40.errores.some((m) => /suma 40\.00 %, no 100 % \(CF-05\)/.test(m)), JSON.stringify(p40.errores));
+  const pes = con({ reparto_interno: { modo: 'pesos', partes: { YOD: 0.2, PG: 0.2 }, estado_pacto: 'pactado' } }); assert(pes.autorizable && pes.alianza_por_socio.autorizado.YOD === 6614628 && pes.alianza_por_socio.autorizado.PG === 6614628, JSON.stringify(pes.motivos));
+  assert(con({ reparto_interno: { modo: 'pesos', partes: { YOD: 1, PG: 1 }, estado_pacto: 'propuesto' } }).motivos.some((m) => /^PACTO · reparto interno de la alianza distinto del de la opción A sin firma/.test(m)));
+  cifra('B03 · JV sin aporte ni acuerdo: bloqueado (0 autorizado); con acuerdo pactado recibe $13,229,256; YOD/PG 0.2/0.2 en porcentajes invalida (suma 40 %); en pesos pactados $6,614,628 cada uno');
+});
+prueba('B03 · CF-03, CF-04 y CF-09 en el camino vertical: comisión de venta con beneficiario y canal; un socio no cobra comercialización dos veces; master se bloquea', () => {
+  const con = (reg, plan) => Motor.reparto(DEF10, Object.assign({}, plan || P39, { reparto: Object.assign({}, DECL, reg) })).resultado;
+  const sinCv = Motor.reparto(DEF10, Object.assign({}, P39, { reparto: B2_DECLARADO })).resultado; assert(sinCv.motivos.some((m) => /^SV · beneficiario y canal de la comisión de venta \(C-10 = /.test(m)));
+  assert(con({ comision_venta: { beneficiario: 'AVM', canal: 'externo' } }).motivos.some((m) => /^CF-03 · Avermont .*\(tercios de la opción A\) y además la comisión de venta/.test(m)));
+  const B = Motor.planConOpcion(DEF10, P39, 'B').plan;
+  assert(con({ comision_venta: { beneficiario: 'AVM', canal: 'externo' } }, B).motivos.some((m) => /^CF-03 · Avermont .* cobra comercialización dentro del fee \(matriz de la opción B\)/.test(m)));
+  assert(con({ comision_venta: { beneficiario: 'TERCERO', canal: 'master' } }).motivos.some((m) => /^CF-03 · canal master \(paquete 86\) no implementado/.test(m)));
+  assert(/^INVÁLIDO/.test(con({ comision_venta: { beneficiario: 'FANTASMA', canal: 'externo' } }).estado));
+  const e05 = Motor.reparto(DEF10, P39).caso.nodos['E-05'], jv = con({ lineas: [lineaPE('credito', e05, { beneficiario: 'JV', alcance: 'gestion_credito' })] }, B);
+  assert(jv.motivos.some((m) => /^CF-04 · Jorge Vizcaíno cobra «gestion_credito» dentro del fee \(matriz de la opción B\) y como línea aparte/.test(m)) && jv.motivos.some((m) => /^CF-09/.test(m)));
+});
+prueba('B04 · sonda: el visor (visor.js pinta) ya no dice «reparto en el mes 39» con corte 60, pinta negativos como pérdida y conserva el bloqueo con datos inválidos', () => {
+  const h60 = textoVisor(Motor.paqueteVisor(DEF10, P60));
+  assert(!/reparto en el mes 39/.test(h60) && !/Mes del reparto/.test(h60) && !/cobra en el mes/.test(h60), 'corte 60: ninguna frase del visor presenta el mes 39 como reparto ni dice que el dueño cobra');
+  assert(/corte de reparto autorizado en el mes 60/.test(h60) && /corte autorizado: mes 60 \(sin pago registrado\)/.test(h60) && /Hito del motor \(referencia del Árbol\)","mes 39"/.test(h60), 'el corte autorizado es 60 y el 39 se ve como hito de referencia');
+  const h60r = textoVisor(Motor.paqueteVisor(DEF10, P60R));
+  assert(!/reparto en el mes 39/.test(h60r) && /sin corte de reparto autorizado \(hito del motor: mes 39, referencia\)/.test(h60r) && /teórico/.test(h60r), 'sin autorización (plan sin la opción): sólo el hito, como referencia');
+  const n1 = con10(PLANES10A.N1_tierra_especie, { 'S-17': 'al_liquidar', 'S-23': 'pactado', 'S-19': 'no' }, DECL), pn1 = Motor.paqueteVisor(DEF10, n1), hn1 = textoVisor(pn1);
+  assert(pn1.v.dueno_recibe < 0 && !/recibe en total[^<"]{0,8}−/.test(hn1) && !/recibe −\$/.test(hn1) && /pérdida asignada −\$3\.5 \(teórica\)/.test(hn1) && /Dueño · pérdida asignada \(teórica\)/.test(hn1), 'N1: el negativo es pérdida asignada, nunca «recibe»');
+  const n1i = Object.assign({}, n1, { reparto: Object.assign({}, DECL, { isr: { estado: 'pendiente' } }) }), pi = Motor.paqueteVisor(DEF10, n1i), hi = textoVisor(pi);
+  assert(/^INVÁLIDO/.test(pi.cascada.estado) && /INVÁLIDO/.test(pi.deducido['v.dueno_recibe']) && /nunca bajo «recibe»/.test(pi.deducido['v.dueno_recibe']), 'el paquete conserva el bloqueo y la nota de pérdida con ISR inválido');
+  assert(/bloqueado ·/.test(hi) && /"Estado","INVÁLIDO · no se calcula"/.test(hi) && /pérdida asignada −\$3\.5 \(teórica\)/.test(hi) && !/recibe en total[^<"]{0,8}−/.test(hi), 'el visor dice que el reparto es inválido y no presenta el negativo como «recibe»');
+  const leg = textoVisor(Motor.paqueteVisor(DEF, PLANES10.muestra)); assert(/reparto en el mes 39/.test(leg) && !/Estado del reparto/.test(leg), 'sin la extensión el visor pinta como siempre (paquete legado)');
+});
+prueba('B05 · sonda: el arrastre se valida clase por clase, el desglose conserva el peso y con dos o más clases no se autoriza (entrada cerrada)', () => {
+  const c = CASOSA.N1, kw = (x) => Object.assign({ iva: { tipologia: 'vivienda', modalidad: 'ya_incorporado' }, fee_en_indirectos: 'no', gestion_esquema: 'A', liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true,
+    clases_capital: [{ clase: 'CAP_A', parte: 0.5 }, { clase: 'CAP_B', parte: 0.5 }], regla_clases: 'pari_passu' }, DECL, x || {});
+  const c39 = REP.repartoVertical(c, kw({ mes_corte: 39 })), zs = JSON.parse(JSON.stringify(c39.capital_arrastre)); zs.clases.CAP_A.pr += 1000; zs.clases.CAP_B.pr -= 1000;
+  const rz = REP.repartoVertical(c, kw({ capital_arrastre: zs })); assert(rz.arrastre_cuadra === false && rz.motivos.some((m) => /no cuadra, clase por clase/.test(m)) && sumaO(rz.autorizado) === 0);
+  const r0 = REP.repartoVertical(c, kw()), pc = r0.capital_por_clase, sp = (k) => Object.keys(pc).reduce((t, x) => t + pc[x][k], 0);
+  assert(sp('principal') === r0.principal_pendiente && r0.principal_pendiente === 1156991 && sp('preferente') === r0.preferente_pendiente, JSON.stringify(pc));
+  assert(r0.motivos.some((m) => /^M3 · clases de capital: .* con 2 clases el desglose es de presentación y no se autoriza/.test(m)) && sumaO(r0.autorizado) === 0);
+  const una = REP.repartoVertical(c, kw({ clases_capital: [{ clase: 'CAP_A', parte: 1 }] })); assert(!una.motivos.some((m) => /^M3/.test(m)) && sumaO(una.autorizado) === 5478010, JSON.stringify(una.motivos));
+  cifra('B05 · arrastre +1,000/−1,000 entre clases: ya no cuadra; principal por clase suma $1,156,991 exacto; con dos clases no se autoriza; con una clase autoriza $5,478,010');
+});
+prueba('B07 · sonda: un plan de tipo distinto cargado en la definición vertical se bloquea; renta sigue bloqueada', () => {
+  const pat = Motor.reparto(DEF10, Object.assign({}, P39, { tipo: 'patrimonial' })).resultado;
+  assert(/^BLOQUEADO/.test(pat.estado) && pat.motivos.some((m) => /el plan es de tipo «patrimonial» y se cargó en la definición «vertical»: tipos distintos/.test(m)) && sumaO(pat.autorizado) === 0);
+  assert(/^BLOQUEADO/.test(Motor.reparto(DEF10, con10(P39, { 'P1-03': 'Renta' })).resultado.estado));
+});
+prueba('B07 · punto de entrada de la copia: reparto-prueba.html carga reparto.js, el motor, las tablas y la extensión, y muestra el estado del reparto', () => {
+  const html = fs.readFileSync(path.join(APP, 'reparto-prueba.html'), 'utf8'), src = [...html.matchAll(/<script src="([^"?]+)/g)].map((m) => m[1]);
+  assert.deepStrictEqual(src.filter((x) => !/^https?:/.test(x)), ['reparto.js', 'motor.js', 'definicion-tablas.js', 'definicion-reparto.js', 'pantalla.js', 'reparto-prueba.js', '../portero.js']);
+  assert(/yod-acceso\.js/.test(html) && /noindex/.test(html) && !/servidor\.js|conexion\.js|arranque\.js/.test(html), 'con la misma puerta de acceso que arbol.html y sin escribir en el libro');
+  assert(!/reparto\.js|definicion-reparto/.test(fs.readFileSync(path.join(APP, 'arbol.html'), 'utf8')), 'la página normal no cambia');
+  assert.strictEqual(fs.readFileSync(path.join(APP, 'definicion-reparto.js'), 'utf8'), require(path.join(APP, 'construir-reparto.cjs')).js, 'definicion-reparto.js coincide con los CSV de la extensión');
+  const vm = require('vm'), ctx = { console }; ctx.window = ctx; ctx.self = ctx; ctx.globalThis = ctx; vm.createContext(ctx);
+  ['reparto.js', 'motor.js', 'definicion-tablas.js', 'definicion-reparto.js', 'reparto-prueba.js'].forEach((f) => vm.runInContext(fs.readFileSync(path.join(APP, f), 'utf8'), ctx, { filename: f }));
+  const d = ctx.ArbolRepartoPrueba.definicion(ctx.ArbolMotor); assert.strictEqual(JSON.stringify(d.errores), '[]'); assert.strictEqual(d.definicion.nodos.length, 150);
+  const ok = ctx.ArbolRepartoPrueba.estadoHtml(ctx.ArbolMotor, d.definicion, JSON.parse(JSON.stringify(P39)));
+  assert(/data-estado="AUTORIZABLE"/.test(ok) && /Corte autorizado<\/th><td>mes 39/.test(ok) && /\$40,458,512 · \$40,458,512 · \$0/.test(ok) && (ok.match(/<tr><th scope="row">[IP]\d+ · /g) || []).length === 19, ok.slice(0, 400));
+  const no = ctx.ArbolRepartoPrueba.estadoHtml(ctx.ArbolMotor, d.definicion, JSON.parse(JSON.stringify(P39R))); assert(/NO AUTORIZABLE/.test(no) && /P-02 · el plan reparte el excedente 30\/70\/0/.test(no));
+});
+prueba('O02 · las etiquetas de C2 (fichas del vertical y del Hub) llegan al lector: tarjeta, paquete del visor y página de prueba', () => {
+  const pq = Motor.paqueteVisor(DEF10, P39), t = Motor.evalua(DEF10, P39, null, SIN).tarjetas.Reparto;
+  [pq.cascada.fichas, t.cascada.fichas].forEach((f) => { assert(f && f.filas.length === 19 && f.fallas.length === 0 && f.regla === 'el Hub nunca supera al vertical'); const F = (id) => f.filas.find((x) => x[0] === id);
+    assert.strictEqual(F('I1')[3], 'Patrón reutilizable (sólo superficie y norma)'); assert.strictEqual(F('P4')[3], 'Hueco'); });
+  assert(JSON.stringify(pq).length <= 50000, 'con las fichas el paquete cabe en 50,000 caracteres: ' + JSON.stringify(pq).length);
+});
+prueba('T-11 · las sondas EXACTAS del dictamen (P39R, P60R, N1, respaldo y el registro tal como lo escribió la Reina): ninguna reproduce ya el defecto', () => {
+  const tot = (x) => sumaO(x.autorizado);
+  /* B01: A, B y C ya no comparten estructura y ninguna autoriza con el plan 30/70/0 */
+  const b01 = ['A', 'B', 'C'].map((op) => Motor.reparto(DEF10, con10(P39R, { 'S-24': op })).resultado); assert(b01.every((x) => tot(x) === 0) && b01[0].simulado.capital_parte === 0 && b01[2].simulado.capital_parte > 0 && b01[0].dueno !== b01[2].dueno);
+  /* B02: C-08 bajado, una y dos líneas de 3 M a PG sin catálogo: ya no autorizan 44,071,695 ni validan las dos */
+  const baja = con10(P39R, { 'C-08': (10486800 - 3000000) / 87390000 }), L = (id) => ({ id, beneficiario: 'PG', monto: 3000000, sustituye: 'C-08', agregado_original: 10486800, estado_pacto: 'pactado' });
+  const u = Motor.reparto(DEF10, Object.assign({}, baja, { reparto: Object.assign({}, B2_DECLARADO, { lineas: [L('L1')] }) })).resultado, d = Motor.reparto(DEF10, Object.assign({}, baja, { reparto: Object.assign({}, B2_DECLARADO, { lineas: [L('L1'), L('L2')] }) })).resultado;
+  assert(tot(u) === 0 && u.cr === 44071695 - 3000000 && u.motivos.some((m) => /^CF-09/.test(m)) && tot(d) === 0 && d.lineas.every((l) => l.cf07 === 'bloquea'));
+  /* B03: {JV:1} y {YOD:0.2,PG:0.2} sin modo ni pacto ya no se aceptan (ni reciben ni se normalizan) */
+  ['JV', 'YP'].forEach((k) => { const x = Motor.reparto(DEF10, Object.assign({}, P39R, { reparto: Object.assign({}, B2_DECLARADO, { reparto_interno: k === 'JV' ? { JV: 1 } : { YOD: 0.2, PG: 0.2 } }) })).resultado; assert(/^INVÁLIDO/.test(x.estado) && tot(x) === 0, k); });
+  /* B04: corte 60 sin la opción en el plan; N1 tierra en especie sin regla; ISR pendiente */
+  const h60 = textoVisor(Motor.paqueteVisor(DEF10, P60R)); assert(!/reparto en el mes 39/.test(h60) && !/Mes del reparto/.test(h60) && !/cobra en el mes/.test(h60));
+  const n1 = con10(PLANES10.N1_tierra_especie, { 'S-17': 'al_liquidar', 'S-23': 'pactado', 'S-19': 'no' }, B2_DECLARADO), hn1 = textoVisor(Motor.paqueteVisor(DEF10, n1));
+  assert(!/recibe en total[^<"]{0,8}−/.test(hn1) && /pérdida asignada −\$2\.1 \(teórica\)/.test(hn1) && /Dueño · pérdida asignada \(teórica\)/.test(hn1));
+  const pi = Motor.paqueteVisor(DEF10, Object.assign({}, n1, { reparto: { isr: { estado: 'pendiente' } } })); assert(/INVÁLIDO/.test(pi.deducido['v.dueno_recibe']) && /nunca bajo «recibe»/.test(pi.deducido['v.dueno_recibe']) && /bloqueado ·/.test(textoVisor(pi)));
+  /* B05: arrastre de suma cero entre CAP_A y CAP_B pasado al corte 60 */
+  const kw = (x) => Object.assign({ iva: { tipologia: 'vivienda', modalidad: 'ya_incorporado' }, fee_en_indirectos: 'no', gestion_esquema: 'A', liberar_caja_minima: 'al_liquidar', acuerdos_pactados: true, clases_capital: [{ clase: 'CAP_A', parte: 0.5 }, { clase: 'CAP_B', parte: 0.5 }], regla_clases: 'pari_passu' }, B2_DECLARADO, x || {});
+  const c39 = REP.repartoVertical(CASOS.N1, kw({ mes_corte: 39 })), a = JSON.parse(JSON.stringify(c39.capital_arrastre)); a.clases.CAP_A.pr += 1000; a.clases.CAP_B.pr -= 1000;
+  const r5 = REP.repartoVertical(CASOS.N1, kw({ capital_arrastre: a })); assert(r5.arrastre_cuadra === false && tot(r5) === 0);
+  /* B06: tasas 0, 0.15 y 1 ya no dan lo mismo: 0 y 1 llevan el motivo de la tasa */
+  const pr = con10(PLANES10.respaldo, { 'S-17': 'al_liquidar', 'S-23': 'pactado' }, B2_DECLARADO), r6 = (t) => Motor.reparto(DEF10, con10(pr, { 'S-18': 'parte=SP; tope=30000000; tasa=' + t + '; pacto=pactado' })).resultado;
+  [0, 1].forEach((t) => assert(r6(t).motivos.some((m) => /no coincide con el costo que usa F-02/.test(m)) && tot(r6(t)) === 0, String(t))); assert(!r6(0.15).motivos.some((m) => /no coincide con el costo que usa F-02/.test(m)));
+  /* B07: plan patrimonial en la definición vertical */
+  assert(/^BLOQUEADO/.test(Motor.reparto(DEF10, Object.assign({}, P39R, { tipo: 'patrimonial' })).resultado.estado));
+});
+prueba('Mutación CF-01 «si» (T-11): con S-12 = sí la única razón del bloqueo es CF-01; con S-12 = no el mismo plan autoriza', () => {
+  const f = (s12) => Motor.reparto(DEF10, con10(PLANES10A.muestra_fee_5, { 'S-12': s12, 'S-13': 'A', 'S-23': 'pactado', 'S-17': 'al_liquidar' }, DECL)).resultado;
+  const si = f('si'), no = f('no'); assert.deepStrictEqual(si.motivos, ['CF-01 · fee dentro de indirectos y aparte']); assert.strictEqual(sumaO(si.autorizado), 0); assert(no.autorizable && sumaO(no.autorizado) === no.cr && no.cr > 0, JSON.stringify(no.motivos));
+});
+prueba('Mutación CF-05 sumas (T-11): en el ejemplo anual, un excedente que no suma 100 % y una matriz que no suma 100 % invalidan aunque cada parte esté en rango', () => {
+  const x = REP.cascada(REP.escenario({ excedente: { DUENO: 0.6, ALIANZA: 0.3, CAPITAL: 0 } })); assert(/^INVÁLIDO/.test(x.estado) && x.errores.some((m) => /los porcentajes del excedente no suman 100 % \(CF-05\)/.test(m)), JSON.stringify(x.errores));
+  const mat = REP.MATRIZ_MOREO.map((f, i) => (i === 0 ? [f[0], 0.06, f[2], f[3]] : f));
+  const y = REP.cascada(REP.escenario({ acuerdo_marco: Object.assign({}, REP.ACUERDO_MARCO, { matriz: mat }) })); assert(/^INVÁLIDO/.test(y.estado) && y.errores.some((m) => /la matriz de contribuciones suma 0\.98, no 100 % \(CF-05\)/.test(m)), JSON.stringify(y.errores));
+});
+
 /* ═══════════════════ RESUMEN ═══════════════════ */
 console.log('\n══════════════════════════════════════════');
 console.log('pruebas: ' + R.ok + ' de ' + R.n + ' pasan' + (R.fallos.length ? ' · ' + R.fallos.length + ' FALLAN' : ' · TODO BIEN'));
