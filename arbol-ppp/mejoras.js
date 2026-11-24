@@ -7,7 +7,7 @@ function __mejorasArbol() {
   if (W.__vp && W.__vp.t) clearInterval(W.__vp.t);
   document.querySelectorAll('[data-vp]').forEach((e) => e.remove());
   document.querySelectorAll('[data-hecho],[data-orden],[data-docs],[data-listo],[data-g]').forEach((e) => ['data-hecho', 'data-orden', 'data-docs', 'data-listo', 'data-g'].forEach((a) => e.removeAttribute(a)));
-  document.querySelectorAll('.prev-ficha,.prev-uni,.prev-m2,.prev-eq').forEach((e) => e.remove());
+  document.querySelectorAll('.prev-ficha,.prev-uni,.prev-m2,.prev-eq,.vp-ok,.vp-vistos').forEach((e) => e.remove());
   const est = W.__vp = { t: 0, tab: (W.__vp && W.__vp.tab) || 'cambiar', uni: (W.__vp && W.__vp.uni) || 'pct', visto: (W.__vp && W.__vp.visto) || {} };
   const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt !== undefined) e.textContent = txt; return e; };
   const $ = (s, r) => (r || document).querySelector(s), $$ = (s, r) => [...(r || document).querySelectorAll(s)];
