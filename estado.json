@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-23T20:35:37.639Z",
+ "generado": "2026-11-24T02:17:47.837Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -42,16 +42,16 @@
    "msg": "board-flujo-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
-   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-cada-hora.yml",
+   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-diario.yml",
    "tipo": "flujo",
    "nodos": [
-    "sala-edicion::github_workflows_sala_cada_hora",
+    "sala-edicion::github_workflows_sala_diario",
     "repo:yodesarrollomx/sala-edicion",
     "SYS-SALA"
    ],
-   "desde": "2026-11-23T15:22:54Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45259765641",
-   "msg": "Falló el flujo «Sala · Cada hora» de sala-edicion, trabajo «mesa / mesa», paso 14 «Avisar si algo falló»"
+   "desde": "2026-11-24T00:34:11Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45298217523",
+   "msg": "Falló el flujo «Sala · Diario» de sala-edicion, trabajo «relevo / relevo», paso 8 «Publicar datos y esperar su recibo exacto»"
   },
   {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-mesa.yml",
