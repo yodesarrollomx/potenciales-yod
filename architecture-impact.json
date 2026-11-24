@@ -1,18 +1,15 @@
 {
   "model_revision": "2026-11-23.arbol-ppp.1",
   "proposal_id": "CHG-ARBOL-PPP-20261123",
-  "summary": "Continuación de la propuesta ARBOLPPP. Módulo de repartos por socio en el Árbol del PPP (Super PPP, entrega T-10 v2 de la partida Ajedrez de tareas): arbol-ppp/reparto.js, definicion-reparto.js y definicion/reparto* agregan el reparto de utilidad entre dueño del terreno, alianza y capital; arbol-ppp/motor.js expone Motor.reparto sin cambiar el cálculo de los planes existentes; arbol-ppp/pruebas/motor-real.cjs sube a 547 pruebas. visor.js sólo actúa cuando el paquete trae «cascada», que hoy no trae ningún paquete del libro, por lo que las pantallas publicadas pintan igual. arbol-ppp/reparto-prueba.html es una página de prueba sin enlace desde la aplicación. Estado de la revisión independiente (dictamen T-11 v2): el cálculo se acepta para simulación interna por la API; la página de prueba y el cuadro del visor NO están aprobados para presentar y quedan inactivos hasta su corrección. No cambia el servidor, el Portero, los permisos ni la etiqueta de versiones; no autoriza ni registra pagos.",
+  "summary": "Continuación de la propuesta ARBOLPPP. Pantalla del Árbol PPP: nueva capa arbol-ppp/mejoras.js (cargada por arbol.html después de arranque.js) que sólo cambia cómo se ve y se navega la pantalla: el grafo ocupa todo el espacio, las tarjetas de arriba quedan como pastillas chicas y transparentes que despliegan sus datos, la tarjeta del dato se puede cerrar, tiene encabezado fijo, separadores (Cambiar, Conexiones, Fuente, Comparar), ajustes secundarios plegados en «Más ajustes», botones que llevan al nodo aunque su rama esté plegada (usa la API pública de la pantalla: seleccionar, alterna, centrar, estado), unidad % o m² en el COS, avisos con «Enterado» y acomodo para teléfono (hoja inferior). Los documentos enlazados son del caso Calzada de los Ángeles y sólo se muestran con ese predio. No cambia el motor, la definición, el cálculo, el servidor, el Portero ni lo que se guarda en el libro.",
   "components": [
-    "SYS-ARBOL-PPP",
-    "SYS-POTENCIALES",
-    "SYS-PPP2"
+    "SYS-ARBOL-PPP"
   ],
   "tests": [
-    "node arbol-ppp/pruebas/motor-real.cjs: 547 de 547 con el cambio; la suite original (260) sigue pasando sobre el motor nuevo.",
-    "node scripts/versiones.cjs --check: 172 etiquetas con la versión esperada.",
-    "Dictamen independiente T-11 v2 (Reina de otra compañía): cálculo aceptado para simulación; página de prueba y cuadro del visor rechazados para presentación.",
-    "Corrida real por la API (caso Calzada de los Ángeles, T-12): 61 aserciones, salida reproducida byte por byte por el Rey y por la Reina.",
-    "Pendiente, no demostrado: el cuadro del visor con un paquete que traiga «cascada» y la página de prueba sin red."
+    "node --check arbol-ppp/mejoras.js.",
+    "node arbol-ppp/pruebas/motor-real.cjs: sin cambios en el motor; la suite sigue pasando.",
+    "Prueba manual en el navegador de Dirección con el archivo de la rama (escritorio 1669×853 y marco de 440×956, iPhone 16 Pro Max): grafo a todo el espacio, tarjeta de «¿Dónde van los cajones?» y «¿Qué tipo de edificio es?», brinco a un dato plegado (D-03), separadores y hoja inferior.",
+    "Pendiente, no demostrado: prueba en un iPhone físico y con un plan distinto de Calzada."
   ],
-  "rollback": "Revertir el commit por revisión: el motor vuelve a no tener Motor.reparto y el visor a su versión anterior. No hay datos ni servidor que restaurar."
+  "rollback": "Quitar la línea de mejoras.js en arbol-ppp/arbol.html (o revertir el commit): la pantalla vuelve a verse como antes. No hay datos ni servidor que restaurar."
 }
