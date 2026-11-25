@@ -8,7 +8,8 @@
     "SYS-CONTROL",
     "SYS-POTENCIALES",
     "SYS-PPP2",
-    "SHEET-PPP-MAESTRO"
+    "SHEET-PPP-MAESTRO",
+    "SHEET-PPP2"
   ],
   "tests": [
     "node --check arbol-ppp/mejoras.js.",

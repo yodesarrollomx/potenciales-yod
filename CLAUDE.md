@@ -264,4 +264,3 @@ Barra fija abajo en `visor.html` (`visor-pestanas.js` + `visor-pestanas.css`; la
 ## 25-nov-2026 · El visor enseña las versiones del Árbol PPP
 
 Al guardar una versión, el Árbol deja su paquete del visor en la pestaña `ARBOL_VISOR` del Maestro (`arbol_visor_pon_`, `server/ppp2/ArbolPPP.gs`) y `Visor.gs` la sirve por la ruta de las fotos con la liga `ppp:arbol-<proyecto>`: una versión por columna, la última por omisión y la que Dirección elija con `ppp2-elige`. El prefijo `arbol-` decide la hoja. El servidor no calcula ni compara: guarda lo del motor con la identidad del libro y sirve sólo datos (las claves de la forma y `cascada`, limpia). Ni nombres de proyectos ni cifras reales en pruebas o docs. Detalle en docs/arbol-ppp.md; encenderlo, en `server/ppp2/INSTALAR.md`. Pruebas: `node --test tests/arbol-ppp-visor.test.cjs`.
-

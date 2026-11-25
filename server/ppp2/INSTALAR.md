@@ -343,4 +343,3 @@ Va con `Visor.gs`, `ArbolPPP.gs` y `Código.gs` (`PPP2.gs`) de este repo, public
 4. Probar que cambia: mover un dato en el Árbol, guardar sobre la misma versión y ver el cambio en el visor sin recargar.
 
 **Apagarlo:** regresar el `plan_id` de la liga a lo que tenía, o renombrar la pestaña `ARBOL_VISOR`. Los renglones no se borran.
-
