@@ -378,10 +378,22 @@
     var c = d && d.cascada;
     if (!c || typeof c !== 'object' || Array.isArray(c)) return null;
     var f = c.fechas || {}, val = function (x) { return x && num(x.valor) !== null ? x.valor : null; };
+    // En los paquetes v2 una fecha podía figurar como registrada con importe cero.
+    var registro = f.pago_registrado, dueno = c.conciliacion && c.conciliacion.DUENO;
+    if (registro && registro.estado === 'registrado' && val(registro) !== null && !(dueno && num(dueno.pagado) > 0)) {
+      f = Object.assign({}, f, { pago_registrado: { estado: 'inconsistente', valor: null, fecha_sin_importe: registro.valor } });
+    }
     var estado = typeof c.estado === 'string' && c.estado ? c.estado : 'SIN CALCULAR';
     var hito = val(f.hito_motor); if (hito === null) hito = num((d.v || {}).mes_reparto);
     return { estado: estado, bloqueado: !c.ok || /^(INVÁLIDO|BLOQUEADO|SIN CALCULAR)/.test(estado), autorizable: /^AUTORIZABLE/.test(estado),
-      motivos: (Array.isArray(c.motivos) ? c.motivos : (c.motivo ? [c.motivo] : [])).slice(0, 4), hito: hito, corte: val(f.corte_autorizado), pago: val(f.pago_registrado), campos: c.campos || {} };
+      motivos: (Array.isArray(c.motivos) ? c.motivos : (c.motivo ? [c.motivo] : [])).slice(0, 4), hito: hito, corte: val(f.corte_autorizado),
+      /* N01 (dictamen T-11 v2): sólo es pago lo que el libro registra con importe; una fecha sin importe se informa como inconsistente y nunca desplaza el corte */
+      pago: f.pago_registrado && f.pago_registrado.estado === 'registrado' ? val(f.pago_registrado) : null,
+      sinImporte: f.pago_registrado && f.pago_registrado.estado === 'inconsistente' ? (num(f.pago_registrado.fecha_sin_importe) !== null ? f.pago_registrado.fecha_sin_importe : '—') : null, campos: c.campos || {} };
+  }
+  function pagoT10(RC) {
+    if (RC.pago) return 'mes ' + RC.pago;
+    return 'sin pago registrado' + (RC.sinImporte !== null ? ' · fecha sin importe (mes ' + RC.sinImporte + '): inconsistente, no es pago' : '');
   }
   function publicaT10(RC, k) { return !!RC && !RC.bloqueado && !!RC.campos[k] && RC.campos[k].rotulo === 'publicable'; }
   function recibeT10(RC, k, x, txt) {
@@ -390,9 +402,12 @@
     return txt + (publicaT10(RC, k) ? '' : ' (teórico)');
   }
   function fechaT10(RC) {
-    if (RC.pago) return 'pago registrado al dueño: mes ' + RC.pago;
-    if (RC.corte) return 'corte autorizado: mes ' + RC.corte + ' (sin pago registrado)';
-    return 'sin corte autorizado' + (RC.hito ? ' (hito del motor: mes ' + RC.hito + ', referencia)' : '');
+    /* el corte autorizado (o su ausencia) va siempre primero: un pago, o una fecha sin importe, se agrega a su lado y nunca lo sustituye */
+    var sin = RC.sinImporte !== null ? 'fecha de pago del mes ' + RC.sinImporte + ' sin importe: inconsistente' : '';
+    var corte = RC.corte ? 'corte autorizado: mes ' + RC.corte : 'sin corte autorizado' + (RC.hito ? ' (hito del motor: mes ' + RC.hito + ', referencia)' : '');
+    if (RC.pago) return corte + ' · pago registrado al dueño: mes ' + RC.pago;
+    if (RC.corte) return corte + ' (sin pago registrado' + (sin ? '; ' + sin : '') + ')';
+    return corte + (sin ? ' · sin pago registrado; ' + sin : '');
   }
   function cTiempo(d) {
     var v = d.v || {}, N = Math.max(1, (d.flujo && d.flujo.meses) || num(v.mes_reparto) || 1), o = [];
@@ -421,7 +436,7 @@
       });
       if (rep && RC) {
         /* N-02: el corte autorizado se marca lleno; sin corte, el hito del motor va hueco y dice que es referencia */
-        var cxT = clamp(R.XE(rep) - 3.5, R.x0 + 4, R.x1 - 2), trT = T('Reparto · ' + RC.estado, [['Corte autorizado', RC.corte ? 'mes ' + RC.corte : 'sin fecha autorizada'], ['Hito del motor (referencia del Árbol)', RC.hito ? 'mes ' + RC.hito : '—'], ['Pago registrado', RC.pago ? 'mes ' + RC.pago : 'sin pago registrado']], L('Versiones', 'mes_reparto'), 'v.mes_reparto');
+        var cxT = clamp(R.XE(rep) - 3.5, R.x0 + 4, R.x1 - 2), trT = T('Reparto · ' + RC.estado, [['Corte autorizado', RC.corte ? 'mes ' + RC.corte : 'sin fecha autorizada'], ['Hito del motor (referencia del Árbol)', RC.hito ? 'mes ' + RC.hito : '—'], ['Pago registrado', pagoT10(RC)]], L('Versiones', 'mes_reparto'), 'v.mes_reparto');
         f.push('<text' + trT + ' x="0" y="71.5" font-size="8.5" font-weight="700" fill="' + INK + '">Reparto</text>');
         p.push('<g' + trT + '><circle cx="' + f1(cxT) + '" cy="69" r="3.5" fill="' + (RC.corte ? INK : 'none') + '" stroke="' + INK + '" stroke-width="0.9"></circle><text x="' + f1(cxT - 6.5) + '" y="71.6" text-anchor="end" font-size="7.5" font-weight="700" fill="' + INK + '">' + (RC.corte ? 'corte ' + RC.corte : 'hito ' + rep + ' (ref.)') + '</text></g>');
       } else if (rep) {
@@ -461,7 +476,7 @@
       ].concat(RC ? [
         ['Hito del motor (referencia del Árbol)', RC.hito ? 'mes ' + RC.hito : '—', L('Versiones', 'mes_reparto'), 'v.mes_reparto'],
         ['Corte autorizado', RC.corte ? 'mes ' + RC.corte : 'sin fecha autorizada', 'Reparto · ' + RC.estado, 'cascada.fechas'],
-        ['Pago registrado al dueño', RC.pago ? 'mes ' + RC.pago : 'sin pago registrado', 'Libro de pagos (fuera del Árbol)', 'cascada.fechas']
+        ['Pago registrado al dueño', pagoT10(RC), 'Libro de pagos (fuera del Árbol)', 'cascada.fechas']
       ] : [['Reparto', rep ? 'mes ' + rep : '—', L('Versiones', 'mes_reparto'), 'v.mes_reparto']]) }, { h: 'Ritmo', filas: [
         ['Preventa al arrancar la obra', pct(prev), 'mínimo ' + pct(pmin, 0) + ' · ' + L('Versiones', 'rv_preventa'), 'v.rv_preventa'],
         ['Unidades por mes', mesesVenta && unidades ? f1(unidades / mesesVenta) : '—', mesesVenta && unidades ? ent(unidades) + ' unidades ÷ ' + mesesVenta + ' meses' : L('Flujo', 'unidades que se firman'), 'visor.ritmo']
@@ -823,7 +838,7 @@
     var pd = num(rp.parte_dueno), pa = num(rp.parte_alianza), pc = num(rp.parte_capital) || 0;
     orden.push(pd !== null ? (pd === pa && !pc ? 'utilidad mitad y mitad' : 'utilidad ' + pct(pd, 0) + ' dueño · ' + pct(pa, 0) + ' alianza' + (pc ? ' · ' + pct(pc, 0) + ' capital' : '')) : 'utilidad');
     o.push('<text' + T('Esquema de reparto', [['Esquema', rp.esquema || (d.plan && d.plan.esquema) || '—'], ['Parte del dueño', pct(pd, 0)], ['Parte de la alianza', pct(pa, 0)], ['Parte del capital', pct(pc, 0)], ['¿Se paga la tierra antes de repartir?', rp.paga_tierra ? 'sí' : 'no']], L('Reparto'), 'reparto.esquema') +
-      ' x="0" y="132" font-size="7.6" fill="' + MUTED + '">Orden de cobro: ' + orden.join(' → ') + (RC ? ' · ' + fechaT10(RC) : (num(v.dueno_meses) ? ' · el dueño cobra en el mes ' + v.dueno_meses : '')) + '</text>');
+      ' x="0" y="132" font-size="7.6" fill="' + MUTED + '">Orden de cobro: ' + orden.join(' → ') + (!RC && num(v.dueno_meses) ? ' · el dueño cobra en el mes ' + v.dueno_meses : '') + '</text>');
     if (RC && (RC.bloqueado || !RC.autorizable)) o.push('<text x="0" y="10" font-size="7.4" font-weight="700" fill="' + BADT + '">' + esc(corta('Reparto ' + (RC.bloqueado ? RC.estado : 'teórico, sin autorización de pago'), 60)) + '</text>');
     /* El mismo cuadro, en alto, para el pop-up del teléfono: cada quien en su renglón, con las barras a todo lo ancho. */
     var g = ['<text x="220" y="7" text-anchor="end" font-size="6" fill="' + MUTED + '">veces lo que puso</text>'], tope = Math.max(1, pone, recibe, capital, capRecibe, alianza), sg = 150 / tope;
@@ -839,8 +854,9 @@
     });
     var yo = 12 + rows.length * 46 + 6;
     g.push('<text x="0" y="' + yo + '" font-size="6.6" fill="' + MUTED + '">Orden de cobro: ' + orden.join(' → ') + '</text>' +
-      (RC ? '<text x="0" y="' + (yo + 9.5) + '" font-size="6.6" fill="' + MUTED + '">' + esc(fechaT10(RC).charAt(0).toUpperCase() + fechaT10(RC).slice(1)) + '</text>' : (num(v.dueno_meses) ? '<text x="0" y="' + (yo + 9.5) + '" font-size="6.6" fill="' + MUTED + '">El dueño cobra en el mes ' + v.dueno_meses + '</text>' : '')));
+      (!RC && num(v.dueno_meses) ? '<text x="0" y="' + (yo + 9.5) + '" font-size="6.6" fill="' + MUTED + '">El dueño cobra en el mes ' + v.dueno_meses + '</text>' : ''));
     return {
+      pieFecha: RC ? mayus1(fechaT10(RC)) : '',
       id: 'reparto', n: 6, titulo: 'Reparto', sub: esc(corta((RC ? (RC.bloqueado ? 'bloqueado · ' : !RC.autorizable ? 'teórico · ' : '') : '') + (rp.esquema || (d.plan && d.plan.esquema) || 'pones y recibes'), 44)), svg: pone || recibe || alianza ? o.join('') : sinDatos(396, 'Aún no hay reparto calculado', 'Cuando el plan tenga su esquema, aquí se verá quién pone y quién recibe.'), w: 396, doble: true,
       svgG: pone || recibe || alianza ? g.join('') : sinDatos(220, 'Aún no hay reparto calculado'), wG: 220, hG: pone || recibe || alianza ? yo + 13 : 136,
       aria: RC ? 'Reparto (' + RC.estado + '): el dueño pone ' + mdp(pone) + (recibe < 0 ? ' y tiene una pérdida asignada teórica de ' + mdp(recibe) : ' y recibe ' + mdp(recibe) + (publicaT10(RC, 'dueno_recibe') ? '' : ' (teórico)')) + '; la alianza ' + (alianza < 0 ? 'tiene una pérdida asignada teórica de ' + mdp(alianza) : 'recibe ' + mdp(alianza) + (publicaT10(RC, 'alianza_recibe') ? '' : ' (teórico)')) + '; ' + fechaT10(RC)
@@ -1040,9 +1056,12 @@
     if (grande) return '<svg viewBox="0 0 ' + (c.wG || c.w) + ' ' + (c.hG || 136) + '" class="vz-svg-g" role="img" aria-label="' + esc(c.aria) + '">' + (c.svgG || c.svg) + '</svg>';
     return '<svg viewBox="0 0 ' + c.w + ' 136" width="' + c.w + '" height="136" role="img" aria-label="' + esc(c.aria) + '"' + (/class="vz-pan"/.test(c.svg) ? ' class="vz-panea"' : '') + '>' + c.svg + '</svg>';
   }
+  function pieFecha(c) {
+    return c.pieFecha ? '<p class="vz-fecha-reparto">' + esc(c.pieFecha) + '</p>' : '';
+  }
   function tarjeta(c) {
     return '<section class="vz-card' + (c.doble ? ' vz-doble' : '') + '" data-card="' + c.id + '" tabindex="0" role="button" aria-haspopup="dialog" aria-label="' + esc(c.titulo + ': ver el detalle') + '">' +
-      '<div class="vz-head"><span class="vz-tit">' + esc(c.titulo) + '</span><span class="vz-sub">' + c.sub + '</span></div>' + svgDe(c, false) + '</section>';
+      '<div class="vz-head"><span class="vz-tit">' + esc(c.titulo) + '</span><span class="vz-sub">' + c.sub + '</span></div>' + svgDe(c, false) + pieFecha(c) + '</section>';
   }
   function encabezado(d) {
     var v = d.v || {}, est = String(v.estado || ''), fa = fechaCorta(v.fecha_aprobacion), cambio = fechaCorta(d.cambio);
@@ -1225,7 +1244,7 @@
     var hay = c.detalle.some(function (s) { return s.filas.some(function (f) { return f[3] && explicaDe(f[3]); }); });
     return '<div class="vz-m-head"><span class="vz-asa" aria-hidden="true"></span><div><h2 class="vz-tit" id="vzMTit">' + esc(c.titulo) + '</h2><span class="vz-sub">' + c.sub + '</span></div>' +
       '<button type="button" class="vz-x" aria-label="Cerrar"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></button></div>' +
-      (QUE[c.id] ? '<p class="vz-m-que">' + esc(QUE[c.id]) + '</p>' : '') + '<div class="vz-m-fig">' + svgDe(c, true) + '</div>' +
+      (QUE[c.id] ? '<p class="vz-m-que">' + esc(QUE[c.id]) + '</p>' : '') + '<div class="vz-m-fig">' + svgDe(c, true) + '</div>' + pieFecha(c) +
       '<p class="vz-m-pista">Toca una cifra o una figura para ver qué hay detrás y de dónde sale' + (hay ? '; toca un renglón con flecha para ver qué es y de qué depende' : '') + '. Cifras en millones de pesos.</p>' +
       c.detalle.map(function (s) {
         return '<h3>' + esc(s.h) + '</h3><dl>' + s.filas.map(filaHtml).join('') + '</dl>';

@@ -2268,8 +2268,8 @@ prueba('B07 · sonda: un plan de tipo distinto cargado en la definición vertica
 });
 prueba('B07 · punto de entrada de la copia: reparto-prueba.html carga reparto.js, el motor, las tablas y la extensión, y muestra el estado del reparto', () => {
   const html = fs.readFileSync(path.join(APP, 'reparto-prueba.html'), 'utf8'), src = [...html.matchAll(/<script src="([^"?]+)/g)].map((m) => m[1]);
-  assert.deepStrictEqual(src.filter((x) => !/^https?:/.test(x)), ['reparto.js', 'motor.js', 'definicion-tablas.js', 'definicion-reparto.js', 'pantalla.js', 'reparto-prueba.js', '../portero.js']);
-  assert(/yod-acceso\.js/.test(html) && /noindex/.test(html) && !/servidor\.js|conexion\.js|arranque\.js/.test(html), 'con la misma puerta de acceso que arbol.html y sin escribir en el libro');
+  assert.deepStrictEqual(src, ['reparto.js', 'motor.js', 'definicion-tablas.js', 'definicion-reparto.js', 'pantalla.js', 'reparto-prueba.js']);
+  assert(/noindex/.test(html) && !/servidor\.js|conexion\.js|arranque\.js/.test(html), 'sin escribir en el libro (v3: sin red ni puerta del portal; ver la prueba del punto 1 de T-11 v2)');
   assert(!/reparto\.js|definicion-reparto/.test(fs.readFileSync(path.join(APP, 'arbol.html'), 'utf8')), 'la página normal no cambia');
   assert.strictEqual(fs.readFileSync(path.join(APP, 'definicion-reparto.js'), 'utf8'), require(path.join(APP, 'construir-reparto.cjs')).js, 'definicion-reparto.js coincide con los CSV de la extensión');
   const vm = require('vm'), ctx = { console }; ctx.window = ctx; ctx.self = ctx; ctx.globalThis = ctx; vm.createContext(ctx);
@@ -2309,6 +2309,75 @@ prueba('T-11 · las sondas EXACTAS del dictamen (P39R, P60R, N1, respaldo y el r
   [0, 1].forEach((t) => assert(r6(t).motivos.some((m) => /no coincide con el costo que usa F-02/.test(m)) && tot(r6(t)) === 0, String(t))); assert(!r6(0.15).motivos.some((m) => /no coincide con el costo que usa F-02/.test(m)));
   /* B07: plan patrimonial en la definición vertical */
   assert(/^BLOQUEADO/.test(Motor.reparto(DEF10, Object.assign({}, P39R, { tipo: 'patrimonial' })).resultado.estado));
+});
+/* ═══ corrección 2 de T-10 (dictamen T-11 v2): una prueba por punto ═══ */
+const cargaPagina = (loc) => {   // la página de prueba con sus archivos reales, sin red ni DOM; «loc» simula window.location
+  const vm = require('vm'), ctx = { console }; ctx.window = ctx; ctx.self = ctx; ctx.globalThis = ctx; if (loc) ctx.location = loc; vm.createContext(ctx);
+  ['reparto.js', 'motor.js', 'definicion-tablas.js', 'definicion-reparto.js', 'pantalla.js', 'reparto-prueba.js'].forEach((f) => vm.runInContext(fs.readFileSync(path.join(APP, f), 'utf8'), ctx, { filename: f }));
+  return ctx;
+};
+prueba('T-11 v2 · punto 1 · la página de prueba no pide nada a internet y su almacenamiento queda aparte del Árbol habitual', () => {
+  const html = fs.readFileSync(path.join(APP, 'reparto-prueba.html'), 'utf8');
+  const refs = [...html.matchAll(/(?:src|href|action|poster|data)\s*=\s*"([^"]*)"/gi)].map((m) => m[1]);
+  assert(refs.length >= 7 && refs.every((u) => /^[a-z0-9_.-]+\.(js|css)(\?v=[\w.-]+)?$/i.test(u)), 'sólo archivos de esta carpeta: ' + JSON.stringify(refs));
+  assert(!/https?:\/\/|\/\/[a-z]|portero|yod-acceso|yod-cargador|fonts\.g|jsdelivr|@import/i.test(html.replace(/<!--[\s\S]*?-->/g, '')), 'ni portal, ni fuentes de Google, ni jsDelivr, ni Portero');
+  const csp = (html.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/) || [])[1] || '';
+  assert(/default-src 'none'/.test(csp) && /script-src 'self'(;|$)/.test(csp) && /connect-src 'none'/.test(csp) && /font-src 'self'/.test(csp) && /img-src 'self' data:/.test(csp), 'la política del navegador impide cualquier otra petición: ' + csp);
+  const red = /\bfetch\s*\(|XMLHttpRequest|sendBeacon|new\s+WebSocket|EventSource|importScripts|createElement\(\s*['"](script|link|img|iframe)['"]|https?:\/\/(?!www\.w3\.org\/2000\/svg)/;
+  ['reparto.js', 'motor.js', 'definicion-tablas.js', 'definicion-reparto.js', 'pantalla.js', 'reparto-prueba.js'].forEach((f) => { const m = fs.readFileSync(path.join(APP, f), 'utf8').match(red); assert(!m, f + ' pide red: ' + (m && m[0])); });
+  assert(!/url\(\s*['"]?(https?:)?\/\/|@import/i.test(fs.readFileSync(path.join(APP, 'pantalla.css'), 'utf8')), 'pantalla.css no carga nada de fuera');
+  /* almacenamiento: mismas claves de siempre sin prefijo; con el prefijo de la página, todas distintas */
+  const ctx = cargaPagina({ protocol: 'file:', hostname: '' }), P = ctx.ArbolRepartoPrueba.PREFIJO_ALMACEN, base = ctx.ArbolPantalla.clavesAlmacen({}), pr = ctx.ArbolPantalla.clavesAlmacen({ prefijoAlmacen: P });
+  assert.strictEqual(JSON.stringify(base), JSON.stringify({ plan: 'ppp-arbol-pantalla-2', reglas: 'ppp-arbol-reglas-1', comparacion: 'ppp-arbol-comparacion-1' }), 'el Árbol habitual conserva sus claves');
+  assert(P && Object.keys(base).every((k) => pr[k] === P + base[k] && pr[k] !== base[k]), JSON.stringify(pr));
+  const fuente = fs.readFileSync(path.join(APP, 'pantalla.js'), 'utf8'); assert(!/ls\.(get|set|del)\(\s*CLAVE_/.test(fuente), 'pantalla.js ya no escribe ni lee con las claves fijas: usa las de clavesAlmacen');
+  let opts = null; const panel = { innerHTML: '' }, host = {};
+  ctx.ArbolPantalla = Object.assign({}, ctx.ArbolPantalla, { montar: (h, o) => { opts = o; return { estado: () => ({ plan: JSON.parse(JSON.stringify(P39)) }), DEF: null }; } });
+  ctx.ArbolRepartoPrueba.arranca(host, panel); assert(opts && opts.prefijoAlmacen === P, 'la página monta la pantalla con su prefijo');
+  /* sin la puerta del portal, en un sitio publicado no se monta */
+  const pub = cargaPagina({ protocol: 'https:', hostname: 'yodesarrollomx.github.io' }); let montada = false;
+  pub.ArbolPantalla = Object.assign({}, pub.ArbolPantalla, { montar: () => { montada = true; return null; } });
+  const pan2 = { innerHTML: '' }; assert.strictEqual(pub.ArbolRepartoPrueba.arranca({}, pan2), null); assert(!montada && /Página de prueba local/.test(pan2.innerHTML));
+  assert(cargaPagina({ protocol: 'http:', hostname: 'localhost' }).ArbolRepartoPrueba.esLocal({ protocol: 'http:', hostname: 'localhost' }));
+});
+prueba('T-11 v2 · punto 2 · la tarjeta «Reparto» de la pantalla y el panel muestran la pérdida teórica (etiqueta_reparto)', () => {
+  const ctx = cargaPagina({ protocol: 'file:', hostname: '' }), def = ctx.ArbolRepartoPrueba.definicion(ctx.ArbolMotor).definicion;
+  const n1 = con10(PLANES10.N1_tierra_especie, { 'S-17': 'al_liquidar', 'S-23': 'pactado', 'S-19': 'no' }, B2_DECLARADO);
+  const T = Motor.evalua(DEF10, n1, null, SIN).tarjetas.Reparto, c22 = T.cifras.find((c) => c.id === 'R-22');
+  assert(c22.valor < 0 && c22.etiqueta_reparto === 'Pérdida asignada (teórica) · Dueño', JSON.stringify(c22));
+  const tx = ctx.ArbolPantalla.textoCifras('Reparto', JSON.parse(JSON.stringify(T)));
+  assert(/^Pérdida asignada \(teórica\) · Veces su tierra$/.test(tx.s[0]) && /^Pérdida asignada \(teórica\) · Dueño −/.test(tx.s[1]), 'la tarjeta de la pantalla lee etiqueta_reparto: ' + JSON.stringify(tx.s));
+  assert.strictEqual(ctx.ArbolPantalla.etiquetaCifra(c22), 'Pérdida asignada (teórica) · Dueño');
+  const tp = ctx.ArbolPantalla.textoCifras('Reparto', JSON.parse(JSON.stringify(Motor.evalua(DEF10, P39, null, SIN).tarjetas.Reparto)));
+  assert(!tp.s.some((x) => /Pérdida/.test(x)) && tp.s[0] === 'Veces su tierra', 'sin pérdida, la etiqueta de siempre: ' + JSON.stringify(tp.s));
+  const tl = ctx.ArbolPantalla.textoCifras('Reparto', JSON.parse(JSON.stringify(Motor.evalua(DEF, BASE, null, SIN).tarjetas.Reparto)));
+  assert(!tl.s.some((x) => /Pérdida/.test(x)), 'sin la extensión la tarjeta se lee igual que antes');
+  const fuente = fs.readFileSync(path.join(APP, 'pantalla.js'), 'utf8'); assert(/return textoCifras\(nombre, T\);/.test(fuente) && /et: etiquetaCifra\(c\)/.test(fuente), 'la tarjeta y los avisos de la pantalla usan etiquetaCifra');
+  const h = ctx.ArbolRepartoPrueba.estadoHtml(ctx.ArbolMotor, def, JSON.parse(JSON.stringify(n1)));
+  assert(/<h3>Tarjeta «Reparto»<\/h3>/.test(h) && /<th scope="row">Pérdida asignada \(teórica\) · Dueño<\/th><td>−\$2,119,229 · teórico/.test(h), 'el panel de la página muestra la pérdida teórica');
+  cifra('Punto 2 (T-11 v2) · N1 con tierra en especie sin regla: la tarjeta dice «Pérdida asignada (teórica) · Dueño −…» y el panel «Pérdida asignada (teórica) · Dueño −$2,119,229 · teórico»');
+});
+prueba('T-11 v2 · punto 3 (N01) · una fecha de pago sin importe no aparece como pago, conserva su motivo y nunca desplaza el corte autorizado', () => {
+  const ctx = cargaPagina({ protocol: 'file:', hostname: '' }), def = ctx.ArbolRepartoPrueba.definicion(ctx.ArbolMotor).definicion;
+  const con = (reg) => Object.assign({}, P60, { reparto: Object.assign({}, DECL, reg) });
+  const p38 = con({ fechas_pago: { DUENO: 38 } }), r = Motor.reparto(DEF10, p38).resultado, fp = r.salida.paquete.fecha_pago_registrado;
+  assert(r.conciliacion.DUENO.pagado === 0 && fp.valor === null && fp.estado === 'inconsistente' && fp.fecha_sin_importe === 38 && /^fecha sin pago registrado al dueño: el mes 38 no tiene importe/.test(fp.motivos[0]), JSON.stringify(fp));
+  const pq = Motor.paqueteVisor(DEF10, p38), fq = pq.cascada.fechas;
+  assert(fq.pago_registrado.valor === null && fq.pago_registrado.estado === 'inconsistente' && fq.pago_registrado.fecha_sin_importe === 38 && fq.corte_autorizado.valor === 60 && pq.v.dueno_meses === 60, JSON.stringify(fq.pago_registrado));
+  const hv = textoVisor(pq);
+  assert(!/pago registrado al dueño: mes 38/.test(hv) && !/"Pago registrado al dueño","mes 38"/.test(hv), 'el visor no presenta el 38 como pago');
+  assert(/corte autorizado: mes 60 \(sin pago registrado; fecha de pago del mes 38 sin importe: inconsistente\)/.test(hv) && /corte de reparto autorizado en el mes 60/.test(hv), 'el corte 60 se conserva y la fecha sin importe se dice inconsistente');
+  assert(/"Pago registrado al dueño","sin pago registrado · fecha sin importe \(mes 38\): inconsistente, no es pago"/.test(hv));
+  const hp = ctx.ArbolRepartoPrueba.estadoHtml(ctx.ArbolMotor, def, JSON.parse(JSON.stringify(p38)));
+  assert(/Pago registrado<\/th><td>sin pago registrado · inconsistente: fecha sin pago registrado al dueño: el mes 38/.test(hp) && /Corte autorizado<\/th><td>mes 60/.test(hp) && !/Pago registrado<\/th><td>mes 38/.test(hp), 'el panel tampoco');
+  /* control: con importe registrado, el pago sí aparece y el corte sigue a la vista */
+  const pr = con({ fechas_pago: { DUENO: 60 }, pagos_registrados: { DUENO: 1000000 } }), xr = Motor.reparto(DEF10, pr).resultado, pqr = Motor.paqueteVisor(DEF10, pr), hr = textoVisor(pqr);
+  assert(xr.salida.paquete.fecha_pago_registrado.valor === 60 && xr.salida.paquete.fecha_pago_registrado.estado === 'registrado' && xr.conciliacion.DUENO.pagado === 1000000);
+  assert(/corte autorizado: mes 60 · pago registrado al dueño: mes 60/.test(hr) && /"Pago registrado al dueño","mes 60"/.test(hr), 'pago registrado con importe: corte y pago, ninguno sustituye al otro');
+  assert(/Pago registrado<\/th><td>mes 60/.test(ctx.ArbolRepartoPrueba.estadoHtml(ctx.ArbolMotor, def, JSON.parse(JSON.stringify(pr)))));
+  /* importe sin fecha: tampoco hay mes de pago, y lo dice */
+  const sf = Motor.reparto(DEF10, con({ pagos_registrados: { DUENO: 1000000 } })).resultado.salida.paquete.fecha_pago_registrado; assert(sf.valor === null && sf.estado === 'sin registro' && /pago registrado sin fecha/.test(sf.motivos[0]));
+  cifra('N01 (T-11 v2) · P60 con fecha de pago 38 y sin importe: pagado $0, fecha «inconsistente» sin valor, corte autorizado 60 en paquete, visor y panel; con importe de $1,000,000 en el mes 60, corte y pago a la vista');
 });
 prueba('Mutación CF-01 «si» (T-11): con S-12 = sí la única razón del bloqueo es CF-01; con S-12 = no el mismo plan autoriza', () => {
   const f = (s12) => Motor.reparto(DEF10, con10(PLANES10A.muestra_fee_5, { 'S-12': s12, 'S-13': 'A', 'S-23': 'pactado', 'S-17': 'al_liquidar' }, DECL)).resultado;
