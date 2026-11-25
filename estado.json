@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-25T01:06:39.463Z",
+ "generado": "2026-11-25T02:06:49.916Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -18,7 +18,7 @@
     "repo:yodesarrollomx/potenciales-yod"
    ],
    "desde": "2026-11-13T02:10:58Z",
-   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/76d80e2c76e41527ad63695d6186ad1e12d0f694",
+   "url": "https://github.com/yodesarrollomx/potenciales-yod/commit/eedbf78f079e48f03aac71b83c84a31d5a407b24",
    "msg": "potenciales-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
@@ -50,20 +50,8 @@
     "SYS-SALA"
    ],
    "desde": "2026-11-24T23:07:24Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45521628147",
-   "msg": "Falló el flujo «Sala · publicacion=datos-45518278207-1-arranque · sha=19992e0de78c954874bbb12b8a6ea4c4a891ed02» de sala-edicion, trabajo «publicar», paso 12 «Run actions/deploy-pages@v4»"
-  },
-  {
-   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-cada-hora.yml",
-   "tipo": "flujo",
-   "nodos": [
-    "sala-edicion::github_workflows_sala_cada_hora",
-    "repo:yodesarrollomx/sala-edicion",
-    "SYS-SALA"
-   ],
-   "desde": "2026-11-25T00:27:53Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45518278207",
-   "msg": "Falló el flujo «Sala · Cada hora» de sala-edicion, trabajo «arranque / arranque», paso 11 «Publicar datos y esperar su recibo exacto»"
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45523009532",
+   "msg": "Falló el flujo «Sala · publicacion=datos-45520580398-1-maquinas · sha=19992e0de78c954874bbb12b8a6ea4c4a891ed02» de sala-edicion, trabajo «publicar», paso 12 «Run actions/deploy-pages@v4»"
   },
   {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-diario.yml",
