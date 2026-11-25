@@ -199,11 +199,29 @@
     barra.addEventListener('submit', function (e) { e.preventDefault(); guardaAhora(false); });   // Enter o el botón principal: siempre plan nuevo
     host.addEventListener('click', function () { setTimeout(function () { var antes = N.origen(); if (antes && !origenVivo() && !est.ocupado) pinta(); }, 0); });
     root.addEventListener('resize', mide);
+    /* Liga desde la portada del PPP: arbol.html#abrir=<columna>. Abre ese plan del libro. Si en pantalla hay un plan con datos que no salió
+       de esa columna, no lo pisa: abre el panel «Abrir un plan» con esa columna lista para confirmar con un toque. */
+    function abrirDeLiga() {
+      var m = /^#abrir=([A-Z]{1,3})$/.exec(root.location ? root.location.hash || '' : ''); if (!m || !api) return;
+      try { root.history.replaceState(null, '', root.location.pathname + root.location.search); } catch (e) { }
+      var col = m[1], o = origenVivo(), datos = Object.keys((api.estado().plan || {}).valores || {}).length;
+      if (datos > 1 && !(o && o.columna === col)) {
+        est.panel = 'abrir'; est.confirma = col; est.lista = null; pinta();
+        N.lista().then(function (r) { if (est.panel !== 'abrir') return; if (!r.ok) { est.panel = ''; fin(texto(r.error)); return; } est.lista = Array.isArray(r.columnas) ? r.columnas : []; est.msg = 'Tienes otro plan en pantalla: toca el plan resaltado para abrirlo en su lugar.'; pinta(); }).catch(falla);
+        return;
+      }
+      est.ocupado = true; est.msg = 'Abriendo el plan…'; pinta();
+      N.abre(est.def, col).then(function (r) {
+        if (!r.ok) { fin(texto(r.error)); return; }
+        monta(); fin('Abrí «' + (r.nombre || 'sin nombre') + '» de la columna ' + r.columna + '.');
+      }).catch(falla);
+    }
     monta(); pinta();                                   // primero lo de la página; si el libro contesta, se cambia a su definición
     return N.definicion().catch(function () { return { modo: 'local', codigo: 'red', aviso: texto('red') }; }).then(function (d) {
       est.modo = d.modo; est.aviso = d.aviso || '';
       if (d.modo === 'libro') { est.tablas = d.tablas; est.def = d.definicion; est.puede = d.puede.guardar; monta(); }
       pinta();
+      if (d.modo === 'libro') abrirDeLiga();
       return { modo: est.modo, codigo: d.codigo || '', pantalla: function () { return api; } };
     });
   }

@@ -247,6 +247,16 @@
     raiz.innerHTML = '<div class="p2-error"><h2>Entra para ver el vivero</h2><p>PPP 2 usa tu sesión de YOD. Entra con tu correo y la página se abre sola.</p>' +
       '<button class="p2-btn oro" data-accion="entrar">Entrar con mi correo</button></div>';
   }
+  /* Planes que el Árbol PPP guardó en el libro Maestro (recurso arbol-columnas, sólo lectura). Se piden sólo si el servidor dice que el
+     árbol está encendido; si no contesta, la portada sigue igual. Cada tarjeta abre ese plan en el árbol (arbol.html#abrir=<columna>). */
+  function cargarArbol() {
+    if (!estado.vivero || estado.vivero.arbol !== true) return;
+    leer('arbol-columnas').then(function (r) {
+      if (!r || !r.ok || !Array.isArray(r.columnas)) return;
+      estado.arbolPlanes = r.columnas.filter(function (c) { return /^[A-Z]{1,3}$/.test(String(c.columna || '')); });
+      if (!estado.planId && (location.hash || '#/').replace(/^#\/?/, '') === '') pintarVivero();
+    }, function () { });
+  }
   function cargarVivero() {
     if (!configurado()) { raiz.innerHTML = '<div class="p2-error"><h2>El servidor de PPP 2 aún no está instalado</h2><p>La página está lista; falta publicar su servidor.</p></div>'; return; }
     if (!token()) { sinSesion(); return; }
@@ -264,7 +274,7 @@
         estado.viveroCopia = null;
         return fallo(r);
       }
-      estado.vivero = r; estado.viveroCopia = null; pintarVivero();
+      estado.vivero = r; estado.viveroCopia = null; pintarVivero(); cargarArbol();
     }, function () {
       if (estado.planId) return;
       if (previo && estado.viveroCopia) { estado.viveroCopia.sinRed = true; pintarVivero(); return; }
@@ -338,6 +348,12 @@
       (!anteriores && v.arbol === true ? '<a class="p2-btn suave" href="arbol-ppp/arbol.html"><i class="ti ti-binary-tree-2"></i> Armar un plan con el árbol</a>' : '') +   // sólo si el servidor dice que el árbol está encendido (Config!arbol = sí)
       (!anteriores && puede.editar && !estado.viveroCopia ? '<button class="p2-btn oro" data-accion="sembrar"><i class="ti ti-seedling"></i> Crear plan en blanco</button>' : '') + '</div></div>' +
       (tarjetas ? '<div class="p2-rejilla">' + tarjetas + '</div>' : '<div class="p2-vacio">' + (anteriores ? 'No hay expedientes anteriores en este registro.' : 'Todavía no hay planes en el nuevo sistema.') + '</div>') +
+      (!anteriores && v.arbol === true && (estado.arbolPlanes || []).length ? '<h2 class="p2-sobre" style="margin-top:22px">Planes del árbol</h2><div class="p2-rejilla">' + estado.arbolPlanes.map(function (c) {
+        return '<a class="p2-tarjeta" href="arbol-ppp/arbol.html#abrir=' + encodeURIComponent(c.columna) + '"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center">' +
+          chip('Árbol', 'gris') + chip((c.version || 'V1') + ' · ' + (c.estado || 'Borrador'), 'gris') + '</div><h2>' + esc(c.nombre || 'Plan del árbol') + '</h2>' +
+          '<div class="p2-tenue p2-chico">Guardado en el libro Maestro · columna ' + esc(c.columna) + (c.quien ? ' · ' + esc(c.quien) : '') + '</div>' +
+          '<div class="p2-chico"><b>Abrir en el árbol ›</b></div></a>';
+      }).join('') + '</div>' : '') +
       ((v.planes || []).some(function (p) { return !!p.error; }) ? '<p role="status">Hay libros que no se pudieron leer. <button class="p2-btn suave" data-accion="refrescar">Volver a consultar</button></p>' : '') +
       '<nav class="p2-acciones"><a class="p2-btn suave" href="' + (anteriores ? '#/' : '#/anteriores') + '">' + (anteriores ? 'Volver a planes de potencial' : 'Consultar expedientes anteriores') + '</a>' +
       (anteriores ? '<a class="p2-btn suave" href="index.html?archivo=1">Abrir mapa y archivo histórico</a>' : '') + '</nav>';
