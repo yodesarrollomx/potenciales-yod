@@ -35,6 +35,7 @@
     estado: 'El árbol solo guarda borradores.',
     red: 'No pude hablar con el servidor. Lo que ves usa la definición de esta página, que puede estar desactualizada.',
     definicion: 'La definición del libro no cargó bien. Uso la de esta página, que puede estar desactualizada; no se guarda en el libro.',
+    cambio_local: 'Cambiaste el plan en pantalla mientras abría el del libro: no lo pisé. Ábrelo desde «Abrir un plan» si lo quieres.',
     reglas: 'Tienes cambios a las reglas sin publicar. El libro guarda planes calculados con las reglas publicadas: vuelve a la definición original para guardar.'
   };
   function texto(codigo) { return TEXTOS[codigo] || 'El servidor respondió «' + String(codigo || 'sin respuesta').slice(0, 40) + '». No se guardó nada.'; }
@@ -94,9 +95,10 @@
     }
     function lista() { return leer('arbol-columnas'); }
     /* Abre una columna del árbol: la vuelve plan, comprueba que el motor la evalúa y la deja como el plan de la pantalla. */
-    function abre(def, letra) {
+    function abre(def, letra, guardia) {
       return leer('arbol-columna', { columna: letra }).then(function (r) {
         if (!r.ok) return r;
+        if (typeof guardia === 'function' && !guardia()) return { ok: false, error: 'cambio_local' };   // la pantalla cambió mientras llegaba: no se pisa
         var mapa = {}, nombre = '', version = '';
         (Array.isArray(r.valores) ? r.valores : []).forEach(function (x) { if (x && typeof x.id === 'string') { mapa[x.id] = x.valor; if (x.id === 'I-01') nombre = String(x.valor); if (x.id === 'I-02') version = String(x.valor); } });
         var v; try { v = conexion.columnaAPlan(def, mapa, { motor: motor }); } catch (e) { return { ok: false, error: 'definicion' }; }
@@ -199,11 +201,32 @@
     barra.addEventListener('submit', function (e) { e.preventDefault(); guardaAhora(false); });   // Enter o el botón principal: siempre plan nuevo
     host.addEventListener('click', function () { setTimeout(function () { var antes = N.origen(); if (antes && !origenVivo() && !est.ocupado) pinta(); }, 0); });
     root.addEventListener('resize', mide);
+    /* Liga desde la portada del PPP: arbol.html#abrir=<columna>. Abre ese plan del libro. Si en pantalla hay un plan con datos que no salió
+       de esa columna, no lo pisa: abre el panel «Abrir un plan» con esa columna lista para confirmar con un toque. */
+    function abrirDeLiga() {
+      var m = /^#abrir=([A-Z]{1,3})$/.exec(root.location ? root.location.hash || '' : ''); if (!m || !api) return;
+      try { root.history.replaceState(null, '', root.location.pathname + root.location.search); } catch (e) { }
+      /* sólo se abre sin preguntar si la pantalla no tiene ningún dato o si ya es ese mismo plan del libro; con cualquier dato (también el
+         tamaño del predio, que conserva la marca «dato de muestra» aunque se cambie) se pide confirmar con un toque */
+      var col = m[1], o = origenVivo(), ks = Object.keys((api.estado().plan || {}).valores || {});
+      if (ks.length > 0 && !(o && o.columna === col)) {
+        est.panel = 'abrir'; est.confirma = col; est.lista = null; pinta();
+        N.lista().then(function (r) { if (est.panel !== 'abrir') return; if (!r.ok) { est.panel = ''; fin(texto(r.error)); return; } est.lista = Array.isArray(r.columnas) ? r.columnas : []; est.msg = 'Tienes otro plan en pantalla: toca el plan resaltado para abrirlo en su lugar.'; pinta(); }).catch(falla);
+        return;
+      }
+      var foto = JSON.stringify(api.estado().plan || {});
+      est.ocupado = true; est.msg = 'Abriendo el plan…'; pinta();
+      N.abre(est.def, col, function () { return JSON.stringify(api.estado().plan || {}) === foto; }).then(function (r) {
+        if (!r.ok) { fin(texto(r.error)); return; }
+        monta(); fin('Abrí «' + (r.nombre || 'sin nombre') + '» de la columna ' + r.columna + '.');
+      }).catch(falla);
+    }
     monta(); pinta();                                   // primero lo de la página; si el libro contesta, se cambia a su definición
     return N.definicion().catch(function () { return { modo: 'local', codigo: 'red', aviso: texto('red') }; }).then(function (d) {
       est.modo = d.modo; est.aviso = d.aviso || '';
       if (d.modo === 'libro') { est.tablas = d.tablas; est.def = d.definicion; est.puede = d.puede.guardar; monta(); }
       pinta();
+      if (d.modo === 'libro') abrirDeLiga();
       return { modo: est.modo, codigo: d.codigo || '', pantalla: function () { return api; } };
     });
   }
