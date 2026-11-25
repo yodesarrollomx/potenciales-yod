@@ -916,6 +916,7 @@
     function panel(enfoca) {
       const foco = document.activeElement, kFoco = foco && panelEl.contains(foco) ? foco.getAttribute('data-k') : null, enCampo = foco && foco.tagName === 'INPUT' && foco.type === 'text';
       if (vista === 'presentacion' && !res.presentacion) vista = 'nodo';
+      if (vista === 'presentacion') panelEl.setAttribute('data-amplio', ''); else panelEl.removeAttribute('data-amplio');   // la lista de láminas es larga: su panel es más alto (pantalla.css)
       const aparte = vista === 'pruebas' || vista === 'reglas' || vista === 'lista' || vista === 'presentacion';
       const n = aparte ? null : (porId(sel) || res.nodos[0]);
       const clave = (aparte ? vista : n && n.id), st = panelEl.scrollTop, mismo = clave === panelClave;
@@ -1273,7 +1274,7 @@
       else if (a === 'comparar') { if (cmp) fijaVista('cmp'); else abreCmp(); }
       else if (a === 'editar') { editar = !editar; errCampo = null; pintaModo(); if (vista === 'reglas' && !editar) vista = 'nodo'; panel(); anuncia(editar ? 'Modo editar reglas encendido: borrador sin publicar.' : 'Modo editar reglas apagado.'); }
       else if (a === 'lista') { vista = vista === 'lista' ? 'nodo' : 'lista'; panel(true); }
-      else if (a === 'presentacion') { vista = vista === 'presentacion' ? 'nodo' : 'presentacion'; panel(true); }
+      else if (a === 'presentacion') { vista = vista === 'presentacion' ? 'nodo' : 'presentacion'; panel(true); if (vista === 'presentacion') ppp.scrollTop = ppp.scrollHeight; }   // el panel es lo último de la pantalla: se trae a la vista dentro de ella, sin mover la página
       else if (a === 'vercambios') { vista = 'reglas'; panel(true); if (panelEl.scrollIntoView) panelEl.scrollIntoView({ block: 'nearest' }); }
       else if (a.indexOf('esc:') === 0) { cambiaEscenario(a.slice(4)); if (cmp && cmp.ver === 'cmp') { fijaVista('arbol'); } }
       else if (a.indexOf('ver:') === 0) fijaVista(a.slice(4));

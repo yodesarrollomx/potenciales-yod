@@ -633,3 +633,6 @@ body{font-family:var(--body);font-size:15px;line-height:1.4;-webkit-text-size-ad
 .li-b.pres-n.fijo{cursor:default}
 .li-b.pres-n.vacia{border-style:dashed}
 .pres-c{font-style:normal;font-size:.6875rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--estrella);border:1px solid var(--estrella);border-radius:999px;padding:0 5px;margin-left:4px;white-space:nowrap}
+/* la lista de la presentación es larga (once láminas): mientras esa vista está abierta, su panel ocupa más alto que el de un dato */
+.ppp-panel[data-amplio]{min-height:60vh;min-height:60dvh;max-height:76vh;max-height:76dvh}
+@media (min-width:760px){.ppp-panel[data-amplio]{min-height:40vh;min-height:40dvh;max-height:58vh;max-height:58dvh}}

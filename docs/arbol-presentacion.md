@@ -18,7 +18,7 @@ Las láminas esquemáticas de la presentación (una por tema, sin caso) no viven
   - **★ llena** — el dato está firme (decidido o confirmado, y todo de lo que depende también).
   - **★ a medias** — hay dato, pero descansa en una referencia o en un supuesto estándar: sirve para armar la lámina y sigue «por confirmar».
   - **☆ vacía** — no hay dato: la lámina que lo usa queda incompleta.
-- En la barra del Árbol aparece el botón **Presentación** con el avance (`★ completos/total`). Abre un panel con las láminas en orden; cada lámina lista sus datos y cada renglón lleva al dato en el Árbol. Se puede filtrar por ficha: inversionista o dueño.
+- En la barra del Árbol aparece el botón **Presentación** con el avance (`★ completos/total`). Abre un panel con las láminas en orden; cada lámina lista sus datos y cada renglón lleva al dato en el Árbol. Se puede filtrar por ficha: inversionista o dueño. Como la lista es larga, mientras está abierta su panel ocupa más alto que el de un dato y se trae a la vista dentro de la pantalla del Árbol (la página no se mueve); al ir a un dato vuelve a su alto de siempre.
 - Al abrir un dato con estrella, su tarjeta dice a qué lámina alimenta y si es dato **clave** o de **apoyo**.
 - La leyenda explica las tres estrellas.
 - **Sin el mapa nada de esto existe**: ni botón, ni estrellas, ni leyenda nueva. El Árbol de siempre se ve y calcula igual (lo comprueban las pruebas de Node y la de navegador).

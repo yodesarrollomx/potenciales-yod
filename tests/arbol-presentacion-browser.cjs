@@ -97,6 +97,12 @@ const estado = (pg) => pg.evaluate(() => {
       assert.deepEqual(v.laminas, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => 'Lámina ' + n + ' completa'));
       assert.equal(v.filas, 100); assert.equal(v.botones + v.fijos, 100); assert.ok(v.fijos >= 8 && v.fijos <= 14, 'los datos internos (sin bolita) se listan sin botón: ' + v.fijos); assert.equal(v.claves, 39, "39 datos clave en el mapa");
       assert.equal(v.ley, '★ 1 firme · ★ 89 con supuesto por confirmar · ☆ 0 sin dato'); assert.ok(v.ancho, 'la lista no se sale del panel');
+      {   // la lista de láminas es larga: su panel es más alto que el de un dato y queda a la vista sin mover la página
+        const m = await pg.evaluate(() => { const p = document.querySelector('[data-panel]'), r = p.getBoundingClientRect(); return { amplio: p.hasAttribute('data-amplio'), alto: r.height, arriba: r.top, vh: innerHeight, pagina: scrollY, ancho: document.documentElement.scrollWidth <= innerWidth + 1 }; });
+        assert.equal(m.amplio, true); assert.equal(m.pagina, 0, 'la página no se mueve: sólo la pantalla del Árbol'); assert.ok(m.ancho, 'nada se sale a lo ancho');
+        assert.ok(m.alto >= (t.w < 760 ? 0.55 : 0.38) * m.vh, 'el panel de la presentación ocupa buena parte de la pantalla: ' + JSON.stringify(m));
+        assert.ok(m.arriba >= 0 && m.arriba < (t.w < 760 ? 0.5 : 0.65) * m.vh, 'el panel queda a la vista (en teléfono, de la mitad de la pantalla hacia arriba): ' + JSON.stringify(m));
+      }
       await foto(pg, t.w + '-3-presentacion');
       await pg.click('[data-a="pficha:dueno"]'); await pg.waitForTimeout(200);
       v = await pg.evaluate(() => { const p = document.querySelector('[data-panel]'); return { h2: p.querySelector('h2').textContent.trim(), laminas: [...p.querySelectorAll('h3.pres-l')].map((h) => h.textContent.trim()), temas: [...p.querySelectorAll('h4.pres-d')].map((h) => h.textContent.trim()) }; });
@@ -105,6 +111,7 @@ const estado = (pg) => pg.evaluate(() => {
       await pg.click('[data-a="pir:VD-08"]'); await pg.waitForTimeout(700);
       e = await estado(pg);
       assert.equal(e.vista, 'nodo'); assert.equal(e.sel, 'VD-08'); assert.equal(e.boton.pulsado, 'false');
+      assert.equal(await pg.evaluate(() => document.querySelector('[data-panel]').hasAttribute('data-amplio')), false, 'al ir a un dato el panel vuelve a su alto de siempre');
       const nota = await pg.locator('[data-panel] .estr-nota').textContent();
       assert.equal(nota.replace(/\s+/g, ' ').trim(), '★ Alimenta la presentación · con supuesto por confirmar. Va en lámina 10, «Aportar o vender» (dato clave).');
       assert.match(await pg.locator('.nodo[data-id="VD-08"]').getAttribute('aria-label'), /Alimenta la presentación: con supuesto por confirmar\.$/);
