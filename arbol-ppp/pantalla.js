@@ -71,6 +71,14 @@
     if (u.clase === 'mes') return u.etiqueta === 'mes' ? 'mes ' + nf(v) : nf(v) + (v === 1 ? ' mes' : nivel === 2 ? ' m' : ' mes.');
     return fmt(v, u);
   };
+  /* SPPP · T-10 v3 (dictamen T-11 v2, punto 2): una cifra del reparto con valor negativo trae «etiqueta_reparto» («Pérdida asignada (teórica) · …»);
+     la tarjeta y los avisos la usan en lugar de la etiqueta normal. Sin módulo de repartos la cifra no la trae y todo se ve igual que antes. */
+  const etiquetaCifra = (c) => (c && c.etiqueta_reparto) || (c && c.etiqueta);
+  /* SPPP · T-10 v3 (punto 1): las claves de localStorage aceptan un prefijo para que una página de prueba no lea ni escriba los planes del Árbol habitual */
+  function clavesAlmacen(opts) {
+    const pre = opts && typeof opts.prefijoAlmacen === 'string' && opts.prefijoAlmacen ? opts.prefijoAlmacen : '';
+    return { plan: pre + CLAVE_LS, reglas: pre + CLAVE_REG, comparacion: pre + CLAVE_CMP };
+  }
   const fmtCifra = (c) => {
     if (c.valor == null) return '?';
     if (typeof c.valor === 'string') return c.valor;
@@ -78,9 +86,18 @@
   };
 
   /* ───── montaje ───── */
+  /* texto de una tarjeta con cifras (todas menos «Riesgo y estado»): fuera de montar para poder probarlo sin pantalla */
+  function textoCifras(nombre, T) {
+    const cs = T.cifras.filter((c) => c.valor != null);
+    if (!cs.length) return { h: '?', s: ['cerrada'], est: false };
+    const s2 = cs[1] ? [etiquetaCifra(cs[0]), etiquetaCifra(cs[1]) + ' ' + fmtCifra(cs[1])] : [etiquetaCifra(cs[0])];
+    if (nombre === 'Reparto') s2.push(TXT_REPARTO);      // el reparto es el del libro: después de pagar banco y capital
+    return { h: fmtCifra(cs[0]), hc: fmtCifraCorta(cs[0], 1), hcc: fmtCifraCorta(cs[0], 2), s: s2, est: cs.slice(0, 2).some((c) => c.estado === 'estimado') };
+  }
   function montar(host, opts) {
     if (host.__ppp) host.__ppp.destruir();
     opts = opts || {};
+    const CL = clavesAlmacen(opts);
     const motor = opts.motor || root.ArbolMotor;
     const proyecto = opts.proyecto || 'Predio de muestra';
     const ubicacion = opts.ubicacion || 'Ubicación de muestra';
@@ -99,7 +116,7 @@
     /* reglas editadas en la sesión (borrador): la lista de cambios se aplica SIEMPRE a la definición original */
     let cambiosRegla = [], filasRegla = {}, tablasAct = tablas0, editar = false, errCampo = null, verExport = false;
     try {
-      const g = JSON.parse(ls.get(CLAVE_REG) || 'null');
+      const g = JSON.parse(ls.get(CL.reglas) || 'null');
       if (Array.isArray(g) && g.length) { const r0 = motor.editaDefinicion(DEF0, g); if (r0.ok) { cambiosRegla = g; DEF = r0.definicion; filasRegla = r0.filas_cambiadas || {}; } }
     } catch (e) { /* borrador ilegible: se empieza con la definición original */ }
 
@@ -107,7 +124,7 @@
     const planInicial = () => ({ tipo: 'vertical', valores: { 'T-01': { estado: 'confirmado', valor: 2000, fuente: 'dato de muestra' } }, datos: { 'I-08': ubicacion } });
     function leePlan() {
       try {
-        const g = JSON.parse(ls.get(CLAVE_LS) || 'null');
+        const g = JSON.parse(ls.get(CL.plan) || 'null');
         if (g && g.plan && g.plan.valores && g.plan.valores['T-01']) { const r = motor.evalua(DEF, g.plan); if (!(r.errores || []).length) return g.plan; }
       } catch (e) { /* plan guardado ilegible: se empieza de cero */ }
       return null;
@@ -124,7 +141,7 @@
     let tarjAntes = {}, temporizadores = [], reinicioPend = 0;
     let cmp = null, ultimoToque = null, forzarArriba = false, cierre = null, avisoCache = { clave: '', v: null };          // comparación A/B en curso; último toque del panel (contra el doble toque)
 
-    const guarda = () => { ls.set(CLAVE_LS, JSON.stringify({ plan })); guardaCmp(); };
+    const guarda = () => { ls.set(CL.plan, JSON.stringify({ plan })); guardaCmp(); };
     const porId = (id) => res.nodos.find((n) => n.id === id);
     const colorDe = (n) => 'var(--' + (SLUG[(n.tarjetas || [])[0]] || 'confirmar') + ')';
     const alertasRotas = () => (res.alertas || []).filter((a) => a.nivel !== 'info');
@@ -199,11 +216,7 @@
         const marca = up.length === 1 ? up[0].nota : up.length ? 'umbrales propios en ' + up.length + ' pruebas; el libro pide otros' : null;
         return { h: pasan + ' de ' + items.length, s: [fuera.length ? fuera.length + (fuera.length === 1 ? ' no pasa' : ' no pasan') : 'Todo pasa', marca || 'toca para ver'], est: true, marca: !!marca };
       }
-      const cs = T.cifras.filter((c) => c.valor != null);
-      if (!cs.length) return { h: '?', s: ['cerrada'], est: false };
-      const s2 = cs[1] ? [cs[0].etiqueta, cs[1].etiqueta + ' ' + fmtCifra(cs[1])] : [cs[0].etiqueta];
-      if (nombre === 'Reparto') s2.push(TXT_REPARTO);      // el reparto es el del libro: después de pagar banco y capital
-      return { h: fmtCifra(cs[0]), hc: fmtCifraCorta(cs[0], 1), hcc: fmtCifraCorta(cs[0], 2), s: s2, est: cs.slice(0, 2).some((c) => c.estado === 'estimado') };
+      return textoCifras(nombre, T);
     }
     function pintaTarjetas() {
       let html = '';
@@ -1299,13 +1312,13 @@
     function guardaActivo() { if (cmp) { cmp[cmp.activo].plan = plan; cmp[cmp.activo].hist = historia; } }
     /* P5: la comparación (A congelado, B, rótulos, versión activa y vista) se guarda y se recupera al recargar (con try/catch; sin almacenamiento sigue igual) */
     function guardaCmp() {
-      if (!cmp) { ls.del(CLAVE_CMP); return; }
+      if (!cmp) { ls.del(CL.comparacion); return; }
       guardaActivo();
-      ls.set(CLAVE_CMP, JSON.stringify({ v: 1, huella: DEF.huella, activo: cmp.activo, ver: cmp.ver, rotA: cmp.rotA, rotB: cmp.rotB, A: { plan: cmp.A.plan, hist: cmp.A.hist.slice(-20) }, B: { plan: cmp.B.plan, hist: cmp.B.hist.slice(-20) } }));
+      ls.set(CL.comparacion, JSON.stringify({ v: 1, huella: DEF.huella, activo: cmp.activo, ver: cmp.ver, rotA: cmp.rotA, rotB: cmp.rotB, A: { plan: cmp.A.plan, hist: cmp.A.hist.slice(-20) }, B: { plan: cmp.B.plan, hist: cmp.B.hist.slice(-20) } }));
     }
     function restauraCmp() {
       try {
-        const g = JSON.parse(ls.get(CLAVE_CMP) || 'null');
+        const g = JSON.parse(ls.get(CL.comparacion) || 'null');
         if (!g || g.v !== 1 || (g.activo !== 'A' && g.activo !== 'B') || !g.A || !g.B) return false;
         const planOk = (p) => { if (!p || !p.valores || !p.valores['T-01']) return null; const r = motor.evalua(DEF, p, null, SOLO_CIFRAS); return (r.errores || []).length ? null : r.plan; };
         const pA = planOk(g.A.plan), pB = planOk(g.B.plan); if (!pA || !pB) return false;
@@ -1641,7 +1654,7 @@
       if (!mismoTxt(orig, c.valor)) out.push(c);
       return out;
     }
-    function edoTarjetas() { const o = {}; ORDEN_TARJETAS.forEach((nm) => { const T = res.tarjetas[nm]; if (T) T.cifras.forEach((c) => { if (c.valor != null && !(c.id in o)) o[c.id] = { et: c.etiqueta, txt: fmtCifra(c), v: c.valor }; }); }); return o; }
+    function edoTarjetas() { const o = {}; ORDEN_TARJETAS.forEach((nm) => { const T = res.tarjetas[nm]; if (T) T.cifras.forEach((c) => { if (c.valor != null && !(c.id in o)) o[c.id] = { et: etiquetaCifra(c), txt: fmtCifra(c), v: c.valor }; }); }); return o; }
     function efectoDeCifras(antes, titulo) {
       const ahora = edoTarjetas(), partes = [];
       Object.keys(ahora).forEach((i) => { if (antes[i] && antes[i].txt !== ahora[i].txt && partes.length < 4) partes.push(ahora[i].et + ' ' + antes[i].txt + ' → ' + ahora[i].txt); });
@@ -1655,7 +1668,7 @@
       const nuevos = planes.map((p) => { const rr = motor.evalua(r.definicion, p, null, SOLO_CIFRAS); if ((rr.errores || []).some((e) => /ya no existe/.test(e.mensaje || ''))) malos.push(sinIds(rr.errores[0].mensaje)); return rr.plan; });
       if (malos.length) { errCampo = k ? { k, texto, mensaje: 'Ese cambio dejaría sin sentido algo ya elegido en el plan: ' + malos[0] + ' Cambia primero esa decisión.' } : null; if (!k) ultimosErrores = [{ codigo: 'regla', mensaje: 'Eso deja sin sentido algo ya elegido: ' + malos[0] }]; panel(); return false; }
       const antes = edoTarjetas();
-      cambiosRegla = lista; DEF = r.definicion; filasRegla = r.filas_cambiadas || {}; reconstruyeTablas(); ls.set(CLAVE_REG, JSON.stringify(cambiosRegla)); errCampo = null; ultimosErrores = [];
+      cambiosRegla = lista; DEF = r.definicion; filasRegla = r.filas_cambiadas || {}; reconstruyeTablas(); ls.set(CL.reglas, JSON.stringify(cambiosRegla)); errCampo = null; ultimosErrores = [];
       if (cmp) { cmp.A.plan = nuevos[0]; cmp.B.plan = nuevos[1]; plan = cmp[cmp.activo].plan; } else plan = nuevos[0];
       res = motor.evalua(DEF, plan); plan = res.plan; if (cmp) cmp[cmp.activo].plan = plan; guarda();
       efecto = efectoDeCifras(antes, titulo || 'Regla cambiada');
@@ -1849,5 +1862,5 @@
     return api;
   }
 
-  root.ArbolPantalla = { montar, fmt };
+  root.ArbolPantalla = { montar, fmt, textoCifras, etiquetaCifra, clavesAlmacen };
 })(typeof window !== 'undefined' ? window : this);

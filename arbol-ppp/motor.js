@@ -3094,7 +3094,7 @@
         corte_autorizado: { valor: null, estado: 'teórico', rol: 'corte autorizado', fuente: 'corte del reparto (S-21)', motivos: [x.estado] }, pago_registrado: { valor: null, estado: 'sin registro', rol: 'pago registrado', fuente: 'libro de pagos (fuera del Árbol)', motivos: ['sin pago registrado'] } };
       return b;
     }
-    const pq = x.salida.paquete, f = (k) => (pq[k] ? { valor: pq[k].valor, estado: pq[k].estado, rol: pq[k].rol || null, fuente: pq[k].fuente, motivos: pq[k].motivos } : null);
+    const pq = x.salida.paquete, f = (k) => (pq[k] ? Object.assign({ valor: pq[k].valor, estado: pq[k].estado, rol: pq[k].rol || null, fuente: pq[k].fuente, motivos: pq[k].motivos }, pq[k].fecha_sin_importe !== undefined ? { fecha_sin_importe: pq[k].fecha_sin_importe } : {}) : null);   // N01 (T-11 v2): la fecha sin importe viaja aparte, nunca como valor
     return Object.assign(b, {
       corte: x.corte, mes_corte: x.mes_corte, primer_mes_cierre: x.primer_mes_cierre, cartera_por_cobrar: x.cartera_por_cobrar, egresos_pendientes: x.egresos_pendientes,
       caja_disponible: x.cd, acreedores: x.acreedores, reservas: [x.reserva].concat(x.reservas_otras || []), caja_repartible: x.cr,

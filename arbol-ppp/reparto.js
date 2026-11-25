@@ -18,7 +18,7 @@
   else root.ArbolReparto = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
-  const VERSION = 'reparto-t10-2.0.0';   // corrección 1 de T-10 (dictamen T-11 v1)
+  const VERSION = 'reparto-t10-3.0.0';   // corrección 2 de T-10 (dictamen T-11 v2): N01
 
   /* ═════════════════════════ ARITMÉTICA EXACTA (equivale a Decimal del guion) ═════════════════════════ */
   const gcd = (a, b) => { if (a < 0n) a = -a; if (b < 0n) b = -b; while (b) { const t = a % b; a = b; b = t; } return a; };
@@ -1193,9 +1193,13 @@
       paquete.dueno_meses = Object.assign(campo(V.dueno_meses === undefined ? null : V.dueno_meses, 'motor (hito del Árbol)', motRef), { rol: 'hito del motor' });
       paquete.dueno_anos = Object.assign(campo(V.dueno_anos === undefined ? null : V.dueno_anos, 'motor (hito del Árbol)', motRef), { rol: 'hito del motor' });
     }
-    const mesPago = esObj(p.fechas_pago) && p.fechas_pago.DUENO ? p.fechas_pago.DUENO : null;
-    paquete.fecha_pago_registrado = { valor: mesPago, estado: mesPago !== null ? 'registrado' : 'sin registro', fuente: 'libro de pagos (fuera del Árbol)', rol: 'pago registrado',
-      motivos: mesPago !== null ? (pag.DUENO > 0 ? [] : ['fecha sin pago registrado al dueño']) : [pag.DUENO > 0 ? 'pago registrado sin fecha en el libro de pagos' : 'sin pago registrado'] };
+    /* N01 (dictamen T-11 v2): un pago existe sólo con importe registrado. Una fecha sin importe no es pago: queda «inconsistente», sin valor
+       (nadie la lee como mes de pago), conserva su motivo y la fecha declarada aparte; nunca toca el corte autorizado. */
+    const mesPago = esObj(p.fechas_pago) && p.fechas_pago.DUENO ? p.fechas_pago.DUENO : null, conImporte = pag.DUENO > 0;
+    const basePago = { fuente: 'libro de pagos (fuera del Árbol)', rol: 'pago registrado' };
+    paquete.fecha_pago_registrado = mesPago !== null && conImporte ? Object.assign({ valor: mesPago, estado: 'registrado' }, basePago, { motivos: [] })
+      : mesPago !== null ? Object.assign({ valor: null, estado: 'inconsistente', fecha_sin_importe: mesPago }, basePago, { motivos: ['fecha sin pago registrado al dueño: el mes ' + mesPago + ' no tiene importe en el libro de pagos; no es un pago'] })
+        : Object.assign({ valor: null, estado: 'sin registro' }, basePago, { motivos: [conImporte ? 'pago registrado sin fecha en el libro de pagos' : 'sin pago registrado'] });
     if (caso.paquete_v && caso.paquete_v.resultado_repartir !== null && caso.paquete_v.resultado_repartir !== undefined) paquete.resultado_repartir = campo(caso.paquete_v.resultado_repartir * 1e6, 'motor', []);
     const rot = {}; Object.keys(paquete).forEach((c) => { const x = paquete[c]; rot[c] = x.estado === 'publicable' ? 'publicable' : x.estado === 'registrado' ? 'registrado' : 'teórico · ' + x.motivos.join('; '); });
     DEPENDEN_TIERRA.forEach((k) => { const x = publicado[k] || legado[k]; if (x) rot[k] = x.estado === 'publicable' ? 'publicable' : 'teórico · ' + x.motivos.join('; '); });

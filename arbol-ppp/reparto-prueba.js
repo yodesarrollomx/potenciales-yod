@@ -2,12 +2,17 @@
    Carga la definición base (definicion-tablas.js) con la extensión del reparto (definicion-reparto.js), monta la pantalla del Árbol y muestra
    junto a ella el estado del reparto del plan en pantalla: estado, motivos, corte y fechas (N-02), totales simulado, autorizado y pagado, y el
    estado de los datos de las fichas (C2). Copia de prueba: sólo vertical en venta, no guarda en el libro ni toca el PPP Maestro.
-   Orden de carga (reparto-prueba.html): reparto.js, motor.js, definicion-tablas.js, definicion-reparto.js, pantalla.js y este archivo. */
+   Orden de carga (reparto-prueba.html): reparto.js, motor.js, definicion-tablas.js, definicion-reparto.js, pantalla.js y este archivo.
+   v3 (dictamen T-11 v2): la página no pide nada a internet (sin portal, fuentes ni Portero) y por eso sólo arranca en una copia local (file:// o
+   localhost): en un sitio publicado no monta nada. Su almacenamiento usa el prefijo PREFIJO_ALMACEN, aparte de los planes del Árbol habitual.
+   El panel muestra las cifras de la tarjeta «Reparto» con su rótulo (pérdida asignada teórica) y un pago sólo si el libro trae su importe (N01). */
 (function (root) {
   'use strict';
   const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const miles = (x) => (typeof x === 'number' && isFinite(x) ? (x < 0 ? '−' : '') + '$' + String(Math.round(Math.abs(x))).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '—');
   const mes = (x) => (typeof x === 'number' && isFinite(x) ? 'mes ' + x : '—');
+  const PREFIJO_ALMACEN = 'ppp-reparto-prueba:';   // claves de localStorage propias de esta página (el Árbol habitual usa las mismas sin prefijo)
+  const esLocal = (loc) => !loc || loc.protocol === 'file:' || ['localhost', '127.0.0.1', '::1', '[::1]', ''].indexOf(String(loc.hostname || '')) >= 0;
 
   /* la definición base más la extensión del reparto, en pestañas (lo mismo que hace la suite con carga(…, { extension })) */
   function definicion(motor) {
@@ -32,16 +37,24 @@
     h += '<p class="rp-alcance">' + esc(b.alcance) + ' · opción ' + esc(b.opcion_reparto) + (b.opcion_titulo ? ' (' + esc(b.opcion_titulo) + ')' : '') + '</p><table class="rp-tabla">';
     h += fila('Corte autorizado', esc(val('corte_autorizado') !== null ? mes(val('corte_autorizado')) : 'sin fecha autorizada'));
     h += fila('Hito del motor (referencia del Árbol)', esc(mes(val('hito_motor'))));
-    h += fila('Pago registrado', esc(val('pago_registrado') !== null ? mes(val('pago_registrado')) : 'sin pago registrado'));
+    /* N01: sólo es pago lo registrado con importe; una fecha sin importe se dice inconsistente con su motivo y nunca aparece como mes de pago */
+    const pr = f.pago_registrado;
+    h += fila('Pago registrado', esc(pr && pr.estado === 'registrado' && pr.valor !== null ? mes(pr.valor) : 'sin pago registrado' + (pr && pr.estado === 'inconsistente' ? ' · inconsistente: ' + (pr.motivos || []).join('; ') : '')));
     if (b.caja_repartible !== undefined) {
       h += fila('Corte', esc(b.corte + ' · mes ' + b.mes_corte));
       h += fila('Caja repartible', esc(miles(b.caja_repartible)));
       h += fila('Simulado · autorizado · pagado', esc(miles(b.totales.simulado) + ' · ' + miles(b.totales.autorizado) + ' · ' + miles(b.totales.pagado)));
-      ['DUENO', 'ALIANZA', 'CAPITAL'].forEach((k) => { const c = b.conciliacion && b.conciliacion[k]; if (c) h += fila({ DUENO: 'Dueño', ALIANZA: 'Alianza', CAPITAL: 'Capital' }[k], esc('derecho ' + miles(c.derecho) + ' · autorizado ' + miles(c.autorizado) + ' · pagado ' + miles(c.pagado))); });
+      ['DUENO', 'ALIANZA', 'CAPITAL'].forEach((k) => { const c = b.conciliacion && b.conciliacion[k]; if (c) h += fila({ DUENO: 'Dueño', ALIANZA: 'Alianza', CAPITAL: 'Capital · conciliación' }[k], esc('derecho ' + miles(c.derecho) + ' · autorizado ' + miles(c.autorizado) + ' · pagado ' + miles(c.pagado))); });
       const so = b.alianza_por_socio && b.alianza_por_socio.simulado;
       if (so) h += fila('Alianza por socio (simulado)', esc(Object.keys(so).map((k) => k + ' ' + miles(so[k])).join(' · ')));
     }
     h += '</table>';
+    /* punto 2 (T-11 v2): las cifras de la tarjeta «Reparto» con su rótulo; un negativo se lee «Pérdida asignada (teórica)» (etiqueta_reparto) */
+    const t = motor.evalua(def, plan, null, { sugerencias: 'no', rutas: 'no' }).tarjetas.Reparto;
+    if (t && t.cifras) {
+      h += '<h3>Tarjeta «Reparto»</h3><table class="rp-tabla rp-tarjeta">' + t.cifras.filter((c) => c.valor != null && c.id !== 'R-23').map((c) => fila(c.etiqueta_reparto || (c.id === 'R-25' ? 'Capital · cifra de la tarjeta (R-25)' : c.etiqueta),
+        esc(miles(c.valor) + (c.rotulo ? ' · ' + c.rotulo : c.estado_reparto ? ' · ' + c.estado_reparto : '')))).join('') + '</table>';
+    }
     const mot = (b.motivos || []).concat(b.motivos_utilidades || []);
     h += mot.length ? '<h3>Por qué no se autoriza</h3><ul class="rp-motivos">' + mot.map((m) => '<li>' + esc(m) + '</li>').join('') + '</ul>' : '<p class="rp-ok">Sin motivos de bloqueo en este corte.</p>';
     h += '<details><summary>Lo que la copia de prueba no implementa (se bloquea)</summary><ul>' + (b.no_implementado || []).map((m) => '<li>' + esc(m) + '</li>').join('') + '</ul></details>';
@@ -55,9 +68,10 @@
 
   /* monta la pantalla con la definición extendida y vuelve a pintar el estado cada vez que la pantalla cambia */
   function arranca(host, panel, opciones) {
+    if (!esLocal(root.location)) { panel.innerHTML = '<section class="rp-estado"><h2>Página de prueba local</h2><p>Esta copia de prueba no usa la puerta de acceso del portal y no pide nada a internet: ábrela desde una copia local del repositorio (archivo o localhost). En un sitio publicado no se monta.</p></section>'; return null; }
     const motor = (opciones && opciones.motor) || root.ArbolMotor, d = definicion(motor);
     if (d.errores && d.errores.length) { panel.innerHTML = '<section class="rp-estado"><h2>Reparto · no se pudo cargar</h2><p>' + esc(d.errores.map((e) => e.mensaje).join(' ')) + '</p></section>'; return null; }
-    const api = root.ArbolPantalla.montar(host, { motor, tablas: d.fuente, proyecto: 'Copia de prueba · reparto (T-10)' });
+    const api = root.ArbolPantalla.montar(host, { motor, tablas: d.fuente, proyecto: 'Copia de prueba · reparto (T-10)', prefijoAlmacen: PREFIJO_ALMACEN });
     if (!api) { panel.innerHTML = '<section class="rp-estado"><h2>Reparto · no se pudo montar la pantalla</h2></section>'; return null; }
     let ultimo = '', t = null;
     const pinta = () => { const est = api.estado(); const k = JSON.stringify(est.plan); if (k === ultimo) return; ultimo = k; panel.innerHTML = estadoHtml(motor, api.DEF, est.plan); };
@@ -66,7 +80,7 @@
     return api;
   }
 
-  const api = { definicion, estadoHtml, arranca };
+  const api = { definicion, estadoHtml, arranca, PREFIJO_ALMACEN, esLocal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.ArbolRepartoPrueba = api;
   if (typeof document !== 'undefined' && document.getElementById) {

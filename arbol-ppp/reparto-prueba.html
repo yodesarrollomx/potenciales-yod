@@ -2,18 +2,16 @@
 <html lang="es" data-theme="light">
 <head>
 <meta charset="utf-8">
-<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-acceso.js?v=20261031-fase1-e2"></script>
-<script src="https://yodesarrollomx.github.io/yod-portal/os/yod-cargador.js?v=20261031-fase1-e2"></script>
+<!-- SPPP · T-10 v3 (dictamen T-11 v2, punto 1): página de prueba sin red. Sólo carga archivos de esta copia; la política de abajo impide en el
+     navegador cualquier otra petición (scripts, estilos, fuentes, imágenes o conexiones a otro origen). Sin la puerta del portal, sólo arranca en local. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <title>Árbol PPP · reparto en copia de prueba · YoDesarrollo</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css">
-<link rel="stylesheet" href="pantalla.css?v=20261123-arbol-marco">
+<link rel="stylesheet" href="pantalla.css?v=20261124-repartos-p10">
 <style>
   /* SPPP · T-10 · página de prueba del módulo de repartos (corrección 1, dictamen T-11): el Árbol a la izquierda, el estado del reparto a la derecha */
-  body { margin: 0; font-family: 'Instrument Sans', system-ui, sans-serif; color: #231d14; background: #fbf8f2; }
+  body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; color: #231d14; background: #fbf8f2; }
   .rp-aviso { margin: 0; padding: 8px 14px; font-size: 13px; background: #f3e6c8; border-bottom: 1px solid #e1d3ae; }
   .rp-marco { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 0; height: calc(100vh - 36px); }
   #arbol-ppp { min-width: 0; height: 100%; overflow: hidden; }
@@ -26,17 +24,16 @@
 </style>
 </head>
 <body>
-<p class="rp-aviso" role="note">Copia de prueba del módulo de repartos (SPPP · T-10): sólo vertical en venta; renta y el Hub quedan bloqueados. Esta página no guarda en el libro ni toca el PPP Maestro.</p>
+<p class="rp-aviso" role="note">Copia de prueba del módulo de repartos (SPPP · T-10): sólo vertical en venta; renta y el Hub quedan bloqueados. Esta página no guarda en el libro ni toca el PPP Maestro, no pide nada a internet y guarda sus planes aparte de los del Árbol habitual.</p>
 <div class="rp-marco">
   <div id="arbol-ppp"></div>
   <aside id="reparto-estado" aria-live="polite" aria-label="Estado del reparto del plan en pantalla"></aside>
 </div>
-<script src="reparto.js?v=20261123-arbol-marco"></script>
-<script src="motor.js?v=20261123-arbol-marco"></script>
-<script src="definicion-tablas.js?v=20261123-arbol-marco"></script>
-<script src="definicion-reparto.js?v=20261123-arbol-marco"></script>
-<script src="pantalla.js?v=20261123-arbol-marco"></script>
-<script src="reparto-prueba.js?v=20261123-arbol-marco"></script>
-<script src="../portero.js?v=20261123-arbol-marco"></script>
+<script src="reparto.js?v=20261124-repartos-p10"></script>
+<script src="motor.js?v=20261124-repartos-p10"></script>
+<script src="definicion-tablas.js?v=20261124-repartos-p10"></script>
+<script src="definicion-reparto.js?v=20261124-repartos-p10"></script>
+<script src="pantalla.js?v=20261124-repartos-p10"></script>
+<script src="reparto-prueba.js?v=20261124-repartos-p10"></script>
 </body>
 </html>
