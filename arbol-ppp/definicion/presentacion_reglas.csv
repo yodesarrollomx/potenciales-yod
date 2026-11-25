@@ -1,0 +1,5 @@
+id,nodo,clase,cuando,accion,objetivo,valor,nivel,texto,sobre,orden,palancas,medida,meta,pasa_si,sugiere,texto_sugerencia
+AL-MU16-1,MU-16,alerta,abs(MU-16 - 1) > 0.0005,,,,aviso,La mezcla de usos suma {MU-16} y debe sumar 100%: ajusta la parte de cada uso.,MU-01;MU-02;MU-03;MU-04,10,,,,,no,
+AL-MU18-1,MU-18,alerta,abs(MU-18) > 0.001 * PT-07,,,,aviso,Las ventas por uso suman {MU-17} y el plan vende {PT-07}: iguala el precio del plan al promedio de la mezcla o ajusta los precios por uso.,MU-17,10,,,,,no,
+AL-MT03-1,MT-03,alerta,,,,,aviso,El margen antes del capital es {MT-03} y la meta de Dirección es {MT-01}.,MT-03,10,,MT-03,MT-01,>=,no,
+AL-VD08-1,VD-08,alerta,VD-08 < 1,,,,aviso,"A valor de hoy, aportar le deja al dueño {VD-07} y vender directo {VD-05}: con estos supuestos le conviene más vender.",VD-08,10,,,,,no,

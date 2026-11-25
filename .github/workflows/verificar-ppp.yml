@@ -87,6 +87,9 @@ jobs:
           node --check arbol-ppp/definicion-tablas.js
           node --check arbol-ppp/conexion/conexion.js
           node --check arbol-ppp/construir-artifact.cjs
+          node --check arbol-ppp/construir-presentacion.cjs
+          node --check arbol-ppp/definicion-presentacion.js
+          node --check arbol-ppp/presentacion-prueba.js
           node arbol-ppp/pruebas/motor-real.cjs
           node arbol-ppp/conexion/pruebas.cjs
           node --check arbol-ppp/servidor.js
@@ -163,6 +166,7 @@ jobs:
           node tests/ppp2-browser.cjs
           node tests/ppp2-visor-browser.cjs
           node tests/visor-explica-browser.cjs
+          node tests/arbol-presentacion-browser.cjs
       - name: Comprobar archivos publicados
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:

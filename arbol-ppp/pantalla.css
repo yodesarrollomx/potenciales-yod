@@ -3,17 +3,17 @@
 :root{
   --bg:#f3f5f7; --panel:#ffffff; --ink:#16212b; --mute:#566573; --line:#c9d2da; --ghost:#8794a0; --alerta:#c25e00;
   --terreno:#2e86de; --producto:#d63a86; --tiempo:#1f9d57; --costo:#d98200; --dinero:#8e44ad; --reparto:#8b5a2b; --riesgo:#d8432f; --confirmar:#16212b;
-  --sombra:rgba(0,0,0,.16); --rojo:#c4201c; --info:#2468b0;
+  --sombra:rgba(0,0,0,.16); --rojo:#c4201c; --info:#2468b0; --estrella:#9a6b00;
   --display:"Space Grotesk",system-ui,sans-serif; --body:Inter,system-ui,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#10161c; --panel:#18212a; --ink:#e8edf1; --mute:#9aa7b3; --line:#34424f; --ghost:#6c7a86; --alerta:#f0a050;
   --terreno:#5aa6f0; --producto:#f06aa9; --tiempo:#46c47e; --costo:#f2a63a; --dinero:#b77ad6; --reparto:#c08a55; --riesgo:#f0705e; --confirmar:#e8edf1;
-  --sombra:rgba(0,0,0,.5); --rojo:#ff7a6b; --info:#7db4f0; color-scheme:dark}}
+  --sombra:rgba(0,0,0,.5); --rojo:#ff7a6b; --info:#7db4f0; --estrella:#f2c14e; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#10161c; --panel:#18212a; --ink:#e8edf1; --mute:#9aa7b3; --line:#34424f; --ghost:#6c7a86; --alerta:#f0a050;
   --terreno:#5aa6f0; --producto:#f06aa9; --tiempo:#46c47e; --costo:#f2a63a; --dinero:#b77ad6; --reparto:#c08a55; --riesgo:#f0705e; --confirmar:#e8edf1;
-  --sombra:rgba(0,0,0,.5); --rojo:#ff7a6b; --info:#7db4f0; color-scheme:dark}
+  --sombra:rgba(0,0,0,.5); --rojo:#ff7a6b; --info:#7db4f0; --estrella:#f2c14e; color-scheme:dark}
 
 html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);overflow-x:hidden}
 body{font-family:var(--body);font-size:15px;line-height:1.4;-webkit-text-size-adjust:100%}
@@ -602,3 +602,37 @@ body{font-family:var(--body);font-size:15px;line-height:1.4;-webkit-text-size-ad
 .tarj b{letter-spacing:-.01em}
 .tarj b{min-height:2.5em}
 @media (max-height:760px){.tarj b{min-height:2.5em}.tarj.conf b{min-height:0}}
+
+/* ───── Estrellas: datos que alimentan la presentación (24-nov-2026). Solo se pintan con una definición que trae ARBOL_PRESENTACION. ───── */
+.nodo .estr{display:none;pointer-events:none}
+.nodo .estr.llena,.nodo .estr.supuesto,.nodo .estr.vacia{display:block}
+.estr path{stroke-width:1.4;stroke-linejoin:round}
+.estr.llena path{fill:var(--estrella);stroke:var(--panel)}
+.estr.supuesto path{fill:color-mix(in srgb,var(--estrella) 30%,var(--panel));stroke:var(--estrella)}
+.estr.vacia path{fill:var(--panel);stroke:var(--ghost);stroke-dasharray:2 1.6}
+.estr-g{font-style:normal;color:var(--estrella)}
+.estr-g.supuesto{opacity:.55}
+.estr-g.vacia{color:var(--ghost)}
+.estr-nota{margin:4px 0 6px;padding:5px 9px;border-left:4px solid var(--estrella);background:color-mix(in srgb,var(--estrella) 9%,var(--panel));border-radius:0 8px 8px 0;font-size:.8rem;line-height:1.35}
+.estr-nota.vacia{border-left-color:var(--ghost);background:color-mix(in srgb,var(--ghost) 12%,var(--panel))}
+.ppp-btn.chico.pres-b{border-color:var(--estrella);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ppp-btn.chico.pres-b[hidden]{display:none}
+/* con el botón de la presentación son cinco herramientas: en un teléfono siguen en una sola fila (el texto de un botón puede ir en dos renglones) */
+@media (max-width:560px){
+  .ppp-herr.con-pres{flex-wrap:nowrap;gap:4px}
+  .ppp-herr.con-pres .ppp-btn.chico{flex:1 1 auto;min-width:0;white-space:normal;line-height:1.1;padding:0 5px;text-align:center}
+  .ppp-herr.con-pres .ppp-btn.chico.pres-b{white-space:nowrap;flex:0 0 auto;padding:0 7px}
+}
+.pres-ley{margin:2px 0 6px;font-size:.78rem;color:var(--mute)}
+.pres-f{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.pres-falta{margin:0 0 8px;padding:6px 9px;border:1.5px solid var(--alerta);border-radius:9px;background:color-mix(in srgb,var(--alerta) 8%,var(--panel));font-size:.8rem;line-height:1.35}
+.lt.pres-l{--c:var(--estrella);margin-top:10px}
+.lt.pres-l.falta{--c:var(--alerta)}
+.pres-d{margin:6px 0 3px;font:600 .82rem var(--body)}
+.pres-d small{color:var(--mute);font-weight:400}
+.li-b.pres-n.fijo{cursor:default}
+.li-b.pres-n.vacia{border-style:dashed}
+.pres-c{font-style:normal;font-size:.6875rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--estrella);border:1px solid var(--estrella);border-radius:999px;padding:0 5px;margin-left:4px;white-space:nowrap}
+/* la lista de la presentación es larga (once láminas): mientras esa vista está abierta, su panel ocupa más alto que el de un dato */
+.ppp-panel[data-amplio]{min-height:60vh;min-height:60dvh;max-height:76vh;max-height:76dvh}
+@media (min-width:760px){.ppp-panel[data-amplio]{min-height:40vh;min-height:40dvh;max-height:58vh;max-height:58dvh}}
