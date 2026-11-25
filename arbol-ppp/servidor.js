@@ -105,6 +105,9 @@
         return escribir(cuerpo);
       }
       try { cuerpo.columna = columnaDe(def, plan); } catch (e) { return Promise.resolve({ ok: false, error: 'definicion' }); }
+      /* El paquete del visor de esta versión (el mismo de la vista previa): el servidor lo guarda junto a la columna para que la liga del
+         visor enseñe esta versión y cambie cuando se vuelve a guardar. Si no cabe o falla, el plan se guarda igual, sin visor. */
+      try { var pv = JSON.stringify(motor.paqueteVisor(def, plan)); if (pv.length <= 50000) cuerpo.visor = pv; } catch (e3) { }
       if (datos.sobre) {
         if (!o) return Promise.resolve({ ok: false, error: 'columna_invalida' });
         cuerpo.columna_existente = o.columna; cuerpo.rev = o.rev; cuerpo.escenario = o.escenario || cuerpo.escenario;

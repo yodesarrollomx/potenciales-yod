@@ -331,3 +331,15 @@ Lo que hay que saber:
   convertir un texto en número o fecha al escribirlo; por eso el paso 3 no se salta.
 
 Pruebas: `node arbol-ppp/conexion/pruebas-gs.cjs` y `node --test tests/arbol-ppp-servidor.test.cjs`.
+
+## El visor enseña las versiones del Árbol
+
+Va con `Visor.gs`, `ArbolPPP.gs` y `Código.gs` (`PPP2.gs`) de este repo, publicados juntos como **Versión nueva** de la implementación de siempre. Publicarlo no cambia nada mientras no exista la pestaña del paso 1.
+
+1. En el libro «PPP Maestro», crear la pestaña `ARBOL_VISOR` con este encabezado en el renglón 1, en este orden (el mismo de `PPP_VISOR`):
+   `caso_id`, `tipo`, `escenario_id`, `escenario_nombre`, `estado`, `elegida`, `elegida_por`, `elegida_fecha`, `orden`, `motor_commit`, `huella_entradas`, `calculado`, `origen`, `conciliacion`, `visor_json`. `visor_json` va al final.
+2. Abrir un plan en el Árbol y tocar «Guardar en el libro». La respuesta trae `visor: guardado` y en `ARBOL_VISOR` aparece su renglón; `caso_id` es el nombre del proyecto con el prefijo `arbol-`.
+3. En la hoja `Ligas` del vivero, poner `ppp:<caso_id>` en el `plan_id` de la liga de ese proyecto (o dar una liga nueva). Abrir el visor con esa liga.
+4. Probar que cambia: mover un dato en el Árbol, guardar sobre la misma versión y ver el cambio en el visor sin recargar.
+
+**Apagarlo:** regresar el `plan_id` de la liga a lo que tenía, o renombrar la pestaña `ARBOL_VISOR`. Los renglones no se borran.

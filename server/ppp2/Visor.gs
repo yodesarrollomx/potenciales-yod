@@ -63,7 +63,12 @@ var VISOR = {
   /* Una «Propuesta de reestructura» (scripts/visor-fotos/completa.cjs) se puede ver y elegir, pero nunca es la de
      por omisión aunque tenga el mayor `orden`: su escenario_id es `reestructura` y su nombre empieza así. */
   FOTO_REESTRUCTURA: /^propuesta de reestructura/i,
-  FOTO_V: /^[a-z][a-z0-9_]{0,39}$/   // claves de `v` que se aceptan de una foto
+  FOTO_V: /^[a-z][a-z0-9_]{0,39}$/,  // claves de `v` que se aceptan de una foto
+  /* Versiones del Árbol PPP guardadas en el Maestro (pestaña ARBOL_VISOR): el caso lleva el prefijo `arbol-`. */
+  ARBOL_HOJA: 'ARBOL_VISOR',
+  ARBOL_CASO: /^arbol-[a-z0-9]+(?:-[a-z0-9]+)*$/,
+  ARBOL_CASCADA: 16000,      // caracteres del reparto por socio (`cascada`) que se sirven de una versión del Árbol
+  ARBOL_CLAVE: /^[A-Za-z_][A-Za-z0-9_-]{0,39}$/
 };
 
 /* ───────────────────────── ligas ───────────────────────── */
@@ -304,7 +309,20 @@ function llaveVisor_(p) {
    tiene un solo renglón con `escenario_id` vacío: se sirve por `ppp:<caso_id>`. Sin el renglón `potenciales_id`,
    sin la pestaña o sin acceso, no hay fotos: el visor responde como «sin plan». */
 function esFoto_(id) { return String(id || '').indexOf('ppp:') === 0; }
-function hojaFotos_() {
+/* Versiones del Árbol PPP (Super PPP): el Árbol, al guardar una versión en el Maestro, deja también su paquete del visor en
+   la pestaña ARBOL_VISOR del mismo libro (mismas columnas que PPP_VISOR; la escribe arbol_visor_pon_, ArbolPPP.gs). Se sirven
+   por la misma ruta de las fotos: el caso se llama `arbol-<proyecto>` y la liga `ppp:arbol-<proyecto>`. El prefijo decide la
+   hoja: un caso `arbol-…` sólo se lee del Maestro y los demás sólo de PPP_VISOR. Sin el Árbol encendido, sin `maestro_id`
+   o sin la pestaña no hay versiones del Árbol: el visor responde como «sin plan». */
+function esFotoArbol_(caso) { return VISOR.ARBOL_CASO.test(String(caso || '')); }
+function hojaFotos_(caso) {
+  if (esFotoArbol_(caso)) {
+    try {
+      if (typeof arbol_libro_ !== 'function' || !arbolEncendido_(config_())) return null;
+      var maestro = arbol_libro_();
+      return maestro ? maestro.getSheetByName(VISOR.ARBOL_HOJA) : null;
+    } catch (e0) { return null; }
+  }
   var id = String(config_().potenciales_id || '').trim();
   if (!/^[A-Za-z0-9_-]{20,80}$/.test(id)) return null;
   try { return SpreadsheetApp.openById(id).getSheetByName(VISOR.FOTO_HOJA); } catch (e) { return null; }
@@ -324,23 +342,24 @@ function filasFotos_(h) {
 }
 /* El índice de todas las fotos, en el orden de la hoja (sin visor_json ni nombres de personas), compartido unos
    segundos como la llave del plan. ppp2-elige lo borra al escribir. */
-function fotos_() {
-  var cache = CacheService.getScriptCache(), hit = null;
-  try { hit = cache.get('vf'); } catch (e) { }
+function fotos_(arbol) {
+  arbol = !!arbol;                                                            // cada hoja tiene su índice: mirar un caso del PPP 1 no abre el Maestro
+  var cache = CacheService.getScriptCache(), hit = null, ck = arbol ? 'vfa' : 'vf';
+  try { hit = cache.get(ck); } catch (e) { }
   if (hit) { try { return JSON.parse(hit); } catch (e) { } }
-  var out = [], h = hojaFotos_();
+  var out = [], h = hojaFotos_(arbol ? 'arbol-x' : '');
   if (h && h.getLastRow() > 1) {
     var t = filasFotos_(h);
-    t.filas.forEach(function (f) { var m = fotoDe_(t.cab, f); if (m.caso && VISOR.FOTO_ESC.test(m.esc) && m.estado) out.push(m); });
+    t.filas.forEach(function (f) { var m = fotoDe_(t.cab, f); if (m.caso && esFotoArbol_(m.caso) === arbol && VISOR.FOTO_ESC.test(m.esc) && m.estado) out.push(m); });
   }
-  try { cache.put('vf', JSON.stringify(out), VISOR.LLAVE_S); } catch (e) { }
+  try { cache.put(ck, JSON.stringify(out), VISOR.LLAVE_S); } catch (e) { }
   return out;
 }
 /* Las versiones servibles de un caso (la foto más reciente de cada una, si está lista), por `orden`, y cuál es
    «la buena» (la que sirve `ppp:<caso>`). */
 function versionesFoto_(caso) {
   var ultima = {}, claves = [], marcada = null;
-  fotos_().forEach(function (f) {
+  fotos_(esFotoArbol_(caso)).forEach(function (f) {
     if (f.caso !== caso) return;
     if (!(('e' + f.esc) in ultima)) claves.push('e' + f.esc);
     ultima['e' + f.esc] = f;                                                  // la de más abajo manda
@@ -366,7 +385,7 @@ function fotoPlan_(id) {
 function llaveFoto_(p) { var f = p.foto; return f.huella || f.calc ? 'pf_' + hash_([f.caso, f.esc, f.estado, f.orden, f.huella, f.calc, p.buena].join('|')) : ''; }
 /* El visor_json de la foto, limpio (forma ppp2-visor-v1 más `origen`). null = como si no hubiera. */
 function leeFoto_(p) {
-  var h = hojaFotos_(), f = p.foto;
+  var f = p.foto, h = hojaFotos_(f.caso);
   if (!h || h.getLastRow() < 2) return null;
   var vals = h.getDataRange().getValues(), cab = vals[0].map(low_), cj = cab.indexOf('visor_json'), crudo = null;
   if (cj < 0) return null;
@@ -412,7 +431,7 @@ function fotoLimpia_(o, p) {
   var ou = o.ultimo && typeof o.ultimo === 'object' && !Array.isArray(o.ultimo) ? o.ultimo : null;
   var origen = texto(o.origen, 300);
   if (origen && buena) origen = origen.replace(' · versión', ' · versión vigente');
-  return {
+  var out = {
     plan: {
       nombre: txt_(texto(pl.nombre, 120), 120), ubicacion: texto(pl.ubicacion, 200), tipo: texto(pl.tipo, 200), edad: texto(pl.edad, 40),
       candados_abiertos: numero(pl.candados_abiertos), paso_texto: texto(pl.paso_texto, 200), esquema: texto(pl.esquema, 80), vigente: buena ? n : null, mostrada: n
@@ -432,6 +451,22 @@ function fotoLimpia_(o, p) {
     origen: origen,
     deducido: deducidoLimpio_(o.deducido)
   };
+  /* Sólo una versión del Árbol trae el reparto por socio (`cascada`, módulo de repartos): es lo que pinta el cuadro Reparto del
+     Super PPP. Sale limpio (números, sí/no y textos cortos sin marcado) y, si no cabe, no sale: el cuadro cae en el reparto simple. */
+  if (esFotoArbol_(f.caso)) { var cas = arbolLimpio_(o.cascada, 0); if (cas && typeof cas === 'object' && !Array.isArray(cas) && JSON.stringify(cas).length <= VISOR.ARBOL_CASCADA) out.cascada = cas; }
+  return out;
+}
+/* Copia de una parte del paquete del Árbol dejando sólo datos: números finitos, sí/no, textos de hasta 500 caracteres sin < ni >,
+   listas de hasta 80 y objetos de hasta 80 claves sencillas, a lo más 6 niveles. Lo demás queda fuera (undefined). */
+function arbolLimpio_(x, nivel) {
+  if (x === null || typeof x === 'boolean') return x;
+  if (typeof x === 'number') return isFinite(x) ? r6v_(x) : null;
+  if (typeof x === 'string') return x.replace(/[<>]/g, '').slice(0, 500);
+  if (typeof x !== 'object' || nivel >= 6) return undefined;
+  if (Array.isArray(x)) return x.slice(0, 80).map(function (y) { var z = arbolLimpio_(y, nivel + 1); return z === undefined ? null : z; });
+  var o = {};
+  Object.keys(x).slice(0, 80).forEach(function (k) { if (!VISOR.ARBOL_CLAVE.test(k)) return; var z = arbolLimpio_(x[k], nivel + 1); if (z !== undefined) o[k] = z; });
+  return o;
 }
 /* Las marcas de lo que el paso «completa» dedujo o corrigió (scripts/visor-fotos/completa.cjs): ruta del cuadro
    (`v.rv_margen`, `flujo.total.obra`, `productos.0.ventas`…) → «de qué sale y cómo». Sólo texto corto, sin < ni >,
@@ -455,7 +490,7 @@ function elige_(s, b, rid) {
   if (!m) return { ok: false, error: 'plan' };
   var v = String(b.v == null ? '' : b.v).trim();
   if (!VISOR.FOTO_ESC.test(v)) return { ok: false, error: 'version' };
-  var h = hojaFotos_();
+  var h = hojaFotos_(m[1]);
   if (!h || h.getLastRow() < 2) return { ok: false, error: 'plan' };
   var t = filasFotos_(h), ce = t.cab.indexOf('elegida'), cp = t.cab.indexOf('elegida_por'), cf = t.cab.indexOf('elegida_fecha');
   if (ce < 0 || cp < 0 || cf < 0) return { ok: false, error: 'hoja' };
@@ -477,7 +512,7 @@ function elige_(s, b, rid) {
     h.getRange(destino + 2, cp + 1).setValue(seguro_(actor_(s)));
     h.getRange(destino + 2, cf + 1).setValue(ahora_());
     SpreadsheetApp.flush();
-    try { CacheService.getScriptCache().remove('vf'); } catch (e) { }
+    try { CacheService.getScriptCache().remove(esFotoArbol_(m[1]) ? 'vfa' : 'vf'); } catch (e) { }
     bitacoraVivero_(s, 'visor-elige', 'ppp:' + m[1], 'versión ' + (v || '(única)') + (otras.length ? ' (antes ' + (antes || '(única)') + ')' : ''), rid);
   }
   var p = fotoPlan_('ppp:' + m[1]), llave = p ? llaveFoto_(p) : '';

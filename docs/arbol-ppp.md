@@ -72,6 +72,19 @@ La creación de versiones requiere la capacidad `puede.versiones` del servidor. 
 
 Instalación, interruptor y prueba en una copia privada: `server/ppp2/INSTALAR.md`, «El Árbol PPP».
 
+## El visor enseña las versiones del Árbol
+
+Al tocar «Guardar en el libro», el Árbol manda también el paquete del visor de esa versión (el mismo de la vista previa, `Motor.paqueteVisor`). El servidor lo deja en la pestaña `ARBOL_VISOR` del Maestro, un renglón por columna del Árbol, y el visor lo sirve por la ruta de las fotos (`server/ppp2/Visor.gs`).
+
+- **La liga.** El caso se llama `arbol-<proyecto>`, con el nombre I-01 en minúsculas, sin acentos y con guiones. La liga del visor lleva `plan_id` = `ppp:arbol-<proyecto>`: es un renglón de la hoja `Ligas`, igual que cualquier otra. Para que un proyecto que ya tenía liga enseñe su versión del Árbol se cambia el `plan_id` de su renglón; la liga que tiene la gente no cambia.
+- **Las versiones.** Cada columna del proyecto es una versión, numerada 1, 2, 3… en el orden en que se guardó. Por omisión rige la última. Dirección escoge otra con el selector del visor (`ppp2-elige`) y ésa se queda aunque después se guarden más.
+- **Cambia sola.** Volver a guardar una columna cambia su revisión, que es la huella de su renglón. Quien tenga el visor abierto ve el cambio en su siguiente sondeo.
+- **El servidor no calcula.** Guarda lo que calculó el motor del Árbol, con el nombre y la versión que quedaron en el libro, y al servirlo deja pasar sólo las claves de la forma del visor, más el reparto por socio (`cascada`), limpio. Es la misma excepción al contrato del 30-sep que ya tienen las fotos del PPP de siempre.
+- **El interruptor.** Sin la pestaña `ARBOL_VISOR`, el plan se guarda igual y no hay nada que enseñar (`visor: sin_hoja`). Con `arbol` apagado en `Config`, las versiones del Árbol tampoco se sirven. Un caso `arbol-…` sólo se lee del Maestro y los demás sólo de `PPP_VISOR`.
+- **Lo que todavía no hace.** «Agregar versión» copia la columna en el servidor y no trae paquete: la versión nueva aparece en el visor cuando se abre y se guarda desde el Árbol. El servidor no compara el paquete con las fórmulas de la columna. El Árbol vertical sólo conoce vivienda de 48, 74 o 98 m², así que un edificio de otro uso sale en el cuadro Producto con nombre de vivienda.
+
+Pruebas: `node --test tests/arbol-ppp-visor.test.cjs` (de punta a punta sobre dobles, con el caso de muestra inventado). Encenderlo: `server/ppp2/INSTALAR.md`, «El visor enseña las versiones del Árbol».
+
 ## Lo que falta
 
 Nada de lo siguiente está hecho; una prueba en Node o con dobles no demuestra funcionamiento en producción.
