@@ -147,9 +147,10 @@
     function abre(def, letra, guardia) {
       return leer('arbol-columna', { columna: letra }).then(function (r) {
         if (!r.ok) return r;
-        if (typeof guardia === 'function' && !guardia()) return { ok: false, error: 'cambio_local' };   // la pantalla cambió mientras llegaba: no se pisa
         var v; try { v = planDeColumna(def, r); } catch (e) { return { ok: false, error: 'definicion' }; }
-        if (!v || !pon(CLAVE_PLAN, JSON.stringify({ plan: v.plan }))) return { ok: false, error: 'definicion' };
+        if (!v) return { ok: false, error: 'definicion' };
+        if (typeof guardia === 'function' && !guardia(v.plan)) return { ok: false, error: 'cambio_local' };
+        if (!pon(CLAVE_PLAN, JSON.stringify({ plan: v.plan }))) return { ok: false, error: 'definicion' };
         quita(CLAVE_CMP);
         var nombre = String(v.mapa['I-01'] || ''), version = String(v.mapa['I-02'] || '');
         var o = { columna: r.columna, rev: r.rev, nombre: nombre, version: version };
@@ -313,21 +314,23 @@
       if (e.target.getAttribute('data-as-form') === 'agregar') agregaAhora(e.target); else guardaAhora(false);
     });
     root.addEventListener('resize', mide);
-    /* Liga desde la portada del PPP: arbol.html#abrir=<columna>. Abre ese plan del libro. Si en pantalla hay un plan con datos que no salió
-       de esa columna, no lo pisa: abre el panel «Abrir un plan» con esa columna lista para confirmar con un toque. */
+    /* La columna de origen identifica la versión, pero el plan de esa sesión puede tener ediciones locales. */
     function abrirDeLiga() {
       var m = /^#abrir=([A-Z]{1,3})$/.exec(root.location ? root.location.hash || '' : ''); if (!m || !api) return;
       try { root.history.replaceState(null, '', root.location.pathname + root.location.search); } catch (e) { }
-      /* sólo se abre sin preguntar si la pantalla no tiene ningún dato o si ya es ese mismo plan del libro; con cualquier dato (también el
-         tamaño del predio, que conserva la marca «dato de muestra» aunque se cambie) se pide confirmar con un toque */
-      var col = m[1], o = N.origen(), ks = Object.keys((api.estado().plan || {}).valores || {});
-      if (ks.length > 0 && !(o && o.columna === col)) {
-        est.panel = 'abrir'; est.confirma = col; est.msg = 'Tienes otro plan en pantalla: toca el plan resaltado para abrirlo en su lugar.'; cargaLista();
-        return;
+      var col = m[1], o = N.origen(), plan = api.estado().plan || {};
+      var tieneDatos = Object.keys(plan.valores || {}).length > 0;
+      function pideConfirmacion() {
+        est.ocupado = false; est.panel = 'abrir'; est.confirma = col;
+        est.msg = 'Hay datos en pantalla: toca el plan resaltado para reemplazarlos por los del libro.'; cargaLista();
       }
-      var foto = JSON.stringify(api.estado().plan || {});
+      if (tieneDatos && (!o || o.columna !== col)) { pideConfirmacion(); return; }
+      var foto = JSON.stringify(plan);
       est.ocupado = true; est.msg = 'Abriendo el plan…'; pinta();
-      N.abre(est.def, col, function () { return JSON.stringify(api.estado().plan || {}) === foto; }).then(function (r) {
+      N.abre(est.def, col, function (planDelLibro) {
+        return JSON.stringify(api.estado().plan || {}) === foto && (!tieneDatos || JSON.stringify(planDelLibro) === foto);
+      }).then(function (r) {
+        if (r.error === 'cambio_local') { pideConfirmacion(); return; }
         if (!r.ok) { fin(texto(r.error)); return; }
         monta(); fin('Abrí «' + (r.nombre || 'sin nombre') + '» de la columna ' + r.columna + '.');
       }).catch(falla);

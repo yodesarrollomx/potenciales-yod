@@ -64,6 +64,28 @@ async function prueba() {
     let p = await nuevaPagina('#abrir=' + BASES[0]);
     await fila(p, BASES[0]).or(boton(p, 'Versiones del proyecto')).first().waitFor();
     if (await fila(p, BASES[0]).count()) await fila(p, BASES[0]).click();
+    await estado(p, 'columna L');
+    assert.equal(BASES[0], 'L');
+    const claves = Servidor.CLAVES;
+    const tamLocal = () => p.evaluate((k) => JSON.parse(localStorage.getItem(k)).plan.valores['T-01'].valor, claves.plan);
+    assert.equal(await tamLocal(), 1500);
+    await p.evaluate(({ plan, origen }) => {
+      if (JSON.parse(localStorage.getItem(origen)).columna !== 'L') throw new Error('Se esperaba origen L');
+      const local = JSON.parse(localStorage.getItem(plan));
+      local.plan.valores = { 'T-01': { estado: 'confirmado', valor: 7350, fuente: 'dato de muestra' } };
+      localStorage.setItem(plan, JSON.stringify(local));
+    }, claves);
+    await p.close();
+    p = await nuevaPagina('#abrir=L');
+    await fila(p, 'L').or(p.locator('.as-msg').filter({ hasText: 'Abrí «' })).first().waitFor();
+    assert.equal(await tamLocal(), 7350, 'La liga debe conservar la edición local hasta confirmar');
+    assert.match(await fila(p, 'L').innerText(), /Toca otra vez para abrir/);
+    await fila(p, 'L').click();
+    await estado(p, 'columna L');
+    assert.equal(await tamLocal(), 1500);
+    await p.close();
+    p = await nuevaPagina('#abrir=L');
+    await estado(p, 'Abrí «');
     await boton(p, 'Versiones del proyecto').click();
     await opciones(p, BASES);
     await boton(p, 'Agregar versión').click();
