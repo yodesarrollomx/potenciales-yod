@@ -2389,6 +2389,49 @@ prueba('Mutación CF-05 sumas (T-11): en el ejemplo anual, un excedente que no s
   const y = REP.cascada(REP.escenario({ acuerdo_marco: Object.assign({}, REP.ACUERDO_MARCO, { matriz: mat }) })); assert(/^INVÁLIDO/.test(y.estado) && y.errores.some((m) => /la matriz de contribuciones suma 0\.98, no 100 % \(CF-05\)/.test(m)), JSON.stringify(y.errores));
 });
 
+/* ═══════════════════ 30 · Corrección P-10 (dictamen independiente T-11, N04): una prueba por punto ═══════════════════
+   Sin estas pruebas, quitar el pie de la tarjeta o del detalle, dejarlo vacío, apagar la lectura de paquetes v2 o revertir los rótulos de
+   «Capital» dejaba la suite en verde (mutantes R-M1 a R-M6 de la Reina). Cada aserción falla si se deshace su punto. */
+grupo('30 · Corrección P-10 · pie de fecha del reparto, paquetes v2 y rótulos de Capital');
+const pieReparto = (pq) => {
+  const x = VZ.pinta(pq, [], { sinElige: true }), c = x.cuadros.find((q) => q.id === 'reparto');
+  const card = (x.html.match(/<section class="vz-card[^"]*" data-card="reparto"[\s\S]*?<\/section>/) || [''])[0];
+  const pie = (h) => { const m = /<p class="vz-fecha-reparto">([^<]*)<\/p>/.exec(h); return m ? m[1] : null; };
+  return { tarjeta: pie(card), detalle: c ? pie(VZ.detalleHtml(c)) : null };
+};
+prueba('P-10 · B01 · la tarjeta «Reparto» y su detalle llevan el pie de fecha completo como texto que se acomoda en renglones (no dentro del dibujo)', () => {
+  const con = (reg) => Object.assign({}, P60, { reparto: Object.assign({}, DECL, reg) });
+  const N01 = 'Corte autorizado: mes 60 (sin pago registrado; fecha de pago del mes 38 sin importe: inconsistente)';
+  const a = pieReparto(Motor.paqueteVisor(DEF10, con({ fechas_pago: { DUENO: 38 } })));
+  assert.strictEqual(a.tarjeta, N01, 'pie de la tarjeta'); assert.strictEqual(a.detalle, N01, 'pie del detalle');
+  const b = pieReparto(Motor.paqueteVisor(DEF10, con({ fechas_pago: { DUENO: 58 }, pagos_registrados: { DUENO: 1000000 } })));
+  assert.strictEqual(b.tarjeta, 'Corte autorizado: mes 60 · pago registrado al dueño: mes 58'); assert.strictEqual(b.detalle, b.tarjeta);
+  const x = VZ.pinta(Motor.paqueteVisor(DEF10, con({ fechas_pago: { DUENO: 38 } })), [], { sinElige: true }), c = x.cuadros.find((q) => q.id === 'reparto');
+  const visible = (s) => (s.match(/<text[^>]*>[^<]*<\/text>/g) || []).map((t) => t.replace(/<[^>]+>/g, '')).join(' | ');   // el texto que se dibuja (las leyendas emergentes no cuentan)
+  assert(!/sin importe|pago registrado|corte autorizado/i.test(visible(c.svg)) && !/sin importe|pago registrado|corte autorizado/i.test(visible(c.svgG)), 'la fecha ya no va como texto dentro del SVG de ancho fijo (allí se recortaba a 430 px): ' + visible(c.svg).slice(0, 200));
+  const css = fs.readFileSync(path.join(APP, '..', 'visor.css'), 'utf8');
+  assert(/\.vz-fecha-reparto\s*\{[^}]*overflow-wrap:\s*anywhere/.test(css), 'visor.css deja que el pie parta renglones');
+  assert.strictEqual(pieReparto(Motor.paqueteVisor(DEF, BASE)).tarjeta, null, 'sin cascada (paquetes del libro) no hay pie');
+  cifra('P-10 · B01 · pie «' + N01 + '» en tarjeta y detalle; con pago real «Corte autorizado: mes 60 · pago registrado al dueño: mes 58»');
+});
+prueba('P-10 · N02 · un paquete v2 que marca «registrado» con pagado $0 se lee como fecha sin importe; con pago real se sigue mostrando', () => {
+  const con = (reg) => Object.assign({}, P60, { reparto: Object.assign({}, DECL, reg) });
+  const v2 = JSON.parse(JSON.stringify(Motor.paqueteVisor(DEF10, con({ fechas_pago: { DUENO: 38 } }))));
+  v2.cascada.fechas.pago_registrado = { estado: 'registrado', valor: 38 }; v2.cascada.conciliacion.DUENO.pagado = 0;   // así lo entregaba el motor v2
+  const hv = textoVisor(v2);
+  assert(!/pago registrado al dueño: mes 38/.test(hv) && !/"Pago registrado al dueño","mes 38"/.test(hv), 'el paquete v2 ya no anuncia el pago del mes 38');
+  assert.strictEqual(pieReparto(v2).tarjeta, 'Corte autorizado: mes 60 (sin pago registrado; fecha de pago del mes 38 sin importe: inconsistente)');
+  const ok = JSON.parse(JSON.stringify(v2)); ok.cascada.conciliacion.DUENO.pagado = 1000000;
+  assert.strictEqual(pieReparto(ok).tarjeta, 'Corte autorizado: mes 60 · pago registrado al dueño: mes 38', 'con importe pagado el registro v2 sí es pago');
+});
+prueba('P-10 · R01 · el panel distingue «Capital · conciliación» de «Capital · cifra de la tarjeta (R-25)» y ya no repite «Capital» a secas', () => {
+  const ctx = cargaPagina({ protocol: 'file:', hostname: '' }), def = ctx.ArbolRepartoPrueba.definicion(ctx.ArbolMotor).definicion;
+  const h = ctx.ArbolRepartoPrueba.estadoHtml(ctx.ArbolMotor, def, JSON.parse(JSON.stringify(P60)));
+  assert(/<th scope="row">Capital · conciliación<\/th><td>derecho /.test(h), 'rótulo de la conciliación');
+  assert(/<th scope="row">Capital · cifra de la tarjeta \(R-25\)<\/th><td>\$/.test(h), 'rótulo de la cifra de la tarjeta');
+  assert(!/<th scope="row">Capital<\/th>/.test(h), 'ningún renglón se llama sólo «Capital»');
+});
+
 /* ═══════════════════ RESUMEN ═══════════════════ */
 console.log('\n══════════════════════════════════════════');
 console.log('pruebas: ' + R.ok + ' de ' + R.n + ' pasan' + (R.fallos.length ? ' · ' + R.fallos.length + ' FALLAN' : ' · TODO BIEN'));

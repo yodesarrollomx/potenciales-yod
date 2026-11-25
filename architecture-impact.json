@@ -13,9 +13,10 @@
     "Prueba manual en el navegador de Dirección con el archivo de la rama (escritorio 1669×853 y marco de 440×956, iPhone 16 Pro Max): grafo a todo el espacio, tarjeta de «¿Dónde van los cajones?» y «¿Qué tipo de edificio es?», brinco a un dato plegado (D-03), separadores y hoja inferior.",
     "Pendiente, no demostrado: prueba en un iPhone físico y con un plan distinto de Calzada.",
     "Prueba manual del ajuste en el navegador de Dirección con el archivo de la rama: plegar, ver, quitar y regresar avisos; abrir todo (105 nodos), cerrar todo (39) y pantalla completa.",
-    "node arbol-ppp/pruebas/motor-real.cjs con el ajuste de repartos: 550 de 550 (la sección 10, sugerencias con tope de tiempo, puede fallar 1–2 casos en una máquina lenta y ocupada; ya ocurría antes del ajuste).",
+    "node arbol-ppp/pruebas/motor-real.cjs con el ajuste de repartos: 553 de 553 con el grupo 30 nuevo (pie de fecha en tarjeta y detalle, lectura de paquetes v2 y rótulos de Capital), que mata los 6 mutantes R-M1 a R-M6 del dictamen independiente; la sección 10 (sugerencias con tope de tiempo) puede fallar 1–2 casos en una máquina lenta y ocupada, ya ocurría antes del ajuste.",
     "Suite original de 7a03972 sin editar contra los módulos nuevos: pasa; node --test tests/*.test.cjs: sin fallas.",
-    "Dictamen T-11 v3 (Reina ChatGPT) y dictamen independiente de la corrección P-10 (Reina Claude): ver la partida «Partida · en curso»."
+    "Dictamen T-11 v3 (Reina ChatGPT) y dictamen independiente de la corrección P-10 (Reina Claude): ver la partida «Partida · en curso».",
+    "versiones.json: familia propia a 20261124-repartos-p10 (node scripts/versiones.cjs --aplicar) para que los navegadores no sigan con visor.js y visor.css anteriores."
   ],
   "rollback": "Quitar la línea de mejoras.js en arbol-ppp/arbol.html (o revertir el commit): la pantalla vuelve a verse como antes. No hay datos ni servidor que restaurar."
 }
