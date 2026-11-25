@@ -40,7 +40,9 @@ const MIDE = ([sel, contSel]) => {
   p.scrollIntoView({ block: 'center', inline: 'nearest' });
   const r = p.getBoundingClientRect(), rc = cont.getBoundingClientRect();
   const rango = document.createRange(); rango.selectNodeContents(p);
-  const lineas = Array.from(rango.getClientRects()).filter((x) => x.width > 0.5 && x.height > 0.5);
+  const cajas = Array.from(rango.getClientRects()).filter((x) => x.width > 0.5 && x.height > 0.5), bandas = [];
+  for (const x of cajas) { if (!bandas.some((y) => Math.min(x.bottom, y.bottom) - Math.max(x.top, y.top) > 0.5 * Math.min(x.height, y.height))) bandas.push(x); }   // un <span> que envuelve texto da dos cajas del mismo renglón
+  const lineas = cajas;
   let oculto = false; for (let e = p; e; e = e.parentElement) { const c = getComputedStyle(e); if (c.display === 'none' || c.visibility === 'hidden' || Number(c.opacity) === 0) oculto = true; }
   const recortes = [];   // zonas visibles de los ancestores que recortan, del pie hasta el contenedor (incluido)
   for (let e = p.parentElement; e; e = e.parentElement) {
@@ -55,7 +57,7 @@ const MIDE = ([sel, contSel]) => {
     if (!cabe(x, { l: 0, t: 0, r: window.innerWidth, b: window.innerHeight })) malas.push(i + ': fuera de la pantalla');
     if (recortes.some((z) => !cabe(x, z))) malas.push(i + ': recortado por un contenedor intermedio');
   });
-  return { texto: p.innerText, textoHtml: p.textContent, ancho: r.width, alto: r.height, lineas: lineas.length, oculto, malas,
+  return { texto: p.innerText, textoHtml: p.textContent, ancho: r.width, alto: r.height, lineas: bandas.length, oculto, malas,
     toque: lineas.length ? { x: lineas[0].left + Math.min(12, lineas[0].width / 2), y: lineas[0].top + lineas[0].height / 2 } : null,
     desborda: p.scrollWidth > p.clientWidth + 1 || p.scrollHeight > p.clientHeight + 1 };
 };
@@ -65,21 +67,40 @@ const MIDE = ([sel, contSel]) => {
    con la misma fuente y con el pie en el mismo sitio:
      A  el pie tal cual                       B  igual, con su texto transparente   → tinta REAL   = píxeles que cambian entre A y B
      C  el pie DESPEJADO (ver T_DESPEJA)      D  igual, con su texto transparente   → tinta DEBIDA = píxeles que cambian entre C y D
-   Despejar no mueve nada de sitio (sólo propiedades que no tocan la maquetación): esconde todo lo que pisa el rectángulo del pie y no
-   es de su linaje —elementos y seudoelementos—, y le quita al linaje recortes, máscaras, filtros y opacidades. Cada píxel de tinta
+   Despejar no mueve nada de sitio (sólo propiedades que no tocan la maquetación): esconde todo lo que no es del linaje del pie
+   —elementos y seudoelementos, estén donde estén— y le quita al linaje recortes, máscaras, filtros, contornos y opacidades. Cada píxel de tinta
    debida que no esté, con casi toda su fuerza, en la tinta real es texto que una persona no ve: lo tape lo que lo tape (una capa opaca
-   aunque deje pasar los toques, un velo, un clip-path, una máscara), falla. Una capa transparente no quita tinta: pasa. Y si ni
-   despejado hay tinta (texto del color del papel), también falla. */
+   aunque deje pasar los toques, la sombra de un vecino, un velo, un clip-path, una máscara), falla. Una capa transparente no quita
+   tinta: pasa. Además se mira letra por letra: cada carácter del pie tiene que ocupar sitio, tener tamaño de lectura y, despejado,
+   dejar tinta (una fecha con letra de tamaño cero o del color del papel sigue en el texto de la página y nadie la ve). */
 const SIN_TEXTO = 'color:transparent !important;-webkit-text-fill-color:transparent !important;text-shadow:none !important;-webkit-text-stroke-color:transparent !important;text-decoration-color:transparent !important;text-emphasis-color:transparent !important;';
 const T_PREPARA = (sel) => {
   const p = document.querySelector(sel);
   p.scrollIntoView({ block: 'center', inline: 'nearest' });
   const r = p.getBoundingClientRect();
-  const rango = document.createRange(); rango.selectNodeContents(p);
-  const lineas = Array.from(rango.getClientRects()).filter((x) => x.width > 0.5 && x.height > 0.5).map((x) => ({ l: x.left, t: x.top, r: x.right, b: x.bottom }));
+  /* letra por letra: cada carácter que no es espacio tiene que ocupar sitio en la pantalla (un trozo con letra de tamaño cero sigue
+     en el texto de la página y no se ve) */
+  const letras = [], sinSitio = [], anda = document.createTreeWalker(p, NodeFilter.SHOW_TEXT), rango = document.createRange();
+  for (let n = anda.nextNode(); n; n = anda.nextNode()) {
+    let quitado = false; for (let e = n.parentElement; e && e !== p.parentElement; e = e.parentElement) if (getComputedStyle(e).display === 'none') quitado = true;
+    if (quitado) continue;   // lo que no se dibuja tampoco sale en innerText: de eso se encarga la lectura del texto
+    const t = n.data;
+    for (let i = 0; i < t.length; i++) {
+      if (/\s/.test(t[i])) continue;
+      rango.setStart(n, i); rango.setEnd(n, i + 1);
+      const x = Array.from(rango.getClientRects()).find((y) => y.width > 0.5 && y.height > 0.5);
+      if (!x) { sinSitio.push(t[i]); continue; }
+      letras.push({ c: t[i], l: x.left, t: x.top, r: x.right, b: x.bottom });
+    }
+  }
+  const lineas = [];   // renglones: letras que comparten franja
+  for (const x of letras) {
+    const y = lineas.find((z) => Math.min(x.b, z.b) - Math.max(x.t, z.t) > 0.5 * Math.min(x.b - x.t, z.b - z.t));
+    if (y) { y.l = Math.min(y.l, x.l); y.r = Math.max(y.r, x.r); y.t = Math.min(y.t, x.t); y.b = Math.max(y.b, x.b); } else lineas.push({ l: x.l, t: x.t, r: x.r, b: x.b });
+  }
   const caja = { x: Math.max(0, Math.floor(r.left) - 2), y: Math.max(0, Math.floor(r.top) - 2) };
   caja.width = Math.min(window.innerWidth, Math.ceil(r.right) + 2) - caja.x; caja.height = Math.min(window.innerHeight, Math.ceil(r.bottom) + 2) - caja.y;
-  return { caja, lineas };
+  return { caja, lineas, letras, sinSitio };
 };
 const T_TEXTO = ([sel, css]) => {   // quita (o devuelve) la tinta del texto del pie y de lo que lleve dentro
   let e = document.getElementById('tintaSinTexto');
@@ -90,30 +111,27 @@ const T_TEXTO = ([sel, css]) => {   // quita (o devuelve) la tinta del texto del
 const T_DESPEJA = ([sel, pon]) => {
   document.querySelectorAll('[data-tinta]').forEach((e) => e.removeAttribute('data-tinta'));
   const viejo = document.getElementById('tintaDespeja'); if (viejo) viejo.remove();
-  if (!pon) return 0;
-  const p = document.querySelector(sel), r = p.getBoundingClientRect();
+  if (!pon) return;
+  const p = document.querySelector(sel);
   for (let e = p; e; e = e.parentElement) e.setAttribute('data-tinta', 'linaje');
   p.querySelectorAll('*').forEach((e) => e.setAttribute('data-tinta', 'linaje'));
-  let n = 0;
-  document.querySelectorAll('body *').forEach((e) => {
-    if (e.hasAttribute('data-tinta') || e.closest('[data-tinta="pisa"]')) return;
-    const z = e.getBoundingClientRect();
-    if (z.width > 0 && z.height > 0 && z.left < r.right && z.right > r.left && z.top < r.bottom && z.bottom > r.top) { e.setAttribute('data-tinta', 'pisa'); n++; }
-  });
+  /* se esconde TODO lo que no es del linaje del pie, esté donde esté (una sombra, un contorno o un filtro pintan fuera de la caja de
+     su elemento), y todos los seudoelementos; visibility no mueve nada de sitio */
   const st = document.createElement('style'); st.id = 'tintaDespeja';
-  st.textContent = '[data-tinta="pisa"],[data-tinta="pisa"] *,*::before,*::after{visibility:hidden !important}'
-    + '[data-tinta="linaje"]{opacity:1 !important;visibility:visible !important;clip-path:none !important;-webkit-mask:none !important;mask:none !important;filter:none !important;mix-blend-mode:normal !important;transition:none !important}';
+  st.textContent = 'body *:not([data-tinta]),*::before,*::after{visibility:hidden !important}'
+    + '[data-tinta="linaje"]{opacity:1 !important;visibility:visible !important;clip-path:none !important;-webkit-mask:none !important;mask:none !important;filter:none !important;mix-blend-mode:normal !important;outline:none !important;transition:none !important}';
   document.head.appendChild(st);
-  return n;
 };
 /* en una página en blanco: decodifica las fotos y compara. Tinta debida = cambio fuerte (el cuerpo de la letra);
    está en la pantalla si el cambio real conserva al menos el 60 % de esa fuerza (un velo a medias también quita tinta). */
-const T_COMPARA = async ({ a, b, c, d, caja, lineas }) => {
+const T_COMPARA = async ({ a, b, c, d, caja, lineas, letras }) => {
   const px = async (b64) => { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); const bmp = await createImageBitmap(new Blob([u], { type: 'image/png' })); const cv = new OffscreenCanvas(bmp.width, bmp.height), g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(bmp, 0, 0); return { w: bmp.width, h: bmp.height, d: g.getImageData(0, 0, bmp.width, bmp.height).data }; };
   const [A, B, C, D] = await Promise.all([px(a), px(b), px(c), px(d)]);
   if ([B, C, D].some((x) => x.w !== A.w || x.h !== A.h)) return { error: 'las fotos no miden lo mismo' };
   const cambio = (X, Y, k) => Math.max(Math.abs(X.d[k] - Y.d[k]), Math.abs(X.d[k + 1] - Y.d[k + 1]), Math.abs(X.d[k + 2] - Y.d[k + 2]));
   const porLinea = lineas.map(() => ({ debida: 0, falta: 0 })); let debida = 0, falta = 0;
+  /* cada letra, despejada, tiene que dejar tinta dentro de su sitio (umbral más bajo: un punto o una coma pesan poco) */
+  const enBlanco = letras.filter((q) => { for (let y = Math.max(0, Math.floor(q.t - caja.y)); y < Math.min(A.h, Math.ceil(q.b - caja.y)); y++) for (let x = Math.max(0, Math.floor(q.l - caja.x)); x < Math.min(A.w, Math.ceil(q.r - caja.x)); x++) if (cambio(C, D, (y * A.w + x) * 4) >= 48) return false; return true; }).map((q) => q.c);
   for (let y = 0; y < A.h; y++) for (let x = 0; x < A.w; x++) {
     const k = (y * A.w + x) * 4, ref = cambio(C, D, k);
     if (ref < 96) continue;
@@ -122,7 +140,7 @@ const T_COMPARA = async ({ a, b, c, d, caja, lineas }) => {
     const cx = caja.x + x + 0.5, cy = caja.y + y + 0.5, i = lineas.findIndex((l) => cx >= l.l - 1 && cx <= l.r + 1 && cy >= l.t - 1 && cy <= l.b + 1);
     if (i >= 0) { porLinea[i].debida++; if (!hay) porLinea[i].falta++; }
   }
-  return { debida, falta, porLinea };
+  return { debida, falta, porLinea, enBlanco };
 };
 async function tinta(page, lienzo, sel, donde) {
   const m = await page.evaluate(T_PREPARA, sel);
@@ -137,10 +155,14 @@ async function tinta(page, lienzo, sel, donde) {
   } finally { await page.evaluate(T_TEXTO, [sel, '']); await page.evaluate(T_DESPEJA, [sel, false]); }
   const fijo = await page.evaluate(T_PREPARA, sel);   // despejar no debe haber movido nada
   assert.deepStrictEqual(fijo, m, donde + ': el pie cambió de sitio mientras se fotografiaba');
-  const r = await lienzo.evaluate(T_COMPARA, { a, b, c, d, caja: m.caja, lineas: m.lineas });
+  assert.deepStrictEqual(m.sinSitio, [], donde + ': hay texto del pie que está en la página y no ocupa sitio en la pantalla: «' + m.sinSitio.join('') + '»');
+  const altos = m.letras.map((x) => x.b - x.t).sort((x, y) => x - y), tipico = altos[altos.length >> 1] || 0, chicas = m.letras.filter((x) => x.b - x.t < 8 || x.b - x.t < 0.8 * tipico).map((x) => x.c);
+  assert.deepStrictEqual(chicas, [], donde + ': letras del pie demasiado pequeñas para leerse (menos de 8 px o del 80 % del resto): «' + chicas.join('') + '»');
+  const r = await lienzo.evaluate(T_COMPARA, { a, b, c, d, caja: m.caja, lineas: m.lineas, letras: m.letras });
   assert(!r.error, donde + ': ' + r.error);
-  assert(r.debida >= 150 && r.porLinea.every((l) => l.debida > 0), donde + ': ni despejado tiene tinta el pie (' + r.debida + ' px): su texto no contrasta con el fondo');
   assert(r.falta === 0, donde + ': al pie le faltan ' + r.falta + ' de ' + r.debida + ' píxeles de tinta en la pantalla (por renglón: ' + r.porLinea.map((l, i) => i + ': ' + l.falta + '/' + l.debida).join(', ') + '); algo lo tapa, lo vela o lo recorta');
+  assert.deepStrictEqual(r.enBlanco, [], donde + ': letras del pie que ni despejadas dejan tinta (no contrastan con el fondo): «' + r.enBlanco.join('') + '»');
+  assert(r.debida >= 150, donde + ': ni despejado tiene tinta el pie (' + r.debida + ' px)');
   return r;
 }
 
