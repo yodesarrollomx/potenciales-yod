@@ -3,7 +3,7 @@
    Corrección P-10 (dictamen T-11): en un teléfono de 430 px el pie de fecha de la tarjeta «Reparto» y de su detalle se ve COMPLETO.
    Monta visor.js y visor.css reales con el paquete de tests/fixtures/visor-reparto-n01.json (lo genera el motor; motor-real.cjs vigila que
    no se desfase) y mide en Chrome: que el pie esté a la vista, que su texto no se desborde ni se recorte, que quepa dentro de la tarjeta y del
-   detalle, y que diga corte, estado, mes y motivo. No sale a la red. */
+   detalle, que su tinta llegue entera a la pantalla (píxel por píxel), que tocarlo abra el detalle, y que diga corte, estado, mes y motivo. No sale a la red. */
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -31,10 +31,9 @@ function servidor() {
    · el texto es el que Chrome MUESTRA (innerText): un trozo oculto dentro del párrafo no cuenta;
    · cada renglón (Range.getClientRects) cabe en el contenedor, en la pantalla y en la zona visible de TODO ancestro que recorte
      (overflow distinto de visible), hasta el contenedor; así un envoltorio intermedio que corte la última línea se detecta;
-   · cada renglón se recorre de punta a punta (un punto cada 6 px, a tres alturas) y en todos está el propio pie
-     (document.elementFromPoint): si algo lo tapa o un clip-path le quita un trozo —el principio, el final o una franja—, falla.
-     Mientras se mide, el pie recibe pointer-events: auto: aquí importa qué texto se VE, no qué elemento recibe el toque
-     (con pointer-events: none el pie se lee igual y el toque abre la tarjeta). */
+   · que la tinta del pie llegue de verdad a la pantalla lo comprueba TINTA (abajo), con los píxeles que Chrome pinta; aquí no se
+     pregunta quién recibe el puntero (document.elementFromPoint): una capa del color del papel que deja pasar los toques tapa el texto
+     sin cambiar esa respuesta, y una capa transparente que sí los recibe la cambia sin tapar nada. */
 const MIDE = ([sel, contSel]) => {
   const p = document.querySelector(sel), cont = document.querySelector(contSel);
   if (!p || !cont) return { falta: true };
@@ -51,22 +50,99 @@ const MIDE = ([sel, contSel]) => {
   }
   const cabe = (x, z) => x.left >= z.l - 0.5 && x.right <= z.r + 0.5 && x.top >= z.t - 0.5 && x.bottom <= z.b + 0.5;
   const malas = [];
-  const previo = p.style.getPropertyValue('pointer-events'), prioridad = p.style.getPropertyPriority('pointer-events');
-  p.style.setProperty('pointer-events', 'auto', 'important');
   lineas.forEach((x, i) => {
     if (!cabe(x, { l: rc.left, t: rc.top, r: rc.right, b: rc.bottom })) malas.push(i + ': fuera del contenedor');
     if (!cabe(x, { l: 0, t: 0, r: window.innerWidth, b: window.innerHeight })) malas.push(i + ': fuera de la pantalla');
     if (recortes.some((z) => !cabe(x, z))) malas.push(i + ': recortado por un contenedor intermedio');
-    const xs = []; for (let px = x.left + 1; px < x.right - 1; px += 6) xs.push(px); xs.push(x.right - 1);
-    const ys = [x.top + x.height * 0.25, x.top + x.height * 0.5, x.top + x.height * 0.75];
-    let tapado = null;
-    for (const px of xs) { for (const py of ys) { const el = document.elementFromPoint(px, py); if (!el || !p.contains(el)) { tapado = { px: Math.round(px - x.left), el: el ? el.tagName + '.' + el.className : 'nada' }; break; } } if (tapado) break; }
-    if (tapado) malas.push(i + ': a ' + tapado.px + ' px de su inicio no se ve el pie sino ' + tapado.el);
   });
-  if (previo) p.style.setProperty('pointer-events', previo, prioridad); else p.style.removeProperty('pointer-events');
   return { texto: p.innerText, textoHtml: p.textContent, ancho: r.width, alto: r.height, lineas: lineas.length, oculto, malas,
+    toque: lineas.length ? { x: lineas[0].left + Math.min(12, lineas[0].width / 2), y: lineas[0].top + lineas[0].height / 2 } : null,
     desborda: p.scrollWidth > p.clientWidth + 1 || p.scrollHeight > p.clientHeight + 1 };
 };
+
+/* ── TINTA: el testigo de los píxeles ───────────────────────────────────────────────────────────────────────────────────────────
+   Qué se ve se decide con lo que Chrome pinta, no con el árbol de la página. Cuatro fotos del mismo rectángulo, en el mismo navegador,
+   con la misma fuente y con el pie en el mismo sitio:
+     A  el pie tal cual                       B  igual, con su texto transparente   → tinta REAL   = píxeles que cambian entre A y B
+     C  el pie DESPEJADO (ver T_DESPEJA)      D  igual, con su texto transparente   → tinta DEBIDA = píxeles que cambian entre C y D
+   Despejar no mueve nada de sitio (sólo propiedades que no tocan la maquetación): esconde todo lo que pisa el rectángulo del pie y no
+   es de su linaje —elementos y seudoelementos—, y le quita al linaje recortes, máscaras, filtros y opacidades. Cada píxel de tinta
+   debida que no esté, con casi toda su fuerza, en la tinta real es texto que una persona no ve: lo tape lo que lo tape (una capa opaca
+   aunque deje pasar los toques, un velo, un clip-path, una máscara), falla. Una capa transparente no quita tinta: pasa. Y si ni
+   despejado hay tinta (texto del color del papel), también falla. */
+const SIN_TEXTO = 'color:transparent !important;-webkit-text-fill-color:transparent !important;text-shadow:none !important;-webkit-text-stroke-color:transparent !important;text-decoration-color:transparent !important;text-emphasis-color:transparent !important;';
+const T_PREPARA = (sel) => {
+  const p = document.querySelector(sel);
+  p.scrollIntoView({ block: 'center', inline: 'nearest' });
+  const r = p.getBoundingClientRect();
+  const rango = document.createRange(); rango.selectNodeContents(p);
+  const lineas = Array.from(rango.getClientRects()).filter((x) => x.width > 0.5 && x.height > 0.5).map((x) => ({ l: x.left, t: x.top, r: x.right, b: x.bottom }));
+  const caja = { x: Math.max(0, Math.floor(r.left) - 2), y: Math.max(0, Math.floor(r.top) - 2) };
+  caja.width = Math.min(window.innerWidth, Math.ceil(r.right) + 2) - caja.x; caja.height = Math.min(window.innerHeight, Math.ceil(r.bottom) + 2) - caja.y;
+  return { caja, lineas };
+};
+const T_TEXTO = ([sel, css]) => {   // quita (o devuelve) la tinta del texto del pie y de lo que lleve dentro
+  let e = document.getElementById('tintaSinTexto');
+  if (!css) { if (e) e.remove(); return; }
+  if (!e) { e = document.createElement('style'); e.id = 'tintaSinTexto'; document.head.appendChild(e); }
+  e.textContent = sel + ',' + sel + ' *{' + css + '}';
+};
+const T_DESPEJA = ([sel, pon]) => {
+  document.querySelectorAll('[data-tinta]').forEach((e) => e.removeAttribute('data-tinta'));
+  const viejo = document.getElementById('tintaDespeja'); if (viejo) viejo.remove();
+  if (!pon) return 0;
+  const p = document.querySelector(sel), r = p.getBoundingClientRect();
+  for (let e = p; e; e = e.parentElement) e.setAttribute('data-tinta', 'linaje');
+  p.querySelectorAll('*').forEach((e) => e.setAttribute('data-tinta', 'linaje'));
+  let n = 0;
+  document.querySelectorAll('body *').forEach((e) => {
+    if (e.hasAttribute('data-tinta') || e.closest('[data-tinta="pisa"]')) return;
+    const z = e.getBoundingClientRect();
+    if (z.width > 0 && z.height > 0 && z.left < r.right && z.right > r.left && z.top < r.bottom && z.bottom > r.top) { e.setAttribute('data-tinta', 'pisa'); n++; }
+  });
+  const st = document.createElement('style'); st.id = 'tintaDespeja';
+  st.textContent = '[data-tinta="pisa"],[data-tinta="pisa"] *,*::before,*::after{visibility:hidden !important}'
+    + '[data-tinta="linaje"]{opacity:1 !important;visibility:visible !important;clip-path:none !important;-webkit-mask:none !important;mask:none !important;filter:none !important;mix-blend-mode:normal !important;transition:none !important}';
+  document.head.appendChild(st);
+  return n;
+};
+/* en una página en blanco: decodifica las fotos y compara. Tinta debida = cambio fuerte (el cuerpo de la letra);
+   está en la pantalla si el cambio real conserva al menos el 60 % de esa fuerza (un velo a medias también quita tinta). */
+const T_COMPARA = async ({ a, b, c, d, caja, lineas }) => {
+  const px = async (b64) => { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); const bmp = await createImageBitmap(new Blob([u], { type: 'image/png' })); const cv = new OffscreenCanvas(bmp.width, bmp.height), g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(bmp, 0, 0); return { w: bmp.width, h: bmp.height, d: g.getImageData(0, 0, bmp.width, bmp.height).data }; };
+  const [A, B, C, D] = await Promise.all([px(a), px(b), px(c), px(d)]);
+  if ([B, C, D].some((x) => x.w !== A.w || x.h !== A.h)) return { error: 'las fotos no miden lo mismo' };
+  const cambio = (X, Y, k) => Math.max(Math.abs(X.d[k] - Y.d[k]), Math.abs(X.d[k + 1] - Y.d[k + 1]), Math.abs(X.d[k + 2] - Y.d[k + 2]));
+  const porLinea = lineas.map(() => ({ debida: 0, falta: 0 })); let debida = 0, falta = 0;
+  for (let y = 0; y < A.h; y++) for (let x = 0; x < A.w; x++) {
+    const k = (y * A.w + x) * 4, ref = cambio(C, D, k);
+    if (ref < 96) continue;
+    const hay = cambio(A, B, k) >= 0.6 * ref;
+    debida++; if (!hay) falta++;
+    const cx = caja.x + x + 0.5, cy = caja.y + y + 0.5, i = lineas.findIndex((l) => cx >= l.l - 1 && cx <= l.r + 1 && cy >= l.t - 1 && cy <= l.b + 1);
+    if (i >= 0) { porLinea[i].debida++; if (!hay) porLinea[i].falta++; }
+  }
+  return { debida, falta, porLinea };
+};
+async function tinta(page, lienzo, sel, donde) {
+  const m = await page.evaluate(T_PREPARA, sel);
+  assert(m.caja.width > 4 && m.caja.height > 4, donde + ': el pie no tiene zona que fotografiar');
+  const foto = async () => (await page.screenshot({ clip: m.caja, caret: 'hide', scale: 'css' })).toString('base64');
+  let a, b, c, d;
+  try {
+    a = await foto();
+    await page.evaluate(T_TEXTO, [sel, SIN_TEXTO]); b = await foto(); await page.evaluate(T_TEXTO, [sel, '']);
+    await page.evaluate(T_DESPEJA, [sel, true]); c = await foto();
+    await page.evaluate(T_TEXTO, [sel, SIN_TEXTO]); d = await foto();
+  } finally { await page.evaluate(T_TEXTO, [sel, '']); await page.evaluate(T_DESPEJA, [sel, false]); }
+  const fijo = await page.evaluate(T_PREPARA, sel);   // despejar no debe haber movido nada
+  assert.deepStrictEqual(fijo, m, donde + ': el pie cambió de sitio mientras se fotografiaba');
+  const r = await lienzo.evaluate(T_COMPARA, { a, b, c, d, caja: m.caja, lineas: m.lineas });
+  assert(!r.error, donde + ': ' + r.error);
+  assert(r.debida >= 150 && r.porLinea.every((l) => l.debida > 0), donde + ': ni despejado tiene tinta el pie (' + r.debida + ' px): su texto no contrasta con el fondo');
+  assert(r.falta === 0, donde + ': al pie le faltan ' + r.falta + ' de ' + r.debida + ' píxeles de tinta en la pantalla (por renglón: ' + r.porLinea.map((l, i) => i + ': ' + l.falta + '/' + l.debida).join(', ') + '); algo lo tapa, lo vela o lo recorta');
+  return r;
+}
 
 const partes = (t, caso) => caso === 'n01'
   ? /corte autorizado:\s*mes 60\b/i.test(t) && /sin pago registrado/i.test(t) && /\bmes 38\b/.test(t) && /sin importe/i.test(t) && /inconsistente/i.test(t)
@@ -88,19 +164,24 @@ function revisa(m, donde) {
       for (const caso of ['n01', 'pago58']) {
         const ctx = await nav.newContext({ viewport: { width: ancho, height: 932 }, deviceScaleFactor: 1, hasTouch: ancho < 800 });
         await ctx.route('**/*', (r) => (r.request().url().startsWith(base) ? r.continue() : r.abort()));
-        const page = await ctx.newPage(), errores = [];
+        const page = await ctx.newPage(), lienzo = await ctx.newPage(), errores = [];
+        await page.bringToFront();
         page.on('pageerror', (e) => errores.push(e.message));
         await page.goto(base);
         await page.evaluate((pq) => { window.VisorPPP.monta(document.getElementById('caja'), { sinElige: true }).muestra(pq, [], false); }, FIX[caso]);
         const donde = caso + ' a ' + ancho + ' px';
         const t = await page.evaluate(MIDE, ['[data-card="reparto"] .vz-fecha-reparto', '[data-card="reparto"]']);
         revisa(t, donde + ' · tarjeta'); assert(partes(t.texto, caso), donde + ' · tarjeta dice: ' + t.texto);
-        await page.click('[data-card="reparto"]');
-        await page.waitForSelector('#vzModal:not([hidden]) .vz-fecha-reparto');
+        await tinta(page, lienzo, '[data-card="reparto"] .vz-fecha-reparto', donde + ' · tarjeta');
+        /* el toque va sobre el propio texto del pie, por coordenadas: lo reciba quien lo reciba, tiene que abrir el detalle */
+        const z = await page.evaluate(MIDE, ['[data-card="reparto"] .vz-fecha-reparto', '[data-card="reparto"]']);
+        await page.mouse.click(z.toque.x, z.toque.y);
+        await page.waitForSelector('#vzModal:not([hidden]) .vz-fecha-reparto', { timeout: 5000 }).catch(() => { throw new Error(donde + ': tocar el pie de la tarjeta no abre el detalle'); });
         /* el detalle entra con una animación: se mide cuando ya terminó de aparecer (todo su linaje visible y opaco) */
         await page.waitForFunction(() => { const p = document.querySelector('#vzModal .vz-fecha-reparto'); if (!p) return false; for (let e = p; e; e = e.parentElement) { const c = getComputedStyle(e); if (c.display === 'none' || c.visibility === 'hidden' || Number(c.opacity) < 1) return false; } return !p.getAnimations({ subtree: false }).length && !document.getElementById('vzModal').getAnimations({ subtree: true }).some((a) => a.playState === 'running'); }, null, { timeout: 5000 }).catch(() => {});
         const d = await page.evaluate(MIDE, ['#vzModal .vz-fecha-reparto', '#vzModal .vz-m-caja']);
         revisa(d, donde + ' · detalle'); assert(partes(d.texto, caso), donde + ' · detalle dice: ' + d.texto);
+        await tinta(page, lienzo, '#vzModal .vz-fecha-reparto', donde + ' · detalle');
         assert.deepStrictEqual(errores, [], donde + ': errores en la página');
         if (ancho === 430 && caso === 'n01') assert(t.lineas >= 2 && d.lineas >= 2, 'a 430 px el pie largo se parte en renglones (tarjeta ' + t.lineas + ', detalle ' + d.lineas + ')');
         await ctx.close();
