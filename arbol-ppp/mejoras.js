@@ -7,7 +7,7 @@ function __mejorasArbol() {
   if (W.__vp && W.__vp.t) clearInterval(W.__vp.t);
   document.querySelectorAll('[data-vp]').forEach((e) => e.remove());
   document.querySelectorAll('[data-hecho],[data-orden],[data-docs],[data-listo],[data-g]').forEach((e) => ['data-hecho', 'data-orden', 'data-docs', 'data-listo', 'data-g'].forEach((a) => e.removeAttribute(a)));
-  document.querySelectorAll('.prev-ficha,.prev-uni,.prev-m2,.prev-eq').forEach((e) => e.remove());
+  document.querySelectorAll('.prev-ficha,.prev-uni,.prev-m2,.prev-eq,.vp-ok,.vp-vistos,.vp-b3').forEach((e) => e.remove());
   const est = W.__vp = { t: 0, tab: (W.__vp && W.__vp.tab) || 'cambiar', uni: (W.__vp && W.__vp.uni) || 'pct', visto: (W.__vp && W.__vp.visto) || {} };
   const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt !== undefined) e.textContent = txt; return e; };
   const $ = (s, r) => (r || document).querySelector(s), $$ = (s, r) => [...(r || document).querySelectorAll(s)];
@@ -302,19 +302,34 @@ function __mejorasArbol() {
   };
 
   /* ───── avisos de la franja: botón «Enterado» ───── */
+  /* Sólo se anuncian los que bloquean («No pasa»). Los que no bloquean quedan plegados en un contador,
+     y lo que se quita con ✓ se queda quitado en este navegador (por plan) hasta que se pida verlo. */
+  const planClave = () => { const mo = modelo(), n = mo && mo.l.find((x) => x.id === 'T-01'); return 'vp_quitados_v1:' + (n && n.valor != null ? n.valor : ''); };
+  const leeQuit = () => { try { return JSON.parse(localStorage.getItem(planClave()) || '{}') || {}; } catch (e) { return {}; } };
+  const guardaQuit = (q) => { try { localStorage.setItem(planClave(), JSON.stringify(q)); } catch (e) { /* sin memoria: vale sólo en esta visita */ } };
   function avisos() {
     const fr = $('.ppp-franja'); if (!fr) return;
-    const chips = $$('.fr-chips button, .fr-chips [role=button]', fr).filter((b) => !b.classList.contains('vp-ok'));
-    let ocultos = 0;
+    if (est.planQ !== planClave()) { est.planQ = planClave(); est.visto = leeQuit(); est.verMas = false; }
+    const chips = $$('.fr-chips .fr-chip', fr);
+    let quitados = 0, suaves = 0, vivos = 0;
     chips.forEach((b) => {
-      const clave = b.textContent.trim();
-      if (!b.nextElementSibling || !b.nextElementSibling.classList.contains('vp-ok')) { const ok = el('button', 'vp-ok', '✓'); ok.type = 'button'; ok.title = 'Enterado: ocultar este aviso'; ok.setAttribute('aria-label', 'Enterado: ocultar el aviso de ' + clave); ok.onclick = (ev) => { ev.stopPropagation(); est.visto[clave] = true; avisos(); }; b.after(ok); }
-      const oc = !!est.visto[clave]; if (oc) ocultos++;
+      const clave = b.textContent.trim(), bloquea = b.classList.contains('alto');
+      if (!b.nextElementSibling || !b.nextElementSibling.classList.contains('vp-ok')) { const ok = el('button', 'vp-ok', '✓'); ok.type = 'button'; ok.title = 'Quitar este aviso'; ok.setAttribute('aria-label', 'Quitar el aviso de ' + clave); ok.onclick = (ev) => { ev.stopPropagation(); est.visto[clave] = true; guardaQuit(est.visto); avisos(); }; b.after(ok); }
+      const q = !!est.visto[clave]; if (q) quitados++; else if (!bloquea) suaves++;
+      const oc = !est.verMas && (q || !bloquea); if (!oc) vivos++;
       [b, b.nextElementSibling].forEach((e2) => oc ? e2.setAttribute('data-vp-oculto', '') : e2.removeAttribute('data-vp-oculto'));
     });
+    const t = $('.fr-t', fr);
+    if (t) { vivos ? t.removeAttribute('data-vp-oculto') : t.setAttribute('data-vp-oculto', ''); const txt = t.innerHTML.replace(/\s*·\s*(?:<b>)?\d+ avisos?(?: nuevos?)?(?:<\/b>)?(?: por este cambio<\/b>)? \(no bloquean\)/, ''); if (txt !== t.innerHTML) t.innerHTML = txt; }
     let v = $('.vp-vistos', fr);
-    if (ocultos) { if (!v) { v = el('button', 'vp-vistos'); v.type = 'button'; v.onclick = () => { est.visto = {}; avisos(); }; fr.append(v); } v.textContent = ocultos + ' enterado' + (ocultos > 1 ? 's' : '') + ' · ver'; }
-    else if (v) v.remove();
+    const resto = suaves + quitados;
+    if (resto) {
+      if (!v) { v = el('button', 'vp-vistos'); v.type = 'button'; v.onclick = () => { est.verMas = !est.verMas; avisos(); }; fr.append(v); }
+      const partes = []; if (suaves) partes.push(suaves + (suaves > 1 ? ' avisos que no bloquean' : ' aviso que no bloquea')); if (quitados) partes.push(quitados + (quitados > 1 ? ' quitados' : ' quitado'));
+      const txt = est.verMas ? 'Ocultar' : partes.join(' · ') + ' · ver'; if (v.textContent !== txt) v.textContent = txt;
+      let r = $('.vp-regresa', fr);
+      if (est.verMas && quitados) { if (!r) { r = el('button', 'vp-vistos vp-regresa', 'Regresar los quitados'); r.type = 'button'; r.onclick = () => { est.visto = {}; guardaQuit(est.visto); avisos(); }; fr.append(r); } } else if (r) r.remove();
+    } else { if (v) v.remove(); const r = $('.vp-regresa', fr); if (r) r.remove(); }
   }
 
   /* ───── tarjetas de arriba: despliegan sus datos ───── */
@@ -444,6 +459,45 @@ html,body{overflow:hidden!important;height:100%!important}
   const limpia = (t) => t.replace(/por m²\s+por m²/g, 'por m²').replace(/\s+/g, ' ').trim();
   const movil = () => W.matchMedia('(max-width:760px)').matches;
   const auto = {}, masDe = { id: null, on: false }; let fix = 0, eraMovil = null;
+  /* ───── tres botones del grafo: pantalla completa, abrir todo, cerrar todo ───── */
+  const st3 = el('style'); st3.setAttribute('data-vp', '');
+  st3.textContent = 'html[data-vp-max] .ppp{position:fixed!important;inset:0!important;z-index:9000!important;width:auto!important;height:auto!important;max-width:none!important;max-height:none!important;margin:0!important}html[data-vp-max],html[data-vp-max] body{overflow:hidden!important}.ppp-herr .vp-b3[aria-pressed=true]{background:#1f1b16!important;color:#fffdf8!important}';
+  document.head.append(st3);
+  const maxOn = () => document.documentElement.hasAttribute('data-vp-max');
+  const ponMax = (on) => {
+    const d = document.documentElement;
+    on ? d.setAttribute('data-vp-max', '') : d.removeAttribute('data-vp-max');
+    try { if (on && d.requestFullscreen && !document.fullscreenElement) d.requestFullscreen().catch(() => 0); else if (!on && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => 0); } catch (e) { /* el teléfono no lo permite: queda el modo que tapa el menú */ }
+    setTimeout(() => { W.dispatchEvent(new Event('resize')); const a = api(); if (a) a.verTodo(); }, 350);
+  };
+  if (!W.__vpFs) { W.__vpFs = true; document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.documentElement.hasAttribute('data-vp-max')) { document.documentElement.removeAttribute('data-vp-max'); W.dispatchEvent(new Event('resize')); } }); }
+  const sinResumen = () => { const b = $('[data-act="resumen"]'); if (b && b.getAttribute('aria-pressed') === 'true') b.click(); };
+  const abreTodo = () => { const a = api(); if (!a) return; sinResumen(); (a.estado().plegados || []).forEach((id) => a.alterna(id)); a.verTodo(); };
+  /* Cerrar todo: queda a la vista sólo el camino que lleva al primer dato de cada color; lo demás se pliega. */
+  const cierraTodo = () => {
+    const a = api(); if (!a) return; sinResumen();
+    const ns = a.estado().res.nodos.filter((n) => !n.oculto), by = {}, hijos = {};
+    ns.forEach((n) => { by[n.id] = n; }); ns.forEach((n) => { if (n.de && by[n.de]) (hijos[n.de] = hijos[n.de] || []).push(n.id); });
+    const color = (n) => (n.tarjetas || [])[0] || '';
+    const guarda = new Set();
+    const prof = (n) => { let d = 0; for (let x = n; x.de && by[x.de]; x = by[x.de]) d++; return d; }, prim = {};
+    ns.forEach((n) => { const c = color(n); if (c && (!prim[c] || prof(n) < prof(prim[c]))) prim[c] = n; });      // el primer dato de cada color (el más cercano al predio)
+    Object.keys(prim).forEach((c) => { for (let x = prim[c]; x && !guarda.has(x.id); x = x.de && by[x.de]) guarda.add(x.id); });
+    const pl = new Set(a.estado().plegados || []);
+    ns.forEach((n) => { const h = hijos[n.id]; if (!h) return; const quiere = !h.some((i) => guarda.has(i)); if (quiere !== pl.has(n.id)) a.alterna(n.id); });
+    a.verTodo();
+  };
+  function botones3() {
+    const h = $('.ppp-herr'); if (!h) return;
+    if (!$('.vp-b3', h)) {
+      [['max', 'Pantalla completa', 'Que el árbol ocupe toda la pantalla', () => ponMax(!maxOn())], ['abre', 'Abrir todo', 'Desplegar todas las ramas', abreTodo], ['cierra', 'Cerrar todo', 'Plegar todo y dejar sólo el inicio de cada color', cierraTodo]].forEach((d) => {
+        const b = el('button', 'ppp-btn chico vp-b3', d[1]); b.type = 'button'; b.title = d[2]; b.setAttribute('data-b3', d[0]); b.onclick = (ev) => { ev.stopPropagation(); d[3](); }; h.append(b);
+      });
+    }
+    const m = $('[data-b3="max"]', h), on = maxOn(), txt = on ? 'Salir de pantalla completa' : 'Pantalla completa';
+    if (m && m.textContent !== txt) { m.textContent = txt; m.setAttribute('aria-pressed', String(on)); }
+  }
+
   function extra() {
     const raiz = $('.ppp'); if (!raiz) return;
     const m = movil();
@@ -491,7 +545,7 @@ html,body{overflow:hidden!important;height:100%!important}
     });
     if (p.scrollTop === 0) { const h = $(':scope>h2', p); if (h) { const d = h.getBoundingClientRect().top - (p.getBoundingClientRect().top + p.clientTop); if (Math.abs(d) > 1) fix += d; p.style.setProperty('--fix', fix + 'px'); } }
   }
-  est.t = setInterval(() => { tick(); extra(); }, 300); tick(); extra(); W.dispatchEvent(new Event('resize'));
+  est.t = setInterval(() => { tick(); extra(); botones3(); }, 300); tick(); extra(); botones3(); W.dispatchEvent(new Event('resize'));
 }
 (function espera(n) {
   if (document.querySelector('.ppp .ppp-lienzo .nodo')) return __mejorasArbol();
