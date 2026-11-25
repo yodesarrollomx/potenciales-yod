@@ -35,6 +35,7 @@
     estado: 'El árbol solo guarda borradores.',
     red: 'No pude hablar con el servidor. Lo que ves usa la definición de esta página, que puede estar desactualizada.',
     definicion: 'La definición del libro no cargó bien. Uso la de esta página, que puede estar desactualizada; no se guarda en el libro.',
+    cambio_local: 'Cambiaste el plan en pantalla mientras abría el del libro: no lo pisé. Ábrelo desde «Abrir un plan» si lo quieres.',
     reglas: 'Tienes cambios a las reglas sin publicar. El libro guarda planes calculados con las reglas publicadas: vuelve a la definición original para guardar.'
   };
   function texto(codigo) { return TEXTOS[codigo] || 'El servidor respondió «' + String(codigo || 'sin respuesta').slice(0, 40) + '». No se guardó nada.'; }
@@ -94,9 +95,10 @@
     }
     function lista() { return leer('arbol-columnas'); }
     /* Abre una columna del árbol: la vuelve plan, comprueba que el motor la evalúa y la deja como el plan de la pantalla. */
-    function abre(def, letra) {
+    function abre(def, letra, guardia) {
       return leer('arbol-columna', { columna: letra }).then(function (r) {
         if (!r.ok) return r;
+        if (typeof guardia === 'function' && !guardia()) return { ok: false, error: 'cambio_local' };   // la pantalla cambió mientras llegaba: no se pisa
         var mapa = {}, nombre = '', version = '';
         (Array.isArray(r.valores) ? r.valores : []).forEach(function (x) { if (x && typeof x.id === 'string') { mapa[x.id] = x.valor; if (x.id === 'I-01') nombre = String(x.valor); if (x.id === 'I-02') version = String(x.valor); } });
         var v; try { v = conexion.columnaAPlan(def, mapa, { motor: motor }); } catch (e) { return { ok: false, error: 'definicion' }; }
@@ -212,8 +214,9 @@
         N.lista().then(function (r) { if (est.panel !== 'abrir') return; if (!r.ok) { est.panel = ''; fin(texto(r.error)); return; } est.lista = Array.isArray(r.columnas) ? r.columnas : []; est.msg = 'Tienes otro plan en pantalla: toca el plan resaltado para abrirlo en su lugar.'; pinta(); }).catch(falla);
         return;
       }
+      var foto = JSON.stringify(api.estado().plan || {});
       est.ocupado = true; est.msg = 'Abriendo el plan…'; pinta();
-      N.abre(est.def, col).then(function (r) {
+      N.abre(est.def, col, function () { return JSON.stringify(api.estado().plan || {}) === foto; }).then(function (r) {
         if (!r.ok) { fin(texto(r.error)); return; }
         monta(); fin('Abrí «' + (r.nombre || 'sin nombre') + '» de la columna ' + r.columna + '.');
       }).catch(falla);
