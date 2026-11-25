@@ -30,8 +30,8 @@ function libroMaestro(ancho = 14) {
   Object.keys(C.MAESTRO).forEach((n) => { hojas[n] = new Hoja(n, C.MAESTRO[n], 60); });
   return { hojas, h, renglon, ids };
 }
-function entorno(config, ancho) {
-  const w = mundo(), m = libroMaestro(ancho);
+function entorno(config, ancho, opMundo) {
+  const w = mundo(opMundo), m = libroMaestro(ancho);
   vm.runInContext(ARBOL_GS, w.ctx, { filename: 'ArbolPPP.gs' });
   w.libros[MAESTRO] = { getSheetByName: (n) => m.hojas[n] || null };
   const cfg = w.vivero.getSheetByName('Config');
@@ -50,4 +50,4 @@ function entorno(config, ancho) {
   };
   return { w, m, pedidos, cliente };
 }
-module.exports = { entorno, RAIZ, C, Conexion, Servidor, Motor, SIN };
+module.exports = { entorno, RAIZ, C, Conexion, Servidor, Motor, SIN, Hoja };

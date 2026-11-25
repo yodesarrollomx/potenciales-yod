@@ -307,7 +307,73 @@ function arbol_guarda_(s, b, rid) {
   var rev = arbol_rev_(h.getRange(1, col, ult, 1).getValues(), h.getRange(1, col, ult, 1).getFormulas());
   var salida = { ok: true, hecho: 'arbol-guarda', columna: letra, nueva: nueva, escritos: escritos, ignorados: ignorados.slice(0, 50), estado: ARBOL.ESTADO, rev: rev };
   if (base) { salida.nombre = nombre; salida.version = version; salida.cambio = cambio; }
+  /* la versión en el visor: nunca tumba un guardado que ya quedó escrito y comprobado */
+  try { salida.visor = arbol_visor_pon_(libro, b.visor, { nombre: nombre, version: version, escenario: escenario, letra: letra, col: col, rev: rev }); } catch (e9) { salida.visor = 'error'; }
   return salida;
+}
+
+/* ───────────── 3 · la versión en el visor ─────────────
+   Si la petición trae el paquete del visor de la versión (`visor`: texto JSON de la forma ppp2-visor-v1, el mismo que arma el motor del
+   árbol para su vista previa) y el Maestro tiene la pestaña ARBOL_VISOR, se deja ahí un renglón por columna del árbol, con las mismas
+   columnas que PPP_VISOR. Visor.gs lo sirve por la ruta de las fotos: caso `arbol-<proyecto>` (liga `ppp:arbol-<proyecto>`), una versión
+   por columna (`c<letra>`, numeradas 1, 2, 3… en el orden en que se guardaron), por omisión la última y, si Dirección elige otra, ésa (ppp2-elige). Volver a guardar la columna
+   cambia su huella, así que quien tenga el visor abierto ve el cambio en su siguiente sondeo.
+   Sin pestaña no se guarda nada (ése es el interruptor). El servidor no calcula: guarda lo que el motor calculó, con la identidad del libro.
+   Devuelve una palabra: guardado · sin_paquete · sin_hoja · hoja · grande · invalido · sin_nombre. */
+var ARBOL_VISOR = {
+  HOJA: 'ARBOL_VISOR', ESQUEMA: 'ppp2-visor-v1', MAX: 50000, SIRVE: 'lista',
+  PIDE: ['caso_id', 'escenario_id', 'escenario_nombre', 'estado', 'orden', 'huella_entradas', 'calculado', 'visor_json']
+};
+/* El nombre del proyecto (I-01) como clave del caso: minúsculas, sin acentos y con guiones. Dos columnas con el mismo nombre son versiones
+   del mismo proyecto, igual que en «Versiones del proyecto». */
+function arbol_caso_(nombre) {
+  var x = String(nombre == null ? '' : nombre).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56).replace(/-+$/, '');
+  return x ? 'arbol-' + x : '';
+}
+function arbol_visor_pon_(libro, crudo, d) {
+  if (crudo === undefined || crudo === null || crudo === '') return 'sin_paquete';
+  if (typeof crudo !== 'string' || crudo.length > ARBOL_VISOR.MAX) return 'grande';
+  var h = libro.getSheetByName(ARBOL_VISOR.HOJA);
+  if (!h) return 'sin_hoja';
+  var ancho = h.getLastColumn(), cab = ancho ? h.getRange(1, 1, 1, ancho).getValues()[0].map(low_) : [], ix = {};
+  cab.forEach(function (c, i) { if (c && !(c in ix)) ix[c] = i; });
+  if (ARBOL_VISOR.PIDE.some(function (c) { return !(c in ix); })) return 'hoja';
+  var o;
+  try { o = JSON.parse(crudo); } catch (e) { return 'invalido'; }
+  if (!o || typeof o !== 'object' || Array.isArray(o) || o.esquema !== ARBOL_VISOR.ESQUEMA) return 'invalido';
+  var caso = arbol_caso_(d.nombre);
+  if (!caso) return 'sin_nombre';
+  /* la identidad es la del libro, no la de la vista previa del navegador */
+  var esObj = function (x) { return x && typeof x === 'object' && !Array.isArray(x); };
+  var etiqueta = txt_(String(d.version || '') + (d.escenario && low_(d.escenario) !== 'arbol' ? ' · ' + d.escenario : ''), 80) || 'Versión';
+  if (!esObj(o.plan)) o.plan = {};
+  o.plan.nombre = txt_(d.nombre, 120);
+  if (esObj(o.v)) o.v.nombre = etiqueta;
+  var guardada = 'Árbol PPP · versión «' + etiqueta + '» · guardada en el libro el ' + ahora_(), antes = typeof o.origen === 'string' ? o.origen : '';
+  o.origen = txt_(/^Árbol PPP · estimado, no sincronizado/.test(antes) ? antes.replace(/^Árbol PPP · estimado, no sincronizado/, guardada) : guardada, 300);
+  var texto = JSON.stringify(o);
+  if (texto.length > ARBOL_VISOR.MAX) return 'grande';
+  /* un renglón por columna del árbol: si ya existe se actualiza (y conserva si Dirección la eligió); si no, se agrega al final */
+  var esc = 'c' + d.letra, n = h.getLastRow(), fila = -1, orden = 1;
+  if (n > 1) {
+    var col1 = function (c) { return h.getRange(2, ix[c] + 1, n - 1, 1).getValues().map(function (r) { return r[0]; }); };
+    var escs = col1('escenario_id'), casos = col1('caso_id'), ordenes = col1('orden'), mayor = 0;
+    for (var i = escs.length - 1; i >= 0 && fila < 0; i--) if (String(escs[i]).trim() === esc) fila = i + 2;
+    casos.forEach(function (c, j) { if (String(c).trim() === caso && j + 2 !== fila) mayor = Math.max(mayor, Number(ordenes[j]) || 0); });
+    /* el número de versión: el que ya tenía en su proyecto; si es nueva (o cambió de proyecto), la siguiente */
+    orden = fila > 0 && String(casos[fila - 2]).trim() === caso && Number(ordenes[fila - 2]) >= 1 ? Number(ordenes[fila - 2]) : mayor + 1;
+  }
+  var pone = { caso_id: caso, tipo: 'arbol', escenario_id: esc, escenario_nombre: etiqueta, estado: ARBOL_VISOR.SIRVE, orden: orden, huella_entradas: String(d.rev || ''),
+    calculado: ahora_(), origen: 'Árbol PPP · columna ' + d.letra, visor_json: texto };
+  if (fila < 0) {
+    var nuevo = cab.map(function (c) { return c in pone ? arbol_literal_(pone[c]) : ''; });
+    h.getRange(n + 1, 1, 1, ancho).setValues([nuevo]);
+  } else {
+    Object.keys(pone).forEach(function (c) { if (c in ix) h.getRange(fila, ix[c] + 1).setValue(arbol_literal_(pone[c])); });
+  }
+  SpreadsheetApp.flush();
+  try { CacheService.getScriptCache().remove('vfa'); } catch (e2) { }
+  return 'guardado';
 }
 
 /* ───────────── utilidades ───────────── */

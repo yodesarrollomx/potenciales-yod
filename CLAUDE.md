@@ -260,3 +260,8 @@ Barra fija abajo en `visor.html` (`visor-pestanas.js` + `visor-pestanas.css`; la
 - **«deducido de …»** sale en leyendas y hojas cuando la respuesta trae `deducido` (rutas → `rutasDe`/`FLUJO_RUTA` de `visor.js`).
 - **Tipos de archivo:** la pantalla arma cada archivo con el tipo de sus bytes (`ppp2-archivo`) revisado contra `PASIVO` de `visor-pestanas.js`, que debe decir lo mismo que `PESTANAS.PASIVO` de `server/ppp2/Visor.gs` (lo compara una prueba): lo que un navegador ejecuta (HTML, SVG, XML, scripts) no se abre aparte, sólo se guarda.
 - Pruebas: `node --test tests/visor-pestanas.test.cjs` y `node tests/visor-pestanas-browser.cjs` (dobles del contrato en `tests/visor-pestanas-dobles.cjs`; el servidor de main de verdad, con hoja de historial y Drive inventados, en `tests/visor-pestanas-mundo.cjs`), además de las del visor.
+
+## 25-nov-2026 · El visor enseña las versiones del Árbol PPP
+
+Al guardar una versión, el Árbol deja su paquete del visor en la pestaña `ARBOL_VISOR` del Maestro (`arbol_visor_pon_`, `server/ppp2/ArbolPPP.gs`) y `Visor.gs` la sirve por la ruta de las fotos con la liga `ppp:arbol-<proyecto>`: una versión por columna, la última por omisión y la que Dirección elija con `ppp2-elige`. El prefijo `arbol-` decide la hoja. El servidor no calcula ni compara: guarda lo del motor con la identidad del libro y sirve sólo datos (las claves de la forma y `cascada`, limpia). Ni nombres de proyectos ni cifras reales en pruebas o docs. Detalle en docs/arbol-ppp.md; encenderlo, en `server/ppp2/INSTALAR.md`. Pruebas: `node --test tests/arbol-ppp-visor.test.cjs`.
+
