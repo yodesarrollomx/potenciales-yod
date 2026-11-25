@@ -127,6 +127,7 @@ jobs:
         run: |
           node tests/visor-compara-browser.cjs
           node tests/visor-pestanas-browser.cjs
+          node tests/visor-reparto-pie-browser.cjs
       - name: Recorridos reales del DOM con transporte sintético
         env:
           NODE_PATH: ${{ runner.temp }}/ppp-browser/node_modules
