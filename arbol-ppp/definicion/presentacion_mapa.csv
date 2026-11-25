@@ -1,0 +1,101 @@
+dato,ficha,tema,lamina,nodo,papel,nota
+P1,dueno,El terreno y lo que permite,2,T-01,clave,
+P1,dueno,El terreno y lo que permite,2,N-03,clave,
+P1,dueno,El terreno y lo que permite,2,N-02,apoyo,
+P1,dueno,El terreno y lo que permite,2,N-04,apoyo,
+P1,dueno,El terreno y lo que permite,2,E-08,apoyo,CUS usado contra el permitido
+I1,inversionista,El programa: qué se construye,3,E-05,clave,
+I1,inversionista,El programa: qué se construye,3,E-17,clave,
+I1,inversionista,El programa: qué se construye,3,PT-01,clave,
+I1,inversionista,El programa: qué se construye,3,T-01,apoyo,
+I1,inversionista,El programa: qué se construye,3,E-01,apoyo,
+I1,inversionista,El programa: qué se construye,3,ES-01,apoyo,el sótano como área
+I1,inversionista,El programa: qué se construye,3,ES-05,apoyo,cajones del predio y de afuera
+I1,inversionista,El programa: qué se construye,3,E-15,apoyo,el tipo de edificio
+I1,inversionista,El programa: qué se construye,3,E-09,apoyo,cajones que pide la norma
+I2,inversionista,Qué se vende y a cuánto,4,PT-07,clave,
+I2,inversionista,Qué se vende y a cuánto,4,MU-11,clave,
+I2,inversionista,Qué se vende y a cuánto,4,P1-08,clave,
+I2,inversionista,Qué se vende y a cuánto,4,MU-17,clave,ventas por uso: debe cuadrar con las ventas
+I2,inversionista,Qué se vende y a cuánto,4,MU-12,apoyo,
+I2,inversionista,Qué se vende y a cuánto,4,MU-13,apoyo,
+I2,inversionista,Qué se vende y a cuánto,4,MU-14,apoyo,
+I2,inversionista,Qué se vende y a cuánto,4,MU-15,apoyo,
+I2,inversionista,Qué se vende y a cuánto,4,K-08,apoyo,
+I2,inversionista,Qué se vende y a cuánto,4,P1-05,apoyo,el producto que se vende
+I2,inversionista,Qué se vende y a cuánto,4,P1-12,apoyo,lo que cuesta una unidad
+I6,inversionista,Cuándo: el calendario,5,K-05,clave,
+I6,inversionista,Cuándo: el calendario,5,K-12,clave,
+I6,inversionista,Cuándo: el calendario,5,K-02,apoyo,
+I6,inversionista,Cuándo: el calendario,5,K-04,apoyo,
+I6,inversionista,Cuándo: el calendario,5,K-07,apoyo,
+I6,inversionista,Cuándo: el calendario,5,CR-01,apoyo,
+I6,inversionista,Cuándo: el calendario,5,CR-02,apoyo,
+I6,inversionista,Cuándo: el calendario,5,K-06,apoyo,
+I4,inversionista,Cuánto cuesta,6,C-17,clave,
+I4,inversionista,Cuánto cuesta,6,C-16,clave,
+I4,inversionista,Cuánto cuesta,6,T-04,clave,
+I4,inversionista,Cuánto cuesta,6,C-07,apoyo,
+I4,inversionista,Cuánto cuesta,6,C-12,apoyo,
+I4,inversionista,Cuánto cuesta,6,C-13,apoyo,
+I4,inversionista,Cuánto cuesta,6,C-14,apoyo,
+I4,inversionista,Cuánto cuesta,6,C-15,apoyo,
+I4,inversionista,Cuánto cuesta,6,R-06,apoyo,cuánto pesa la tierra en las ventas
+I5,inversionista,De dónde sale el dinero,7,D-19,clave,
+I5,inversionista,De dónde sale el dinero,7,D-20,clave,
+I5,inversionista,De dónde sale el dinero,7,D-18,apoyo,
+I5,inversionista,De dónde sale el dinero,7,R-11,apoyo,
+I5,inversionista,De dónde sale el dinero,7,RV-06,apoyo,
+I5,inversionista,De dónde sale el dinero,7,D-21,apoyo,lo que cuesta el dinero
+P6,dueno,"Lo que condiciona el cobro: costos, banco y caja",7,C-16,clave,
+P6,dueno,"Lo que condiciona el cobro: costos, banco y caja",7,D-22,clave,
+P6,dueno,"Lo que condiciona el cobro: costos, banco y caja",7,D-16,apoyo,
+P6,dueno,"Lo que condiciona el cobro: costos, banco y caja",7,D-10,apoyo,
+I8,inversionista,Cuánto deja,8,MT-03,clave,el margen que mide Dirección
+I8,inversionista,Cuánto deja,8,R-19,clave,
+I8,inversionista,Cuánto deja,8,RI-01,clave,
+I8,inversionista,Cuánto deja,8,MT-01,apoyo,
+I8,inversionista,Cuánto deja,8,R-05,apoyo,
+I8,inversionista,Cuánto deja,8,R-09,apoyo,
+I8,inversionista,Cuánto deja,8,RI-02,apoyo,
+I8,inversionista,Cuánto deja,8,RI-03,apoyo,
+I8,inversionista,Cuánto deja,8,RI-05,apoyo,
+I8,inversionista,Cuánto deja,8,FI-04,apoyo,antes y después de ISR
+I8,inversionista,Cuánto deja,8,FI-09,apoyo,el plan calcula antes de IVA
+I8,inversionista,Cuánto deja,8,R-03,apoyo,utilidad antes de financiar
+I8,inversionista,Cuánto deja,8,MT-04,apoyo,holgura contra la meta
+I7,inversionista,Cómo se reparte,9,R-22,clave,
+I7,inversionista,Cómo se reparte,9,R-24,clave,
+I7,inversionista,Cómo se reparte,9,R-25,clave,
+I7,inversionista,Cómo se reparte,9,S-03,apoyo,
+I7,inversionista,Cómo se reparte,9,S-04,apoyo,
+I7,inversionista,Cómo se reparte,9,D-01,apoyo,el rendimiento que se le reconoce al capital
+P3,dueno,Qué recibe el dueño y en qué orden,9,R-22,clave,
+P3,dueno,Qué recibe el dueño y en qué orden,9,S-02,clave,
+P3,dueno,Qué recibe el dueño y en qué orden,9,S-03,apoyo,
+P3,dueno,Qué recibe el dueño y en qué orden,9,R-23,apoyo,
+P2,dueno,Lo que vale su tierra,10,T-04,clave,
+P2,dueno,Lo que vale su tierra,10,VD-01,clave,
+P2,dueno,Lo que vale su tierra,10,T-05,apoyo,
+P2,dueno,Lo que vale su tierra,10,VD-05,apoyo,
+P4,dueno,Cuándo cobra,10,VD-06,clave,"hito teórico, no fecha de pago"
+P4,dueno,Cuándo cobra,10,K-12,apoyo,
+P5,dueno,Aportar o vender,10,VD-08,clave,
+P5,dueno,Aportar o vender,10,VD-07,clave,
+P5,dueno,Aportar o vender,10,VD-10,apoyo,
+P5,dueno,Aportar o vender,10,R-23,apoyo,
+P5,dueno,Aportar o vender,10,RI-04,apoyo,
+P5,dueno,Aportar o vender,10,VD-09,apoyo,
+I9,inversionista,Qué puede salir mal,11,RV-10,clave,
+I9,inversionista,Qué puede salir mal,11,RV-11,clave,
+I9,inversionista,Qué puede salir mal,11,RV-07,apoyo,
+I9,inversionista,Qué puede salir mal,11,RV-05,apoyo,
+I9,inversionista,Qué puede salir mal,11,RV-04,apoyo,lo que ponen el dueño y el capital contra el costo
+P9,dueno,Alternativas y sensibilidad,11,RV-11,clave,
+P9,dueno,Alternativas y sensibilidad,11,VD-09,apoyo,
+I10,inversionista,Derechos y garantías del inversionista,12,DG-01,clave,
+I10,inversionista,Derechos y garantías del inversionista,12,DG-02,clave,
+I10,inversionista,Derechos y garantías del inversionista,12,DG-04,clave,
+P8,dueno,Derechos del dueño y su pérdida máxima,12,DG-03,clave,
+P8,dueno,Derechos del dueño y su pérdida máxima,12,DG-05,clave,
+P8,dueno,Derechos del dueño y su pérdida máxima,12,DG-01,apoyo,

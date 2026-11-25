@@ -26,7 +26,7 @@
   'use strict';
 
   const ROTULO = 'estimado, no sincronizado';
-  const VERSION_MOTOR = 'motor-real-1.4.0';
+  const VERSION_MOTOR = 'motor-real-1.5.0';
   const TARJETAS = ['Reparto', 'Terreno', 'Producto', 'Tiempo', 'Costo y ganancia', 'Dinero', 'Riesgo y estado'];
   const TIPOS_NODO = ['se_decide', 'se_busca', 'regla_oficio', 'calculado'];
   const CLASES_UNIDAD = ['m2', 'pct', 'mxn', 'mxn_m2', 'n', 'n1', 'veces', 'mes', 'u_mes', 'texto', 'si_no'];
@@ -36,7 +36,7 @@
     definido: [1, 1], firme: [1, 1], pendiente: [1, 1], min: [1, 12], max: [1, 12], abs: [1, 1], piso: [1, 1], techo: [1, 1],
     redondea: [2, 2], si: [3, 3], suma_tipos: [1, 1], suma_tipos_si: [3, 3], cuenta_pendientes: [0, 0], flujo: [2, 3],
     fuentes_difieren: [1, 1], suma_componentes: [2, 2], cuenta_componentes: [2, 2], componente: [3, 3], esnumero: [1, 1],
-    fallas_revision: [0, 0], resultado_revision: [0, 0]
+    fallas_revision: [0, 0], resultado_revision: [0, 0], potencia: [2, 2]
   };
   const PALABRAS = new Set(['y', 'o', 'no', 'en', 'verdadero', 'falso']);
 
@@ -376,6 +376,9 @@
       case 'piso': return (E) => { const x = fs[0](E); return esNum(x) ? Math.floor(x) : null; };
       case 'techo': return (E) => { const x = fs[0](E); return esNum(x) ? Math.ceil(x) : null; };
       case 'redondea': return (E) => { const x = fs[0](E), n = fs[1](E); return esNum(x) && esNum(n) ? redondeaExcel(x, n) : null; };
+      /* potencia(base, exponente): el «^» de la gramática solo admite un entero escrito; con esto el exponente puede ser un dato (p. ej. meses / 12 para
+         traer un cobro a valor de hoy). Un resultado que no es un número (base negativa con exponente fraccionario, desbordamiento) queda desconocido. */
+      case 'potencia': return (E) => { const x = fs[0](E), y = fs[1](E); if (!esNum(x) || !esNum(y)) return null; const r = Math.pow(x, y); return esNum(r) ? r : null; };
       default: throw new Error('Función sin implementar: ' + f);
     }
   }
@@ -477,7 +480,9 @@
     ARBOL_TIPOS: ['id', 'nombre', 'max_abiertas', 'modulos', 'version', 'max_sugerencias', 'tope_corridas', 'tope_ms'],
     ARBOL_FLUJOS: ['flujo', 'concepto', 'signo', 'monto', 'perfil', 'desde', 'hasta', 'parametros'],
     ARBOL_LISTAS: ['lista', 'valor', 'nombre'],
-    ARBOL_VERSIONES: ['version', 'huella', 'quien', 'fecha', 'resultado_validacion', 'nota']
+    ARBOL_VERSIONES: ['version', 'huella', 'quien', 'fecha', 'resultado_validacion', 'nota'],
+    /* Estrellas (24-nov-2026): qué datos del árbol alimentan la presentación. Una fila por dato de presentación y nodo. Pestaña opcional: sin ella no hay estrellas y nada cambia. */
+    ARBOL_PRESENTACION: ['dato', 'ficha', 'tema', 'lamina', 'nodo', 'papel', 'nota']
   };
   const OBLIGATORIAS = {   // columnas de v1.1 (las de v1.2 pueden faltar: se aceptan vacías, Anexo A convención 10)
     ARBOL_NODOS: ['id', 'modulo', 'tipo', 'titulo', 'tarjetas', 'de', 'unidad_clase', 'unidad_etiqueta', 'que_es', 'version'],
@@ -488,9 +493,12 @@
     ARBOL_TIPOS: ['id', 'nombre', 'max_abiertas', 'modulos', 'version'],
     ARBOL_FLUJOS: ['flujo', 'concepto', 'perfil'],
     ARBOL_LISTAS: ['lista', 'valor'],
-    ARBOL_VERSIONES: ['version', 'huella', 'quien', 'fecha', 'resultado_validacion']
+    ARBOL_VERSIONES: ['version', 'huella', 'quien', 'fecha', 'resultado_validacion'],
+    ARBOL_PRESENTACION: ['dato', 'ficha', 'tema', 'nodo', 'papel']
   };
-  const NOMBRES_TABLA = { nodos: 'ARBOL_NODOS', opciones: 'ARBOL_OPCIONES', reglas: 'ARBOL_REGLAS', factores: 'ARBOL_FACTORES', componentes: 'ARBOL_COMPONENTES', tipos: 'ARBOL_TIPOS', flujos: 'ARBOL_FLUJOS', listas: 'ARBOL_LISTAS', versiones: 'ARBOL_VERSIONES' };
+  const NOMBRES_TABLA = { nodos: 'ARBOL_NODOS', opciones: 'ARBOL_OPCIONES', reglas: 'ARBOL_REGLAS', factores: 'ARBOL_FACTORES', componentes: 'ARBOL_COMPONENTES', tipos: 'ARBOL_TIPOS', flujos: 'ARBOL_FLUJOS', listas: 'ARBOL_LISTAS', versiones: 'ARBOL_VERSIONES', presentacion: 'ARBOL_PRESENTACION' };
+  const FICHAS = ['inversionista', 'dueno'];   // las dos fichas de «datos de presentación» (T-09 v2)
+  const PAPELES = ['clave', 'apoyo'];          // clave: sin ese dato la lámina queda incompleta · apoyo: la acompaña
 
   function parseParametros(txt) {
     const o = {}; if (!T(txt)) return o;
@@ -500,7 +508,7 @@
 
   /* De tablas en filas (Anexo A) al formato canónico (el mismo de vertical.json). Anota errores de columnas. */
   function desdeTablas(tablas, errores) {
-    const cr = { tipo: null, nodos: [], componentes: [], factores: [], flujos: [], listas: [], versiones: [], fuente: 'tablas' };
+    const cr = { tipo: null, nodos: [], componentes: [], factores: [], flujos: [], listas: [], versiones: [], presentacion: [], fuente: 'tablas' };
     const tab = {};
     Object.keys(tablas).forEach((k) => {
       const nombre = COLUMNAS[k] ? k : (COLUMNAS[k.toUpperCase()] ? k.toUpperCase() : (NOMBRES_TABLA[k.toLowerCase()] || null));
@@ -583,6 +591,7 @@
     });
     (tab.ARBOL_LISTAS || []).forEach((r, k) => cr.listas.push({ _fila: k + 2, lista: T(r.lista), valor: T(r.valor), nombre: T(r.nombre) }));
     (tab.ARBOL_VERSIONES || []).forEach((r) => cr.versiones.push(r));
+    (tab.ARBOL_PRESENTACION || []).forEach((r, k) => cr.presentacion.push({ _fila: k + 2, dato: T(r.dato), ficha: T(r.ficha), tema: T(r.tema), lamina: T(r.lamina) === '' ? null : r.lamina, nodo: T(r.nodo), papel: T(r.papel), nota: T(r.nota) }));
     cr.tiposIds = (tab.ARBOL_TIPOS || []).map((r) => T(r.id));
     const t0 = (tab.ARBOL_TIPOS || [])[0];
     if (t0) cr.tipo = { id: T(t0.id), nombre: T(t0.nombre), max_abiertas: t0.max_abiertas, incluye: LISTA(t0.modulos), version: ENTERO(t0.version), max_sugerencias: t0.max_sugerencias, tope_corridas: t0.tope_corridas, tope_ms: t0.tope_ms };
@@ -591,7 +600,7 @@
 
   /* Del JSON canónico (vertical.json) al mismo formato interno, con copias de lo que se va a tocar. */
   function desdeJson(j) {
-    const cr = { tipo: clonar(j.tipo) || null, nodos: [], componentes: clonar(j.componentes) || [], factores: clonar(j.factores) || [], flujos: clonar(j.flujos) || [], listas: clonar(j.listas) || [], versiones: [], fuente: 'json' };
+    const cr = { tipo: clonar(j.tipo) || null, nodos: [], componentes: clonar(j.componentes) || [], factores: clonar(j.factores) || [], flujos: clonar(j.flujos) || [], listas: clonar(j.listas) || [], versiones: [], presentacion: (clonar(j.presentacion) || []).map((r, k) => Object.assign({ _fila: k + 2 }, r)), fuente: 'json' };
     (j.nodos || []).forEach((n0, k) => {
       const n = clonar(n0);
       n._fila = k + 2;
@@ -636,6 +645,7 @@
       const out = Object.assign({}, entrada);
       out.nodos = (entrada.nodos || []).concat(clonar(ext.nodos));
       out.factores = (entrada.factores || []).concat(clonar(ext.factores || []));
+      if (Array.isArray(ext.presentacion) && ext.presentacion.length) out.presentacion = (entrada.presentacion || []).concat(clonar(ext.presentacion));
       return out;
     }
     if (!tablas(ext)) return err('La extensión de las pestañas ARBOL_* debe venir en pestañas (ARBOL_NODOS y ARBOL_FACTORES).');
@@ -1205,7 +1215,33 @@
       }
     })));
 
-    return { cn, ids, ix, kind, N, deps, orden, flujos, tipo, tipologias, rvIds, escribeDe, L, ctxs, factores, maestro, C, claseDe };
+    /* ── presentación (ARBOL_PRESENTACION): qué nodos alimentan cada dato de las fichas; de aquí salen las estrellas ── */
+    const presentacion = [], presDe = new Map(), datosPres = new Map();
+    (cr.presentacion || []).forEach((r, q) => {
+      const fila = r._fila || q + 2, P_ = (col, msg, cod) => E_('ARBOL_PRESENTACION', fila, col, msg, cod);
+      const dato = T(r.dato), ficha = T(r.ficha), tema = T(r.tema), nodo = T(r.nodo), papel = T(r.papel), lamina = r.lamina === null || r.lamina === undefined || T(r.lamina) === '' ? null : Number(r.lamina);
+      let ok = true;
+      if (!/^[A-Za-z][A-Za-z0-9]{0,7}$/.test(dato)) { P_('dato', 'El dato de presentación «' + dato + '» no tiene una clave válida (una letra y hasta siete letras o números más, por ejemplo I2 o P5).', 'dato_invalido'); ok = false; }
+      if (FICHAS.indexOf(ficha) < 0) { P_('ficha', 'La ficha «' + ficha + '» del dato ' + dato + ' no existe (' + FICHAS.join(' o ') + ').', 'ficha_invalida'); ok = false; }
+      if (!tema) { P_('tema', 'El dato de presentación ' + dato + ' no dice su tema.', 'campo_obligatorio'); ok = false; }
+      if (PAPELES.indexOf(papel) < 0) { P_('papel', 'El papel «' + papel + '» del nodo ' + nodo + ' en el dato ' + dato + ' no existe (' + PAPELES.join(' o ') + ').', 'papel_invalido'); ok = false; }
+      if (lamina !== null && !(Number.isInteger(lamina) && lamina >= 1)) { P_('lamina', 'La lámina del dato ' + dato + ' debe ser un número entero desde 1.', 'lamina_invalida'); ok = false; }
+      const j = ix.get(nodo);
+      if (j === undefined || kind[j] !== 'nodo') { P_('nodo', 'El dato de presentación ' + dato + ' se alimenta de «' + nodo + '», que no existe como nodo del árbol.', 'id_inexistente'); ok = false; }
+      if (!ok) return;
+      if (presentacion.some((x) => x.dato === dato && x.i === j)) { P_('nodo', 'El nodo ' + nodo + ' está repetido en el dato de presentación ' + dato + '.', 'id_repetido'); return; }
+      const d0 = datosPres.get(dato);
+      if (d0 && (d0.ficha !== ficha || d0.tema !== tema || d0.lamina !== lamina)) { P_('dato', 'El dato de presentación ' + dato + ' trae ficha, tema o lámina distintos en dos filas (la primera está en la fila ' + d0.fila + '): deben coincidir.', 'presentacion_inconsistente'); return; }
+      if (!d0) datosPres.set(dato, { dato, ficha, tema, lamina, fila, claves: 0 });
+      if (papel === 'clave') datosPres.get(dato).claves++;
+      const en = { dato, ficha, tema, lamina, i: j, nodo, papel, nota: T(r.nota), fila };
+      presentacion.push(en);
+      if (!presDe.has(j)) presDe.set(j, []);
+      presDe.get(j).push(en);
+    });
+    datosPres.forEach((d) => { if (!d.claves) E_('ARBOL_PRESENTACION', d.fila, 'papel', 'El dato de presentación ' + d.dato + ' no tiene ningún nodo con papel «clave»: sin uno no se puede saber si está completo.', 'sin_clave'); });
+
+    return { cn, ids, ix, kind, N, deps, orden, flujos, tipo, tipologias, rvIds, escribeDe, L, ctxs, factores, maestro, C, claseDe, presentacion, presDe, datosPres: Array.from(datosPres.values()) };
   }
 
 
@@ -2182,11 +2218,58 @@
     }
     if (c.compuesto && E.est[i] === 'decidido' && E.opc[i] === 'personalizado') { const pl = (E.plan.valores || {})[c.id]; o.opcion_base = pl && pl.base_opcion || (c.referencia && c.referencia.opcion) || null; }
     if (E.est[i] === 'reabierto') o.motivo = E.motivo[i];
+    const ps = D.presDe.get(i);   // estrellas: solo si la definición trae ARBOL_PRESENTACION y este nodo alimenta algún dato
+    if (ps) { o.presentacion = ps.map((x) => ({ dato: x.dato, ficha: x.ficha, tema: x.tema, lamina: x.lamina, papel: x.papel })); o.estrella = estrellaDe(E, i); }
     if (Ea) {
       if (!Ea.vis[i]) o.marca = 'nuevo';
       else if (!igualV(Ea.vis[i] ? Ea.v[i] : null, vf)) { o.marca = 'cambio'; o.antes = Ea.v[i] === undefined ? null : Ea.v[i]; }
     }
     return o;
+  }
+
+  /* ── estrellas: qué datos alimentan la presentación y si ya están ──
+     llena = el nodo tiene dato firme · supuesto = tiene dato, pero descansa en una referencia (el supuesto estándar) · vacia = todavía no hay dato.
+     Un dato de presentación está completo cuando todos sus nodos «clave» tienen dato (firme o con supuesto). No calcula nada: solo lee lo ya evaluado. */
+  /* La firmeza de las estrellas es la del árbol (un calculado es firme si todo de lo que sale lo es) con una diferencia: un número que la persona escribió
+     en un «se busca» o en una «regla del oficio» todavía no es el dato confirmado (D7 2.2), y eso se hereda hacia abajo. Así una cifra no sale «firme»
+     encima de un dato que sigue por confirmar. Se calcula una vez por evaluación. */
+  function firmezaEstrellas(E) {
+    if (E.fpEstrellas) return E.fpEstrellas;
+    const D = E.D, fp = new Array(D.N).fill(true);
+    for (let q = 0; q < D.orden.length; q++) {
+      const i = D.orden[q], k = D.kind[i];
+      if (k === 'dato' || !E.vis[i]) continue;
+      if (k === 'nodo' && D.cn[i].tipo !== 'calculado') { fp[i] = firmeE(E.est[i]) && !valorPropio(E, D.cn[i]); continue; }
+      let f = true; const ds = D.firmDeps[i]; for (let t = 0; t < ds.length; t++) if (!fp[ds[t]]) { f = false; break; }
+      fp[i] = f;
+    }
+    E.fpEstrellas = fp;
+    return fp;
+  }
+  function estrellaDe(E, i) {
+    if (!E.vis[i] || E.v[i] === null || E.v[i] === undefined) return 'vacia';
+    return firmezaEstrellas(E)[i] ? 'llena' : 'supuesto';
+  }
+  function armaPresentacion(E) {
+    const D = E.D, datos = [], faltan = [];
+    D.datosPres.forEach((d) => {
+      const nodos = D.presentacion.filter((x) => x.dato === d.dato).map((x) => {
+        const c = D.cn[x.i], est = estrellaDe(E, x.i), v = est === 'vacia' ? null : E.v[x.i];
+        return { id: c.id, titulo: c.titulo, papel: x.papel, estrella: est, valor: v, valor_vista: v === null ? null : vistaDe(E, c, v), unidad: c.escala ? { clase: c.unidad.clase, etiqueta: c.unidad.etiqueta, escala: c.escala } : { clase: c.unidad.clase, etiqueta: c.unidad.etiqueta },
+          tipo: c.tipo, oculto: c.oculto, a_la_vista: E.vis[x.i] === 1, tarjetas: c.tarjetas, nota: x.nota || null };
+      });
+      const sinDato = nodos.filter((n) => n.papel === 'clave' && n.estrella === 'vacia').map((n) => n.id);
+      sinDato.forEach((id) => { if (faltan.indexOf(id) < 0) faltan.push(id); });
+      datos.push({ dato: d.dato, ficha: d.ficha, tema: d.tema, lamina: d.lamina, estado: sinDato.length ? 'incompleto' : 'completo', con_supuesto: nodos.filter((n) => n.estrella === 'supuesto').length, faltan: sinDato, nodos });
+    });
+    const estrellas = { total: 0, llenas: 0, supuestos: 0, vacias: 0 };
+    D.presDe.forEach((l, i) => { const e = estrellaDe(E, i); estrellas.total++; estrellas[e === 'llena' ? 'llenas' : e === 'supuesto' ? 'supuestos' : 'vacias']++; });
+    const fichas = {}; FICHAS.forEach((f) => { const l = datos.filter((d) => d.ficha === f); fichas[f] = { total: l.length, completos: l.filter((d) => d.estado === 'completo').length }; });
+    const laminas = [];
+    datos.forEach((d) => { if (d.lamina === null) return; let g = laminas.find((x) => x.lamina === d.lamina); if (!g) { g = { lamina: d.lamina, datos: [], estado: 'completo' }; laminas.push(g); } g.datos.push(d.dato); if (d.estado !== 'completo') g.estado = 'incompleto'; });
+    laminas.sort((a, b) => a.lamina - b.lamina);
+    const completos = datos.filter((d) => d.estado === 'completo').length;
+    return { rotulo: ROTULO, total: datos.length, completos, incompletos: datos.length - completos, completa: datos.length > 0 && completos === datos.length, estrellas, fichas, laminas, faltan, datos };
   }
 
   function armaTarjetas(E) {
@@ -2281,6 +2364,7 @@
       alertas, sugerencias_pendientes: alertas.filter((a) => a.estado_sugerencias === 'diferidas').map((a) => a.id), rojos, tarjetas, pruebas, que_cambio, errores,
       plan: planResultante(D, E, plan2)
     };
+    if (D.presentacion.length) res.presentacion = armaPresentacion(E);   // sin la pestaña no existe la llave: el resultado queda idéntico al de antes
     return res;
   }
 
@@ -3188,6 +3272,12 @@
     return { plan: p, errores, opcion, estructura: { excedente: Object.assign({}, op.excedente), preferente: Object.assign({}, op.preferente) } };
   }
   function extiende(entrada, ext) { const errores = []; const out = extiendeDefinicion(entrada, ext, errores); return { definicion: out, errores }; }
+  /* el estado de la presentación de un plan (las estrellas), sin armar el resultado completo; null si la definición no trae ARBOL_PRESENTACION */
+  function presentacionPublica(definicion, plan) {
+    const D = definicion && definicion._interna; if (!D || !D.presentacion.length) return null;
+    const E = corre(D, normalizaPlan(plan)); aplicaReparto(E);
+    return armaPresentacion(E);
+  }
   function visorFechasPublica(definicion, plan) {
     const D = definicion && definicion._interna; if (!D) return null;
     const E = corre(D, normalizaPlan(plan)), fid = D.tipo.flujoBanco || 'F-02';
@@ -3203,7 +3293,9 @@
     D.firmDeps = D.deps.map((l) => l.filter((d) => ['formula', 'escribe', 'flujo', 'componente', 'efecto'].indexOf(d.tipo) >= 0).map((d) => d.j));
     D.sal = []; for (let i = 0; i < N; i++) D.sal.push([]);
     D.deps.forEach((l, i) => l.forEach((d) => { if (d.tipo !== 'de') D.sal[d.j].push({ a: i, tipo: d.tipo }); }));
-    D.huella = huella53(canonico(sinFilas({ tipo: cr.tipo, nodos: cr.nodos, componentes: cr.componentes, factores: cr.factores, flujos: cr.flujos, listas: cr.listas })));
+    const paraHuella = { tipo: cr.tipo, nodos: cr.nodos, componentes: cr.componentes, factores: cr.factores, flujos: cr.flujos, listas: cr.listas };
+    if (cr.presentacion && cr.presentacion.length) paraHuella.presentacion = cr.presentacion;   // las estrellas son parte de la definición solo cuando existen: sin la pestaña, la huella de siempre
+    D.huella = huella53(canonico(sinFilas(paraHuella)));
     return D;
   }
 
@@ -3444,5 +3536,5 @@
   }
 
   return { carga, valida, evalua, sugiere, compara, paqueteVisor, planConCambio, grafo, analiza, evaluaExpresion, editaDefinicion, REGLAS_VEREDICTO, ROTULO, VERSION: VERSION_MOTOR, TARJETAS, PRUEBAS_LIBRO, AREAS, areasACelda, celdaAAreas, nuevaClaveArea, validaNombreArea,
-    reparto, registraReparto, visorFechas: visorFechasPublica, MEDIDAS_REPARTO, REPARTO_LEE, moduloReparto: () => moduloReparto(), planConOpcion, extiende };
+    reparto, registraReparto, visorFechas: visorFechasPublica, MEDIDAS_REPARTO, REPARTO_LEE, moduloReparto: () => moduloReparto(), planConOpcion, extiende, presentacion: presentacionPublica, FICHAS, PAPELES };
 });

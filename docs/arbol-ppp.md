@@ -27,6 +27,7 @@ Una forma de armar un Plan de Potencial paso a paso. Se empieza con el predio y 
 | `arbol-ppp/conexion/conexion.js` | Paso de un plan a una columna de factores y de regreso. |
 | `arbol-ppp/conexion/caso-muestra.cjs`, `siembra.cjs`, `datos/` | Casos inventados y planes sembrados para las pruebas. |
 | `arbol-ppp/pruebas/motor-real.cjs`, `arbol-ppp/conexion/pruebas.cjs`, `arbol-ppp/conexion/pruebas-gs.cjs`, `tests/arbol-ppp-servidor.test.cjs` | Pruebas en Node; las dos últimas, del servidor contra un doble de Sheets. |
+| `arbol-ppp/definicion/presentacion_*.csv`, `construir-presentacion.cjs`, `definicion-presentacion.js`, `presentacion-prueba.html` (+ `.css`, `.js`) | Copia de prueba de los datos de presentación y sus estrellas (24-nov-2026). `arbol.html` no la carga. Ver `docs/arbol-presentacion.md`. |
 
 ## Reglas
 
@@ -87,3 +88,7 @@ Revertir por revisión el commit que agrega `arbol-ppp/` y repetir las verificac
 - **El alto:** la pantalla ocupa lo que dejan la barra del marco (65 px; 57 en teléfono) y la barra del libro, que `arranque.js` vuelve a medir cada vez que cambia.
 - **Botones flotantes:** el engrane y la chinche quedan apilados abajo a la derecha; en teléfono los controles del mapa pasan a la izquierda para no quedar debajo.
 - **Entrada:** en la lista de planes del PPP, «Armar un plan con el árbol» va junto a «Crear plan en blanco», sólo si el servidor dice `arbol = sí`.
+
+## Datos de presentación y estrellas (24-nov-2026, copia de prueba)
+
+El motor acepta una tabla opcional, `ARBOL_PRESENTACION`, que dice qué datos del Árbol alimentan cada lámina de la presentación del plan. Con ella, cada uno de esos datos lleva una estrella (firme, con supuesto o sin dato) y la barra gana el botón «Presentación» con el avance por lámina. Sin la tabla, el Árbol se ve y calcula igual que antes. La extensión de prueba agrega 57 datos con supuesto estándar (mezcla de usos, estacionamiento, meta de margen, rentabilidad, fechas del banco, aportar o vender, impuestos, derechos y garantías) y vive sólo en `presentacion-prueba.html`. Detalle, supuestos, lo que falta para encenderlo y pruebas: `docs/arbol-presentacion.md`.

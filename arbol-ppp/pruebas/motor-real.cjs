@@ -2432,6 +2432,268 @@ prueba('P-10 · R01 · el panel distingue «Capital · conciliación» de «Capi
   assert(!/<th scope="row">Capital<\/th>/.test(h), 'ningún renglón se llama sólo «Capital»');
 });
 
+/* ═══════════════════ 31 · DATOS DE PRESENTACIÓN Y ESTRELLAS (24-nov-2026; copia de prueba, nada en producción) ═══════════════════
+   Pedido de Dirección: (1) los datos que la presentación pide y el árbol no traía entran con un supuesto estándar editable; (2) lo que el árbol ya
+   calculaba y la presentación no usaba queda a la vista; (3) cada dato que alimenta la presentación lleva una estrella (ARBOL_PRESENTACION).
+   Sin la extensión, el árbol queda idéntico al de antes. Los oráculos de abajo se calculan aquí, a mano, con las cifras del propio plan. */
+grupo('31 · Datos de presentación: supuestos estándar, estrellas y mapa de láminas (copia de prueba)');
+const PRES = require(path.join(APP, 'construir-presentacion.cjs'));
+const REPEXT = require(path.join(APP, 'construir-reparto.cjs')).ext;
+const TABM = JSON.parse(fs.readFileSync(path.join(APP, 'definicion-tablas.js'), 'utf8').replace(/^window\.ARBOL_TABLAS=/, '').replace(/;\s*$/, ''));
+const clon = (x) => JSON.parse(JSON.stringify(x));
+const cargaPres = (conReparto, ext) => { let d = clon(TABM); if (conReparto) d = Motor.extiende(d, clon(REPEXT)).definicion; const y = Motor.extiende(d, ext || clon(PRES.ext)); assert.deepStrictEqual(y.errores, []); return Motor.carga(y.definicion); };
+const CP = cargaPres(true), DEFP = CP.definicion, CP0 = cargaPres(false), DEFP0 = CP0.definicion;
+const evP = (plan, cambio) => Motor.evalua(DEFP, plan, cambio, SIN);
+const planP = (predio, respuestas, datos) => { let plan = { tipo: 'vertical', valores: { 'T-01': { estado: 'confirmado', valor: predio } } }; respuestas.forEach(([id, op]) => { plan = evP(plan, { [id]: { opcion: op, estado: 'decidido' } }).plan; }); Object.keys(datos || {}).forEach((id) => { plan = evP(plan, { [id]: { valor: datos[id], estado: 'decidido' } }).plan; }); return plan; };
+const BASEP = planP(2000, RESPUESTAS, { 'T-04': 14 });
+const valsP = (plan) => { const v = Motor.paqueteVisor(DEFP, plan, { informe: true }).valores, o = {}; Object.keys(v).forEach((id) => { o[id] = v[id].visible ? v[id].valor : null; }); return o; };
+const conP = (plan, cambios) => { let p = plan; Object.keys(cambios).forEach((id) => { p = evP(p, { [id]: typeof cambios[id] === 'object' ? cambios[id] : { valor: cambios[id], estado: 'decidido' } }).plan; }); return p; };
+const estrellaP = (plan, id) => { const P = Motor.presentacion(DEFP, plan); for (const d of P.datos) { const n = d.nodos.find((x) => x.id === id); if (n) return n.estrella; } return undefined; };
+const datoP = (plan, dato) => Motor.presentacion(DEFP, plan).datos.find((d) => d.dato === dato);
+
+prueba('potencia(base, exponente): el exponente puede ser un dato; lo que no es un número queda desconocido', () => {
+  casi(X('potencia(2, 10)'), 1024, 1e-12); casi(X('potencia(4, 0.5)'), 2, 1e-12); casi(X('potencia(1 + T-01, T-02 / 12)', { 'T-01': 0.15, 'T-02': 39 }), Math.pow(1.15, 3.25), 1e-12);
+  casi(X('100 / potencia(1.1, 2)'), 100 / 1.21, 1e-12);
+  assert.strictEqual(X('potencia(0 - 8, 1 / 3)'), null, 'base negativa con exponente fraccionario no es un número');
+  assert.strictEqual(X('potencia(10, 400)'), null, 'un desbordamiento no es un número');
+  assert.strictEqual(X('potencia(T-01, 2)', { 'T-01': null }), null); assert.strictEqual(X("potencia('a', 2)"), null); assert.strictEqual(X('potencia(2, T-09)'), null, 'un exponente desconocido deja el resultado desconocido');
+  ['potencia(2)', 'potencia(1, 2, 3)', 'potencia()'].forEach((t) => assert.strictEqual(Motor.analiza(t).ok, false, t + ' pide exactamente dos argumentos'));
+  assert.deepStrictEqual(Motor.analiza('potencia(1 + T-01, T-02 / 12)').funciones, ['potencia']);
+  assert.strictEqual(Motor.analiza('2 ^ T-01').ok, false, 'el «^» sigue pidiendo un entero escrito: para un dato se usa potencia');
+});
+prueba('sin la pestaña ARBOL_PRESENTACION no hay estrellas: resultado, nodos y huella quedan como antes', () => {
+  assert(!('presentacion' in RB), 'el resultado base no trae la llave «presentacion»');
+  assert(RB.nodos.every((n) => !('estrella' in n) && !('presentacion' in n)), 'ningún nodo base trae estrella');
+  assert.strictEqual(Motor.presentacion(DEF, BASE), null); assert.strictEqual(Motor.presentacion(DEFT.definicion, BASE), null);
+  const v = clon(VERT); v.presentacion = []; assert.strictEqual(Motor.carga(v).huella, DEF.huella, 'una lista vacía no cambia la huella');
+  v.presentacion = [{ dato: 'I2', ficha: 'inversionista', tema: 'Ventas', lamina: 4, nodo: 'PT-07', papel: 'clave' }];
+  const c = Motor.carga(v); assert.deepStrictEqual(c.errores, []); assert.notStrictEqual(c.huella, DEF.huella, 'con filas, las estrellas son parte de la definición');
+  const r = Motor.evalua(c.definicion, BASE, null, SIN);
+  assert.strictEqual(r.presentacion.total, 1); assert.strictEqual(nodo(r, 'PT-07').estrella, 'supuesto'); assert(!('estrella' in nodo(r, 'C-17')));
+  const k = (x) => JSON.stringify({ n: x.nodos.map((q) => [q.id, q.valor, q.estado, q.opcion]), al: x.alertas.map((q) => q.id), t: x.tarjetas, p: x.pruebas });
+  assert.strictEqual(k(r), k(RB), 'las estrellas no cambian ni un valor, ni una alerta, ni una tarjeta');
+});
+prueba('la extensión sale de los CSV: definicion-presentacion.js coincide y sus 57 nodos no chocan con los del árbol ni con los del reparto', () => {
+  assert.strictEqual(fs.readFileSync(path.join(APP, 'definicion-presentacion.js'), 'utf8'), PRES.js, 'vuelve a correr: node construir-presentacion.cjs');
+  const N = PRES.ext.ARBOL_NODOS, cab = N[0], ids = N.slice(1).map((f) => f[cab.indexOf('id')]);
+  assert.strictEqual(ids.length, 57); assert.strictEqual(new Set(ids).size, 57);
+  const yaEstan = new Set(TABM.ARBOL_NODOS.slice(1).map((f) => f[0]).concat(REPEXT.ARBOL_NODOS.slice(1).map((f) => f[0])));
+  assert.deepStrictEqual(ids.filter((id) => yaEstan.has(id)), []); assert(ids.every((id) => /^(MU|ES|MT|RI|CR|VD|FI|DG)-\d{2}$/.test(id)), 'series propias, con la forma de un factor');
+  assert(N.slice(1).every((f) => f[cab.indexOf('modulo')] === 'comun/presentacion'));
+  assert.deepStrictEqual(PRES.ext.ARBOL_NODOS[0], TABM.ARBOL_NODOS[0], 'mismas columnas que ARBOL_NODOS'); assert.deepStrictEqual(PRES.ext.ARBOL_FACTORES[0], TABM.ARBOL_FACTORES[0]); assert.deepStrictEqual(PRES.ext.ARBOL_REGLAS[0], TABM.ARBOL_REGLAS[0]);
+  /* cada dato que se captura trae su supuesto estándar y dice de dónde sale */
+  const col = (f, c) => f[cab.indexOf(c)];
+  N.slice(1).filter((f) => col(f, 'tipo') !== 'calculado').forEach((f) => { assert(col(f, 'referencia_valor') !== '', col(f, 'id') + ' sin supuesto estándar'); assert(col(f, 'referencia_origen').length > 20, col(f, 'id') + ' no dice de dónde sale su supuesto'); });
+  assert(N.slice(1).every((f) => col(f, 'titulo').length <= 26), 'títulos cortos');
+  const F = PRES.ext.ARBOL_FACTORES; assert.strictEqual(F.length - 1, 57); assert(F.slice(1).every((f) => f[F[0].indexOf('correspondencia')] === 'sin_equivalente' && /no darlo de alta en el Maestro/.test(f[F[0].indexOf('nota')])), 'ningún factor nuevo se da por dado de alta en el Maestro');
+  cifra('presentación: 57 nodos nuevos (' + N.slice(1).filter((f) => col(f, 'tipo') !== 'calculado').length + ' con supuesto estándar editable y ' + N.slice(1).filter((f) => col(f, 'tipo') === 'calculado').length + ' calculados), ' + (PRES.ext.ARBOL_REGLAS.length - 1) + ' alertas y ' + (PRES.ext.ARBOL_PRESENTACION.length - 1) + ' filas del mapa');
+});
+prueba('carga sin errores con y sin la extensión del reparto, y no toca lo que ya había', () => {
+  assert.deepStrictEqual(CP.errores, [], JSON.stringify(CP.errores.slice(0, 3))); assert.deepStrictEqual(CP0.errores, [], JSON.stringify(CP0.errores.slice(0, 3)));
+  assert.strictEqual(DEFP0._interna.cn.length, 130 + 57); assert.strictEqual(DEFP._interna.cn.length, 130 + 20 + 57);
+  const r0 = Motor.evalua(DEFP0, BASE, null, SIN), viejos = (r) => JSON.stringify(r.nodos.filter((n) => !/^(MU|ES|MT|RI|CR|VD|FI|DG)-/.test(n.id)).map((n) => [n.id, n.valor, n.estado, n.opcion]));
+  assert.strictEqual(viejos(r0), viejos(RB), 'los nodos del árbol dan lo mismo con la extensión');
+  assert.strictEqual(JSON.stringify(r0.tarjetas), JSON.stringify(RB.tarjetas), 'las siete tarjetas no cambian'); assert.strictEqual(JSON.stringify(r0.pruebas), JSON.stringify(RB.pruebas), 'las nueve pruebas no cambian');
+  /* lo único que cambia hacia afuera: cada supuesto estándar nuevo que se captura cuenta como «por confirmar» (18 en el caso de muestra) */
+  const nuevosPorConfirmar = r0.por_confirmar.ids.filter((id) => /^(MU|ES|MT|RI|CR|VD|FI|DG)-/.test(id));
+  assert.strictEqual(nuevosPorConfirmar.length, 18, nuevosPorConfirmar.join(' ')); assert.strictEqual(r0.por_confirmar.n, RB.por_confirmar.n + 18);
+  assert.deepStrictEqual(r0.por_confirmar.ids.filter((id) => nuevosPorConfirmar.indexOf(id) < 0), RB.por_confirmar.ids, 'los que ya estaban por confirmar son los mismos');
+  const pa = Motor.paqueteVisor(DEFP0, BASE), pb = Motor.paqueteVisor(DEFT.definicion, BASE), difs = [];
+  const dif = (x, y, ruta) => { if (JSON.stringify(x) === JSON.stringify(y)) return; if (x && y && typeof x === 'object' && typeof y === 'object') new Set(Object.keys(x).concat(Object.keys(y))).forEach((k) => dif(x[k], y[k], ruta + '.' + k)); else difs.push(ruta); };
+  dif(pa, pb, '');
+  assert.deepStrictEqual(difs.sort(), ['.origen', '.plan.candados_abiertos', '.v.huella'], 'el paquete del visor sólo cambia en la cuenta de «por confirmar» y su huella: ' + difs.join(' '));
+  assert.strictEqual(pa.plan.candados_abiertos, pb.plan.candados_abiertos + 18);
+});
+prueba('validador del mapa: cada falla sale en español con pestaña, fila y columna', () => {
+  const conMapa = (f) => { const e = clon(PRES.ext); f(e.ARBOL_PRESENTACION); return cargaPres(false, e); };
+  const I = (c) => PRES.ext.ARBOL_PRESENTACION[0].indexOf(c);
+  const pide = (codigo, f, re) => { const e = tiene(conMapa(f), codigo, re); assert.strictEqual(e.pestana, 'ARBOL_PRESENTACION'); return e; };
+  pide('dato_invalido', (m) => { m[1][I('dato')] = '9x!'; });
+  pide('ficha_invalida', (m) => { m[1][I('ficha')] = 'banco'; }, /inversionista o dueno/);
+  pide('campo_obligatorio', (m) => { m[1][I('tema')] = ''; }, /tema/);
+  pide('papel_invalido', (m) => { m[1][I('papel')] = 'importante'; }, /clave o apoyo/);
+  pide('lamina_invalida', (m) => { m[1][I('lamina')] = '2.5'; }); pide('lamina_invalida', (m) => { m[1][I('lamina')] = '0'; });
+  pide('id_inexistente', (m) => { m[1][I('nodo')] = 'ZZ-99'; }, /no existe como nodo/);
+  pide('id_inexistente', (m) => { m[1][I('nodo')] = 'E-10'; }, /E-10/);   // lo escribe una decisión: no es un nodo con bolita
+  pide('id_inexistente', (m) => { m[1][I('nodo')] = 'I-08'; }, /I-08/);   // dato del plan (la ubicación): tampoco es un nodo
+  pide('id_repetido', (m) => { m.push(m[1].slice()); }, /repetido/);
+  pide('presentacion_inconsistente', (m) => { m[2][I('tema')] = 'Otro tema'; }, /deben coincidir/);
+  pide('presentacion_inconsistente', (m) => { m[2][I('lamina')] = '9'; });
+  pide('sin_clave', (m) => { m.forEach((f, k) => { if (k && f[I('dato')] === 'P4') f[I('papel')] = 'apoyo'; }); }, /P4/);
+  const e = tiene(conMapa((m) => { m[0].push('color'); m.slice(1).forEach((f) => f.push('rojo')); }), 'columna_desconocida', /color/); assert.strictEqual(e.pestana, 'ARBOL_PRESENTACION');
+  tiene(conMapa((m) => { const k = I('papel'); m.forEach((f) => f.splice(k, 1)); }), 'columna_faltante', /papel/);
+  /* sin fallas, el mapa de fábrica: 17 datos, 11 láminas, cada dato con su clave */
+  const P = Motor.presentacion(DEFP, BASEP);
+  assert.strictEqual(P.total, 17); assert.deepStrictEqual(P.laminas.map((l) => l.lamina), [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  assert.deepStrictEqual(P.fichas, { inversionista: { total: 9, completos: 9 }, dueno: { total: 8, completos: 8 } });
+  assert(P.datos.every((d) => d.nodos.some((n) => n.papel === 'clave')));
+});
+prueba('el JSON también lleva el mapa (extensión con «presentacion») y editaDefinicion lo conserva', () => {
+  const ext = { nodos: [], factores: [], presentacion: [{ dato: 'I2', ficha: 'inversionista', tema: 'Ventas', lamina: 4, nodo: 'PT-07', papel: 'clave' }, { dato: 'I2', ficha: 'inversionista', tema: 'Ventas', lamina: 4, nodo: 'P1-06', papel: 'apoyo' }] };
+  const c = Motor.carga(clon(VERT), { extension: ext }); assert.deepStrictEqual(c.errores, []);
+  const P = Motor.presentacion(c.definicion, BASE); assert.strictEqual(P.total, 1); assert.deepStrictEqual(P.datos[0].nodos.map((n) => [n.id, n.papel]), [['PT-07', 'clave'], ['P1-06', 'apoyo']]);
+  const mal = Motor.carga(clon(VERT), { extension: { nodos: [], presentacion: [{ dato: 'I2', ficha: 'inversionista', tema: 'Ventas', nodo: 'NO-01', papel: 'clave' }] } }); tiene(mal, 'id_inexistente', /NO-01/);
+  const ed = Motor.editaDefinicion(DEFP, [{ tabla: 'ARBOL_NODOS', id: 'MT-01', columna: 'referencia_valor', valor: 0.18 }]);
+  assert.strictEqual(ed.ok, true, JSON.stringify(ed.errores)); const P2 = Motor.presentacion(ed.definicion, BASEP);
+  assert.strictEqual(P2.total, 17, 'el mapa sobrevive a una edición de reglas'); casi(valsP2(ed.definicion, BASEP)['MT-01'], 0.18, 1e-12);
+});
+function valsP2(def, plan) { const v = Motor.paqueteVisor(def, plan, { informe: true }).valores, o = {}; Object.keys(v).forEach((id) => { o[id] = v[id].visible ? v[id].valor : null; }); return o; }
+prueba('supuestos estándar: cada dato nuevo nace con su referencia y las cifras cuadran con la cuenta hecha a mano', () => {
+  const v = valsP(BASEP), rend = v['R-20'] - v['D-22'];   // rendimiento del capital = resultado a repartir − caja al cierre
+  /* ventas por uso: por omisión todo es del uso del plan, al precio promedio: cuadra al peso con las ventas */
+  casi(v['MU-10'], v['PT-03'] + v['E-18']); casi(v['MU-11'], v['PT-07'] / v['MU-10']);
+  assert.deepStrictEqual([v['MU-01'], v['MU-02'], v['MU-03'], v['MU-04']], [1, 0, 0, 0]); casi(v['MU-16'], 1);
+  casi(v['MU-12'], v['PT-07']); assert.deepStrictEqual([v['MU-13'], v['MU-14'], v['MU-15']], [0, 0, 0]); casi(v['MU-17'], v['PT-07']); assert(Math.abs(v['MU-18']) < 1e-6);
+  casi(v['MU-05'], v['MU-11']); assert.deepStrictEqual([v['MU-06'], v['MU-07'], v['MU-08']], [null, null, null], 'el precio de un uso sin parte no aparece');
+  /* estacionamiento y sótano */
+  casi(v['ES-01'], v['E-10'] * v['E-12']); casi(v['ES-02'], v['E-05'] + v['ES-01']); casi(v['ES-03'], v['E-10'] + v['E-11']); assert.strictEqual(v['ES-04'], 0); casi(v['ES-05'], v['ES-03']);
+  /* meta de margen: la utilidad antes del capital es la caja al cierre menos la tierra más lo que se le pagó al capital */
+  assert.strictEqual(v['MT-01'], 0.15); casi(v['MT-02'], v['D-22'] - v['T-04'] + rend); casi(v['MT-03'], v['MT-02'] / v['PT-07']); casi(v['MT-04'], v['MT-02'] - 0.15 * v['PT-07']);
+  if (v['R-30'] !== null && v['R-30'] !== undefined) assert(Math.abs(v['MT-02'] - v['R-30']) <= 1, 'coincide al peso con la utilidad económica del módulo de repartos');
+  /* inversionista */
+  casi(v['RI-04'], v['D-01']); casi(v['RI-01'], (v['D-19'] + rend) / v['D-19']); casi(v['RI-02'], Math.pow(1 + v['D-01'] / 12, 12) - 1);
+  assert(Number.isInteger(v['RI-03']) && v['RI-03'] > 0 && v['RI-03'] <= v['K-12']); assert(Number.isInteger(v['CR-01']) && Number.isInteger(v['CR-02']) && v['CR-01'] >= v['K-05'] && v['CR-02'] > v['CR-01']);
+  /* el dueño: aportar o vender */
+  casi(v['VD-01'], v['T-04']); assert.strictEqual(v['VD-02'], 12); casi(v['VD-03'], v['C-10']); assert.strictEqual(v['VD-06'], v['K-12']);
+  casi(v['VD-04'], v['VD-01'] * (1 - v['VD-03'])); casi(v['VD-05'], v['VD-04'] / Math.pow(1 + v['RI-04'], v['VD-02'] / 12));
+  casi(v['VD-07'], v['R-22'] / Math.pow(1 + v['RI-04'], v['VD-06'] / 12)); casi(v['VD-08'], v['VD-07'] / v['VD-05']); casi(v['VD-09'], v['VD-07'] - v['VD-05']);
+  casi(v['VD-10'], Math.pow(v['R-22'] / v['T-04'], 12 / v['VD-06']) - 1);
+  /* impuestos */
+  assert.strictEqual(v['FI-01'], 'si'); assert.strictEqual(v['FI-02'], 0.3); casi(v['FI-03'], 0.3 * Math.max(0, v['R-19'])); casi(v['FI-04'], v['R-19'] - v['FI-03']);
+  assert.strictEqual(v['FI-05'], 'no', 'la vivienda no causa IVA'); assert.deepStrictEqual([v['FI-06'], v['FI-07']], [null, null]); assert.strictEqual(v['FI-08'], 0); casi(v['FI-09'], v['PT-07']);
+  /* derechos y garantías */
+  assert.strictEqual(v['DG-01'], 'si'); assert.strictEqual(v['DG-02'], 'si'); casi(v['DG-03'], v['T-04']); casi(v['DG-04'], v['D-19']); assert.strictEqual(v['DG-05'], 'no');
+  cifra('caso de muestra con la extensión: margen antes del capital ' + (v['MT-03'] * 100).toFixed(2) + ' % (meta 15 %), múltiplo del capital ×' + v['RI-01'].toFixed(4) + ', aportar entre vender ×' + v['VD-08'].toFixed(4) + ', rendimiento anual del dueño ' + (v['VD-10'] * 100).toFixed(2) + ' %');
+});
+prueba('valor presente neto: con tasa cero es la utilidad antes de financiar y con la TIR del proyecto es cero', () => {
+  const v0 = valsP(conP(BASEP, { 'RI-04': 0 })); casi(v0['RI-05'], v0['R-03'], 1e-9, 'VPN a tasa 0 = ventas − costo');
+  const v = valsP(BASEP), vt = valsP(conP(BASEP, { 'RI-04': v['R-09'] }));
+  assert(v['R-09'] > 0.05 && v['R-09'] < 0.4, 'la TIR del caso cabe en el rango de la tasa'); casi(vt['RI-04'], v['R-09'], 1e-12);
+  assert(Math.abs(vt['RI-05']) < 1e-6 * v['PT-07'], 'VPN a la TIR ≈ 0: ' + vt['RI-05']);
+  assert(v['RI-05'] > vt['RI-05'] && v0['RI-05'] > v['RI-05'], 'a mayor tasa, menor valor presente');
+});
+prueba('ventas por uso: la mezcla debe sumar 100 % y cuadrar con las ventas del plan; si no, avisa', () => {
+  const ids = (r) => r.alertas.map((a) => a.id);
+  assert(!ids(evP(BASEP)).some((id) => /^AL-(MU|VD|MT)/.test(id)), 'el supuesto estándar no dispara avisos en el caso sano');
+  const mezcla = conP(BASEP, { 'MU-01': 0.6, 'MU-02': 0.4 }), v = valsP(mezcla);
+  casi(v['MU-16'], 1); casi(v['MU-06'], v['MU-11'], 1e-12, 'el comercio nace con el precio promedio'); casi(v['MU-12'], 0.6 * v['PT-07']); casi(v['MU-13'], 0.4 * v['PT-07']); casi(v['MU-17'], v['PT-07']);
+  assert(!ids(evP(mezcla)).some((id) => /^AL-MU/.test(id)), 'una mezcla que suma 100 % al precio promedio cuadra');
+  const caro = conP(mezcla, { 'MU-06': v['MU-11'] + 5000 }), vc = valsP(caro), rc = evP(caro);
+  casi(vc['MU-18'], vc['MU-10'] * 0.4 * 5000); assert(ids(rc).indexOf('AL-MU18-1') >= 0 && ids(rc).indexOf('AL-MU16-1') < 0);
+  assert(/ventas por uso suman/.test(rc.alertas.find((a) => a.id === 'AL-MU18-1').texto));
+  /* el arreglo que pide el aviso: el precio del plan igual al promedio de la mezcla */
+  const prom = (0.6 * vc['MU-05'] + 0.4 * vc['MU-06']), arreglado = conP(caro, { 'P1-06': prom, 'MU-05': vc['MU-05'], 'MU-06': vc['MU-06'] }), va = valsP(arreglado);
+  assert(Math.abs(va['MU-18']) <= 0.001 * va['PT-07'] && ids(evP(arreglado)).indexOf('AL-MU18-1') < 0, 'con el precio del plan en el promedio de la mezcla deja de avisar: ' + va['MU-18']);
+  const mal = evP(conP(mezcla, { 'MU-02': 0.5 })); assert(ids(mal).indexOf('AL-MU16-1') >= 0); assert(/suma 110%/.test(mal.alertas.find((a) => a.id === 'AL-MU16-1').texto));
+});
+prueba('un uso distinto de vivienda cambia los supuestos: la mezcla sigue al uso del plan y las ventas causan IVA sobre lo que no es suelo', () => {
+  /* un uso que no es vivienda no tiene cajones por vivienda en esta versión del árbol: la obra se captura directa (factor C-06), como en el caso real */
+  const sinObra = valsP(conP(BASEP, { 'P1-02': 'Comercio' }));
+  assert.strictEqual(sinObra['C-17'], null, 'sin obra capturada el costo queda sin dato'); assert.strictEqual(sinObra['FI-05'], 'si'); casi(sinObra['FI-07'], 1 - sinObra['T-04'] / sinObra['PT-07'], 1e-12, 'la parte gravada no depende del costo');
+  const com = Object.assign({}, conP(BASEP, { 'P1-02': 'Comercio' })); com.datos = Object.assign({}, com.datos, { 'C-06': 87390000 });
+  const v = valsP(com); assert.strictEqual(v['C-07'], 87390000);
+  assert.deepStrictEqual([v['MU-01'], v['MU-02'], v['MU-03'], v['MU-04']], [0, 1, 0, 0]); casi(v['MU-13'], v['PT-07']); casi(v['MU-17'], v['PT-07']);
+  assert.strictEqual(v['FI-05'], 'si'); assert.strictEqual(v['FI-06'], 0.16); casi(v['FI-07'], 1 - v['T-04'] / v['PT-07']);
+  casi(v['FI-08'], v['PT-07'] * (1 - v['T-04'] / v['PT-07']) * 0.16); casi(v['FI-09'], v['PT-07'] + v['FI-08']);
+  const exento = valsP(conP(com, { 'FI-05': 'no' })); assert.strictEqual(exento['FI-08'], 0); assert.deepStrictEqual([exento['FI-06'], exento['FI-07']], [null, null]);
+  const sinIsr = valsP(conP(BASEP, { 'FI-01': 'no' })); assert.strictEqual(sinIsr['FI-03'], 0); casi(sinIsr['FI-04'], sinIsr['R-19']); assert.strictEqual(sinIsr['FI-02'], null);
+  /* con pérdida no hay ISR: el estimado nunca es negativo, y el múltiplo y la holgura dicen la pérdida tal cual */
+  const perdida = valsP(conP(BASEP, { 'T-04': 80, 'P1-06': 30000 }));
+  assert(perdida['R-19'] < 0, 'el caso forzado pierde: ' + perdida['R-19']); assert.strictEqual(perdida['FI-03'], 0); casi(perdida['FI-04'], perdida['R-19']); assert(perdida['MT-04'] < 0 && perdida['MT-03'] < 0.15);
+});
+prueba('la meta de margen avisa cuando el negocio queda abajo, y aportar contra vender avisa cuando conviene vender', () => {
+  const ids = (plan) => evP(plan).alertas.map((a) => a.id), v = valsP(BASEP);
+  assert(v['MT-03'] > 0.15 && ids(BASEP).indexOf('AL-MT03-1') < 0);
+  const alta = conP(BASEP, { 'MT-01': Math.ceil(v['MT-03'] * 200 + 1) / 200 }), ra = evP(alta);   // una meta medio punto arriba del margen
+  assert(ids(alta).indexOf('AL-MT03-1') >= 0); assert(/meta de Dirección es/.test(ra.alertas.find((a) => a.id === 'AL-MT03-1').texto)); assert(valsP(alta)['MT-04'] < 0);
+  assert(v['VD-08'] > 1 && ids(BASEP).indexOf('AL-VD08-1') < 0);
+  const vende = conP(BASEP, { 'VD-01': 60 }), vv = valsP(vende);   // si el terreno se vendiera directo en mucho más, conviene vender
+  assert(vv['VD-08'] < 1 && ids(vende).indexOf('AL-VD08-1') >= 0, 'VD-08 = ' + vv['VD-08']);
+  /* con la tierra aportada sin regla de pago (¿se le paga la tierra? = no) lo del dueño no se enseña: no se inventa una cifra */
+  const especie = conP(BASEP, { 'S-02': 'no' }), ve = valsP(especie);
+  assert.deepStrictEqual([ve['VD-07'], ve['VD-08'], ve['VD-09'], ve['VD-10']], [null, null, null, null]); assert(ve['VD-05'] > 0, 'vender directo sí se sigue enseñando');
+  const sinBanco = conP(BASEP, { 'D-09': { opcion: 'sin_banco', estado: 'decidido' } }), vs = valsP(sinBanco);
+  assert.strictEqual(vs['DG-02'], 'no', 'sin banco la tierra no queda en garantía'); assert.deepStrictEqual([vs['CR-01'], vs['CR-02']], [null, null]);
+});
+prueba('estrellas: vacía sin dato, con supuesto mientras descansa en una referencia y llena sólo cuando todo de lo que sale está firme', () => {
+  const P0 = Motor.presentacion(DEFP, PLAN0);
+  assert(P0.estrellas.vacias > 40 && !P0.completa && P0.completos < 5, JSON.stringify(P0.estrellas)); assert.strictEqual(P0.estrellas.total, 90); assert.strictEqual(P0.estrellas.llenas + P0.estrellas.supuestos + P0.estrellas.vacias, 90);
+  assert(P0.faltan.indexOf('PT-07') >= 0 && P0.faltan.indexOf('R-22') >= 0, 'sin plan, faltan las ventas y lo del dueño');
+  assert.strictEqual(estrellaP(PLAN0, 'T-01'), 'llena', 'el predio confirmado es dato firme'); assert.strictEqual(estrellaP(PLAN0, 'PT-07'), 'vacia');
+  const P = Motor.presentacion(DEFP, BASEP);
+  assert(P.completa && P.completos === 17 && P.estrellas.vacias === 0 && P.faltan.length === 0, JSON.stringify(P.estrellas));
+  /* un número escrito todavía no es el dato confirmado, y eso se hereda: el valor por m² no sale «firme» encima de una tierra por confirmar */
+  assert.strictEqual(estrellaP(BASEP, 'T-04'), 'supuesto'); assert.strictEqual(estrellaP(BASEP, 'T-05'), 'supuesto'); assert.strictEqual(estrellaP(BASEP, 'DG-03'), 'supuesto');
+  assert.strictEqual(nodo(evP(BASEP), 'T-05').heredado, 'firme', 'el árbol de siempre sí lo da por firme: las estrellas son más estrictas');
+  const conf = evP(BASEP, { 'T-04': { valor: 14, estado: 'confirmado', fuente: 'escritura de prueba' } }).plan;
+  assert.strictEqual(estrellaP(conf, 'T-04'), 'llena'); assert.strictEqual(estrellaP(conf, 'T-05'), 'llena'); assert.strictEqual(estrellaP(conf, 'DG-03'), 'llena');
+  assert.strictEqual(estrellaP(conf, 'PT-07'), 'supuesto', 'las ventas siguen saliendo de un precio de referencia');
+  /* el nodo trae su estrella y dónde va; un nodo que no alimenta la presentación no trae nada */
+  const r = evP(BASEP), pt = nodo(r, 'PT-07');
+  assert.strictEqual(pt.estrella, 'supuesto'); assert.deepStrictEqual(pt.presentacion, [{ dato: 'I2', ficha: 'inversionista', tema: 'Qué se vende y a cuánto', lamina: 4, papel: 'clave' }]);
+  assert.deepStrictEqual(nodo(r, 'R-22').presentacion.map((x) => x.dato), ['I7', 'P3'], 'un nodo puede alimentar dos datos'); assert(!('estrella' in nodo(r, 'C-01')));
+  assert.strictEqual(JSON.stringify(r.presentacion), JSON.stringify(P), 'evalua y presentacion dan el mismo resumen');
+  assert.strictEqual(r.nodos.filter((n) => n.estrella).length + P.datos.reduce((s, d) => s.concat(d.nodos.filter((n) => n.oculto).map((n) => n.id)), []).filter((id, k, l) => l.indexOf(id) === k).length, 90, 'las 90 estrellas: las que tienen bolita más las de datos internos');
+});
+prueba('un dato de presentación está completo sólo si todos sus datos clave tienen dato; los de apoyo no lo frenan', () => {
+  const especie = conP(BASEP, { 'S-02': 'no' }), P5 = datoP(especie, 'P5');
+  assert.strictEqual(P5.estado, 'incompleto'); assert.deepStrictEqual(P5.faltan.slice().sort(), ['VD-07', 'VD-08']);
+  const P = Motor.presentacion(DEFP, especie); assert(!P.completa && P.completos === 16 && P.faltan.indexOf('VD-08') >= 0); assert.strictEqual(P.laminas.find((l) => l.lamina === 10).estado, 'incompleto'); assert.strictEqual(P.fichas.dueno.completos, 7);
+  assert.strictEqual(datoP(especie, 'P2').estado, 'completo', 'lo que vale su tierra sigue completo');
+  const sinBanco = conP(BASEP, { 'D-09': { opcion: 'sin_banco', estado: 'decidido' } });
+  assert.strictEqual(estrellaP(sinBanco, 'CR-01'), 'vacia'); assert.strictEqual(datoP(sinBanco, 'I6').estado, 'completo', 'las fechas del banco son de apoyo: sin banco el calendario sigue completo');
+  assert.strictEqual(estrellaP(sinBanco, 'D-10'), 'vacia'); assert.strictEqual(datoP(sinBanco, 'P6').estado, 'completo');
+  /* contraprueba: si el mismo dato fuera clave, sí frenaría */
+  const e = clon(PRES.ext), M = e.ARBOL_PRESENTACION, k = M.findIndex((f) => f[0] === 'I6' && f[M[0].indexOf('nodo')] === 'CR-01'); M[k][M[0].indexOf('papel')] = 'clave';
+  const d2 = cargaPres(true, e).definicion; assert.strictEqual(Motor.presentacion(d2, sinBanco).datos.find((d) => d.dato === 'I6').estado, 'incompleto');
+});
+const cargaPaginaPres = (loc) => {   // la página de prueba con sus archivos reales, sin red ni DOM; «loc» simula window.location
+  const vm = require('vm'), ctx = { console }; ctx.window = ctx; ctx.self = ctx; ctx.globalThis = ctx; if (loc) ctx.location = loc; vm.createContext(ctx);
+  ['reparto.js', 'motor.js', 'definicion-tablas.js', 'definicion-reparto.js', 'definicion-presentacion.js', 'pantalla.js', 'presentacion-prueba.js'].forEach((f) => vm.runInContext(fs.readFileSync(path.join(APP, f), 'utf8'), ctx, { filename: f }));
+  return ctx;
+};
+prueba('la página de prueba no pide nada a internet, sólo arranca en local y guarda sus planes aparte', () => {
+  const html = fs.readFileSync(path.join(APP, 'presentacion-prueba.html'), 'utf8');
+  const refs = [...html.matchAll(/(?:src|href|action|poster|data)\s*=\s*"([^"]*)"/gi)].map((m) => m[1]).filter((u) => u !== 'data:,');
+  assert(refs.length >= 9 && refs.every((u) => /^[a-z0-9_.-]+\.(js|css)(\?v=[\w.-]+)?$/i.test(u)), 'sólo archivos de esta carpeta: ' + JSON.stringify(refs));
+  assert(!/https?:\/\/|\/\/[a-z]|portero|yod-acceso|yod-cargador|fonts\.g|jsdelivr|@import/i.test(html.replace(/<!--[\s\S]*?-->/g, '')), 'ni portal, ni fuentes de Google, ni jsDelivr, ni Portero');
+  const csp = (html.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/) || [])[1] || '';
+  assert(/default-src 'none'/.test(csp) && /script-src 'self'(;|$)/.test(csp) && /connect-src 'none'/.test(csp) && /font-src 'self'/.test(csp) && /img-src 'self' data:/.test(csp), 'la política del navegador impide cualquier otra petición: ' + csp);
+  const red = /\bfetch\s*\(|XMLHttpRequest|sendBeacon|new\s+WebSocket|EventSource|importScripts|createElement\(\s*['"](script|link|img|iframe)['"]|https?:\/\/(?!www\.w3\.org\/2000\/svg)/;
+  ['definicion-presentacion.js', 'presentacion-prueba.js', 'pantalla.js', 'motor.js'].forEach((f) => { const m = fs.readFileSync(path.join(APP, f), 'utf8').match(red); assert(!m, f + ' pide red: ' + (m && m[0])); });
+  ['pantalla.css', 'presentacion-prueba.css'].forEach((f) => assert(!/url\(\s*['"]?(https?:)?\/\/|@import/i.test(fs.readFileSync(path.join(APP, f), 'utf8')), f + ' no carga nada de fuera'));
+  const ctx = cargaPaginaPres({ protocol: 'file:', hostname: '' }), PP = ctx.ArbolPresentacionPrueba, P = PP.PREFIJO_ALMACEN, base = ctx.ArbolPantalla.clavesAlmacen({}), pr = ctx.ArbolPantalla.clavesAlmacen({ prefijoAlmacen: P });
+  assert(P && P !== 'ppp-reparto-prueba:' && Object.keys(base).every((k) => pr[k] === P + base[k] && pr[k] !== base[k]), JSON.stringify(pr));
+  assert.strictEqual(PP.esLocal({ protocol: 'https:', hostname: 'yodesarrollomx.github.io' }), false); assert.strictEqual(PP.esLocal({ protocol: 'http:', hostname: 'localhost' }), true); assert.strictEqual(PP.esLocal({ protocol: 'file:', hostname: '' }), true);
+  const pub = cargaPaginaPres({ protocol: 'https:', hostname: 'yodesarrollomx.github.io' }), b2 = { innerHTML: '' };
+  assert.strictEqual(pub.ArbolPresentacionPrueba.arranca({}, b2, {}), null); assert(/Página de prueba local/.test(b2.innerHTML) && /no se monta/.test(b2.innerHTML), 'en un sitio publicado dice por qué no monta');
+  assert(!/arbol\.html|servidor\.js|conexion\.js/.test(fs.readFileSync(path.join(APP, 'presentacion-prueba.js'), 'utf8') + html), 'no toca el Árbol habitual ni el puente con el libro');
+  assert(!/presentacion/.test(fs.readFileSync(path.join(APP, 'arbol.html'), 'utf8')), 'arbol.html (el Árbol habitual) no carga la extensión');
+});
+prueba('«Llenar con el supuesto estándar» deja cada decisión en su referencia y la presentación queda completa, sin inventar nada', () => {
+  const ctx = cargaPaginaPres({ protocol: 'file:', hostname: '' }), PP = ctx.ArbolPresentacionPrueba, M = ctx.ArbolMotor, d = PP.definicion(M);
+  assert.deepStrictEqual(clon(d.errores), []); assert.strictEqual(d.reparto, true, 'con reparto.js cargado, la página suma también el reparto'); assert.strictEqual(d.definicion.huella, DEFP.huella, 'la página arma la misma definición que la suite');
+  const p0 = { tipo: 'vertical', valores: { 'T-01': { estado: 'confirmado', valor: 2000 } } }, x = PP.planConEstandar(M, d.definicion, p0);
+  assert.deepStrictEqual(clon(x.contestadas).sort(), ['D-09', 'E-15', 'E-16', 'K-13', 'P1-05', 'S-03'], 'las seis decisiones del árbol');
+  const r = M.evalua(d.definicion, x.plan, null, SIN);
+  assert.strictEqual(PP.abiertasDe(r).length, 0); assert(r.nodos.filter((n) => n.tipo === 'se_decide').every((n) => n.estado === 'no_se'), 'cada decisión quedó en «No sé todavía» (su referencia), no en una respuesta inventada');
+  assert.deepStrictEqual(clon(p0), { tipo: 'vertical', valores: { 'T-01': { estado: 'confirmado', valor: 2000 } } }, 'no toca el plan de partida');
+  const P = M.presentacion(d.definicion, x.plan);
+  assert(P.completa && P.estrellas.vacias === 0 && P.estrellas.llenas === 1 && P.estrellas.supuestos === 89, JSON.stringify(P.estrellas));
+  assert.strictEqual(PP.textoResumen(P), 'Presentación: 17 de 17 datos completos · 1 firme, 89 con supuesto y 0 sin dato.');
+  assert(/faltan \d+ datos clave\.$/.test(PP.textoResumen(M.presentacion(d.definicion, p0))));
+  assert.strictEqual(PP.planConEstandar(M, d.definicion, x.plan).contestadas.length, 0, 'con el plan lleno ya no hay nada que contestar');
+  cifra('plan «todo en su supuesto estándar» (predio de 2,000 m²): 17 de 17 datos de presentación completos, 90 estrellas (1 firme, 89 con supuesto)');
+});
+prueba('la pantalla sólo pinta estrellas si el motor las entrega: el botón nace oculto y la vista sale de res.presentacion', () => {
+  const js = fs.readFileSync(path.join(APP, 'pantalla.js'), 'utf8'), css = fs.readFileSync(path.join(APP, 'pantalla.css'), 'utf8');
+  assert(/data-act="presentacion" aria-pressed="false" hidden>/.test(js), 'el botón de la presentación nace oculto');
+  assert(/b\.hidden = !P;/.test(js) && /if \(vista === 'presentacion' && !res\.presentacion\) vista = 'nodo';/.test(js));
+  assert(/\.nodo \.estr\{display:none/.test(css) && /\.nodo \.estr\.llena,\.nodo \.estr\.supuesto,\.nodo \.estr\.vacia\{display:block\}/.test(css), 'una estrella sin estado no se dibuja');
+  const cuerpo = js.slice(js.indexOf('function panelPresentacion()'), js.indexOf('function panel(enfoca)'));
+  assert(cuerpo.length > 500 && !/[-+*\/]\s*(x|n|d)\.valor\b|Math\.pow|\.reduce\(\(s, [a-z]\) => s \+/.test(cuerpo), 'la vista «Presentación» no hace cuentas: pinta lo que arma el motor');
+});
+
 /* ═══════════════════ RESUMEN ═══════════════════ */
 console.log('\n══════════════════════════════════════════');
 console.log('pruebas: ' + R.ok + ' de ' + R.n + ' pasan' + (R.fallos.length ? ' · ' + R.fallos.length + ' FALLAN' : ' · TODO BIEN'));

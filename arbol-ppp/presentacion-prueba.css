@@ -1,0 +1,14 @@
+/* Árbol PPP · página de prueba de los datos de presentación: la barra de arriba (botón del supuesto estándar, nota de copia de prueba y estado de la
+   presentación). El alto de la barra se mide en presentacion-prueba.js (--pp-alto) para que la pantalla de abajo ocupe justo lo que queda. */
+:root{--pp-alto:0px}
+body{margin:0}
+.pp-barra{box-sizing:border-box;padding:6px max(14px,env(safe-area-inset-right,0px)) 6px max(14px,env(safe-area-inset-left,0px));background:#f3e6c8;border-bottom:1px solid #e1d3ae;color:#231d14;font-family:system-ui,-apple-system,'Segoe UI',sans-serif}
+.pp-fila{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.pp-btn{min-height:40px;padding:0 12px;border:1.5px solid #9a6b00;border-radius:9px;background:#fffdf6;color:#231d14;font:600 .8rem system-ui,-apple-system,'Segoe UI',sans-serif;cursor:pointer}
+.pp-btn:focus-visible,.pp-nota summary:focus-visible{outline:3px solid #2468b0;outline-offset:2px}
+.pp-nota{flex:1 1 150px;font-size:.75rem;line-height:1.35}
+.pp-nota summary{cursor:pointer;min-height:40px;display:flex;align-items:center;gap:6px;list-style:none;text-decoration:underline;text-underline-offset:3px}
+.pp-nota summary::-webkit-details-marker{display:none}
+.pp-aviso{margin:2px 0 4px;font-size:.75rem;line-height:1.35}
+.pp-res{margin:4px 0 0;font-size:.75rem;line-height:1.35}
+.pp-barra ~ #arbol-ppp .ppp{height:calc(100vh - var(--pp-alto));height:calc(100dvh - var(--pp-alto));min-height:520px}

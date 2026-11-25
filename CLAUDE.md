@@ -260,3 +260,14 @@ Barra fija abajo en `visor.html` (`visor-pestanas.js` + `visor-pestanas.css`; la
 - **«deducido de …»** sale en leyendas y hojas cuando la respuesta trae `deducido` (rutas → `rutasDe`/`FLUJO_RUTA` de `visor.js`).
 - **Tipos de archivo:** la pantalla arma cada archivo con el tipo de sus bytes (`ppp2-archivo`) revisado contra `PASIVO` de `visor-pestanas.js`, que debe decir lo mismo que `PESTANAS.PASIVO` de `server/ppp2/Visor.gs` (lo compara una prueba): lo que un navegador ejecuta (HTML, SVG, XML, scripts) no se abre aparte, sólo se guarda.
 - Pruebas: `node --test tests/visor-pestanas.test.cjs` y `node tests/visor-pestanas-browser.cjs` (dobles del contrato en `tests/visor-pestanas-dobles.cjs`; el servidor de main de verdad, con hoja de historial y Drive inventados, en `tests/visor-pestanas-mundo.cjs`), además de las del visor.
+
+## 24-nov-2026 · Árbol PPP: datos de presentación y estrellas (copia de prueba)
+
+El Árbol PPP (`arbol-ppp/`, propuesta `CHG-ARBOL-PPP-20261123`; ver **docs/arbol-ppp.md**) acepta una tabla opcional, `ARBOL_PRESENTACION`, que dice qué datos del Árbol alimentan cada lámina de la presentación del plan. Detalle: **docs/arbol-presentacion.md**.
+
+- **Sin la tabla nada cambia**: mismo resultado, misma huella de la definición, misma pantalla. Todo lo nuevo de `pantalla.js` está condicionado a que el resultado traiga `presentacion`.
+- **Es copia de prueba.** Los 57 datos nuevos y el mapa viven en `arbol-ppp/definicion/presentacion_*.csv` y sólo los carga `presentacion-prueba.html` (sin red, sólo en el equipo local). **`arbol.html` no los carga** y sus factores **no se dan de alta en el Maestro** hasta que Dirección apruebe los supuestos estándar (una prueba vigila las dos cosas).
+- **`definicion-presentacion.js` es generado**: si cambias un CSV de la extensión, corre `node arbol-ppp/construir-presentacion.cjs`; no se edita a mano.
+- **La estrella es estricta**: llena sólo si el dato y todo de lo que depende están firmes; un número escrito sin confirmar o un resultado sobre un supuesto queda «con supuesto». Un dato de presentación está completo cuando todos sus datos `clave` tienen valor; los de `apoyo` no lo frenan.
+- **Supuestos estándar con origen escrito** en `referencia_origen` de cada dato (meta de margen de Dirección, tasas de ley, estándar de la alianza). Lo marcado PROVISIONAL es del analista y espera confirmación.
+- Pruebas: `node arbol-ppp/pruebas/motor-real.cjs` (grupo 31) y `node tests/arbol-presentacion-browser.cjs` (corren en `verificar-ppp.yml`).

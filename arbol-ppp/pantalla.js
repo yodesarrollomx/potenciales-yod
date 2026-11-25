@@ -18,6 +18,10 @@
   const ESTADO_TXT = { referencia: 'Referencia · por confirmar', no_se: 'Pendiente · con referencia', decidido: 'Decidido', confirmado: 'Confirmado', reabierto: 'Se reabrió' };
   const TXT_REPARTO = 'tras banco y capital';
   const MOTIVO_NA = { sin_banco: 'sin banco', sin_dato: 'falta calcular', banco_sin_uso: 'el banco no se usa' };
+  /* Estrellas (24-nov-2026): un dato que alimenta la presentación lleva una estrella. Solo existen si la definición trae ARBOL_PRESENTACION; sin ella nada de esto se pinta. */
+  const ESTRELLA_TXT = { llena: 'dato firme', supuesto: 'con supuesto por confirmar', vacia: 'todavía sin dato' };
+  const FICHA_TXT = { inversionista: 'Inversionista', dueno: 'Dueño del terreno' };
+  const ESTRELLA_D = (() => { let d = ''; for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, R = k % 2 ? 3.4 : 7.8; d += (k ? 'L' : 'M') + (R * Math.cos(a)).toFixed(2) + ',' + (R * Math.sin(a)).toFixed(2); } return d + 'Z'; })();
 
   /* ───── utilidades ───── */
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -133,6 +137,7 @@
     let res = motor.evalua(DEF, plan);
     plan = res.plan;
     let sel = null, vista = 'nodo', plegados = new Set(), modoResumen = true, ultimosErrores = [];
+    let fichaPres = 'todas';      // filtro de la vista «Presentación»: todas, inversionista o dueno
     let umbralAbierto = new Set(), areaForm = { abierto: false, nombre: '', vende: 'no', unidad: 'm2', valor: '' }, confArea = false;
     let historia = [], ruta = null, efecto = null, compSel = null, compUni = {}, franjaCerrada = false, toastTxt = '', panelClave = '';
     let cam = { x: 0, y: 0, k: 1 }, vw = 0, vh = 0;
@@ -167,7 +172,7 @@
       '<header class="ppp-top"><h1>Árbol PPP <span class="ppp-proy">' + esc(proyecto) + '</span></h1><div class="ppp-acc"><button class="ppp-btn" type="button" data-act="deshacer" disabled>Deshacer</button><button class="ppp-btn" type="button" data-act="reiniciar">Empezar de nuevo</button></div></header>' +
       '<section class="ppp-cards" aria-label="Visor del plan: siete tarjetas" data-cards></section>' +
       '<div class="ppp-barra" data-barra><span class="ppp-rotulo" role="status" data-rotulo>Estimado · no sincronizado</span><span class="ppp-avance" data-avance></span></div>' +
-      '<div class="ppp-herr" data-herr role="group" aria-label="Herramientas"><button class="ppp-btn chico" type="button" data-act="comparar" aria-pressed="false">Comparar</button><button class="ppp-btn chico" type="button" data-act="editar" aria-pressed="false">Editar reglas</button><button class="ppp-btn chico" type="button" data-act="lista" aria-pressed="false">Ver en lista</button><button class="ppp-btn chico" type="button" data-act="ley" aria-expanded="false" aria-controls="ppp-ley">Leyenda</button></div>' +
+      '<div class="ppp-herr" data-herr role="group" aria-label="Herramientas"><button class="ppp-btn chico" type="button" data-act="comparar" aria-pressed="false">Comparar</button><button class="ppp-btn chico" type="button" data-act="editar" aria-pressed="false">Editar reglas</button><button class="ppp-btn chico" type="button" data-act="lista" aria-pressed="false">Ver en lista</button><button class="ppp-btn chico pres-b" type="button" data-act="presentacion" aria-pressed="false" hidden>Presentación</button><button class="ppp-btn chico" type="button" data-act="ley" aria-expanded="false" aria-controls="ppp-ley">Leyenda</button></div>' +
       '<div class="ppp-modo" data-modo hidden role="status"></div>' +
       '<div class="ppp-cmpbar" data-cmpbar hidden></div>' +
       '<div class="ppp-ley" id="ppp-ley" data-ley hidden><div class="ley-grid" data-leyenda></div></div>' +
@@ -202,6 +207,7 @@
         '<span>' + icono('calculado', '') + 'Calculado (firme)</span><span>' + icono('se_busca', 'e-conf', '<circle class="sello" r="12" style="display:block"/>') + 'Confirmado</span>' +
         '<span><svg viewBox="-12 -12 24 24" aria-hidden="true"><g class="plie" style="--c:var(--terreno)"><circle class="fondo" r="8"/><text y="4">+3</text></g></svg>Rama plegada (toca)</span><span>' + icono('se_decide', 'e-reab', '<circle class="halo" r="12" style="display:block"/>') + 'Se reabrió</span>' +
         '<span><svg viewBox="-12 -12 24 24" aria-hidden="true"><g class="nodo e-dec rojo" style="--c:var(--terreno)"><circle class="halo" r="11" style="display:block"/><circle class="forma" r="7"/></g></svg>Rojo: no pasa</span><span><svg viewBox="-12 -12 24 24" aria-hidden="true"><path d="M-11,6 C-4,6 -4,-6 3,-6 L11,-6" fill="none" stroke="var(--rojo)" stroke-width="3.5" stroke-linecap="round"/></svg>Ruta de la causa</span>' +
+        (res.presentacion ? ['llena', 'supuesto', 'vacia'].map((e) => '<span><svg viewBox="-12 -12 24 24" aria-hidden="true"><g class="estr ' + e + '"><path d="' + ESTRELLA_D + '"/></g></svg>Presentación: ' + ESTRELLA_TXT[e] + '</span>').join('') + '<span></span>' : '') +
         '<p class="ley-hint">Color = tarjeta del visor que alimenta. Al tocar una alerta se resalta la ruta y se atenúa lo demás.</p>';
     }
 
@@ -240,6 +246,17 @@
       flash.forEach((n) => { const e = host.querySelector('.tarj[data-t="' + n + '"]'); if (e) { e.classList.add('cambio'); temporizadores.push(setTimeout(() => e.classList.remove('cambio'), 1000)); } });
       const dec = res.nodos.filter((n) => n.tipo === 'se_decide' && (n.estado === 'decidido' || n.estado === 'no_se')).length;
       $('[data-avance]').innerHTML = '<b>' + dec + '</b> decididas · <b>' + res.abiertas.length + '</b>/' + res.cupo + ' abiertas' + (res.en_espera ? ' · ' + res.en_espera + ' en espera' : '');
+      pintaBotonPres();
+    }
+    /* el botón «Presentación» solo existe para una definición con estrellas; dice cuántos datos de presentación ya están completos */
+    function pintaBotonPres() {
+      const b = host.querySelector('[data-act="presentacion"]'), P = res.presentacion; if (!b) return;
+      b.hidden = !P; if (b.parentNode) b.parentNode.classList.toggle('con-pres', !!P);
+      if (!P) return;
+      b.innerHTML = '<span class="estr-g" aria-hidden="true">' + (P.completa ? '★' : '☆') + '</span> ' + P.completos + '/' + P.total;
+      b.classList.toggle('completa', !!P.completa);
+      b.setAttribute('aria-label', 'Presentación: ' + P.completos + ' de ' + P.total + ' datos completos' + (P.faltan.length ? '; faltan ' + P.faltan.length + ' datos clave' : ''));
+      b.title = 'Presentación: qué datos la alimentan y cuáles faltan';
     }
 
     /* F4: una cifra de tarjeta nunca se corta con «…»: si la completa no cabe se usa la corta (M = millones, MM = miles de millones) y, si aún no cabe, baja la letra (nunca menos de 11 px) */
@@ -411,6 +428,7 @@
       svgEl('text', { class: 't', y: r + 16 }, g); svgEl('text', { class: 'v', y: r + 30 }, g);
       const ins = svgEl('g', { class: 'ins', transform: 'translate(' + (r * 0.8) + ',' + (-r * 0.8) + ')' }, g);
       svgEl('circle', { r: 8 }, ins); svgEl('text', { y: 4.5 }, ins).textContent = '!';
+      svgEl('path', { d: ESTRELLA_D }, svgEl('g', { class: 'estr', transform: 'translate(' + (-(r * 0.8) - 2).toFixed(1) + ',' + (-(r * 0.8) - 1).toFixed(1) + ')', 'aria-hidden': 'true' }, g));
       const p = svgEl('g', { class: 'plie', 'data-fold': n.id, role: 'presentation' }, g);
       svgEl('circle', { class: 'zona', r: 17 }, p); svgEl('rect', { class: 'fondo', rx: 9, ry: 9, height: 18, y: -9 }, p); svgEl('text', { y: 4 }, p);
       elems.set(n.id, { g, r, plie: p });
@@ -430,6 +448,7 @@
       const h = (hijosDe[n.id] || []).length;
       let s = n.titulo + '. ' + TIPO_TXT[n.tipo] + '. ' + (n.estado == null ? (n.tipo === 'calculado' ? (n.heredado === 'firme' ? 'firme' : 'estimado') : 'te toca decidir') : ESTADO_TXT[n.estado]) + '. ' + textoValor(n) + '.';
       if (esRojo(n)) s += ' En rojo: no pasa.';
+      if (n.estrella) s += ' Alimenta la presentación: ' + ESTRELLA_TXT[n.estrella] + '.';
       if (h) s += plegados.has(n.id) ? ' Rama plegada, ' + ocultosPlie[n.id] + ' nodos ocultos.' : ' Rama desplegada.';
       return s;
     }
@@ -453,6 +472,7 @@
         g.querySelector('text.t').textContent = corto(n.titulo, 17);
         g.querySelector('text.v').textContent = corto(textoValor(n), 19);
         g.querySelector('text.g').textContent = n.estado === 'reabierto' ? '!' : (n.tipo === 'se_decide' && n.estado == null) ? '?' : n.estado === 'no_se' ? '≈' : '';
+        const es = g.querySelector('.estr'); if (es) es.setAttribute('class', 'estr' + (n.estrella ? ' ' + n.estrella : ''));
         const hs = (hijosDe[n.id] || []).length, p = e.plie;
         p.style.display = hs ? '' : 'none';
         if (hs) {
@@ -857,21 +877,61 @@
         (n.id.indexOf('RV-') === 0 ? '' : '<p class="nota">Nadie lo escribe: cambia solo cuando cambia alguno de esos datos.</p>');
     }
 
+    /* la nota de la estrella en el panel de un dato: en qué lámina va y cómo está */
+    function htmlEstrella(n) {
+      if (!n || !n.estrella || !(n.presentacion || []).length) return '';
+      const vistos = [], donde = [];
+      n.presentacion.forEach((p) => { const k = p.lamina + '|' + p.tema; if (vistos.indexOf(k) >= 0) return; vistos.push(k); donde.push((p.lamina != null ? 'lámina ' + p.lamina + ', ' : '') + '«' + p.tema + '»' + (p.papel === 'clave' ? ' (dato clave)' : '')); });
+      return '<p class="estr-nota ' + esc(n.estrella) + '" data-estrella="' + esc(n.estrella) + '"><span class="estr-g" aria-hidden="true">' + (n.estrella === 'vacia' ? '☆' : '★') + '</span> <strong>Alimenta la presentación</strong> · ' + esc(ESTRELLA_TXT[n.estrella]) + '. Va en ' + esc(donde.join('; ')) + '.</p>';
+    }
+    /* vista «Presentación»: las láminas con sus datos y sus estrellas. No calcula: pinta res.presentacion, que arma el motor. */
+    function panelPresentacion() {
+      const P = res.presentacion; if (!P) return '';
+      const fichas = Object.keys(FICHA_TXT), ver = fichas.indexOf(fichaPres) >= 0 ? fichaPres : 'todas';
+      const datos = P.datos.filter((d) => ver === 'todas' || d.ficha === ver), comp = datos.filter((d) => d.estado === 'completo').length;
+      const E = P.estrellas, glifo = (e) => '<span class="estr-g ' + e + '" aria-hidden="true">' + (e === 'vacia' ? '☆' : '★') + '</span>';
+      let h = '<h2 tabindex="-1" data-foco>Presentación ' + chip(comp + ' de ' + datos.length + ' completos', comp === datos.length ? '' : 'alerta') + '</h2>' +
+        '<p class="nota">Cada estrella es un dato del árbol que alimenta la presentación. Una lámina está completa cuando todos sus datos clave tienen dato. Toca un dato para verlo en el árbol.</p>' +
+        '<p class="pres-ley">' + glifo('llena') + ' ' + E.llenas + (E.llenas === 1 ? ' firme' : ' firmes') + ' · ' + glifo('supuesto') + ' ' + E.supuestos + ' con supuesto por confirmar · ' + glifo('vacia') + ' ' + E.vacias + ' sin dato</p>' +
+        '<div class="pres-f" role="group" aria-label="Ficha">' + [['todas', 'Las dos fichas']].concat(fichas.map((f) => [f, FICHA_TXT[f]])).map(([k, t]) => boton('pficha:' + k, 'pf-' + k, esc(t), 'ppp-btn chico' + (ver === k ? ' on' : ''), ' aria-pressed="' + (ver === k) + '"')).join('') + '</div>';
+      const sinDato = datos.reduce((l, d) => l.concat(d.nodos.filter((n) => n.papel === 'clave' && n.estrella === 'vacia' && l.indexOf(n.titulo) < 0).map((n) => n.titulo)), []);
+      if (sinDato.length) h += '<p class="pres-falta" role="status"><strong>' + (sinDato.length === 1 ? 'Falta 1 dato clave' : 'Faltan ' + sinDato.length + ' datos clave') + ':</strong> ' + esc(sinDato.map((t) => '«' + t + '»').join(', ')) + '. Sin ' + (sinDato.length === 1 ? 'él' : 'ellos') + ' la presentación queda incompleta.</p>';
+      const laminas = []; datos.forEach((d) => { let g = laminas.find((x) => x.lamina === d.lamina); if (!g) { g = { lamina: d.lamina, datos: [] }; laminas.push(g); } g.datos.push(d); });
+      laminas.sort((a, b) => (a.lamina == null ? 1e9 : a.lamina) - (b.lamina == null ? 1e9 : b.lamina));
+      laminas.forEach((L) => {
+        const mal = L.datos.filter((d) => d.estado !== 'completo').length;
+        h += '<h3 class="lt pres-l' + (mal ? ' falta' : '') + '">' + (L.lamina == null ? 'Sin lámina' : 'Lámina ' + L.lamina) + ' <small>' + (mal ? 'incompleta' : 'completa') + '</small></h3>';
+        L.datos.forEach((d) => {
+          h += '<h4 class="pres-d">' + esc(d.tema) + ' <small>' + esc(FICHA_TXT[d.ficha] || d.ficha) + (d.estado === 'completo' ? '' : ' · incompleto') + '</small></h4><ul class="lista pres">' + d.nodos.map((x) => {
+            const enArbol = !!porId(x.id), valor = x.valor == null ? '—' : fmt(x.valor_vista, x.unidad), est = ESTRELLA_TXT[x.estrella];
+            const dentro = '<span class="l-t">' + glifo(x.estrella) + ' ' + esc(x.titulo) + (x.papel === 'clave' ? ' <em class="pres-c">clave</em>' : '') + '</span><span class="l-v">' + esc(valor) + '</span><span class="l-e">' + esc(est + (x.nota ? ' · ' + x.nota : '')) + '</span>';
+            const voz2 = ' aria-label="' + esc(x.titulo + ': ' + valor + '. ' + est + (x.papel === 'clave' ? ', dato clave' : '') + '.') + '"';
+            return '<li>' + (enArbol ? boton('pir:' + x.id, 'pr-' + d.dato + '-' + x.id, dentro, 'li-b pres-n ' + x.estrella, voz2) : '<div class="li-b pres-n fijo ' + x.estrella + '"' + voz2 + ' role="group">' + dentro + '</div>') + '</li>';
+          }).join('') + '</ul>';
+        });
+      });
+      return h;
+    }
+
     function panel(enfoca) {
       const foco = document.activeElement, kFoco = foco && panelEl.contains(foco) ? foco.getAttribute('data-k') : null, enCampo = foco && foco.tagName === 'INPUT' && foco.type === 'text';
-      const aparte = vista === 'pruebas' || vista === 'reglas' || vista === 'lista';
+      if (vista === 'presentacion' && !res.presentacion) vista = 'nodo';
+      const aparte = vista === 'pruebas' || vista === 'reglas' || vista === 'lista' || vista === 'presentacion';
       const n = aparte ? null : (porId(sel) || res.nodos[0]);
       const clave = (aparte ? vista : n && n.id), st = panelEl.scrollTop, mismo = clave === panelClave;
       panelClave = clave;
       if (vista === 'pruebas') { panelEl.style.setProperty('--c', 'var(--riesgo)'); panelEl.innerHTML = panelPruebas() + (toastTxt ? '' : ''); }
       else if (vista === 'reglas') { panelEl.style.setProperty('--c', 'var(--alerta)'); panelEl.innerHTML = panelReglas(); }
       else if (vista === 'lista') { panelEl.style.setProperty('--c', 'var(--confirmar)'); panelEl.innerHTML = panelLista(); }
+      else if (vista === 'presentacion') { panelEl.style.setProperty('--c', 'var(--estrella)'); panelEl.innerHTML = panelPresentacion(); }
       else if (!n) { panelEl.innerHTML = ''; return; }
       else {
         panelEl.style.setProperty('--c', colorDe(n));
-        panelEl.innerHTML = (n.tipo === 'se_decide' ? panelDecide(n) : n.tipo === 'calculado' ? panelCalculado(n) : panelNumerico(n)) + (editar ? htmlReglas(n) : '');
+        const cuerpo = n.tipo === 'se_decide' ? panelDecide(n) : n.tipo === 'calculado' ? panelCalculado(n) : panelNumerico(n), nota = htmlEstrella(n);
+        panelEl.innerHTML = (nota ? cuerpo.replace('</h2>', () => '</h2>' + nota) : cuerpo) + (editar ? htmlReglas(n) : '');
       }
       host.querySelector('[data-act="lista"]').setAttribute('aria-pressed', String(vista === 'lista'));
+      { const bp = host.querySelector('[data-act="presentacion"]'); if (bp) bp.setAttribute('aria-pressed', String(vista === 'presentacion')); }
       panelEl.scrollTop = mismo && !forzarArriba ? st : 0; forzarArriba = false;
       if (kFoco && !enCampo) { const f = panelEl.querySelector('[data-k="' + kFoco + '"]'); if (f && !f.disabled) { f.focus({ preventScroll: true }); return; } }
       if (enfoca) { const f = panelEl.querySelector('[data-foco]'); if (f) f.focus({ preventScroll: true }); }
@@ -1064,6 +1124,8 @@
         case 'alerta': abreAlerta(arg); break;
         case 'prueba': verPrueba(arg); centrar(arg); break;
         case 'ir': seleccionar(arg); centrar(arg); break;
+        case 'pficha': fichaPres = arg; panel(); break;
+        case 'pir': if (porId(arg)) { desplegarHasta(new Set([arg])); pintaTodo(false); seleccionar(arg); centrar(arg); } break;
         case 'deshacer': deshacer(); break;
         case 'cmpcon': { const o = n.opciones.find((x) => x.clave === arg) || (n.fuentes || []).find((x) => x.clave === arg), nom = o ? (n.opciones.length ? o.nombre : o.nombre + ' (' + fmt(aVista(n, o.valor), n.unidad) + ')') : arg; abreCmp({ nodo: n.id, cambio: { opcion: arg, estado: 'decidido' }, rotA: corto(etiquetaActual(n), 28), rotB: corto(nom, 28) }); break; }
         case 'cmpval': { const inp = panelEl.querySelector('#ppp-cmpv'), v = inp ? parseFloat(inp.value) : NaN, k = n.unidad.clase === 'pct' ? 100 : 1, rg = n.rango || {}; if (!isFinite(v)) { ultimosErrores = [{ codigo: 'fuera_de_rango', id: n.id, mensaje: 'Escribe un número para B.' }]; panel(); break; } let x = v / k; if (rg.min != null) x = Math.max(rg.min, x); if (rg.max != null) x = Math.min(rg.max, x); abreCmp({ nodo: n.id, cambio: { valor: redondea(x, 8), estado: 'decidido' }, rotA: corto(fmt(n.valor_vista, n.unidad), 28), rotB: corto(fmt(x, n.unidad), 28) }); break; }
@@ -1211,6 +1273,7 @@
       else if (a === 'comparar') { if (cmp) fijaVista('cmp'); else abreCmp(); }
       else if (a === 'editar') { editar = !editar; errCampo = null; pintaModo(); if (vista === 'reglas' && !editar) vista = 'nodo'; panel(); anuncia(editar ? 'Modo editar reglas encendido: borrador sin publicar.' : 'Modo editar reglas apagado.'); }
       else if (a === 'lista') { vista = vista === 'lista' ? 'nodo' : 'lista'; panel(true); }
+      else if (a === 'presentacion') { vista = vista === 'presentacion' ? 'nodo' : 'presentacion'; panel(true); }
       else if (a === 'vercambios') { vista = 'reglas'; panel(true); if (panelEl.scrollIntoView) panelEl.scrollIntoView({ block: 'nearest' }); }
       else if (a.indexOf('esc:') === 0) { cambiaEscenario(a.slice(4)); if (cmp && cmp.ver === 'cmp') { fijaVista('arbol'); } }
       else if (a.indexOf('ver:') === 0) fijaVista(a.slice(4));
@@ -1856,6 +1919,7 @@
       reglas: () => ({ editar, cambios: JSON.parse(JSON.stringify(cambiosRegla)), huella: DEF.huella, huella0: DEF0.huella, filas: JSON.parse(JSON.stringify(filasRegla)) }),
       estado: () => ({ sel, vista, plan, res, plegados: [...plegados], camara: Object.assign({}, cam), tam: { vw, vh }, caja: bbox, animando: !!(anim.cam || anim.lay), ruta: ruta ? { alertas: ruta.alertas.slice(), nodos: [...ruta.nodos], aristas: [...ruta.aristas], ok: ruta.ok } : null, historia: historia.length, resumen: modoResumen, visibles: visibles.map((n) => n.id) }),
       posicion: (id) => { const p = disp.get(id); return p ? { x: p.x * cam.k + cam.x, y: p.y * cam.k + cam.y } : null; },
+      presentacion: () => (res.presentacion ? JSON.parse(JSON.stringify(res.presentacion)) : null),
       motor, DEF,
     };
     host.__ppp = api;
