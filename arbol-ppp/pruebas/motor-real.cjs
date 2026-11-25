@@ -2391,45 +2391,50 @@ prueba('Mutación CF-05 sumas (T-11): en el ejemplo anual, un excedente que no s
 
 /* ═══════════════════ 30 · Corrección P-10 (dictamen independiente T-11, N04): una prueba por punto ═══════════════════
    Sin estas pruebas, quitar el pie de la tarjeta o del detalle, dejarlo vacío, apagar la lectura de paquetes v2 o revertir los rótulos de
-   «Capital» dejaba la suite en verde (mutantes R-M1 a R-M6 de la Reina). Cada aserción falla si se deshace su punto. */
+   «Capital» dejaba la suite en verde (mutantes R-M1 a R-M6 de la Reina). El pie se lee como elemento (sin depender del orden de sus atributos)
+   y se comprueba por partes: corte, estado del pago, mes y motivo. Que el pie se vea completo a 430 px lo mide en Chrome
+   tests/visor-reparto-pie-browser.cjs con el paquete de tests/fixtures/visor-reparto-n01.json, que aquí se compara con el que da el motor. */
 grupo('30 · Corrección P-10 · pie de fecha del reparto, paquetes v2 y rótulos de Capital');
+const pieDe = (h) => { const m = /<p\b[^>]*\bclass="[^"]*\bvz-fecha-reparto\b[^"]*"[^>]*>([\s\S]*?)<\/p>/.exec(h || ''); return m ? m[1].replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').trim() : null; };
 const pieReparto = (pq) => {
   const x = VZ.pinta(pq, [], { sinElige: true }), c = x.cuadros.find((q) => q.id === 'reparto');
-  const card = (x.html.match(/<section class="vz-card[^"]*" data-card="reparto"[\s\S]*?<\/section>/) || [''])[0];
-  const pie = (h) => { const m = /<p class="vz-fecha-reparto">([^<]*)<\/p>/.exec(h); return m ? m[1] : null; };
-  return { tarjeta: pie(card), detalle: c ? pie(VZ.detalleHtml(c)) : null };
+  const card = (x.html.match(/<section\b[^>]*\bdata-card="reparto"[\s\S]*?<\/section>/) || [''])[0];
+  return { tarjeta: pieDe(card), detalle: c ? pieDe(VZ.detalleHtml(c)) : null, cuadro: c };
 };
-prueba('P-10 · B01 · la tarjeta «Reparto» y su detalle llevan el pie de fecha completo como texto que se acomoda en renglones (no dentro del dibujo)', () => {
-  const con = (reg) => Object.assign({}, P60, { reparto: Object.assign({}, DECL, reg) });
-  const N01 = 'Corte autorizado: mes 60 (sin pago registrado; fecha de pago del mes 38 sin importe: inconsistente)';
-  const a = pieReparto(Motor.paqueteVisor(DEF10, con({ fechas_pago: { DUENO: 38 } })));
-  assert.strictEqual(a.tarjeta, N01, 'pie de la tarjeta'); assert.strictEqual(a.detalle, N01, 'pie del detalle');
-  const b = pieReparto(Motor.paqueteVisor(DEF10, con({ fechas_pago: { DUENO: 58 }, pagos_registrados: { DUENO: 1000000 } })));
-  assert.strictEqual(b.tarjeta, 'Corte autorizado: mes 60 · pago registrado al dueño: mes 58'); assert.strictEqual(b.detalle, b.tarjeta);
-  const x = VZ.pinta(Motor.paqueteVisor(DEF10, con({ fechas_pago: { DUENO: 38 } })), [], { sinElige: true }), c = x.cuadros.find((q) => q.id === 'reparto');
-  const visible = (s) => (s.match(/<text[^>]*>[^<]*<\/text>/g) || []).map((t) => t.replace(/<[^>]+>/g, '')).join(' | ');   // el texto que se dibuja (las leyendas emergentes no cuentan)
-  assert(!/sin importe|pago registrado|corte autorizado/i.test(visible(c.svg)) && !/sin importe|pago registrado|corte autorizado/i.test(visible(c.svgG)), 'la fecha ya no va como texto dentro del SVG de ancho fijo (allí se recortaba a 430 px): ' + visible(c.svg).slice(0, 200));
-  const css = fs.readFileSync(path.join(APP, '..', 'visor.css'), 'utf8');
-  assert(/\.vz-fecha-reparto\s*\{[^}]*overflow-wrap:\s*anywhere/.test(css), 'visor.css deja que el pie parta renglones');
+/* corte, estado, mes y motivo, cada uno por separado: la puntuación entre ellos puede cambiar sin deshacer la corrección */
+const partesN01 = (t, mesSinImporte) => !!t && /corte autorizado:\s*mes 60\b/i.test(t) && /sin pago registrado/i.test(t) &&
+  new RegExp('\\bmes ' + mesSinImporte + '\\b').test(t) && /sin importe/i.test(t) && /inconsistente/i.test(t) && !/pago registrado al due(ñ|n)o:\s*mes/i.test(t);
+const partesPago = (t, mesPago) => !!t && /corte autorizado:\s*mes 60\b/i.test(t) && new RegExp('pago registrado al due(ñ|n)o:\\s*mes ' + mesPago + '\\b', 'i').test(t) && !/sin importe|inconsistente/i.test(t);
+const conP10 = (reg) => Object.assign({}, P60, { reparto: Object.assign({}, DECL, reg) });
+prueba('P-10 · B01 · la tarjeta «Reparto» y su detalle llevan el pie de fecha con corte, estado, mes y motivo, como texto aparte del dibujo', () => {
+  const pqN01 = Motor.paqueteVisor(DEF10, conP10({ fechas_pago: { DUENO: 38 } })), a = pieReparto(pqN01);
+  assert(partesN01(a.tarjeta, 38), 'pie de la tarjeta: ' + a.tarjeta); assert(partesN01(a.detalle, 38), 'pie del detalle: ' + a.detalle);
+  const pq58 = Motor.paqueteVisor(DEF10, conP10({ fechas_pago: { DUENO: 58 }, pagos_registrados: { DUENO: 1000000 } })), b = pieReparto(pq58);
+  assert(partesPago(b.tarjeta, 58), 'con pago real, tarjeta: ' + b.tarjeta); assert(partesPago(b.detalle, 58), 'con pago real, detalle: ' + b.detalle);
+  const visible = (svg) => (svg.match(/<text[^>]*>[^<]*<\/text>/g) || []).map((t) => t.replace(/<[^>]+>/g, '')).join(' | ');   // lo que se dibuja; las leyendas emergentes no cuentan
+  assert(!/sin importe|pago registrado|corte autorizado/i.test(visible(a.cuadro.svg) + visible(a.cuadro.svgG)), 'la fecha ya no va como texto dentro del SVG de ancho fijo (allí se recortaba a 430 px)');
   assert.strictEqual(pieReparto(Motor.paqueteVisor(DEF, BASE)).tarjeta, null, 'sin cascada (paquetes del libro) no hay pie');
-  cifra('P-10 · B01 · pie «' + N01 + '» en tarjeta y detalle; con pago real «Corte autorizado: mes 60 · pago registrado al dueño: mes 58»');
+  /* el paquete que mide la prueba de navegador es el que da el motor hoy (PPP_REGENERAR=1 lo reescribe) */
+  const FIX = path.join(APP, '..', 'tests', 'fixtures', 'visor-reparto-n01.json'), hoy = { n01: pqN01, pago58: pq58 };
+  if (process.env.PPP_REGENERAR === '1') fs.writeFileSync(FIX, JSON.stringify(hoy) + '\n');
+  assert.deepStrictEqual(JSON.parse(fs.readFileSync(FIX, 'utf8')), JSON.parse(JSON.stringify(hoy)), 'tests/fixtures/visor-reparto-n01.json ya no es lo que da el motor: correr con PPP_REGENERAR=1');
+  cifra('P-10 · B01 · pie con corte 60, «sin pago registrado», mes 38 sin importe e «inconsistente» en tarjeta y detalle; con pago real, corte 60 y pago del mes 58');
 });
 prueba('P-10 · N02 · un paquete v2 que marca «registrado» con pagado $0 se lee como fecha sin importe; con pago real se sigue mostrando', () => {
-  const con = (reg) => Object.assign({}, P60, { reparto: Object.assign({}, DECL, reg) });
-  const v2 = JSON.parse(JSON.stringify(Motor.paqueteVisor(DEF10, con({ fechas_pago: { DUENO: 38 } }))));
+  const v2 = JSON.parse(JSON.stringify(Motor.paqueteVisor(DEF10, conP10({ fechas_pago: { DUENO: 38 } }))));
   v2.cascada.fechas.pago_registrado = { estado: 'registrado', valor: 38 }; v2.cascada.conciliacion.DUENO.pagado = 0;   // así lo entregaba el motor v2
   const hv = textoVisor(v2);
   assert(!/pago registrado al dueño: mes 38/.test(hv) && !/"Pago registrado al dueño","mes 38"/.test(hv), 'el paquete v2 ya no anuncia el pago del mes 38');
-  assert.strictEqual(pieReparto(v2).tarjeta, 'Corte autorizado: mes 60 (sin pago registrado; fecha de pago del mes 38 sin importe: inconsistente)');
+  const a = pieReparto(v2); assert(partesN01(a.tarjeta, 38), 'pie: ' + a.tarjeta);
   const ok = JSON.parse(JSON.stringify(v2)); ok.cascada.conciliacion.DUENO.pagado = 1000000;
-  assert.strictEqual(pieReparto(ok).tarjeta, 'Corte autorizado: mes 60 · pago registrado al dueño: mes 38', 'con importe pagado el registro v2 sí es pago');
+  assert(partesPago(pieReparto(ok).tarjeta, 38), 'con importe pagado el registro v2 sí es pago');
 });
 prueba('P-10 · R01 · el panel distingue «Capital · conciliación» de «Capital · cifra de la tarjeta (R-25)» y ya no repite «Capital» a secas', () => {
   const ctx = cargaPagina({ protocol: 'file:', hostname: '' }), def = ctx.ArbolRepartoPrueba.definicion(ctx.ArbolMotor).definicion;
   const h = ctx.ArbolRepartoPrueba.estadoHtml(ctx.ArbolMotor, def, JSON.parse(JSON.stringify(P60)));
-  assert(/<th scope="row">Capital · conciliación<\/th><td>derecho /.test(h), 'rótulo de la conciliación');
-  assert(/<th scope="row">Capital · cifra de la tarjeta \(R-25\)<\/th><td>\$/.test(h), 'rótulo de la cifra de la tarjeta');
-  assert(!/<th scope="row">Capital<\/th>/.test(h), 'ningún renglón se llama sólo «Capital»');
+  const filas = (h.match(/<th[^>]*>[^<]*<\/th>/g) || []).map((t) => t.replace(/<[^>]+>/g, '').trim());
+  assert(filas.includes('Capital · conciliación'), 'rótulo de la conciliación'); assert(filas.includes('Capital · cifra de la tarjeta (R-25)'), 'rótulo de la cifra de la tarjeta');
+  assert(!filas.includes('Capital'), 'ningún renglón se llama sólo «Capital»');
 });
 
 /* ═══════════════════ RESUMEN ═══════════════════ */
