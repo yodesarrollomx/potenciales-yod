@@ -204,8 +204,10 @@
     function abrirDeLiga() {
       var m = /^#abrir=([A-Z]{1,3})$/.exec(root.location ? root.location.hash || '' : ''); if (!m || !api) return;
       try { root.history.replaceState(null, '', root.location.pathname + root.location.search); } catch (e) { }
-      var col = m[1], o = origenVivo(), datos = Object.keys((api.estado().plan || {}).valores || {}).length;
-      if (datos > 1 && !(o && o.columna === col)) {
+      /* sólo se abre sin preguntar si la pantalla no tiene ningún dato o si ya es ese mismo plan del libro; con cualquier dato (también el
+         tamaño del predio, que conserva la marca «dato de muestra» aunque se cambie) se pide confirmar con un toque */
+      var col = m[1], o = origenVivo(), ks = Object.keys((api.estado().plan || {}).valores || {});
+      if (ks.length > 0 && !(o && o.columna === col)) {
         est.panel = 'abrir'; est.confirma = col; est.lista = null; pinta();
         N.lista().then(function (r) { if (est.panel !== 'abrir') return; if (!r.ok) { est.panel = ''; fin(texto(r.error)); return; } est.lista = Array.isArray(r.columnas) ? r.columnas : []; est.msg = 'Tienes otro plan en pantalla: toca el plan resaltado para abrirlo en su lugar.'; pinta(); }).catch(falla);
         return;

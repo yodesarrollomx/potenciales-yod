@@ -250,12 +250,15 @@
   /* Planes que el Árbol PPP guardó en el libro Maestro (recurso arbol-columnas, sólo lectura). Se piden sólo si el servidor dice que el
      árbol está encendido; si no contesta, la portada sigue igual. Cada tarjeta abre ese plan en el árbol (arbol.html#abrir=<columna>). */
   function cargarArbol() {
-    if (!estado.vivero || estado.vivero.arbol !== true) return;
+    var repinta = function (lista) {
+      var antes = JSON.stringify(estado.arbolPlanes || []); estado.arbolPlanes = lista;
+      if (antes !== JSON.stringify(lista) && !estado.planId && (location.hash || '#/').replace(/^#\/?/, '') === '') pintarVivero();
+    };
+    if (!estado.vivero || estado.vivero.arbol !== true) { repinta([]); return; }
     leer('arbol-columnas').then(function (r) {
-      if (!r || !r.ok || !Array.isArray(r.columnas)) return;
-      estado.arbolPlanes = r.columnas.filter(function (c) { return /^[A-Z]{1,3}$/.test(String(c.columna || '')); });
-      if (!estado.planId && (location.hash || '#/').replace(/^#\/?/, '') === '') pintarVivero();
-    }, function () { });
+      /* si no contesta bien, no se queda a la vista una lista vieja */
+      repinta(r && r.ok && Array.isArray(r.columnas) ? r.columnas.filter(function (c) { return /^[A-Z]{1,3}$/.test(String(c.columna || '')); }) : []);
+    }, function () { repinta([]); });
   }
   function cargarVivero() {
     if (!configurado()) { raiz.innerHTML = '<div class="p2-error"><h2>El servidor de PPP 2 aún no está instalado</h2><p>La página está lista; falta publicar su servidor.</p></div>'; return; }
