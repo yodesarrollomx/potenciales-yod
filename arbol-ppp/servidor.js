@@ -23,6 +23,11 @@
     pausa: 'El servidor está en pausa (solo lectura). No se guardó nada.',
     ocupado: 'El libro está ocupado con otro guardado. Intenta de nuevo en unos segundos.',
     revision: 'Alguien cambió ese plan en el libro después de que lo abriste. No lo pisé. Ábrelo de nuevo o guárdalo como plan nuevo.',
+    revision_base: 'La versión de origen cambió en el libro. Ábrela de nuevo antes de agregar otra versión.',
+    base_version: 'Abre la versión que quieres usar como origen.',
+    version_vacia: 'Escribe un nombre para la nueva versión.',
+    version_repetida: 'Ya existe una versión con ese nombre en este proyecto. Elige otro nombre.',
+    sin_cambios: 'Esta versión ya contiene los valores que tienes en pantalla.',
     columna_ajena: 'Esa columna ya no es un borrador del árbol (alguien la cambió o la volvió vigente). Guárdalo como plan nuevo.',
     columna_invalida: 'No encontré esa columna en el libro.',
     sin_columnas: 'El libro ya no tiene columnas libres. No se guardó nada; avisa a Dirección.',
@@ -71,7 +76,7 @@
         if (!r.ok) return { modo: 'local', codigo: r.error || 'red', aviso: texto(r.error || 'red') };
         var c = null; try { c = motor.carga(r.tablas); } catch (e) { c = null; }
         if (!c || !c.definicion || (c.errores || []).length) return { modo: 'local', codigo: 'definicion', aviso: texto('definicion') };
-        return { modo: 'libro', tablas: r.tablas, definicion: c.definicion, huella: c.huella || r.huella_hoja, puede: { guardar: !!(r.puede && r.puede.guardar) } };
+        return { modo: 'libro', tablas: r.tablas, definicion: c.definicion, huella: c.huella || r.huella_hoja, puede: { guardar: !!(r.puede && r.puede.guardar), versiones: !!(r.puede && r.puede.versiones) } };
       });
     }
     /* La columna de un plan, como la pide el servidor: [{ id, valor }]. Se calcula con la definición publicada. */
@@ -79,81 +84,155 @@
       var res = motor.evalua(def, plan, null, { sugerencias: 'no', rutas: 'no' }), inf = motor.paqueteVisor(def, plan, { informe: true });
       return conexion.planAColumna(def, plan, res, { valores: inf.valores, motor: motor }).map(function (c) { return { id: c.id, valor: c.valor === undefined ? null : c.valor }; });
     }
-    function origen() { try { var o = JSON.parse(lee(CLAVE_ORIGEN) || 'null'); return o && /^[A-Z]{1,3}$/.test(String(o.columna)) ? o : null; } catch (e) { return null; } }
-    function fijaOrigen(o) { if (o) pon(CLAVE_ORIGEN, JSON.stringify(o)); else quita(CLAVE_ORIGEN); }
+    /* Cada pestaña conserva el origen de su propio árbol, aunque otra pestaña abra otra columna. */
+    var origenActivo = null;
+    try {
+      var persistido = JSON.parse(lee(CLAVE_ORIGEN) || 'null');
+      if (persistido && /^[A-Z]{1,3}$/.test(String(persistido.columna))) origenActivo = persistido;
+    } catch (e) { }
+    function origen() { return origenActivo; }
+    function fijaOrigen(o) { origenActivo = o; if (o) pon(CLAVE_ORIGEN, JSON.stringify(o)); else quita(CLAVE_ORIGEN); }
     /* sobre: true = actualizar la columna de origen (con su revisión); false = columna nueva. */
     function guarda(def, plan, datos) {
       datos = datos || {};
       var cuerpo = { tipo: 'arbol-guarda', nombre: String(datos.nombre || '').trim().slice(0, 120) || 'Plan del árbol', version: String(datos.version || '').trim().slice(0, 40) || 'V1', escenario: 'ARBOL' };
-      try { cuerpo.columna = columnaDe(def, plan); } catch (e) { return Promise.resolve({ ok: false, error: 'definicion' }); }
       var o = origen();
-      if (datos.sobre) { if (!o) return Promise.resolve({ ok: false, error: 'columna_invalida' }); cuerpo.columna_existente = o.columna; cuerpo.rev = o.rev; }
-      return escribir(cuerpo).then(function (r) {
-        if (r.ok) fijaOrigen({ columna: r.columna, rev: r.rev, nombre: cuerpo.nombre, version: cuerpo.version });
-        return r;
+      if (datos.derivada) {
+        if (!o || !o.rev || datos.sobre) return Promise.resolve({ ok: false, error: 'base_version' });
+        cuerpo.base_columna = o.columna; cuerpo.base_rev = o.rev;
+        cuerpo.version = String(datos.version || '').trim().slice(0, 40);
+        if (!cuerpo.version) return Promise.resolve({ ok: false, error: 'version_vacia' });
+        return escribir(cuerpo);
+      }
+      try { cuerpo.columna = columnaDe(def, plan); } catch (e) { return Promise.resolve({ ok: false, error: 'definicion' }); }
+      if (datos.sobre) {
+        if (!o) return Promise.resolve({ ok: false, error: 'columna_invalida' });
+        cuerpo.columna_existente = o.columna; cuerpo.rev = o.rev; cuerpo.escenario = o.escenario || cuerpo.escenario;
+      }
+      function guardaCuerpo() {
+        return escribir(cuerpo).then(function (r) {
+          if (r.ok) fijaOrigen(Object.assign({}, datos.sobre ? o : {}, { columna: r.columna, rev: r.rev, nombre: cuerpo.nombre, version: cuerpo.version }));
+          return r;
+        });
+      }
+      if (!datos.sobre || !o.cambio || !/^Derivada de /.test(o.cambio)) return guardaCuerpo();
+      return leer('arbol-columna', { columna: o.columna }).then(function (r) {
+        if (!r.ok) return r;
+        if (r.rev !== o.rev) return { ok: false, error: 'revision' };
+        var antes = {}, visto;
+        try {
+          visto = planDeColumna(def, r);
+          if (!visto) return { ok: false, error: 'definicion' };
+          columnaDe(def, visto.plan).forEach(function (c) { antes[c.id] = c.valor; });
+        } catch (e) { return { ok: false, error: 'definicion' }; }
+        cuerpo.columna = cuerpo.columna.filter(function (c) { return c.valor !== antes[c.id]; });
+        if (!cuerpo.columna.length && cuerpo.nombre === o.nombre && cuerpo.version === o.version) return { ok: false, error: 'sin_cambios' };
+        return guardaCuerpo();
       });
     }
     function lista() { return leer('arbol-columnas'); }
+    function versiones(o, columnas) {
+      var nombre = String(o.nombre || '').trim().toLowerCase();
+      return columnas.filter(function (c) { return nombre && String(c.nombre || '').trim().toLowerCase() === nombre; });
+    }
+    function planDeColumna(def, r) {
+      var mapa = {};
+      (Array.isArray(r.valores) ? r.valores : []).forEach(function (x) { if (x && typeof x.id === 'string') mapa[x.id] = x.valor; });
+      var v = conexion.columnaAPlan(def, mapa, { motor: motor });
+      var ev = motor.evalua(def, v.plan, null, { sugerencias: 'no', rutas: 'no' });
+      if (!v.plan || !v.plan.valores || !v.plan.valores['T-01'] || (ev.errores || []).length) return null;
+      return { plan: ev.plan || v.plan, mapa: mapa, avisos: (v.avisos || []).length };
+    }
     /* Abre una columna del árbol: la vuelve plan, comprueba que el motor la evalúa y la deja como el plan de la pantalla. */
     function abre(def, letra, guardia) {
       return leer('arbol-columna', { columna: letra }).then(function (r) {
         if (!r.ok) return r;
         if (typeof guardia === 'function' && !guardia()) return { ok: false, error: 'cambio_local' };   // la pantalla cambió mientras llegaba: no se pisa
-        var mapa = {}, nombre = '', version = '';
-        (Array.isArray(r.valores) ? r.valores : []).forEach(function (x) { if (x && typeof x.id === 'string') { mapa[x.id] = x.valor; if (x.id === 'I-01') nombre = String(x.valor); if (x.id === 'I-02') version = String(x.valor); } });
-        var v; try { v = conexion.columnaAPlan(def, mapa, { motor: motor }); } catch (e) { return { ok: false, error: 'definicion' }; }
-        var ev = motor.evalua(def, v.plan, null, { sugerencias: 'no', rutas: 'no' });
-        if (!v.plan || !v.plan.valores || !v.plan.valores['T-01'] || (ev.errores || []).length) return { ok: false, error: 'definicion' };
-        if (!pon(CLAVE_PLAN, JSON.stringify({ plan: ev.plan || v.plan }))) return { ok: false, error: 'definicion' };
+        var v; try { v = planDeColumna(def, r); } catch (e) { return { ok: false, error: 'definicion' }; }
+        if (!v || !pon(CLAVE_PLAN, JSON.stringify({ plan: v.plan }))) return { ok: false, error: 'definicion' };
         quita(CLAVE_CMP);
-        fijaOrigen({ columna: r.columna, rev: r.rev, nombre: nombre, version: version });
-        return { ok: true, columna: r.columna, nombre: nombre, avisos: (v.avisos || []).length };
+        var nombre = String(v.mapa['I-01'] || ''), version = String(v.mapa['I-02'] || '');
+        var o = { columna: r.columna, rev: r.rev, nombre: nombre, version: version };
+        if (v.mapa['I-03'] && v.mapa['I-03'] !== 'ARBOL') o.escenario = String(v.mapa['I-03']);
+        if (v.mapa['I-07']) o.cambio = String(v.mapa['I-07']);
+        fijaOrigen(o);
+        return { ok: true, columna: r.columna, nombre: nombre, avisos: v.avisos };
       });
     }
-    return { token: token, definicion: definicion, columnaDe: columnaDe, guarda: guarda, lista: lista, abre: abre, origen: origen, fijaOrigen: fijaOrigen, texto: texto };
+    return { token: token, definicion: definicion, columnaDe: columnaDe, guarda: guarda, lista: lista, versiones: versiones, abre: abre, origen: origen, fijaOrigen: fijaOrigen, texto: texto };
   }
 
   /* ───────── la barra (pantalla) ───────── */
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function procedencia(nota) {
+    return String(nota).split('\n').map(function (linea) {
+      var partes = /^(.*?)\s*(\S+)$/.exec(linea);
+      if (partes) {
+        try {
+          var url = new URL(partes[2]);
+          if (url.protocol === 'https:') {
+            var rango = new URLSearchParams(url.hash.slice(1)).get('range'), nombre = (partes[1] || 'Fuente').replace(/[\s·:]+$/, '');
+            return '<a href="' + esc(url.href) + '" target="_blank" rel="noopener noreferrer">' + esc(nombre + (rango ? ' · ' + rango : '')) + '</a>';
+          }
+        } catch (e) { }
+      }
+      return esc(linea);
+    }).join('<br>');
+  }
   function arranca(host, barra, op) {
     op = op || {};
     var doc = root.document, motor = op.motor || root.ArbolMotor, N = nucleo({ endpoint: op.endpoint, fetch: op.fetch, almacen: op.almacen || root.localStorage, motor: motor, conexion: op.conexion || root.ArbolConexion });
-    var est = { modo: 'local', aviso: '', puede: false, def: null, tablas: null, panel: '', lista: null, msg: '', ocupado: false, confirma: '' }, api = null;
-    /* «Empezar de nuevo» deja el plan solo con el predio: ese plan ya no es el que se abrió del libro, así que se suelta el origen y no se puede guardar encima. */
-    function origenVivo() {
-      var o = N.origen(); if (!o || !api) return o;
-      var v = (api.estado().plan || {}).valores || {};
-      if (Object.keys(v).length <= 1) { N.fijaOrigen(null); return null; }
-      return o;
+    var est = { modo: 'local', aviso: '', puede: false, versiones: false, def: null, tablas: null, panel: '', lista: null, msg: '', ocupado: false, confirma: '', nombreVersion: '' }, api = null;
+    function monta() {
+      api = root.ArbolPantalla.montar(host, { motor: motor, tablas: est.tablas || undefined, alReiniciar: function () { N.fijaOrigen(null); est.panel = ''; est.confirma = ''; est.msg = ''; pinta(); } });
+      mide();
     }
-    function monta() { api = root.ArbolPantalla.montar(host, est.tablas ? { motor: motor, tablas: est.tablas } : { motor: motor }); mide(); }
     function mide() { try { doc.documentElement.style.setProperty('--as-alto', barra.offsetHeight + 'px'); } catch (e) { } }
+    function botonPanel(panel, nombre) {
+      return '<button type="button" class="as-btn" data-as="' + panel + '" aria-expanded="' + (est.panel === panel) + '"' + (est.ocupado ? ' disabled' : '') + '>' + nombre + '</button>';
+    }
     function pinta() {
-      var o = origenVivo(), h = '<div class="as-fila"><span class="as-estado ' + (est.modo === 'libro' ? 'libro' : 'local') + '">' + (est.modo === 'libro' ? 'Conectado al libro' : 'Sin conexión al libro') + '</span>';
+      var o = N.origen(), h = '<div class="as-fila"><span class="as-estado ' + (est.modo === 'libro' ? 'libro' : 'local') + '">' + (est.modo === 'libro' ? 'Conectado al libro' : 'Sin conexión al libro') + '</span>';
+      var titulo = host.querySelector('.ppp-proy');
+      if (titulo && est.modo === 'libro') titulo.textContent = o && o.nombre ? o.nombre : 'Predio de muestra';
       if (est.modo === 'libro') {
-        h += '<span class="as-origen">' + (o ? 'Plan abierto: «' + esc(o.nombre || 'sin nombre') + '» · columna ' + esc(o.columna) : 'Plan sin guardar') + '</span><span class="as-botones">' +
-          (est.puede ? '<button type="button" class="as-btn" data-as="guardar"' + (est.ocupado ? ' disabled' : '') + '>Guardar en el libro</button>' : '') +
-          '<button type="button" class="as-btn" data-as="abrir"' + (est.ocupado ? ' disabled' : '') + '>Abrir un plan</button></span>';
+        h += '<span class="as-origen">' + (o ? '«' + esc(o.nombre || 'sin nombre') + '» · ' + esc(o.version || 'versión sin etiqueta') + ' · columna ' + esc(o.columna) : 'Plan sin guardar') + '</span><span class="as-botones">' +
+          (o && o.nombre ? botonPanel('versiones', 'Versiones del proyecto') : '') +
+          (est.puede && est.versiones && o && o.nombre ? botonPanel('agregar', 'Agregar versión') : '') +
+          (est.puede ? botonPanel('guardar', 'Guardar en el libro') : '') +
+          botonPanel('abrir', 'Abrir un plan') + '</span>';
       }
       h += '</div>';
       if (est.modo !== 'libro' && est.aviso) h += '<p class="as-nota">' + esc(est.aviso) + '</p>';
       if (est.modo === 'libro' && !est.puede) h += '<p class="as-nota">' + esc(texto('permiso')) + '</p>';
+      if (est.modo === 'libro' && o && o.cambio && est.panel !== 'versiones') h += '<p class="as-nota as-procedencia">' + procedencia(o.cambio) + '</p>';
       if (est.msg) h += '<p class="as-msg" role="status">' + esc(est.msg) + '</p>';
+      if (est.panel === 'agregar' && o) {
+        h += '<form class="as-panel" data-as-form="agregar"><p class="as-nota">Crea un borrador a partir de la versión guardada «' + esc(o.version || 'versión sin etiqueta') + '».</p>' +
+          '<label>Nombre de la nueva versión <input name="version" maxlength="40" autocomplete="off" required value="' + esc(est.nombreVersion) + '"></label><div class="as-botones">' +
+          '<button type="submit" class="as-btn fuerte"' + (est.ocupado ? ' disabled' : '') + '>Crear versión</button><button type="button" class="as-btn" data-as="cerrar">Cancelar</button></div></form>';
+      }
       if (est.panel === 'guardar') {
         h += '<form class="as-panel" data-as-form="guardar"><label>Nombre del plan <input name="nombre" maxlength="120" autocomplete="off" value="' + esc(o ? o.nombre : '') + '" placeholder="Por ejemplo: Predio de la esquina"></label>' +
           '<label>Versión <input name="version" maxlength="40" autocomplete="off" value="' + esc(o && o.version ? o.version : 'V1') + '"></label>' +
           '<p class="as-nota">Se guarda como Borrador, en una columna del libro. Lo que marcaste como confirmado vuelve como decidido al abrirlo: el libro guarda el valor, no su estado.</p><div class="as-botones">' +
-          '<button type="submit" class="as-btn fuerte">Guardar como plan nuevo</button>' +
-          (o ? '<button type="button" class="as-btn' + (est.confirma === 'sobre' ? ' alerta' : '') + '" data-as="sobre">' + (est.confirma === 'sobre' ? 'Toca otra vez para reemplazar «' + esc(o.nombre || 'sin nombre') + '» en la columna ' + esc(o.columna) : 'Reemplazar «' + esc(o.nombre || 'sin nombre') + '» en la columna ' + esc(o.columna)) + '</button>' : '') +
+          '<button type="submit" class="as-btn fuerte"' + (est.ocupado ? ' disabled' : '') + '>Guardar como plan nuevo</button>' +
+          (o ? '<button type="button" class="as-btn' + (est.confirma === 'sobre' ? ' alerta' : '') + '" data-as="sobre">' + (est.confirma === 'sobre' ? 'Toca otra vez para guardar cambios en «' : 'Guardar cambios en «') + esc(o.version || o.nombre || 'sin nombre') + '» · columna ' + esc(o.columna) + '</button>' : '') +
           '<button type="button" class="as-btn" data-as="cerrar">Cancelar</button></div></form>';
       }
-      if (est.panel === 'abrir') {
-        h += '<div class="as-panel"><p class="as-nota">Abrir un plan reemplaza lo que tienes en pantalla.</p>';
-        if (!est.lista) h += '<p class="as-nota" role="status">Buscando planes en el libro…</p>';
-        else if (!est.lista.length) h += '<p class="as-nota">El árbol todavía no ha guardado planes en el libro.</p>';
-        else h += '<ul class="as-lista">' + est.lista.map(function (c) {
+      if (est.panel === 'abrir' || est.panel === 'versiones') {
+        var delProyecto = est.panel === 'versiones', lista = est.lista && delProyecto ? N.versiones(o || {}, est.lista) : est.lista;
+        h += '<div class="as-panel"><p class="as-nota">' + (delProyecto ? 'Versiones guardadas de «' + esc(o && o.nombre) + '».' : 'Abrir un plan reemplaza lo que tienes en pantalla.') + '</p>';
+        if (!lista) h += '<p class="as-nota" role="status">Buscando en el libro…</p>';
+        else if (!lista.length) h += '<p class="as-nota">' + (delProyecto ? 'No encontré versiones guardadas para este proyecto.' : 'El árbol todavía no ha guardado planes en el libro.') + '</p>';
+        else h += '<ul class="as-lista">' + lista.map(function (c) {
           var conf = est.confirma === c.columna;
-          return '<li><button type="button" class="as-btn' + (conf ? ' alerta' : '') + '" data-as="abre" data-col="' + esc(c.columna) + '">' + (conf ? 'Toca otra vez para abrir «' + esc(c.nombre || 'sin nombre') + '»' : esc(c.nombre || 'sin nombre') + ' · ' + esc(c.version || '') + ' · ' + esc(c.estado || '') + ' · columna ' + esc(c.columna)) + '</button></li>';
+          var version = esc(c.version || 'versión sin etiqueta'), nombre = (delProyecto ? '' : esc(c.nombre || 'sin nombre') + ' · ') + version;
+          if (c.escenario && c.escenario !== 'ARBOL') nombre += ' · ' + esc(c.escenario);
+          var actual = o && o.columna === c.columna;
+          return '<li><button type="button" class="as-btn' + (conf ? ' alerta' : '') + '" data-as="abre" data-col="' + esc(c.columna) + '"' + (actual ? ' aria-current="true"' : '') + '>' +
+            (conf ? 'Toca otra vez para abrir ' + nombre : nombre + ' · ' + esc(c.estado || '') + ' · columna ' + esc(c.columna) + (actual ? ' · en pantalla' : '')) + '</button>' +
+            (delProyecto && c.cambio ? '<p class="as-nota as-procedencia">' + procedencia(c.cambio) + '</p>' : '') + '</li>';
         }).join('') + '</ul>';
         h += '<div class="as-botones"><button type="button" class="as-btn" data-as="cerrar">Cerrar</button></div></div>';
       }
@@ -161,14 +240,41 @@
     }
     function fin(msg) { est.ocupado = false; est.msg = msg; pinta(); }
     function falla() { fin(texto('red')); }
+    var consulta = 0;
+    function cargaLista() {
+      var peticion = ++consulta, panel = est.panel;
+      est.lista = null; pinta();
+      N.lista().then(function (r) {
+        if (consulta !== peticion || est.panel !== panel) return;
+        if (!r.ok) { est.panel = ''; fin(texto(r.error)); return; }
+        est.lista = Array.isArray(r.columnas) ? r.columnas : []; pinta();
+      }).catch(function () { if (consulta === peticion && est.panel === panel) falla(); });
+    }
     function guardaAhora(sobre) {
       var f = barra.querySelector('form[data-as-form="guardar"]'); if (!f || est.ocupado || !api) return;
       if (api.reglas && api.reglas().cambios.length) { est.panel = ''; fin(texto('reglas')); return; }
-      var datos = { nombre: f.nombre.value, version: f.version.value, sobre: !!sobre };
+      var datos = { nombre: f.elements.nombre.value, version: f.elements.version.value, sobre: !!sobre };
       est.ocupado = true; est.confirma = ''; est.msg = 'Guardando en el libro…'; pinta();
       N.guarda(est.def, api.estado().plan, datos).then(function (r) {
         if (!r.ok) { fin(texto(r.error) + (r.columna ? ' Columna ' + r.columna + '.' : '')); return; }
-        est.panel = ''; fin('Guardado como Borrador en la columna ' + r.columna + ' del libro (' + r.escritos + ' valores).');
+        est.panel = ''; est.nombreVersion = ''; fin('Guardado como Borrador en la columna ' + r.columna + ' del libro (' + r.escritos + ' valores).');
+      }).catch(falla);
+    }
+    function agregaAhora(f) {
+      var o = N.origen(); if (!o || est.ocupado || !est.puede || !est.versiones || !api) return;
+      if (api.reglas && api.reglas().cambios.length) { fin(texto('reglas')); return; }
+      est.nombreVersion = f.elements.version.value;
+      var foto = JSON.stringify(api.estado().plan || {});
+      est.ocupado = true; est.msg = 'Creando versión…'; pinta();
+      N.guarda(est.def, null, { nombre: o.nombre, version: est.nombreVersion, derivada: true }).then(function (r) {
+        if (!r.ok) { fin(texto(r.error)); return; }
+        est.panel = 'versiones'; est.confirma = ''; est.nombreVersion = '';
+        var mensaje = 'Creé «' + r.version + '» como Borrador · columna ' + r.columna + '.';
+        return N.abre(est.def, r.columna, function () { return JSON.stringify(api.estado().plan || {}) === foto; }).then(function (abierta) {
+          if (abierta.ok) monta();
+          fin(mensaje + (abierta.ok ? '' : ' ' + texto(abierta.error)));
+          cargaLista();
+        });
       }).catch(falla);
     }
     barra.addEventListener('click', function (e) {
@@ -176,30 +282,36 @@
       var a = b.getAttribute('data-as');
       if (a === 'cerrar') { est.panel = ''; est.confirma = ''; pinta(); }
       else if (a === 'sobre') {
-        if (!origenVivo()) { est.confirma = ''; pinta(); return; }
+        if (!N.origen()) { est.confirma = ''; pinta(); return; }
         if (est.confirma !== 'sobre') { var fo = barra.querySelector('form[data-as-form="guardar"]'), nom = fo ? fo.nombre.value : '', ver = fo ? fo.version.value : ''; est.confirma = 'sobre'; pinta(); fo = barra.querySelector('form[data-as-form="guardar"]'); if (fo) { fo.nombre.value = nom; fo.version.value = ver; } return; }
         guardaAhora(true);
       }
-      else if (a === 'guardar') {
+      else if (a === 'agregar') {
+        est.panel = est.panel === 'agregar' ? '' : 'agregar'; est.confirma = ''; est.msg = ''; est.nombreVersion = ''; pinta();
+        var campoVersion = barra.querySelector('[data-as-form="agregar"] input'); if (campoVersion) campoVersion.focus();
+      } else if (a === 'guardar') {
         est.msg = ''; est.confirma = '';
         if (api && api.reglas && api.reglas().cambios.length) { est.panel = ''; est.msg = texto('reglas'); } else est.panel = est.panel === 'guardar' ? '' : 'guardar';
         pinta();
-      } else if (a === 'abrir') {
-        est.msg = ''; est.confirma = ''; est.panel = est.panel === 'abrir' ? '' : 'abrir'; est.lista = null; pinta();
-        if (est.panel === 'abrir') N.lista().then(function (r) { if (est.panel !== 'abrir') return; if (!r.ok) { est.panel = ''; fin(texto(r.error)); return; } est.lista = Array.isArray(r.columnas) ? r.columnas : []; pinta(); }).catch(falla);
+      } else if (a === 'abrir' || a === 'versiones') {
+        est.msg = ''; est.confirma = ''; est.panel = est.panel === a ? '' : a;
+        if (est.panel) cargaLista(); else pinta();
       } else if (a === 'abre') {
         var col = b.getAttribute('data-col');
-        if (est.confirma !== col) { est.confirma = col; pinta(); return; }
+        if (est.confirma !== col) { est.confirma = col; pinta(); barra.querySelector('[data-col="' + col + '"]').focus(); return; }
+        var foto = JSON.stringify(api.estado().plan || {});
         est.ocupado = true; est.msg = 'Abriendo el plan…'; pinta();
-        N.abre(est.def, col).then(function (r) {
+        N.abre(est.def, col, function () { return JSON.stringify(api.estado().plan || {}) === foto; }).then(function (r) {
           if (!r.ok) { fin(texto(r.error)); return; }
           est.panel = ''; est.confirma = ''; monta();
           fin('Abrí «' + (r.nombre || 'sin nombre') + '» de la columna ' + r.columna + '.' + (r.avisos ? ' ' + r.avisos + (r.avisos === 1 ? ' dato no se pudo leer y quedó' : ' datos no se pudieron leer y quedaron') + ' en referencia.' : ''));
         }).catch(falla);
       }
     });
-    barra.addEventListener('submit', function (e) { e.preventDefault(); guardaAhora(false); });   // Enter o el botón principal: siempre plan nuevo
-    host.addEventListener('click', function () { setTimeout(function () { var antes = N.origen(); if (antes && !origenVivo() && !est.ocupado) pinta(); }, 0); });
+    barra.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (e.target.getAttribute('data-as-form') === 'agregar') agregaAhora(e.target); else guardaAhora(false);
+    });
     root.addEventListener('resize', mide);
     /* Liga desde la portada del PPP: arbol.html#abrir=<columna>. Abre ese plan del libro. Si en pantalla hay un plan con datos que no salió
        de esa columna, no lo pisa: abre el panel «Abrir un plan» con esa columna lista para confirmar con un toque. */
@@ -208,10 +320,9 @@
       try { root.history.replaceState(null, '', root.location.pathname + root.location.search); } catch (e) { }
       /* sólo se abre sin preguntar si la pantalla no tiene ningún dato o si ya es ese mismo plan del libro; con cualquier dato (también el
          tamaño del predio, que conserva la marca «dato de muestra» aunque se cambie) se pide confirmar con un toque */
-      var col = m[1], o = origenVivo(), ks = Object.keys((api.estado().plan || {}).valores || {});
+      var col = m[1], o = N.origen(), ks = Object.keys((api.estado().plan || {}).valores || {});
       if (ks.length > 0 && !(o && o.columna === col)) {
-        est.panel = 'abrir'; est.confirma = col; est.lista = null; pinta();
-        N.lista().then(function (r) { if (est.panel !== 'abrir') return; if (!r.ok) { est.panel = ''; fin(texto(r.error)); return; } est.lista = Array.isArray(r.columnas) ? r.columnas : []; est.msg = 'Tienes otro plan en pantalla: toca el plan resaltado para abrirlo en su lugar.'; pinta(); }).catch(falla);
+        est.panel = 'abrir'; est.confirma = col; est.msg = 'Tienes otro plan en pantalla: toca el plan resaltado para abrirlo en su lugar.'; cargaLista();
         return;
       }
       var foto = JSON.stringify(api.estado().plan || {});
@@ -224,7 +335,7 @@
     monta(); pinta();                                   // primero lo de la página; si el libro contesta, se cambia a su definición
     return N.definicion().catch(function () { return { modo: 'local', codigo: 'red', aviso: texto('red') }; }).then(function (d) {
       est.modo = d.modo; est.aviso = d.aviso || '';
-      if (d.modo === 'libro') { est.tablas = d.tablas; est.def = d.definicion; est.puede = d.puede.guardar; monta(); }
+      if (d.modo === 'libro') { est.tablas = d.tablas; est.def = d.definicion; est.puede = d.puede.guardar; est.versiones = d.puede.versiones; monta(); }
       pinta();
       if (d.modo === 'libro') abrirDeLiga();
       return { modo: est.modo, codigo: d.codigo || '', pantalla: function () { return api; } };

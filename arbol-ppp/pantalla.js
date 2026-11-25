@@ -1003,6 +1003,7 @@
       elems.forEach((e) => e.g.remove()); elems.clear(); aristas.forEach((a) => a.remove()); aristas.clear(); disp.clear();
       pintaTodo(); tgt.forEach((p, id) => disp.set(id, { x: p.x, y: p.y })); anim.lay = null; coloca(); vistaInicial(); tarjetasSinParpadeo();
       anuncia('Plan nuevo. Te toca: ' + ((porId(sel) || {}).titulo || '') + '.');
+      if (typeof opts.alReiniciar === 'function') opts.alReiniciar();
     }
     const tarjetasSinParpadeo = () => host.querySelectorAll('.tarj.cambio').forEach((e) => e.classList.remove('cambio'));
 

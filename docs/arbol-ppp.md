@@ -62,6 +62,14 @@ Con la sesión de YOD OS que ya está en el navegador, la barra de arriba de `ar
 - **El libro guarda valores, no estados.** Al abrir un plan guardado, lo que estaba «confirmado» vuelve como «decidido».
 - **Reglas editadas sin publicar no se guardan.** Si hay cambios a las reglas en el navegador, guardar se bloquea: el libro recibe planes calculados con las reglas publicadas.
 
+### Versiones del proyecto
+
+Al abrir una versión, «Versiones del proyecto» muestra las columnas del Árbol con el mismo nombre de proyecto (I-01), usando mayúsculas y espacios exteriores indistintamente. Las etiquetas de versión repetidas en el historial se distinguen por escenario y columna. Los nombres I-01 deben distinguir los proyectos del Maestro.
+
+«Agregar versión» guarda y abre una copia de la versión guardada, con una etiqueta nueva y en otra columna Borrador. Copia las capturas del libro incluso si el Árbol no las interpreta y usa las fórmulas de la plantilla. El campo I-07 conserva el origen, su revisión y la ficha si sigue en el borrador de origen. CAMBIOS registra el actor y las columnas. Después de editar, «Guardar en el libro» ofrece guardar los cambios en la versión abierta. El selector muestra todas las columnas del proyecto que ya guardó el Árbol. Las nuevas requieren que quede una columna libre en el Maestro.
+
+La creación de versiones requiere la capacidad `puede.versiones` del servidor. Probar el alta, la edición y la reapertura en un Maestro simulado con `node --test tests/arbol-ppp-servidor.test.cjs` antes de actualizar Apps Script.
+
 Instalación, interruptor y prueba en una copia privada: `server/ppp2/INSTALAR.md`, «El Árbol PPP».
 
 ## Lo que falta

@@ -162,6 +162,7 @@ jobs:
           node tests/ppp-cargador-browser.cjs
           node tests/ppp-paridad-cargador-browser.cjs
           node tests/ppp2-browser.cjs
+          node tests/arbol-ppp-versiones-browser.cjs
           node tests/ppp2-visor-browser.cjs
           node tests/visor-explica-browser.cjs
       - name: Comprobar archivos publicados
