@@ -72,7 +72,8 @@ const MIDE = ([sel, contSel]) => {
    debida que no esté, con casi toda su fuerza, en la tinta real es texto que una persona no ve: lo tape lo que lo tape (una capa opaca
    aunque deje pasar los toques, la sombra de un vecino, un velo, un clip-path, una máscara), falla. Una capa transparente no quita
    tinta: pasa. Además se mira letra por letra: cada carácter del pie tiene que ocupar sitio, tener tamaño de lectura y, despejado,
-   dejar tinta (una fecha con letra de tamaño cero o del color del papel sigue en el texto de la página y nadie la ve). */
+   dejar tinta (una fecha con letra de tamaño cero o del color del papel sigue en el texto de la página y nadie la ve), y avanzar
+   respecto de la anterior (una cifra montada sobre otra o en orden inverso se lee como otro mes). */
 const SIN_TEXTO = 'color:transparent !important;-webkit-text-fill-color:transparent !important;text-shadow:none !important;-webkit-text-stroke-color:transparent !important;text-decoration-color:transparent !important;text-emphasis-color:transparent !important;';
 const T_PREPARA = (sel) => {
   const p = document.querySelector(sel);
@@ -80,17 +81,24 @@ const T_PREPARA = (sel) => {
   const r = p.getBoundingClientRect();
   /* letra por letra: cada carácter que no es espacio tiene que ocupar sitio en la pantalla (un trozo con letra de tamaño cero sigue
      en el texto de la página y no se ve) */
-  const letras = [], sinSitio = [], anda = document.createTreeWalker(p, NodeFilter.SHOW_TEXT), rango = document.createRange();
+  const letras = [], sinSitio = [], desorden = []; let previa = null, pegada = false; const anda = document.createTreeWalker(p, NodeFilter.SHOW_TEXT), rango = document.createRange();
   for (let n = anda.nextNode(); n; n = anda.nextNode()) {
     let quitado = false; for (let e = n.parentElement; e && e !== p.parentElement; e = e.parentElement) if (getComputedStyle(e).display === 'none') quitado = true;
     if (quitado) continue;   // lo que no se dibuja tampoco sale en innerText: de eso se encarga la lectura del texto
     const t = n.data;
     for (let i = 0; i < t.length; i++) {
-      if (/\s/.test(t[i])) continue;
+      if (/\s/.test(t[i])) { pegada = false; continue; }
       rango.setStart(n, i); rango.setEnd(n, i + 1);
       const x = Array.from(rango.getClientRects()).find((y) => y.width > 0.5 && y.height > 0.5);
-      if (!x) { sinSitio.push(t[i]); continue; }
-      letras.push({ c: t[i], l: x.left, t: x.top, r: x.right, b: x.bottom });
+      if (!x) { sinSitio.push(t[i]); pegada = true; continue; }
+      const q = { c: t[i], l: x.left, t: x.top, r: x.right, b: x.bottom };
+      /* cada letra avanza respecto de la anterior de su palabra: si se le monta encima o queda antes, se lee otra cosa («38» que se
+         ve «8» o «83») aunque el texto de la página siga diciendo lo mismo. Entre cifras se pide además un paso mínimo. */
+      if (pegada && previa && Math.min(q.b, previa.b) - Math.max(q.t, previa.t) > 0.5 * Math.min(q.b - q.t, previa.b - previa.t)) {
+        const paso = ((q.l + q.r) / 2 - (previa.l + previa.r) / 2) / Math.min(q.b - q.t, previa.b - previa.t);
+        if (paso <= 0 || (/\d/.test(q.c) && /\d/.test(previa.c) && paso < 0.2)) desorden.push(previa.c + q.c + ' (paso ' + paso.toFixed(3) + ')');
+      }
+      letras.push(q); previa = q; pegada = true;
     }
   }
   const lineas = [];   // renglones: letras que comparten franja
@@ -100,7 +108,7 @@ const T_PREPARA = (sel) => {
   }
   const caja = { x: Math.max(0, Math.floor(r.left) - 2), y: Math.max(0, Math.floor(r.top) - 2) };
   caja.width = Math.min(window.innerWidth, Math.ceil(r.right) + 2) - caja.x; caja.height = Math.min(window.innerHeight, Math.ceil(r.bottom) + 2) - caja.y;
-  return { caja, lineas, letras, sinSitio };
+  return { caja, lineas, letras, sinSitio, desorden };
 };
 const T_TEXTO = ([sel, css]) => {   // quita (o devuelve) la tinta del texto del pie y de lo que lleve dentro
   let e = document.getElementById('tintaSinTexto');
@@ -156,6 +164,7 @@ async function tinta(page, lienzo, sel, donde) {
   const fijo = await page.evaluate(T_PREPARA, sel);   // despejar no debe haber movido nada
   assert.deepStrictEqual(fijo, m, donde + ': el pie cambió de sitio mientras se fotografiaba');
   assert.deepStrictEqual(m.sinSitio, [], donde + ': hay texto del pie que está en la página y no ocupa sitio en la pantalla: «' + m.sinSitio.join('') + '»');
+  assert.deepStrictEqual(m.desorden, [], donde + ': letras del pie montadas una sobre otra o en otro orden que el del texto (se leería otra cosa): ' + m.desorden.join(', '));
   const altos = m.letras.map((x) => x.b - x.t).sort((x, y) => x - y), tipico = altos[altos.length >> 1] || 0, chicas = m.letras.filter((x) => x.b - x.t < 8 || x.b - x.t < 0.8 * tipico).map((x) => x.c);
   assert.deepStrictEqual(chicas, [], donde + ': letras del pie demasiado pequeñas para leerse (menos de 8 px o del 80 % del resto): «' + chicas.join('') + '»');
   const r = await lienzo.evaluate(T_COMPARA, { a, b, c, d, caja: m.caja, lineas: m.lineas, letras: m.letras });
