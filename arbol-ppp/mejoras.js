@@ -480,7 +480,9 @@ html,body{overflow:hidden!important;height:100%!important}
     ns.forEach((n) => { by[n.id] = n; }); ns.forEach((n) => { if (n.de && by[n.de]) (hijos[n.de] = hijos[n.de] || []).push(n.id); });
     const color = (n) => (n.tarjetas || [])[0] || '';
     const guarda = new Set();
-    ns.forEach((n) => { const pa = n.de && by[n.de]; if (pa && color(pa) === color(n)) return; for (let x = n; x && !guarda.has(x.id); x = x.de && by[x.de]) guarda.add(x.id); });
+    const prof = (n) => { let d = 0; for (let x = n; x.de && by[x.de]; x = by[x.de]) d++; return d; }, prim = {};
+    ns.forEach((n) => { const c = color(n); if (c && (!prim[c] || prof(n) < prof(prim[c]))) prim[c] = n; });      // el primer dato de cada color (el más cercano al predio)
+    Object.keys(prim).forEach((c) => { for (let x = prim[c]; x && !guarda.has(x.id); x = x.de && by[x.de]) guarda.add(x.id); });
     const pl = new Set(a.estado().plegados || []);
     ns.forEach((n) => { const h = hijos[n.id]; if (!h) return; const quiere = !h.some((i) => guarda.has(i)); if (quiere !== pl.has(n.id)) a.alterna(n.id); });
     a.verTodo();
