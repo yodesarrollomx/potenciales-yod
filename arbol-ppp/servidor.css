@@ -1,6 +1,6 @@
 /* Árbol PPP · barra del libro (guardar y abrir). Usa las variables de pantalla.css; tema claro y oscuro. */
 :root{--as-alto:0px}
-.as-barra{box-sizing:border-box;max-width:1200px;margin:0 auto;padding:8px max(16px,env(safe-area-inset-right,0px)) 6px max(16px,env(safe-area-inset-left,0px));
+.as-barra{position:relative;z-index:7;box-sizing:border-box;max-width:1200px;margin:0 auto;padding:8px max(16px,env(safe-area-inset-right,0px)) 6px max(16px,env(safe-area-inset-left,0px));
   background:var(--bg);color:var(--ink);font-family:var(--body);font-size:.82rem;line-height:1.35;border-bottom:1px solid var(--line)}
 .as-barra *{box-sizing:border-box}
 .as-fila{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
@@ -23,5 +23,9 @@
 .as-panel .as-botones{margin-left:0}
 .as-lista{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .as-lista .as-btn{width:100%;padding:8px 12px}
+.as-lista .as-btn[aria-current]{border-color:var(--tiempo)}
+.as-procedencia{margin:3px 12px 6px;overflow-wrap:anywhere}
+/* En teléfono la hoja del nodo y sus pestañas son fijas. El panel del libro se puede usar por encima. */
+@media(max-width:760px){.as-barra:has(.as-panel){z-index:99999}}
 /* la pantalla ocupa el alto que deja la barra */
 .as-barra ~ #arbol-ppp .ppp{height:calc(100vh - var(--as-alto));height:calc(100dvh - var(--as-alto));min-height:520px}

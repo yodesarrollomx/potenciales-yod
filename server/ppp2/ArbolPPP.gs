@@ -7,7 +7,7 @@
  *   GET  recurso = arbol-definicion          →  { ok, huella_hoja, tablas: { ARBOL_NODOS: [[encabezado], [fila]…], … }, puede: { guardar } }   (las 9 pestañas ARBOL_*; solo lectura)
  *   GET  recurso = arbol-columnas            →  { ok, columnas: [{ columna, nombre, version, escenario, estado, fecha, quien }] }   (solo las columnas que el árbol creó)
  *   GET  recurso = arbol-columna & columna=O →  { ok, columna, estado, rev, valores: [{ id, valor }] }                     (solo una columna que el árbol creó)
- *   POST tipo = arbol-guarda { k, request_id, nombre, version, escenario, columna: [{ id, valor }], columna_existente?, rev? }
+ *   POST tipo = arbol-guarda { k, request_id, nombre, version, escenario, columna: [{ id, valor }], columna_existente?, rev?, base_columna?, base_rev? }
  *
  * Reglas (cada una con prueba en arbol-ppp/conexion/pruebas-gs.cjs, contra un doble de Sheets):
  *   - Permisos como PPP2.gs: leer pide sesión válida; guardar exige puede_(s,'editar'). El árbol guarda SIEMPRE en «Borrador»: pedir otro estado se rechaza.
@@ -45,7 +45,7 @@ function arbol_lee_(s, p) {
   var r = String(p.recurso || '');
   if (r === 'arbol-definicion') {
     var d = arbol_definicion_();
-    if (d && d.ok) d.puede = { guardar: puede_(s, 'editar') && !pausa_(config_()) };   // depende de quién pregunta: no va en la caché
+    if (d && d.ok) d.puede = { guardar: puede_(s, 'editar') && !pausa_(config_()), versiones: true };   // guardar depende de quién pregunta
     return d;
   }
   if (r === 'arbol-columnas') return arbol_columnas_();
@@ -63,10 +63,12 @@ function arbol_post_(s, b, rid) {
   if (rid) { var prev = cache.get(ck); if (prev) return JSON.parse(prev); }
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(ARBOL.BLOQUEO_MS)) return { ok: false, error: 'ocupado' };
-  var res;
-  try { res = arbol_guarda_(s, b, rid); } catch (e) { res = { ok: false, error: 'interno' }; } finally { lock.releaseLock(); }
-  if (rid && res && res.ok) { try { cache.put(ck, JSON.stringify(res), ARBOL.IDEM_S); } catch (e2) { } }
-  return res;
+  try {
+    if (rid) { var previo = cache.get(ck); if (previo) return JSON.parse(previo); }
+    var res = arbol_guarda_(s, b, rid);
+    if (rid && res && res.ok) { try { cache.put(ck, JSON.stringify(res), ARBOL.IDEM_S); } catch (e2) { } }
+    return res;
+  } catch (e) { return { ok: false, error: 'interno' }; } finally { lock.releaseLock(); }
 }
 
 /* ───────────── 1 · leer la definición ───────────── */
@@ -141,11 +143,11 @@ function arbol_columnas_() {
   var plantilla = arbol_letraACol_(String(config_().maestro_plantilla || 'J')), ancho = h.getLastColumn(), out = [];
   if (ancho <= plantilla) return { ok: true, columnas: out };
   var n = ancho - plantilla, lee = function (id) { return id in m.fila ? h.getRange(m.fila[id], plantilla + 1, 1, n).getValues()[0] : []; };
-  var marca = lee('I-06'), nom = lee('I-01'), ver = lee('I-02'), esc = lee('I-03'), est = lee('I-04'), fec = lee('I-05');
+  var marca = lee('I-06'), nom = lee('I-01'), ver = lee('I-02'), esc = lee('I-03'), est = lee('I-04'), fec = lee('I-05'), cambio = lee('I-07');
   for (var c = 0; c < n; c++) {
     if (String(marca[c] || '').indexOf(ARBOL.MARCA) < 0) continue;
     out.push({ columna: arbol_colALetra_(plantilla + 1 + c), nombre: txt_(arbol_texto_(nom[c]), 200), version: txt_(arbol_texto_(ver[c]), 60), escenario: txt_(arbol_texto_(esc[c]), 60),
-      estado: txt_(arbol_texto_(est[c]), 40), fecha: txt_(arbol_texto_(fec[c]), 20), quien: txt_(String(marca[c]).replace(ARBOL.MARCA, '').replace(/^[\s·]+/, ''), 120) });
+      estado: txt_(arbol_texto_(est[c]), 40), fecha: txt_(arbol_texto_(fec[c]), 20), quien: txt_(String(marca[c]).replace(ARBOL.MARCA, '').replace(/^[\s·]+/, ''), 120), cambio: txt_(arbol_texto_(cambio[c]), ARBOL.MAX_TEXTO) });
   }
   return { ok: true, columnas: out };
 }
@@ -178,8 +180,9 @@ function arbol_rev_(vals, forms) {
 function arbol_guarda_(s, b, rid) {
   if (!puede_(s, 'editar')) return { ok: false, error: 'permiso' };
   if (b.estado != null && String(b.estado).trim() !== '' && low_(b.estado) !== low_(ARBOL.ESTADO)) return { ok: false, error: 'estado' };   // el árbol solo guarda borradores
-  var items = b.columna;
-  if (!Array.isArray(items) || !items.length) return { ok: false, error: 'columna' };
+  var derivada = b.base_columna != null || b.base_rev != null;
+  var items = derivada ? [] : b.columna;
+  if (!Array.isArray(items) || (!derivada && !b.columna_existente && !items.length)) return { ok: false, error: 'columna' };
   if (items.length > ARBOL.MAX_ITEMS) return { ok: false, error: 'demasiados' };
   var libro = arbol_libro_(); if (!libro) return { ok: false, error: 'sin_libro' };
   var h = libro.getSheetByName(ARBOL.HOJA); if (!h) return { ok: false, error: 'sin_hoja' };
@@ -208,6 +211,32 @@ function arbol_guarda_(s, b, rid) {
   if (!(plantilla >= 2) || plantilla > h.getMaxColumns()) return { ok: false, error: 'sin_plantilla' };
   var fPlantilla = h.getRange(1, plantilla, ult, 1).getFormulas();
   if (fPlantilla[fila['I-04'] - 1][0] || fPlantilla[fila['I-06'] - 1][0]) return { ok: false, error: 'sin_identidad' };
+
+  /* Una derivación crea una columna de ese mismo proyecto y deja la revisión de la base en el historial. */
+  var nombre = b.nombre || 'Árbol · plan', version = b.version || 'V1', escenario = b.escenario || 'ARBOL', base = null, cambio = '', ficha = '';
+  if (derivada) {
+    var letraBase = String(b.base_columna || '').trim().toUpperCase();
+    if (b.columna_existente || !/^[A-Z]{1,3}$/.test(letraBase) || !b.base_rev) return { ok: false, error: 'base_version' };
+    base = arbol_columna_(letraBase);
+    if (!base.ok) return base;
+    if (base.rev !== b.base_rev) return { ok: false, error: 'revision_base' };
+    var colBase = arbol_letraACol_(base.columna), rangoBase = h.getRange(1, colBase, ult, 1);
+    var capturas = rangoBase.getValues(), formulasBase = rangoBase.getFormulas(), identidad = {};
+    Object.keys(fila).forEach(function (id) {
+      var i = fila[id] - 1, valor = capturas[i][0];
+      if (/^I-0[1-7]$/.test(id)) identidad[id] = valor;
+      else if (!formulasBase[i][0] && valor !== '' && valor != null) valores[id] = arbol_literal_(valor);
+    });
+    nombre = txt_(identidad['I-01'], 200); version = txt_(b.version, 40);
+    if (!nombre || !('I-02' in fila) || fPlantilla[fila['I-01'] - 1][0] || fPlantilla[fila['I-02'] - 1][0]) return { ok: false, error: 'sin_identidad' };
+    if (!version) return { ok: false, error: 'version_vacia' };
+    var lista = arbol_columnas_();
+    if (!lista.ok) return lista;
+    if (lista.columnas.some(function (c) { return low_(c.nombre) === low_(nombre) && low_(c.version) === low_(version); })) return { ok: false, error: 'version_repetida' };
+    cambio = 'Derivada de ' + (txt_(identidad['I-02'], 60) || 'versión sin etiqueta') + ' · columna ' + base.columna + ' · revisión ' + base.rev + '.';
+    ficha = txt_(identidad['I-07'], ARBOL.MAX_TEXTO).replace(/^(?:Derivada de [^\n]*\n?)+/, '').trim();
+    escenario = txt_(identidad['I-03'], 200) || escenario;
+  }
 
   /* la columna: una propia del árbol que se actualiza, o la primera completamente vacía a la derecha de la plantilla */
   var col, nueva = false;
@@ -245,8 +274,10 @@ function arbol_guarda_(s, b, rid) {
     if (nueva) h.getRange(1, plantilla, ult, 1).copyTo(h.getRange(1, col, ult, 1));
     var formulas = h.getRange(1, col, ult, 1).getFormulas().map(function (r) { return r[0]; });
     var actual = h.getRange(1, col, ult, 1).getValues().map(function (r) { return r[0]; });
-    var ident = { 'I-01': b.nombre || 'Árbol · plan', 'I-02': b.version || 'V1', 'I-03': b.escenario || 'ARBOL', 'I-04': ARBOL.ESTADO, 'I-06': ARBOL.MARCA + ' · ' + actor_(s), 'I-05': hoyISO_() };
-    Object.keys(ident).forEach(function (id) { if (id in fila && !formulas[fila[id] - 1]) valores[id] = arbol_literal_(txt_(ident[id], 200)); });
+    var ident = { 'I-01': nombre, 'I-02': version, 'I-03': escenario, 'I-04': ARBOL.ESTADO, 'I-06': ARBOL.MARCA + ' · ' + actor_(s), 'I-05': hoyISO_() };
+    if (base) ident['I-07'] = cambio + (ficha ? '\n' + ficha : '');
+    else if (!nueva && !valores['I-07']) delete valores['I-07'];   // conserva la procedencia registrada al reemplazar un borrador
+    Object.keys(ident).forEach(function (id) { if (id in fila && !formulas[fila[id] - 1]) valores[id] = arbol_literal_(txt_(ident[id], id === 'I-07' ? ARBOL.MAX_TEXTO : 200)); });
     var porRenglon = {};
     Object.keys(valores).forEach(function (id3) { if (formulas[fila[id3] - 1]) ignorados.push(id3); else porRenglon[fila[id3]] = valores[id3]; });
     var tramo = null, tramos = [];
@@ -268,13 +299,15 @@ function arbol_guarda_(s, b, rid) {
     });
   } catch (err) {
     /* la escritura se cortó: se deja dicho en la bitácora en qué columna, para que una persona la revise */
-    try { anota('Escritura INCOMPLETA del Árbol PPP en la columna ' + letra + (nueva ? ' (columna nueva)' : '') + '.', 'Revisar la columna ' + letra + ': puede haber quedado a medias.'); } catch (e2) { }
+    try { anota('Escritura INCOMPLETA del Árbol PPP en la columna ' + letra + (nueva ? ' (columna nueva)' : '') + '. ' + cambio, 'Revisar la columna ' + letra + ': puede haber quedado a medias.'); } catch (e2) { }
     return { ok: false, error: 'incompleto', columna: letra };
   }
-  anota((nueva ? 'Columna nueva' : 'Columna actualizada') + ' del Árbol PPP: ' + escritos + ' valores; fórmulas sin tocar.', mal.length ? 'Revisar: ' + mal.slice(0, 10).join(', ') : '');
+  anota((nueva ? 'Columna nueva' : 'Columna actualizada') + ' del Árbol PPP: ' + escritos + ' valores; fórmulas sin tocar. ' + cambio, mal.length ? 'Revisar: ' + mal.slice(0, 10).join(', ') : '');
   if (mal.length) return { ok: false, error: 'verificacion', columna: letra, no_coinciden: mal.slice(0, 20) };
   var rev = arbol_rev_(h.getRange(1, col, ult, 1).getValues(), h.getRange(1, col, ult, 1).getFormulas());
-  return { ok: true, hecho: 'arbol-guarda', columna: letra, nueva: nueva, escritos: escritos, ignorados: ignorados.slice(0, 50), estado: ARBOL.ESTADO, rev: rev };
+  var salida = { ok: true, hecho: 'arbol-guarda', columna: letra, nueva: nueva, escritos: escritos, ignorados: ignorados.slice(0, 50), estado: ARBOL.ESTADO, rev: rev };
+  if (base) { salida.nombre = nombre; salida.version = version; salida.cambio = cambio; }
+  return salida;
 }
 
 /* ───────────── utilidades ───────────── */

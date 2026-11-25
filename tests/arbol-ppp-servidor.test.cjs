@@ -7,54 +7,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const vm = require('node:vm');
-const { mundo, ADMIN, EDITOR, LECTOR } = require('./ppp2-mundo.cjs');
-const RAIZ = path.join(__dirname, '..');
-const { Hoja } = require(path.join(RAIZ, 'arbol-ppp/conexion/doble-sheets.cjs'));
-const C = require(path.join(RAIZ, 'arbol-ppp/conexion/caso-muestra.cjs'));
-const Conexion = require(path.join(RAIZ, 'arbol-ppp/conexion/conexion.js'));
-const Servidor = require(path.join(RAIZ, 'arbol-ppp/servidor.js'));
-const Motor = C.Motor;
-const ARBOL_GS = fs.readFileSync(path.join(RAIZ, 'server/ppp2/ArbolPPP.gs'), 'utf8');
-const MAESTRO = 'maestro0000000000000000000001';
+const { ADMIN, EDITOR, LECTOR } = require('./ppp2-mundo.cjs');
+const { entorno, RAIZ, C, Conexion, Servidor, Motor, SIN } = require('./arbol-ppp-servidor-mundo.cjs');
 const EP = 'https://script.google.com/macros/s/PRUEBA/exec';
-const SIN = { sugerencias: 'no', rutas: 'no' };
-
-/* El libro Maestro de prueba: identidad, todos los factores de la definición, la plantilla en J (con dos fórmulas) y una columna hecha a mano en K. */
-function libroMaestro() {
-  const ident = ['I-01', 'I-02', 'I-03', 'I-04', 'I-05', 'I-06', 'I-07', 'I-08'];
-  const ids = ident.concat(C.MAESTRO.ARBOL_FACTORES.slice(1).map((f) => f[0]).filter((id) => ident.indexOf(id) < 0));
-  const filas = [['ID', 'Factor'], ['', 'IDENTIDAD']].concat(ids.map((id) => [id, 'Factor ' + id]));
-  const h = new Hoja('MAESTRO', filas, 14);
-  const renglon = (id) => 3 + ids.indexOf(id);
-  h.put(1, 10, '=IF({c}3="","",{c}3)'); h.put(3, 10, 'PLANTILLA');
-  h.put(renglon('T-05'), 10, '={c}' + renglon('T-04') + '/{c}' + renglon('T-01'));   // dos factores con fórmula en la plantilla: el árbol no los escribe
-  h.put(renglon('PT-07'), 10, '={c}' + renglon('T-01') + '*2');
-  h.put(3, 11, 'Plan hecho a mano'); h.put(renglon('I-04'), 11, 'Borrador'); h.put(renglon('I-06'), 11, 'Persona'); h.put(renglon('T-01'), 11, 123);
-  const hojas = { MAESTRO: h, CAMBIOS: new Hoja('CAMBIOS', [['Fecha', 'Quién', 'Qué se hizo', 'Columna o factor', 'Fuente', 'Pendiente']], 6) };
-  Object.keys(C.MAESTRO).forEach((n) => { hojas[n] = new Hoja(n, C.MAESTRO[n], 60); });
-  return { hojas, h, renglon, ids };
-}
-function entorno(config) {
-  const w = mundo(), m = libroMaestro();
-  vm.runInContext(ARBOL_GS, w.ctx, { filename: 'ArbolPPP.gs' });
-  w.libros[MAESTRO] = { getSheetByName: (n) => m.hojas[n] || null };
-  const cfg = w.vivero.getSheetByName('Config');
-  Object.entries(Object.assign({ maestro_id: MAESTRO, maestro_plantilla: 'J', arbol: 'sí' }, config || {})).forEach(([k, v]) => { if (v !== undefined) cfg.v.push([k, v]); });
-  const pedidos = [];
-  const traer = async (url, o) => {
-    pedidos.push({ url, metodo: (o && o.method) || 'GET' });
-    if (!url.startsWith(EP)) throw new Error('fuera del servidor de prueba: ' + url);
-    const r = o && o.method === 'POST' ? w.post(JSON.parse(o.body)) : w.get(Object.fromEntries(new URL(url).searchParams));
-    return { json: async () => JSON.parse(JSON.stringify(r)) };
-  };
-  const cliente = (k) => {
-    const mem = {}; if (k) mem.pyod_clave_v1 = k;
-    const almacen = { getItem: (x) => (x in mem ? mem[x] : null), setItem: (x, v) => { mem[x] = String(v); }, removeItem: (x) => { delete mem[x]; } };
-    return { N: Servidor.nucleo({ endpoint: EP, fetch: traer, almacen, motor: Motor, conexion: Conexion }), mem };
-  };
-  return { w, m, pedidos, cliente };
-}
 const cifras = (def, plan) => { const r = Motor.evalua(def, plan, null, SIN), o = {}; r.nodos.forEach((n) => { o[n.id] = n.valor; }); return { o, res: r }; };
 
 test('apagado por omisión: sin  arbol = sí  en Config el servidor contesta «apagado», la página trabaja con su definición y el vivero dice arbol: false', async () => {
@@ -153,4 +108,64 @@ test('el puente usa la misma dirección del servidor que ppp2.js, no borra la cr
   assert.equal((fuente.match(/https:\/\/[^'"\s)]+/g) || []).filter((u) => u !== ep).length, 0, 'ninguna otra dirección');
   assert.ok(!/removeItem\(LLAVE\)|quita\(LLAVE\)|localStorage\.clear/.test(fuente));
   assert.ok(!/\beval\(|new Function\(|innerHTML\s*=\s*[^h'"]/.test(fuente.replace(/barra\.innerHTML = h;/, '')));
+});
+
+test('versiones de un proyecto: lista completa, derivación aislada, origen y reapertura', async () => {
+  const e = entorno({}, 30), a = e.cliente(EDITOR), d = await a.N.definicion(), def = d.definicion;
+  assert.equal(d.puede.versiones, true);
+  const plan = C.planMuestra(def), nombre = 'Proyecto de prueba';
+  const iniciales = [];
+  for (const version of ['V1', 'V1', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9']) {
+    const g = await a.N.guarda(def, plan, { nombre, version });
+    assert.equal(g.ok, true, JSON.stringify(g));
+    iniciales.push(g);
+  }
+  assert.equal((await a.N.guarda(def, plan, { nombre: 'Otro proyecto', version: 'V1' })).ok, true);
+  e.m.h.put(e.m.renglon('I-03'), 12, 'BASE');
+  e.m.h.put(e.m.renglon('I-03'), 13, 'COMBI');
+  e.m.h.put(e.m.renglon('I-07'), 14, 'Ficha de prueba · comparativo B3:B51');
+  e.m.h.put(e.m.renglon('X-01'), 14, 'Captura del libro que el árbol no interpreta');
+  const lee = (columna) => e.w.get({ recurso: 'arbol-columna', k: EDITOR, columna });
+  const base = lee(iniciales[2].columna), copias = iniciales.map((c) => lee(c.columna));
+  assert.equal((await a.N.abre(def, base.columna)).ok, true);
+  const anterior = await a.N.lista();
+  const delProyecto = a.N.versiones(a.N.origen(), anterior.columnas);
+  assert.equal(delProyecto.length, iniciales.length);
+  assert.deepEqual(delProyecto.filter((c) => c.version === 'V1').map((c) => c.escenario), ['BASE', 'COMBI']);
+  assert.equal((await a.N.guarda(def, null, { version: ' V4 ', derivada: true })).error, 'version_repetida');
+  const g = await a.N.guarda(def, null, { nombre: 'Este nombre no se usa', version: 'Borrador de prueba', derivada: true });
+  assert.equal(g.ok, true, JSON.stringify(g));
+  assert.equal(g.nueva, true);
+  assert.equal(g.nombre, nombre);
+  assert.match(g.cambio, new RegExp('V3 · columna ' + base.columna + ' · revisión ' + base.rev));
+  const fila = e.m.hojas.CAMBIOS.getRange(e.m.hojas.CAMBIOS.getLastRow(), 1, 1, 6).getValues()[0];
+  assert.equal(fila[1], 'Editora Prueba');
+  assert.equal(fila[3], g.columna);
+  assert.ok(fila[2].includes(g.cambio));
+  const datos = (col) => Object.fromEntries(lee(col).valores.map((v) => [v.id, v.valor]));
+  const clonada = datos(g.columna);
+  assert.equal(clonada['C-01'], datos(base.columna)['C-01']);
+  assert.match(clonada['I-07'], /comparativo B3:B51/);
+  assert.equal(clonada['X-01'], datos(base.columna)['X-01']);
+  assert.equal((await a.N.abre(def, g.columna)).ok, true);
+  const enPantalla = JSON.parse(a.mem[Servidor.CLAVES.plan]).plan;
+  const editado = Motor.evalua(def, enPantalla, { 'C-01': { valor: 23100, estado: 'decidido' } }, SIN).plan;
+  assert.equal((await a.N.guarda(def, editado, { nombre, version: g.version, sobre: true })).ok, true);
+  assert.equal(datos(g.columna)['I-07'], clonada['I-07']);
+  assert.equal(datos(g.columna)['X-01'], clonada['X-01']);
+  for (const original of copias) assert.equal(lee(original.columna).rev, original.rev);
+  const b = e.cliente(LECTOR);
+  assert.equal((await b.N.abre(def, g.columna)).ok, true);
+  const vuelta = JSON.parse(b.mem[Servidor.CLAVES.plan]).plan;
+  assert.equal(vuelta.valores['C-01'].valor, 23100);
+  const abierto = b.N.origen(), guardadas = b.N.versiones(abierto, (await b.N.lista()).columnas);
+  assert.deepEqual(guardadas.map((c) => c.columna), [...iniciales.map((o) => o.columna), g.columna]);
+  assert.equal(guardadas.at(-1).cambio, clonada['I-07']);
+  a.N.fijaOrigen({ columna: base.columna, rev: 'r-vieja' });
+  assert.equal((await a.N.guarda(def, editado, { version: 'Versión tardía', derivada: true })).error, 'revision_base');
+  assert.equal((await b.N.lista()).columnas.length, guardadas.length + 1);
+  for (let c = e.m.h.getLastColumn() + 1; c <= e.m.h.getMaxColumns(); c++) e.m.h.put(3, c, 'Ocupada');
+  assert.equal((await a.N.abre(def, base.columna)).ok, true);
+  assert.equal((await a.N.guarda(def, null, { version: 'Otra variante', derivada: true })).error, 'sin_columnas');
+  assert.equal((await b.N.lista()).columnas.length, guardadas.length + 1);
 });
