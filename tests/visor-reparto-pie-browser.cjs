@@ -31,7 +31,10 @@ function servidor() {
    · el texto es el que Chrome MUESTRA (innerText): un trozo oculto dentro del párrafo no cuenta;
    · cada renglón (Range.getClientRects) cabe en el contenedor, en la pantalla y en la zona visible de TODO ancestro que recorte
      (overflow distinto de visible), hasta el contenedor; así un envoltorio intermedio que corte la última línea se detecta;
-   · el centro de cada renglón, ya desplazado a la vista, es el propio pie (document.elementFromPoint): si algo lo tapa o lo recorta, falla. */
+   · cada renglón se recorre de punta a punta (un punto cada 6 px, a tres alturas) y en todos está el propio pie
+     (document.elementFromPoint): si algo lo tapa o un clip-path le quita un trozo —el principio, el final o una franja—, falla.
+     Mientras se mide, el pie recibe pointer-events: auto: aquí importa qué texto se VE, no qué elemento recibe el toque
+     (con pointer-events: none el pie se lee igual y el toque abre la tarjeta). */
 const MIDE = ([sel, contSel]) => {
   const p = document.querySelector(sel), cont = document.querySelector(contSel);
   if (!p || !cont) return { falta: true };
@@ -48,13 +51,19 @@ const MIDE = ([sel, contSel]) => {
   }
   const cabe = (x, z) => x.left >= z.l - 0.5 && x.right <= z.r + 0.5 && x.top >= z.t - 0.5 && x.bottom <= z.b + 0.5;
   const malas = [];
+  const previo = p.style.getPropertyValue('pointer-events'), prioridad = p.style.getPropertyPriority('pointer-events');
+  p.style.setProperty('pointer-events', 'auto', 'important');
   lineas.forEach((x, i) => {
     if (!cabe(x, { l: rc.left, t: rc.top, r: rc.right, b: rc.bottom })) malas.push(i + ': fuera del contenedor');
     if (!cabe(x, { l: 0, t: 0, r: window.innerWidth, b: window.innerHeight })) malas.push(i + ': fuera de la pantalla');
     if (recortes.some((z) => !cabe(x, z))) malas.push(i + ': recortado por un contenedor intermedio');
-    const el = document.elementFromPoint((x.left + x.right) / 2, (x.top + x.bottom) / 2);
-    if (!el || !p.contains(el)) malas.push(i + ': en su centro no está el pie sino ' + (el ? el.tagName + '.' + el.className : 'nada'));
+    const xs = []; for (let px = x.left + 1; px < x.right - 1; px += 6) xs.push(px); xs.push(x.right - 1);
+    const ys = [x.top + x.height * 0.25, x.top + x.height * 0.5, x.top + x.height * 0.75];
+    let tapado = null;
+    for (const px of xs) { for (const py of ys) { const el = document.elementFromPoint(px, py); if (!el || !p.contains(el)) { tapado = { px: Math.round(px - x.left), el: el ? el.tagName + '.' + el.className : 'nada' }; break; } } if (tapado) break; }
+    if (tapado) malas.push(i + ': a ' + tapado.px + ' px de su inicio no se ve el pie sino ' + tapado.el);
   });
+  if (previo) p.style.setProperty('pointer-events', previo, prioridad); else p.style.removeProperty('pointer-events');
   return { texto: p.innerText, textoHtml: p.textContent, ancho: r.width, alto: r.height, lineas: lineas.length, oculto, malas,
     desborda: p.scrollWidth > p.clientWidth + 1 || p.scrollHeight > p.clientHeight + 1 };
 };
