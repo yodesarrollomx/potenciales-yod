@@ -18,8 +18,8 @@ const dec = (id, op) => ({ [id]: { opcion: op, estado: 'decidido' } });
 
 console.log('\nA · planAColumna');
 const def = DEFS.maestro, PLAN = C.planMuestra(def);
-prueba('lista TODOS los factores del Maestro que el árbol conoce (150), cada uno una sola vez, con su tipo, estado y fuente', () => {
-  const col = columnaDe(def, PLAN); assert.strictEqual(col.length, 150); assert.strictEqual(new Set(col.map((c) => c.id)).size, 150);
+prueba('lista TODOS los factores del Maestro que el árbol conoce (191), cada uno una sola vez, con su tipo, estado y fuente', () => {
+  const col = columnaDe(def, PLAN); assert.strictEqual(col.length, 191); assert.strictEqual(new Set(col.map((c) => c.id)).size, 191);
   col.forEach((c) => { assert(['captura', 'fórmula'].indexOf(c.tipo) >= 0, c.id); assert(c.estado && c.fuente, c.id + ' sin estado o fuente'); assert('valor' in c); });
   const por = {}; col.forEach((c) => { por[c.id] = c; });
   assert.strictEqual(por['T-01'].valor, 2000); assert.strictEqual(por['T-01'].estado, 'confirmado'); assert.strictEqual(por['T-01'].tipo, 'captura');
@@ -30,9 +30,9 @@ prueba('lista TODOS los factores del Maestro que el árbol conoce (150), cada un
   assert.strictEqual(por['E-07'].valor, 0.36, 'también los factores ocultos del árbol'); assert.strictEqual(por['E-04'].valor, null); assert.strictEqual(por['E-04'].estado, 'falta');
   assert.strictEqual(por['P1-06'].estado, 'referencia'); assert(/Referencia/.test(por['P1-06'].fuente)); assert.strictEqual(por['E-16'].opcion, 'a_nivel');
   assert.strictEqual(por['RV-11'].valor, 'Pasa');
-  const sinValor = col.filter((c) => c.valor === null).map((c) => c.id); cifra('150 factores; con valor ' + (150 - sinValor.length) + '; sin valor (el árbol aún no los calcula): ' + sinValor.join(' '));
+  const sinValor = col.filter((c) => c.valor === null).map((c) => c.id); cifra('191 factores; con valor ' + (191 - sinValor.length) + '; sin valor (el árbol aún no los calcula): ' + sinValor.join(' '));
 });
-prueba('con el orden del libro, la lista sale en ese orden', () => { const orden = ['R-03', 'T-01', 'K-12']; const col = columnaDe(def, PLAN, orden); assert.deepStrictEqual(col.slice(0, 3).map((c) => c.id), orden); assert.strictEqual(col.length, 150); });
+prueba('con el orden del libro, la lista sale en ese orden', () => { const orden = ['R-03', 'T-01', 'K-12']; const col = columnaDe(def, PLAN, orden); assert.deepStrictEqual(col.slice(0, 3).map((c) => c.id), orden); assert.strictEqual(col.length, 191); });
 prueba('sin la lista de todos los factores solo salen los visibles (los demás, vacíos) y no falla', () => { const r = Motor.evalua(def, PLAN, null, C.SIN); const col = K.planAColumna(def, PLAN, r); assert.strictEqual(col.find((c) => c.id === 'E-07').valor, null); assert.strictEqual(col.find((c) => c.id === 'T-01').valor, 2000); });
 prueba('funciona igual con la definición del Maestro y con vertical.json', () => { const a = columnaDe(DEFS.vertical, C.planMuestra(DEFS.vertical)), b = columnaDe(DEFS.maestro, PLAN); assert.deepStrictEqual(a.map((c) => [c.id, c.valor, c.estado]), b.map((c) => [c.id, c.valor, c.estado])); });
 
@@ -144,13 +144,13 @@ prueba('fuera del horizonte: un edificio de 200,000 m² (ritmo calibrado, ajusta
 console.log('\nC · definicionDeTablas');
 const TABLAS = C.MAESTRO;
 prueba('las matrices de Sheets quedan en filas con nombre y cargan en el motor con 0 errores', () => {
-  const r = K.definicionDeTablas(C.clon(TABLAS)); assert.deepStrictEqual(r.errores, []); assert.strictEqual(r.definicion.ARBOL_NODOS.length, 135); assert.strictEqual(r.definicion.ARBOL_FACTORES.length, 150);
-  const c = Motor.carga(r.definicion); assert.deepStrictEqual(c.errores, []); assert.strictEqual(c.definicion.nodos.length, 135);
+  const r = K.definicionDeTablas(C.clon(TABLAS)); assert.deepStrictEqual(r.errores, []); assert.strictEqual(r.definicion.ARBOL_NODOS.length, 177); assert.strictEqual(r.definicion.ARBOL_FACTORES.length, 191);
+  const c = Motor.carga(r.definicion); assert.deepStrictEqual(c.errores, []); assert.strictEqual(c.definicion.nodos.length, 177);
   const d0 = Motor.carga(C.clon(TABLAS)); assert.strictEqual(c.huella, d0.huella, 'misma huella que cargar las matrices directamente');
 });
 prueba('nombres de pestaña en minúscula, filas vacías, números, booleanos', () => {
   const t = { nodos: C.clon(TABLAS.ARBOL_NODOS), opciones: C.clon(TABLAS.ARBOL_OPCIONES) }; t.nodos.push(['', '', '']); t.nodos.push([]); t.opciones[1][4] = 74;
-  const r = K.definicionDeTablas(t); assert.deepStrictEqual(r.errores, []); assert(r.definicion.ARBOL_NODOS.length === 135 && typeof r.definicion.ARBOL_OPCIONES[0].valor === 'string');
+  const r = K.definicionDeTablas(t); assert.deepStrictEqual(r.errores, []); assert(r.definicion.ARBOL_NODOS.length === 177 && typeof r.definicion.ARBOL_OPCIONES[0].valor === 'string');
 });
 prueba('detecta lo que rompe: falta ARBOL_NODOS, error de Sheets en una celda, columna repetida, encabezado ausente', () => {
   assert(K.definicionDeTablas({ ARBOL_OPCIONES: C.clon(TABLAS.ARBOL_OPCIONES) }).errores.some((e) => e.codigo === 'sin_definicion'));
@@ -199,7 +199,7 @@ prueba('300 planes sembrados (con umbrales propios, áreas propias, estados y «
   assert(conUmbral >= 60 && conAreas >= 50 && conNombres >= 25 && conEstadoArea >= 20 && noSe >= 10 && prende >= 20 && quitaYTam >= 20, 'la siembra cubre los casos: prende ' + prende + ', quita y cambia tamaños ' + quitaYTam + ', umbral ' + conUmbral + ', áreas propias ' + conAreas + ', nombres ' + conNombres + ', áreas confirmadas ' + conEstadoArea + ', «no sé» ' + noSe);
   cifra('300 planes · con umbral propio ' + conUmbral + ' · con áreas propias ' + conAreas + ' · con áreas renombradas ' + conNombres + ' · con un área confirmada con fuente ' + conEstadoArea + ' · con «no sé todavía» ' + noSe + ' · que prenden un área que el preajuste no trae ' + prende + ' · que quitan áreas del preajuste y cambian tamaños ' + quitaYTam + ' · diferencias: 0 (valores de 145 factores, nodos, por confirmar, estados, opciones, áreas, umbrales y paquete del visor)');
 });
-prueba('los mismos 300 planes guardando solo los valores (sin estados, como los lee el libro): 0 diferencias en los 150 factores y en los nodos', () => {
+prueba('los mismos 300 planes guardando solo los valores (sin estados, como los lee el libro): 0 diferencias en los 191 factores y en los nodos', () => {
   const planes = SIEMBRA.siembra(def, 300, 20261123); let malos = [];
   planes.forEach((p, i) => { const { b } = idaVuelta(def, p, true); const x = huellaPlan(def, p), y = huellaPlan(def, b.plan); const d = ['factores', 'nodos'].filter((k) => diferencias(x[k], y[k]).length).map((k) => k + ': ' + diferencias(x[k], y[k]).slice(0, 4).join(',')); if (x.resultado !== y.resultado) d.push('resultado'); if (x.pv !== y.pv) d.push('cifras del visor'); if (x.areasV !== y.areasV) d.push('áreas'); if (d.length) malos.push('plan ' + i + ': ' + d.join(' · ')); });
   if (process.env.DIFS) console.log(malos.slice(0, 8).join('\n').slice(0, 3500));
@@ -267,7 +267,7 @@ const CASOS_AREAS = [
   ['(d2) Con amenidades sin gimnasio ni salón y terraza de 60 m²', 'amenidades', { gimnasio: { quitar: true }, salon: { quitar: true }, terraza: { valor: 60, unidad: 'm2', estado: 'decidido' } }],
 ];
 CASOS_AREAS.forEach(([nombre, base, areas]) => {
-  prueba('áreas fuera del preajuste · ' + nombre + ': 0 diferencias en los 150 factores, nodos, áreas (activo, m², estado y fuente) y resultado de las pruebas', () => {
+  prueba('áreas fuera del preajuste · ' + nombre + ': 0 diferencias en los 191 factores, nodos, áreas (activo, m², estado y fuente) y resultado de las pruebas', () => {
     const p = ev(def, PLAN, { 'E-15': { opcion: base, estado: 'decidido', componentes: areas } });
     [false, true].forEach((soloValores) => {
       const { b } = idaVuelta(def, p, soloValores), x = huellaPlan(def, p), y = huellaPlan(def, b.plan);

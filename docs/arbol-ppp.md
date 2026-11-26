@@ -117,6 +117,10 @@ Con esa opción, y sólo con ella, aparecen cinco nodos del módulo `vertical/pr
 - **El visor no calcula:** la tarjeta «Costo y ganancia» agrega el renglón «Renta $X/año · vale $Y · rinde Z%» y su detalle «Si se renta en vez de vender», con lo que manda el Árbol.
 - **El Maestro:** las filas nuevas van a `ARBOL_NODOS` (5), `ARBOL_OPCIONES` (1) y `ARBOL_FACTORES` (5), y la fórmula de P1-01 cambia. Orden seguro: primero NODOS y OPCIONES, luego los renglones RN-01 a RN-05 de la pestaña `MAESTRO` y al final `ARBOL_FACTORES` (el guardado rechaza un factor que no esté en `MAESTRO`). La copia de pruebas `arbol-ppp/conexion/datos/arbol-desde-maestro.json` ya trae las filas.
 
+## El programa por tipología, también en el repo (25-nov-2026)
+
+El Maestro ya traía el programa por tipología (PG-01 a PG-05, los tipos 2 a 4 con nombre, uso, destino, superficie, precio, ritmo, unidades y ventas, PT-04 y PT-05, y N-07 y N-08 para cajones de comercio y oficina), escrito directo en sus pestañas. Ahora `definicion/*.csv`, `vertical.json` y la copia de pruebas lo traen igual que el libro: 177 nodos y 191 factores, en el orden del libro. Con PG-01 = 0 el cálculo es el de antes, por edificio. Cambian sólo rótulos y conteos: la tarjeta Producto enseña «Unidades totales» (PT-01), «por confirmar» sube 1 (PG-01) y las explicaciones nombran los nodos nuevos.
+
 ## Lo que falta
 
 Nada de lo siguiente está hecho; una prueba en Node o con dobles no demuestra funcionamiento en producción.
