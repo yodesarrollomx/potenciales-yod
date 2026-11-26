@@ -31,6 +31,7 @@
 .as-barra ~ #arbol-ppp .ppp{height:calc(100vh - var(--as-alto));height:calc(100dvh - var(--as-alto));min-height:520px}
 
 .as-corto{display:none}
+.as-detalle .as-procedencia a{display:inline-block;max-width:100%;overflow-wrap:anywhere}
 .as-detalle summary{cursor:pointer;color:var(--mute);padding:5px 0}
 .as-detalle .as-procedencia{max-height:28vh;overflow:auto}
 @media(max-width:760px){

@@ -28,7 +28,8 @@
     "El visor enseña las versiones del Árbol: node --test tests/arbol-ppp-visor.test.cjs guarda desde el puente de la página con el servidor real sobre dobles y pide por liga: identidad del libro, cifras del motor, volver a guardar, dos versiones y la elegida, sin pestaña, árbol apagado, paquete ajeno o grande y limpieza de lo servido.",
     "Portada, un proyecto una tarjeta: node --test tests/ppp2-portada-arbol.test.cjs.",
     "node tests/arbol-ppp-versiones-browser.cjs: entrada móvil, acciones compactas, consulta de antecedentes y apertura y cierre de la ficha.",
-    "node --test tests/arbol-ppp-superficie.test.cjs"
+    "node --test tests/arbol-ppp-superficie.test.cjs",
+    "El recorrido móvil desplaza la lista y prueba tres posiciones de toque en cada versión y en la fuente desplegada."
   ],
   "rollback": "Quitar la línea de mejoras.js en arbol-ppp/arbol.html (o revertir el commit): la pantalla vuelve a verse como antes. No hay datos ni servidor que restaurar."
 }
