@@ -66,6 +66,14 @@ async function pruebaInterfaz(p) {
       }));
       assert.ok(recibe, width + ' px, control tapado: ' + await item.innerText());
     }
+    assert.ok(await tarjetas.evaluateAll(items => items.every(item => {
+      const card = item.getBoundingClientRect();
+      return ['b','strong'].every(selector => {
+        const rango = document.createRange(); rango.selectNodeContents(item.querySelector(selector));
+        const texto = rango.getBoundingClientRect();
+        return texto.top >= card.top && texto.bottom <= card.bottom && texto.left >= card.left && texto.right <= card.right;
+      });
+    })), width + ' px, nombre o cifra recortados');
     assert.equal(await p.locator('[data-rotulo]').isVisible(), true);
     const terreno = tarjetas.first();
     await terreno.focus(); await terreno.press('Enter');

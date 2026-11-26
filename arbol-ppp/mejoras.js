@@ -480,9 +480,9 @@ dialog.vp-menu::backdrop{background:rgba(30,25,20,.18)}
 .ppp[data-vista=cmp]>.ppp-cards,.ppp[data-vista=cmp]>.ppp-herr,.ppp[data-vista=cmp]>.ppp-franja,.ppp[data-vista=cmp] .ppp-barra,.ppp[data-vista=cmp]>.vp-desplazar,.ppp[data-vista=cmp]>.ppp-panel,.ppp[data-vista=cmp]>.ppp-lienzo{display:none!important}
 .ppp .ppp-ctrl{top:auto!important;bottom:8px!important}
 .ppp .tarj:focus-visible,.vp-menu button:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
-.ppp>.ppp-cards .tarj{display:flex!important;flex:0 0 auto!important;align-items:baseline!important;gap:6px!important;height:26px!important;min-height:0!important;padding:3px 8px!important;border-radius:13px!important;border:1px solid color-mix(in srgb,var(--c) 55%,transparent)!important;border-left:4px solid var(--c)!important;background:rgba(255,255,255,.5)!important;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);box-shadow:none!important;white-space:nowrap!important;overflow:hidden!important}
-.ppp>.ppp-cards .tarj b{font-size:10px!important;letter-spacing:.02em!important;opacity:.75;font-weight:600!important;margin:0!important}
-.ppp>.ppp-cards .tarj strong{font-size:12.5px!important;line-height:1!important;margin:0!important}
+.ppp>.ppp-cards .tarj{display:flex!important;flex:0 0 auto!important;align-items:center!important;gap:6px!important;height:32px!important;min-height:0!important;padding:3px 8px!important;border-radius:13px!important;border:1px solid color-mix(in srgb,var(--c) 55%,transparent)!important;border-left:4px solid var(--c)!important;background:rgba(255,255,255,.5)!important;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);box-shadow:none!important;white-space:nowrap!important;overflow:hidden!important}
+.ppp>.ppp-cards .tarj b{min-height:0!important;align-items:center;font-size:12px!important;letter-spacing:.02em!important;opacity:.75;font-weight:600!important;margin:0!important}
+.ppp>.ppp-cards .tarj strong{font-size:13px!important;line-height:1!important;margin:0!important}
 .ppp>.ppp-cards .tarj span{display:none!important}
 .ppp>.ppp-cards .tarj:hover,.ppp>.ppp-cards .tarj[data-abierta]{background:#fff!important}
 .ppp>.ppp-herr button,.ppp>.ppp-barra>*{background-color:rgba(255,255,255,.55)!important;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
