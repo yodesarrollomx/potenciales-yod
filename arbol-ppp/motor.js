@@ -2924,12 +2924,15 @@
       if (v.rv_resultado) v.rv_resultado = v.rv_resultado + ' · con umbral propio en ' + (umbralesPropios.length === 1 ? 'la prueba ' : 'las pruebas ') + lista;
       deducido['v.rv_resultado'] = 'No es el resultado del libro: ' + umbralesPropios.map((x) => 'prueba ' + x.prueba + ' con ' + x.umbral_texto + ' (' + x.nota + ')').join('; ') + '.';
     }
+    /* rama del árbol (pregunta raíz «Qué se desarrolla»): el visor dibuja el terreno de lotes o de casas en vez de la torre */
+    const rama = (res.nodos.find((n) => n.id === 'DS-01') || {}).valor;
+    const tipoPlan = rama === 'Lotes' ? 'lotes' : rama === 'Casas' ? 'casas' : D.tipo.id;
     const paso = res.abiertas.length ? (res.nodos.find((n) => n.id === res.abiertas[0]) || {}).pregunta || null : null;
     const paquete = {
       ok: true, esquema: 'ppp2-visor-v1', llave: null, leido: null,
       menu: { plan: 'arbol', planes: [{ id: 'arbol', etiqueta: 'Árbol PPP (vista previa)' }] },
       a_medias: false,   // en el visor significa «el libro se está recalculando»; lo que falta por confirmar va en plan.candados_abiertos
-      plan: { nombre: 'Plan del Árbol PPP', ubicacion: null, tipo: D.tipo.id, edad: null, candados_abiertos: res.por_confirmar.n, paso_texto: paso, esquema: 'arbol-ppp', vigente: 1, mostrada: 1 },
+      plan: { nombre: 'Plan del Árbol PPP', ubicacion: null, tipo: tipoPlan, edad: null, candados_abiertos: res.por_confirmar.n, paso_texto: paso, esquema: 'arbol-ppp', vigente: 1, mostrada: 1 },
       version: 1, versiones: [{ n: 1, nombre: 'Vista previa del árbol', estado: 'borrador' }], v, datos, productos, flujo: fl, reparto,
       candados: [], pruebas: [], pruebas_viejas: [], ultimo: null, cambio: null,
       origen: 'Árbol PPP · estimado, no sincronizado' + (res.por_confirmar.n ? ' · por confirmar: ' + res.por_confirmar.n : ' · todo confirmado') + (alerta ? ' · ATENCIÓN: ' + alerta.estado : ''), deducido
