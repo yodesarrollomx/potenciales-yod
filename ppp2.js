@@ -347,6 +347,12 @@
       var caso = casoArbol(g.nombre); if (!caso || estado.arbolBuena[caso] !== undefined) return;
       estado.arbolBuena[caso] = '';
       leer('ppp2-visor', { plan: 'ppp:' + caso }).then(function (r) {
+        /* el servidor dice «plan» cuando el proyecto aún no tiene ninguna versión guardada en el visor: la tarjeta no ofrece «Ver visor» */
+        if (r && r.ok === false && r.error === 'plan') {
+          estado.arbolSinVisor = estado.arbolSinVisor || {}; estado.arbolSinVisor[caso] = true;
+          if (!estado.planId && (location.hash || '#/').replace(/^#\/?/, '') === '') pintarVivero();
+          return;
+        }
         var b = r && r.ok && r.elige && Array.isArray(r.elige.versiones) ? r.elige.versiones.filter(function (v) { return v && v.buena; })[0] : null;
         var col = b && /^c[A-Z]{1,3}$/.test(String(b.v || '')) ? String(b.v).slice(1) : '';
         if (!col || !g.versiones.some(function (c) { return c.columna === col; })) return;
@@ -412,7 +418,7 @@
           chip('Árbol', 'gris') + chip(n === 1 ? '1 versión' : n + ' versiones', 'gris') + '</div><h2><a href="' + arbol + '" style="color:inherit;text-decoration:none">' + esc(g.nombre) + '</a></h2>' +
           '<div class="p2-tenue p2-chico">' + esc(c.version || 'V1') + (fija ? ' · la buena' : '') + '</div>' +
           '<div class="p2-acciones" style="margin-top:10px"><a class="p2-btn suave" data-abre-arbol href="' + arbol + '">Abrir en el árbol</a>' +
-          (caso ? '<a class="p2-btn suave" data-abre-visor href="visor.html#p=' + encodeURIComponent('ppp:' + caso).replace(/%3A/g, ':') + '">Ver visor</a>' : '') + '</div></div>';
+          (caso && !(estado.arbolSinVisor || {})[caso] ? '<a class="p2-btn suave" data-abre-visor href="visor.html#p=' + encodeURIComponent('ppp:' + caso).replace(/%3A/g, ':') + '">Ver visor</a>' : '') + '</div></div>';
       }).join('') + '</div>' : '') +
       ((v.planes || []).some(function (p) { return !!p.error; }) ? '<p role="status">Hay libros que no se pudieron leer. <button class="p2-btn suave" data-accion="refrescar">Volver a consultar</button></p>' : '') +
       '<nav class="p2-acciones"><a class="p2-btn suave" href="' + (anteriores ? '#/' : '#/anteriores') + '">' + (anteriores ? 'Volver a planes de potencial' : 'Consultar expedientes anteriores') + '</a>' +

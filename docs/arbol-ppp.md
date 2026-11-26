@@ -120,6 +120,11 @@ Con esa opción, y sólo con ella, aparecen cinco nodos del módulo `vertical/pr
 ## El programa por tipología, también en el repo (25-nov-2026)
 
 El Maestro ya traía el programa por tipología (PG-01 a PG-05, los tipos 2 a 4 con nombre, uso, destino, superficie, precio, ritmo, unidades y ventas, PT-04 y PT-05, y N-07 y N-08 para cajones de comercio y oficina), escrito directo en sus pestañas. Ahora `definicion/*.csv`, `vertical.json` y la copia de pruebas lo traen igual que el libro: 177 nodos y 191 factores, en el orden del libro. Con PG-01 = 0 el cálculo es el de antes, por edificio. Cambian sólo rótulos y conteos: la tarjeta Producto enseña «Unidades totales» (PT-01), «por confirmar» sube 1 (PG-01) y las explicaciones nombran los nodos nuevos.
+## Cada versión, en el visor desde que nace (25-nov-2026)
+
+- **«Agregar versión» ya trae su visor.** El servidor copia la columna base; enseguida el Árbol lee la copia, el motor saca su paquete (el mismo que daría abrirla y guardarla) y lo guarda sobre esa misma columna **sin cambiar ningún valor** (`visorDeDerivada` en `arbol-ppp/servidor.js`). En `CAMBIOS` quedan dos renglones: la derivación y el guardado del visor. Si este segundo paso falla, la versión queda creada igual y la respuesta dice por qué en `visor`.
+- **La portada no ofrece «Ver visor» a un proyecto sin versiones en el visor.** Si el servidor contesta `plan` (no hay ninguna versión guardada en `ARBOL_VISOR`), la tarjeta deja sólo «Abrir en el árbol» (`estado.arbolSinVisor` en `ppp2.js`).
+- **«Falta calcular».** Una versión no tiene flujo mientras le falten decisiones que el flujo necesita (tipo de edificio, estacionamiento, arranque de obra, trato con el dueño o crédito del banco). Se resuelve contestándolas en el Árbol y guardando.
 
 ## Lo que falta
 
