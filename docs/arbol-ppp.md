@@ -99,6 +99,24 @@ Al tocar «Guardar en el libro», el Árbol manda también el paquete del visor 
 
 Pruebas: `node --test tests/arbol-ppp-visor.test.cjs` (de punta a punta sobre dobles, con el caso de muestra inventado). Encenderlo: `server/ppp2/INSTALAR.md`, «El visor enseña las versiones del Árbol».
 
+## Consultorios y oficinas: venta y su equivalente en renta (25-nov-2026)
+
+El producto (P1-05) suma la opción **Consultorios y oficinas** (`consultorio`, 30 m² por unidad de referencia) y P1-01 la nombra así en el visor. Los cajones siguen la regla de vivienda (uno por unidad).
+
+Con esa opción, y sólo con ella, aparecen cinco nodos del módulo `vertical/producto` (condición `P1-05.opcion = 'consultorio'`):
+
+| ID | Qué es | Tipo | Referencia o fórmula |
+|---|---|---|---|
+| RN-01 | Renta mensual por m² | se busca | 625 $/m² al mes (mediana de comparables, nov 2026; rango 50–3000) |
+| RN-02 | Tasa de capitalización | regla de oficio | 9 % al año (oficinas en México, 7–9 %; plaza secundaria) |
+| RN-03 | Renta anual | calculado | `(PT-03 + E-18) * RN-01 * 12` |
+| RN-04 | Valor en renta | calculado | `si(RN-02 > 0, RN-03 / RN-02, 0)` |
+| RN-05 | Rinde la renta sobre el costo | calculado | `si(C-17 > 0, RN-03 / C-17, 0)` |
+
+- **Al visor** van como `v.renta_m2`, `v.renta_tasa`, `v.renta_anual` y `v.renta_valor` (en millones) y `v.renta_rinde`, **sólo si la renta anual es mayor que cero**. Sin consultorios el paquete es el de antes (la prueba O01 lo compara sin la huella de la definición).
+- **El visor no calcula:** la tarjeta «Costo y ganancia» agrega el renglón «Renta $X/año · vale $Y · rinde Z%» y su detalle «Si se renta en vez de vender», con lo que manda el Árbol.
+- **El Maestro:** las filas nuevas van a `ARBOL_NODOS` (5), `ARBOL_OPCIONES` (1) y `ARBOL_FACTORES` (5), y la fórmula de P1-01 cambia. Orden seguro: primero NODOS y OPCIONES, luego los renglones RN-01 a RN-05 de la pestaña `MAESTRO` y al final `ARBOL_FACTORES` (el guardado rechaza un factor que no esté en `MAESTRO`). La copia de pruebas `arbol-ppp/conexion/datos/arbol-desde-maestro.json` ya trae las filas.
+
 ## Lo que falta
 
 Nada de lo siguiente está hecho; una prueba en Node o con dobles no demuestra funcionamiento en producción.

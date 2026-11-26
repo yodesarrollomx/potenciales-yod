@@ -2800,7 +2800,9 @@
   }
 
   /* ═════════════════════════ PAQUETE PARA EL VISOR (ppp2-visor-v1) ═════════════════════════ */
-  const CLAVES_V = ['nombre', 'estado', 'que_cambia', 'fecha_aprobacion', 'dueno_aporta', 'dueno_recibe', 'dueno_veces', 'dueno_meses', 'dueno_anos', 'alianza_recibe', 'inversion_recibe', 'ventas', 'costo_sin_tierra', 'tierra', 'obra_inicio', 'fin_obra', 'mes_saldos', 'pagos_obra', 'max_ajeno', 'capital', 'banco_max', 'respaldo', 'costo_dinero', 'rend_capital', 'caja_cierre', 'ganancia', 'margen', 'resultado_repartir', 'banco_mes', 'capital_mes', 'respaldo_mes', 'ultimo_cobro', 'mes_reparto', 'rv_linea_ventas', 'rv_linea_costo', 'rv_aportacion', 'rv_preventa', 'rv_preventa_banco', 'rv_cobertura', 'rv_margen', 'rv_meses_credito', 'rv_falta', 'rv_resultado', 'ck_flujo', 'ck_cobranza', 'ck_unidades', 'capital_sobre_tope', 'fuera_horizonte', 'norma_alertas', 'norma_texto', 'niveles', 'construidos', 'cos_usado', 'cus_usado', 'cajones', 'cajones_pide', 'huella'];
+  const CLAVES_V = ['nombre', 'estado', 'que_cambia', 'fecha_aprobacion', 'dueno_aporta', 'dueno_recibe', 'dueno_veces', 'dueno_meses', 'dueno_anos', 'alianza_recibe', 'inversion_recibe', 'ventas', 'costo_sin_tierra', 'tierra', 'obra_inicio', 'fin_obra', 'mes_saldos', 'pagos_obra', 'max_ajeno', 'capital', 'banco_max', 'respaldo', 'costo_dinero', 'rend_capital', 'caja_cierre', 'ganancia', 'margen', 'resultado_repartir', 'banco_mes', 'capital_mes', 'respaldo_mes', 'ultimo_cobro', 'mes_reparto', 'rv_linea_ventas', 'rv_linea_costo', 'rv_aportacion', 'rv_preventa', 'rv_preventa_banco', 'rv_cobertura', 'rv_margen', 'rv_meses_credito', 'rv_falta', 'rv_resultado', 'ck_flujo', 'ck_cobranza', 'ck_unidades', 'capital_sobre_tope', 'fuera_horizonte', 'norma_alertas', 'norma_texto', 'niveles', 'construidos', 'cos_usado', 'cus_usado', 'cajones', 'cajones_pide', 'huella', 'renta_m2', 'renta_tasa', 'renta_anual', 'renta_valor', 'renta_rinde'];
+  /* Equivalente en renta (RN-01 a RN-05): solo viaja al visor si el plan escribió una renta (renta anual > 0); sin renta el paquete queda igual que antes. */
+  const CLAVES_RENTA = ['renta_m2', 'renta_tasa', 'renta_anual', 'renta_valor', 'renta_rinde'];
   const CLAVES_DATOS = ['terreno.m2', 'tierra.valor', 'lamina.m2_construidos', 'lamina.m2_vendibles', 'cob.enganche', 'din.tasa_capital', 'din.tiie', 'din.sobretasa', 'din.apertura', 'din.caja_pct', 'din.preventa_minima', 'costo.comision'];
   const FILAS_FLUJO = { firmas: 'SUM', enganches: 'SUM', saldos: 'SUM', pagos_obra: 'SUM', cobranza: 'SUM', obra: 'SUM', indirectos: 'SUM', imprevistos: 'SUM', comisiones: 'SUM', cierre: 'SUM', egresos: 'SUM', caja_minima: 'MAX', interes: 'SUM', cap_aporta: 'SUM', cap_acum: 'MAX', apertura: 'SUM', disposicion: 'SUM', respaldo: 'SUM', pago_banco: 'SUM', pago_respaldo: 'SUM', pago_capital: 'SUM', saldo_banco: 'MAX', saldo_capital: 'MAX', saldo_respaldo: 'MAX', caja: 'ULT', flujo_acum: 'ULT', ajeno: 'MAX' };
   const ESTADO_VISOR = { referencia: 'supuesto', no_se: 'por confirmar', decidido: 'decidido', confirmado: 'confirmado', reabierto: 'por confirmar' };
@@ -2827,6 +2829,7 @@
       else if ((m = /^datos\['([a-z0-9_.]+)'\](\.valor)?$/.exec(campo))) { if (CLAVES_DATOS.indexOf(m[1]) >= 0) { datos[m[1]] = { valor: x, estado: estadoDe(f.id) }; marcaDed("datos['" + m[1] + "']", f.id); } }
 
     });
+    if (!(esNum(v.renta_anual) && v.renta_anual > 0)) CLAVES_RENTA.forEach((k) => { delete v[k]; delete deducido['v.' + k]; });
     /* reparto */
     let reparto = null;
     if (tiene('S-03')) {

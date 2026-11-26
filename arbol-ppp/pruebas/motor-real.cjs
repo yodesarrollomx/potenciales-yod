@@ -113,7 +113,7 @@ prueba('una alerta con dato desconocido no se activa (4.3)', () => {
 
 /* ═══════════════════ 2 · CARGA Y TABLAS ═══════════════════ */
 grupo('2 · Carga: JSON de la definición y tablas en filas (Anexo A)');
-prueba('vertical.json carga sin errores (130 nodos)', () => { assert.strictEqual(DEF._interna.cn.length, 130); cifra('vertical.json: 130 nodos (119 + 10 umbrales de las pruebas RU-01 a RU-10 + E-18 de las áreas propias), 0 errores, ' + AV0.length + ' advertencia(s)'); });
+prueba('vertical.json carga sin errores (135 nodos)', () => { assert.strictEqual(DEF._interna.cn.length, 135); cifra('vertical.json: 135 nodos (119 + 10 umbrales de las pruebas RU-01 a RU-10 + E-18 de las áreas propias + RN-01 a RN-05 de la renta), 0 errores, ' + AV0.length + ' advertencia(s)'); });
 prueba('la huella es estable entre cargas y cambia si cambia la definición', () => {
   const a = carga(VERT), b = carga(VERT); assert.strictEqual(a.huella, b.huella);
   const m = JSON.parse(JSON.stringify(VERT)); m.nodos.find((n) => n.id === 'K-06').referencia.valor = 19; assert.notStrictEqual(carga(m).huella, a.huella);
@@ -817,11 +817,11 @@ prueba('el tipo puede quitar y parchar nodos (D7 7.1)', () => {
 });
 prueba('acepta matrices con encabezado (lo que devuelve Sheets) en lugar de filas con nombre', () => {
   const t = {}; Object.keys(TABLAS).forEach((k) => { const filas = TABLAS[k], cab = Object.keys(filas[0]); t[k] = [cab].concat(filas.map((f) => cab.map((c) => f[c]))); });
-  const r = Motor.carga(t); assert.deepStrictEqual(r.errores, []); assert.strictEqual(r.definicion.nodos.length, 130);
+  const r = Motor.carga(t); assert.deepStrictEqual(r.errores, []); assert.strictEqual(r.definicion.nodos.length, 135);
   const a = Motor.evalua(r.definicion, BASE, null, SIN), b = RB; assert.strictEqual(JSON.stringify(a.nodos.map((n) => [n.id, n.valor])), JSON.stringify(b.nodos.map((n) => [n.id, n.valor])));
 });
 prueba('grafo(): orden, aristas con tipo, dependientes y ancestros («todo lo que depende»)', () => {
-  const g = Motor.grafo(DEF); assert(g.orden.length === 145 && g.aristas.length > 400); assert(g.aristas.every((a) => ['formula', 'condicion', 'efecto', 'escribe', 'flujo', 'componente', 'usa'].indexOf(a.tipo) >= 0));
+  const g = Motor.grafo(DEF); assert(g.orden.length === 150 && g.aristas.length > 400); assert(g.aristas.every((a) => ['formula', 'condicion', 'efecto', 'escribe', 'flujo', 'componente', 'usa'].indexOf(a.tipo) >= 0));
   const dep = g.dependientes('P1-05'); ['P1-09', 'PT-01', 'K-04', 'K-12', 'PT-07', 'C-17', 'R-05', 'RV-05', 'RV-07', 'E-09', 'E-11'].forEach((id) => assert(dep.indexOf(id) >= 0, id)); assert(dep.indexOf('T-01') < 0);
   const anc = g.ancestros('RV-05'); ['R-05', 'R-03', 'PT-07', 'C-17', 'P1-06', 'C-01', 'E-15'].forEach((id) => assert(anc.indexOf(id) >= 0, id)); assert.deepStrictEqual(dep, g.orden.filter((id) => dep.indexOf(id) >= 0), 'en orden de cálculo');
 });
@@ -1914,13 +1914,13 @@ const DECL = Object.assign({}, B2_DECLARADO, { preferente_f02: 'pactado', comisi
 const INTERNO_TERCIOS = { modo: 'pesos', partes: { YOD: 1, PG: 1, AVM: 1 }, estado_pacto: 'pactado' };   // en C la matriz deja «sin asignar»: se pacta un reparto interno
 const KW_CASO_C = { muestra_capital_20: { opcion_reparto: 'C', reparto_interno: INTERNO_TERCIOS }, muestra_capital_20_tierra_especie: { opcion_reparto: 'C', reparto_interno: INTERNO_TERCIOS } };
 
-prueba('T-10 · la extensión carga sin errores: 150 nodos (130 + S-12, S-13, S-17 a S-24 y R-26 a R-35) y vertical.json sigue con 130', () => {
+prueba('T-10 · la extensión carga sin errores: 155 nodos (135 + S-12, S-13, S-17 a S-24 y R-26 a R-35) y vertical.json sigue con 135', () => {
   assert.deepStrictEqual(C10.errores, []); assert.deepStrictEqual(CT10.errores, [], JSON.stringify(CT10.errores.slice(0, 3)));
-  assert.strictEqual(DEF10.nodos.length, 150); assert.strictEqual(DEF._interna.cn.length, 130); NUEVOS10.forEach((id) => assert(DEF10.nodos.indexOf(id) >= 0, id));
+  assert.strictEqual(DEF10.nodos.length, 155); assert.strictEqual(DEF._interna.cn.length, 135); NUEVOS10.forEach((id) => assert(DEF10.nodos.indexOf(id) >= 0, id));
   NUEVOS10.forEach((id) => { const c = DEF10._interna.cn[DEF10._interna.ix.get(id)]; assert(c.oculto === true && c.tarjetas.indexOf('Reparto') >= 0, id); });
   assert.strictEqual(REPJSON.nodos.length, 20); assert.strictEqual(REPTAB.ARBOL_NODOS.length, 20); assert.strictEqual(REPTAB.ARBOL_FACTORES.length, 20);
   const r = Motor.carga(JSON.parse(JSON.stringify(VERT)), { extension: { nodos: [Object.assign({}, REPJSON.nodos[10], { motor: 'reparto.inventada' })] } }); assert(r.errores.some((e) => e.codigo === 'motor_invalido'), 'una medida inexistente se rechaza');
-  cifra('T-10 · extensión del reparto: 20 nodos ocultos en definicion/reparto.json (y reparto_nodos.csv, reparto_factores.csv); vertical.json intacto (130 nodos)');
+  cifra('T-10 · extensión del reparto: 20 nodos ocultos en definicion/reparto.json (y reparto_nodos.csv, reparto_factores.csv); vertical.json intacto (135 nodos)');
 });
 prueba('T-10 · tablas y JSON de la extensión dan el mismo reparto en la muestra (R-26 a R-35, tarjeta y paquete)', () => {
   const p = con10(PLANES10.muestra, { 'S-21': 39, 'S-17': 'al_liquidar', 'S-23': 'pactado' }, B2_DECLARADO);
@@ -1936,12 +1936,15 @@ prueba('T-10 · los parámetros nuevos van ocultos: no cambian lo que se pide ni
 });
 /* O01 (dictamen T-11): huellas sha256 (16 caracteres) de la tarjeta «Reparto», de todas las tarjetas y del paquete del visor que da el motor del
    COMMIT BASE 7a03972 (git show 7a03972:arbol-ppp/motor.js) con vertical.json sin extensión, sobre estos mismos planes. El motor parchado sin la
-   extensión debe dar exactamente lo mismo: el contrato legado no cambia. */
-const HUELLAS_BASE = {"muestra": ["c8092467e3cc8ae3", "bd03d97ea072adb4", "ad1096f5eedccbb0"], "N1": ["7cfb71a94f7a6a9d", "cba425c829ef41ad", "0f06bd89c9acb11c"], "muestra_tierra_especie": ["ddb4f3076596f32d", "15b2c45e29405001", "281ddc59b7b1aa81"], "N1_tierra_especie": ["126c7526a8af083c", "1e244da075f5d19d", "fef30fb5cf3a3a1d"], "muestra_capital_20": ["16ff8a04931a2475", "8898aa5702f1b9f2", "3f284e400dfc4449"], "muestra_capital_20_tierra_especie": ["992d562052268bbf", "541ca7b4657fd2c3", "50d3ae35475200dd"], "muestra_fee_5": ["3a13507c5977ece8", "963fe01660668e3a", "8c44cf0c7de1c200"], "respaldo_vivo": ["c1273312c57ec53e", "f8977edcfc4f4206", "65e43ef95ac4128c"], "banco_insoluto": ["d389a27f0b967897", "12d3e8b6cf08640f", "0b40a388a396c14c"], "respaldo": ["53ea20c313f74da5", "fea79727b1ac54ab", "c07390989e4d7cf1"], "BASE": ["c8092467e3cc8ae3", "bd03d97ea072adb4", "ad1096f5eedccbb0"], "PROB": ["894ea84d362097c1", "4373bea5c55b09c5", "6b5c05772d0ee911"]};
+   extensión debe dar exactamente lo mismo: el contrato legado no cambia. La tercera huella (paquete) se toma SIN v.huella, que es la huella de
+   la definición y cambia con cualquier nodo nuevo (25-nov-2026: RN-01 a RN-05, renta, solo con Consultorios y oficinas). */
+const HUELLAS_BASE = {"muestra": ["c8092467e3cc8ae3", "bd03d97ea072adb4", "86d74e87e095c061"], "N1": ["7cfb71a94f7a6a9d", "cba425c829ef41ad", "d312c2b69709be56"], "muestra_tierra_especie": ["ddb4f3076596f32d", "15b2c45e29405001", "090495d7eaeacdf3"], "N1_tierra_especie": ["126c7526a8af083c", "1e244da075f5d19d", "b4b7d244c911df64"], "muestra_capital_20": ["16ff8a04931a2475", "8898aa5702f1b9f2", "65b6d8608e939f8f"], "muestra_capital_20_tierra_especie": ["992d562052268bbf", "541ca7b4657fd2c3", "621ae6bacf3a2611"], "muestra_fee_5": ["3a13507c5977ece8", "963fe01660668e3a", "7cd26b4383e8978b"], "respaldo_vivo": ["c1273312c57ec53e", "f8977edcfc4f4206", "fff22c4c58ad771e"], "banco_insoluto": ["d389a27f0b967897", "12d3e8b6cf08640f", "3927a2648c18addb"], "respaldo": ["53ea20c313f74da5", "fea79727b1ac54ab", "f2f02e6755b10ef7"], "BASE": ["c8092467e3cc8ae3", "bd03d97ea072adb4", "86d74e87e095c061"], "PROB": ["894ea84d362097c1", "4373bea5c55b09c5", "fe95bc3f5ff206b9"]};
 prueba('O01 (dictamen T-11) · sin la extensión, la tarjeta «Reparto», todas las tarjetas y el paquete del visor son IDÉNTICOS a los del commit base (12 planes)', () => {
   const huella = (x) => require('crypto').createHash('sha256').update(JSON.stringify(x)).digest('hex').slice(0, 16);
+  /* v.huella es la huella de la DEFINICIÓN: cambia con cualquier nodo nuevo (p. ej. RN-01 a RN-05, renta). Se compara el paquete sin ella. */
+  const sinHuellaDef = (p) => Object.assign({}, p, { v: Object.assign({}, p.v, { huella: '(definición)' }) });
   Object.entries(Object.assign({}, PLANES10, { BASE, PROB })).forEach(([id, plan]) => {
-    const e = Motor.evalua(DEF, plan, null, SIN), h = [huella(e.tarjetas.Reparto), huella(e.tarjetas), huella(Motor.paqueteVisor(DEF, plan))];
+    const e = Motor.evalua(DEF, plan, null, SIN), h = [huella(e.tarjetas.Reparto), huella(e.tarjetas), huella(sinHuellaDef(Motor.paqueteVisor(DEF, plan)))];
     assert.deepStrictEqual(h, HUELLAS_BASE[id], id + ': ' + JSON.stringify(h));
   });
   cifra('O01 · sin la extensión, tarjeta «Reparto», tarjetas y paquete del visor idénticos al commit base 7a03972 en 12 planes (huella sha256)');
@@ -2274,7 +2277,7 @@ prueba('B07 · punto de entrada de la copia: reparto-prueba.html carga reparto.j
   assert.strictEqual(fs.readFileSync(path.join(APP, 'definicion-reparto.js'), 'utf8'), require(path.join(APP, 'construir-reparto.cjs')).js, 'definicion-reparto.js coincide con los CSV de la extensión');
   const vm = require('vm'), ctx = { console }; ctx.window = ctx; ctx.self = ctx; ctx.globalThis = ctx; vm.createContext(ctx);
   ['reparto.js', 'motor.js', 'definicion-tablas.js', 'definicion-reparto.js', 'reparto-prueba.js'].forEach((f) => vm.runInContext(fs.readFileSync(path.join(APP, f), 'utf8'), ctx, { filename: f }));
-  const d = ctx.ArbolRepartoPrueba.definicion(ctx.ArbolMotor); assert.strictEqual(JSON.stringify(d.errores), '[]'); assert.strictEqual(d.definicion.nodos.length, 150);
+  const d = ctx.ArbolRepartoPrueba.definicion(ctx.ArbolMotor); assert.strictEqual(JSON.stringify(d.errores), '[]'); assert.strictEqual(d.definicion.nodos.length, 155);
   const ok = ctx.ArbolRepartoPrueba.estadoHtml(ctx.ArbolMotor, d.definicion, JSON.parse(JSON.stringify(P39)));
   assert(/data-estado="AUTORIZABLE"/.test(ok) && /Corte autorizado<\/th><td>mes 39/.test(ok) && /\$40,458,512 · \$40,458,512 · \$0/.test(ok) && (ok.match(/<tr><th scope="row">[IP]\d+ · /g) || []).length === 19, ok.slice(0, 400));
   const no = ctx.ArbolRepartoPrueba.estadoHtml(ctx.ArbolMotor, d.definicion, JSON.parse(JSON.stringify(P39R))); assert(/NO AUTORIZABLE/.test(no) && /P-02 · el plan reparte el excedente 30\/70\/0/.test(no));

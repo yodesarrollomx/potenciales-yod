@@ -499,7 +499,9 @@
     ].filter(function (it) { return it[1] > 0.05; });
     var pierde = gan !== null && gan < 0;
     if (!pierde && gan !== null) items.push(['Utilidad antes de ISR', gan, CLI, [['Ganancia real, después de la tierra', mdp(gan)], ['Sobre ventas', pct(num(v.margen))]], L('Versiones', 'ganancia'), null, 'v.ganancia']);
-    var RX = 60, g = 3.6, top = 2, H = 112, suman = suma(items.map(function (it) { return it[1]; })) || 1;
+    /* Equivalente en renta: el Árbol manda v.renta_* sólo si el plan trae una renta (producto Consultorios y oficinas); aquí sólo se pinta. */
+    var rentaA = num(v.renta_anual), hayRenta = rentaA !== null && rentaA > 0, bajo = hayRenta ? 9 : 0;
+    var RX = 60, g = 3.6, top = 2, H = 112 - bajo, suman = suma(items.map(function (it) { return it[1]; })) || 1;
     var sc = (H - g * (items.length - 1)) / suman, lh = suman * sc, yl = top + (H - lh) / 2, yr = top, o = [], centros = [];
     o.push('<rect' + T('Ingresos por ventas', ventasPorProducto(d).concat([['Total de ventas', mdp(ventas)]]), Ly(L('Productos'), 'Resumen · v' + d.version + '.ventas' + Lded('Versiones', 'ventas')), 'v.ventas') + ' x="0" y="' + f1(yl) + '" width="6" height="' + f1(lh) + '" rx="1.5" fill="' + INK + '"></rect>');
     items.forEach(function (it) {
@@ -512,7 +514,7 @@
       centros.push([it, yr + h / 2]);
       yl += h; yr += h + g;
     });
-    var ys = spread(centros.map(function (c) { return c[1] + 2.6; }), 10.2, 8, 113);
+    var ys = spread(centros.map(function (c) { return c[1] + 2.6; }), 10.2, 8, 113 - bajo);
     centros.forEach(function (c, i) {
       var it = c[0], fin = it[0] === 'Utilidad antes de ISR', ly = ys[i];
       o.push('<polyline points="' + (RX + 7) + ',' + f1(c[1]) + ' ' + (RX + 9) + ',' + f1(ly - 2.5) + ' ' + (RX + 11) + ',' + f1(ly - 2.5) + '" fill="none" stroke="' + GRIS + '" stroke-width="0.6"></polyline>' +
@@ -521,10 +523,19 @@
     });
     var hayCosto = num(v.costo_sin_tierra) !== null, costoTotal = sinTierra + tierra, antes = ventas - costoTotal, margen = num(v.rv_margen);
     o.push('<text' + T('Ventas y costo total', ventasPorProducto(d).concat([['Ingresos por ventas', mdp(ventas)], ['Costo sin tierra', mdp(sinTierra)], ['Tierra', mdp(tierra)], ['Costo total con tierra', mdp(costoTotal)]]), L('Versiones', 'ventas, costo_sin_tierra y tierra'), 'visor.costo_total') +
-      ' x="0" y="124" font-size="7.4" fill="' + MUTED + '">Ventas <tspan font-weight="700" fill="' + INK + '">' + mdp(ventas) + '</tspan>' + (hayCosto ? ' · costo total ' + mdp(costoTotal) : '') + '</text>');
+      ' x="0" y="' + f1(124 - bajo) + '" font-size="7.4" fill="' + MUTED + '">Ventas <tspan font-weight="700" fill="' + INK + '">' + mdp(ventas) + '</tspan>' + (hayCosto ? ' · costo total ' + mdp(costoTotal) : '') + '</text>');
     if (pierde || hayCosto) o.push('<text' + T('Utilidad antes de intereses', [['Ventas menos costo total', mdp(antes)], ['Margen sobre costo', pct(num(v.rv_margen))], ['Costo del dinero', mdp(costoDin)], ['Ganancia real', mdp(gan)]], L('Versiones', 'rv_margen, costo_dinero y ganancia'), 'visor.antes_intereses') +
-      ' x="0" y="133.8" font-size="7.4" fill="' + MUTED + '">' + (pierde ? 'Pérdida después del costo del dinero <tspan font-weight="700" fill="' + BADT + '">' + mdp(gan) + '</tspan>'
+      ' x="0" y="' + f1(133.8 - bajo) + '" font-size="7.4" fill="' + MUTED + '">' + (pierde ? 'Pérdida después del costo del dinero <tspan font-weight="700" fill="' + BADT + '">' + mdp(gan) + '</tspan>'
         : 'Antes de intereses <tspan font-weight="700" fill="' + ORO + '">' + mdp(antes) + '</tspan>' + (margen !== null ? ' · ' + pct(margen) + ' sobre costo' : '')) + '</text>');
+    var rentaValor = num(v.renta_valor), rentaRinde = num(v.renta_rinde), filasRenta = [
+      ['Renta por m² al mes', num(v.renta_m2) !== null ? '$' + ent(num(v.renta_m2)) : '—', 'Árbol PPP · renta mensual por m²', 'v.renta_m2'],
+      ['Renta al año', mdp(rentaA), 'Árbol PPP · todo lo vendible rentado 12 meses', 'v.renta_anual'],
+      ['Tasa de capitalización', pct(num(v.renta_tasa)), 'Árbol PPP · lo que espera ganar al año quien compra rentado', 'v.renta_tasa'],
+      ['Valor en renta', mdp(rentaValor), 'Árbol PPP · renta al año ÷ tasa de capitalización', 'v.renta_valor'],
+      ['Rinde la renta sobre el costo', pct(rentaRinde), 'Árbol PPP · renta al año ÷ costo total', 'v.renta_rinde']
+    ];
+    if (hayRenta) o.push('<text' + T('Si se renta en vez de vender', filasRenta.map(function (f) { return [f[0], f[1]]; }), 'Árbol PPP · equivalente en renta', 'v.renta_anual') +
+      ' x="0" y="134.6" font-size="7.4" fill="' + MUTED + '">Renta <tspan font-weight="700" fill="' + INK + '">' + mdp(rentaA) + '</tspan>/año' + (rentaValor !== null ? ' · vale ' + mdp(rentaValor) : '') + (rentaRinde !== null ? ' · rinde ' + pct(rentaRinde) : '') + '</text>');
     return {
       id: 'costo', n: 4, titulo: 'Costo y ganancia', sub: 'flujo', svg: ventas && items.length ? o.join('') : sinDatos(184, 'Aún no hay cifras calculadas'), w: 184,
       aria: 'Costo y ganancia: ventas ' + mdp(ventas) + ', costo total ' + mdp(costoTotal) + ', utilidad antes de ISR ' + mdp(gan),
@@ -537,7 +548,7 @@
         ['Margen antes de financiamiento sobre costo', pct(num(v.rv_margen)), L('Versiones', 'rv_margen'), 'v.rv_margen'],
         ['Costo del dinero', mdp(costoDin), L('Versiones', 'costo_dinero'), 'v.costo_dinero'],
         ['Ganancia real sobre ventas', pct(num(v.margen)), L('Versiones', 'margen'), 'v.margen']
-      ] }]
+      ] }].concat(hayRenta ? [{ h: 'Si se renta en vez de vender', filas: filasRenta }] : [])
     };
   }
 
