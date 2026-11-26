@@ -326,10 +326,39 @@
     return 'El dueño aporta ' + mdp(p.dueno_aporta) + ' de tierra y recibe <b>' + mdpCorto(p.dueno_recibe) + ' MDP</b> · ' + veces(p.dueno_veces) +
       ' su tierra · en ' + meses(p.dueno_meses);
   }
+  /* Un proyecto, una tarjeta. Las columnas del Maestro con el mismo nombre (sin distinguir mayúsculas, acentos ni espacios) son
+     versiones de un mismo proyecto: la portada enseña el proyecto una vez y sus versiones se escogen adentro, en el árbol
+     («Versiones del proyecto»). La tarjeta abre la versión guardada más a la derecha. Sólo agrupa: no calcula ni escribe. */
+  function claveProyecto(n) {
+    var x = String(n == null ? '' : n).toLowerCase();
+    try { x = x.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) { }
+    return x.replace(/[^a-z0-9]+/g, ' ').replace(/^ +| +$/g, '');
+  }
+  function agrupaArbol(columnas) {
+    var orden = [], por = {};
+    var pos = function (l) { var n = 0; String(l || '').split('').forEach(function (c) { n = n * 26 + (c.charCodeAt(0) - 64); }); return n; };
+    (columnas || []).forEach(function (c) {
+      var k = claveProyecto(c.nombre) || ('columna ' + c.columna);
+      if (!por[k]) { por[k] = { clave: k, nombre: c.nombre || 'Plan del árbol', versiones: [] }; orden.push(k); }
+      por[k].versiones.push(c);
+    });
+    return orden.map(function (k) {
+      var g = por[k];
+      g.versiones.sort(function (a, b) { return pos(a.columna) - pos(b.columna); });
+      g.abre = g.versiones[g.versiones.length - 1];
+      return g;
+    });
+  }
   function pintarVivero() {
     var v = estado.vivero, puede = v.puede || {};
     var anteriores = location.hash === '#/anteriores';
-    var planes = (v.planes || []).filter(function (p) { return anteriores ? p.paso !== 'captura_v3' : p.paso === 'captura_v3'; });
+    var proyectos = !anteriores && v.arbol === true ? agrupaArbol(estado.arbolPlanes) : [];
+    var enArbol = {}; proyectos.forEach(function (g) { enArbol[g.clave] = true; });
+    /* un plan con libro cuyo proyecto ya vive en el árbol no se repite arriba: sigue en su libro y en «expedientes anteriores» */
+    var repetido = function (p) { return !!enArbol[claveProyecto(p.nombre)]; };
+    var todosArbol = {}; (v.arbol === true ? agrupaArbol(estado.arbolPlanes) : []).forEach(function (g) { todosArbol[g.clave] = true; });
+    var repetidoEnArbol = function (p) { return !!todosArbol[claveProyecto(p.nombre)]; };
+    var planes = (v.planes || []).filter(function (p) { return anteriores ? (p.paso !== 'captura_v3' || repetidoEnArbol(p)) : (p.paso === 'captura_v3' && !repetido(p)); });
     var tarjetas = planes.map(function (p) {
       if (!anteriores) return '<a class="p2-tarjeta" href="#/plan/' + esc(p.plan_id) + '"><h2>' + esc(p.nombre) + '</h2><p>' +
         esc(p.ubicacion) + '</p><div class="p2-chico">' + esc(p.siguiente_pregunta) + '</div></a>';
@@ -352,12 +381,13 @@
       '<div class="p2-acciones">' +
       (!anteriores && v.arbol === true ? '<a class="p2-btn suave" href="arbol-ppp/arbol.html"><i class="ti ti-binary-tree-2"></i> Armar un plan con el árbol</a>' : '') +   // sólo si el servidor dice que el árbol está encendido (Config!arbol = sí)
       (!anteriores && puede.editar && !estado.viveroCopia ? '<button class="p2-btn oro" data-accion="sembrar"><i class="ti ti-seedling"></i> Crear plan en blanco</button>' : '') + '</div></div>' +
-      (tarjetas ? '<div class="p2-rejilla">' + tarjetas + '</div>' : '<div class="p2-vacio">' + (anteriores ? 'No hay expedientes anteriores en este registro.' : 'Todavía no hay planes en el nuevo sistema.') + '</div>') +
-      (!anteriores && v.arbol === true && (estado.arbolPlanes || []).length ? '<h2 class="p2-sobre" style="margin-top:22px">Planes del árbol</h2><div class="p2-rejilla">' + estado.arbolPlanes.map(function (c) {
-        return '<a class="p2-tarjeta" href="arbol-ppp/arbol.html#abrir=' + encodeURIComponent(c.columna) + '"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center">' +
-          chip('Árbol', 'gris') + chip((c.version || 'V1') + ' · ' + (c.estado || 'Borrador'), 'gris') + '</div><h2>' + esc(c.nombre || 'Plan del árbol') + '</h2>' +
-          '<div class="p2-tenue p2-chico">Guardado en el libro Maestro · columna ' + esc(c.columna) + (c.quien ? ' · ' + esc(c.quien) : '') + '</div>' +
-          '<div class="p2-chico"><b>Abrir en el árbol ›</b></div></a>';
+      (tarjetas ? '<div class="p2-rejilla">' + tarjetas + '</div>' : (proyectos.length ? '' : '<div class="p2-vacio">' + (anteriores ? 'No hay expedientes anteriores en este registro.' : 'Todavía no hay planes en el nuevo sistema.') + '</div>')) +
+      (proyectos.length ? '<h2 class="p2-sobre" style="margin-top:22px">Planes del árbol</h2><div class="p2-rejilla">' + proyectos.map(function (g) {
+        var c = g.abre, n = g.versiones.length;
+        return '<a class="p2-tarjeta" data-proyecto-arbol href="arbol-ppp/arbol.html#abrir=' + encodeURIComponent(c.columna) + '"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center">' +
+          chip('Árbol', 'gris') + chip(n === 1 ? '1 versión' : n + ' versiones', 'gris') + '</div><h2>' + esc(g.nombre) + '</h2>' +
+          '<div class="p2-tenue p2-chico">' + g.versiones.map(function (x) { return esc(x.version || 'V1'); }).join(' · ') + '</div>' +
+          '<div class="p2-chico"><b>Abrir en el árbol ›</b> <span class="p2-tenue">' + esc(c.version || 'V1') + ' · las demás se escogen adentro</span></div></a>';
       }).join('') + '</div>' : '') +
       ((v.planes || []).some(function (p) { return !!p.error; }) ? '<p role="status">Hay libros que no se pudieron leer. <button class="p2-btn suave" data-accion="refrescar">Volver a consultar</button></p>' : '') +
       '<nav class="p2-acciones"><a class="p2-btn suave" href="' + (anteriores ? '#/' : '#/anteriores') + '">' + (anteriores ? 'Volver a planes de potencial' : 'Consultar expedientes anteriores') + '</a>' +
@@ -1652,6 +1682,6 @@
     if (document.visibilityState === 'visible' && estado.planId && estado.plan && estado.plan.resumen.esquema === 'ppp-libro-v3' && !estado.ocupado && !document.getElementById('p2Dialogo')) cargarPlan(true);
   });
   window.addEventListener('hashchange', ruta);
-  window.PPP2 = { estado: estado, recargar: function () { estado.vivero = null; estado.plan = null; ruta(); } };
+  window.PPP2 = { estado: estado, recargar: function () { estado.vivero = null; estado.plan = null; ruta(); }, agrupaArbol: agrupaArbol, claveProyecto: claveProyecto };
   ruta();
 })();
