@@ -1134,7 +1134,7 @@
     "clase": "m2",
     "etiqueta": "m² por lote"
    },
-   "que_es": "El tamaño del lote decide cuántos caben en lo vendible.",
+   "que_es": "El tamaño del lote decide cuántos caben en lo vendible. Si no es uno de los cuatro, escribe el tamaño (por ejemplo 206 o 1,000 m²).",
    "pregunta": "¿De qué tamaño son los lotes?",
    "referencia": {
     "opcion": "lote_160",
@@ -1176,7 +1176,13 @@
      "orden": 4,
      "fuente": "Referencia inicial"
     }
-   ]
+   ],
+   "permite_otro": true,
+   "rango": {
+    "min": 60,
+    "max": 20000,
+    "paso": 1
+   }
   },
   {
    "id": "L-05",
@@ -1221,7 +1227,7 @@
     "etiqueta": "texto"
    },
    "que_es": "Cómo se llama el producto en el visor cuando se venden lotes.",
-   "formula": "si(L-07.opcion = 'lote_120', 'Lote de 120 m²', si(L-07.opcion = 'lote_160', 'Lote de 160 m²', si(L-07.opcion = 'lote_200', 'Lote de 200 m²', 'Lote de 300 m²')))",
+   "formula": "si(L-07 = 120, 'Lote de 120 m²', si(L-07 = 160, 'Lote de 160 m²', si(L-07 = 200, 'Lote de 200 m²', si(L-07 = 300, 'Lote de 300 m²', 'Lote'))))",
    "aparece": "DS-01 != 'Edificio'",
    "orden": 254,
    "oculto": true,
@@ -1241,7 +1247,7 @@
     "etiqueta": "texto"
    },
    "que_es": "Cómo se llama el producto en el visor cuando se venden casas.",
-   "formula": "si(L-07.opcion = 'lote_120', 'Casa en lote de 120 m²', si(L-07.opcion = 'lote_160', 'Casa en lote de 160 m²', si(L-07.opcion = 'lote_200', 'Casa en lote de 200 m²', 'Casa en lote de 300 m²')))",
+   "formula": "si(L-07 = 120, 'Casa en lote de 120 m²', si(L-07 = 160, 'Casa en lote de 160 m²', si(L-07 = 200, 'Casa en lote de 200 m²', si(L-07 = 300, 'Casa en lote de 300 m²', 'Casa'))))",
    "aparece": "DS-01 = 'Casas'",
    "orden": 255,
    "oculto": true,
