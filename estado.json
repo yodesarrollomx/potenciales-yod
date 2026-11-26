@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-26T12:48:05.765Z",
+ "generado": "2026-11-26T13:12:36.464Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -52,18 +52,6 @@
    "desde": "2026-11-25T22:57:36Z",
    "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45717528048",
    "msg": "Falló el flujo «Revisión continua de la Sala» de sala-edicion, trabajo «revision», paso 8 «Publicar revisión y confirmar recibo»"
-  },
-  {
-   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-mesa.yml",
-   "tipo": "flujo",
-   "nodos": [
-    "sala-edicion::github_workflows_sala_mesa",
-    "repo:yodesarrollomx/sala-edicion",
-    "SYS-SALA"
-   ],
-   "desde": "2026-11-25T21:43:20Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45706923015",
-   "msg": "Falló el flujo «Montador de la mesa» de sala-edicion, trabajo «mesa», paso 14 «Avisar si algo falló»"
   },
   {
    "clave": "chinche:yodesarrollomx/sala-edicion#393",
