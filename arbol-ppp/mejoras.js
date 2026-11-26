@@ -98,6 +98,12 @@ function __mejorasArbol() {
 .ppp-franja [data-vp-oculto]{display:none !important}
 .vp-vistos{font:600 12px system-ui;color:#6b6257;background:none;border:0;cursor:pointer;text-decoration:underline;white-space:nowrap}
 `;
+  st.textContent += `
+dialog.vp-menu{box-sizing:border-box;margin:0;min-width:0;width:min(340px,calc(100vw - 16px));max-height:min(62dvh,480px);padding:0 8px 8px;color:var(--ink);overflow:auto}
+dialog.vp-menu::backdrop{background:rgba(30,25,20,.18)}
+.vp-menu .vp-cabecera{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:8px;justify-content:space-between;background:#fffdf8;padding:4px 0;border-bottom:1px solid #ded5c6}
+.vp-menu .vp-cabecera button{width:auto;flex:none;font-weight:700}
+`;
   document.head.append(st);
 
   /* ───── utilidades del grafo ───── */
@@ -291,8 +297,16 @@ function __mejorasArbol() {
   const x = el('button', 'vp-x', '×'); x.setAttribute('data-vp', ''); x.setAttribute('aria-label', 'Cerrar el panel');
   const abrir = el('button', 'vp-abrir', 'Abrir el dato'); abrir.setAttribute('data-vp', '');
   document.body.append(bar, x, abrir);
-  x.onclick = () => { $('.ppp').setAttribute('data-sin-panel', ''); tick(); };
-  abrir.onclick = () => { $('.ppp').removeAttribute('data-sin-panel'); tick(); };
+  let origenPanel = null;
+  x.onclick = () => {
+    $('.ppp').setAttribute('data-sin-panel', ''); tick();
+    const destino = origenPanel && origenPanel.isConnected ? origenPanel : abrir;
+    destino.focus({preventScroll:true});
+  };
+  abrir.onclick = () => {
+    $('.ppp').removeAttribute('data-sin-panel'); tick(); x.focus({preventScroll:true});
+  };
+  W.__vpOrigenPanel = (control) => { origenPanel = control; };
   const grupo = (e) => {
     if (e.matches('h2,.grande,[data-efecto],.prev-ficha,p.nota[data-hecho]')) return null;
     if (e.matches('details.cmp-con')) return 'comparar'; if (e.matches('details')) return 'fuente';
@@ -333,12 +347,14 @@ function __mejorasArbol() {
   }
 
   /* ───── tarjetas de arriba: despliegan sus datos ───── */
-  const cierraMenu = () => { $$('.vp-menu').forEach((m) => m.remove()); $$('.tarj[data-abierta]').forEach((t) => t.removeAttribute('data-abierta')); };
+  const cierraMenu = () => { const menu = $('dialog.vp-menu[open]'); if (menu) menu.close(); };
   if (!W.__vpClick) {
     W.__vpClick = true;
     document.addEventListener('click', (e) => {
       const t0 = e.target.closest ? e.target : null; if (!t0) return;
-      const irB = t0.closest('button[data-ir]'); if (irB) { e.preventDefault(); e.stopPropagation(); W.__vpIr(irB.getAttribute('data-ir')); cierraMenu(); return; }
+      const control = t0.closest('[data-act="lista"], .ppp-cards .tarj, .ppp-lienzo .nodo');
+      if (control) W.__vpOrigenPanel(control);
+      const irB = t0.closest('button[data-ir]'); if (irB) { e.preventDefault(); e.stopPropagation(); cierraMenu(); W.__vpIr(irB.getAttribute('data-ir')); const titulo = $('.ppp-panel h2'); if (titulo) { titulo.tabIndex = -1; titulo.focus({preventScroll:true}); } return; }
       const sb = t0.closest('.edit[data-uni=m2] .step .sb');
       if (sb) { e.preventDefault(); e.stopPropagation(); const ed = sb.closest('.edit'), inp = ed.querySelector('#ppp-otro'), P = W.__vpPredio(); const dir = /-1/.test(sb.getAttribute('data-a')) ? -1 : 1; const m2 = Math.round((parseFloat(inp.value) / 100 * P) / 10) * 10 + dir * 10; W.__vpPon(inp, Math.min(parseFloat(inp.max), Math.max(parseFloat(inp.min), Math.round(m2 / P * 10000) / 100))); return; }
       if (t0.closest('.vp-menu')) return;
@@ -346,37 +362,74 @@ function __mejorasArbol() {
       const ya = t.hasAttribute('data-abierta'); cierraMenu(); if (ya) return;
       W.__vpMenu(t); e.stopPropagation();
     }, true);
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || $('dialog[open], .as-panel') || maxOn()) return;
+      const cerrar = $('.vp-x');
+      if (cerrar && cerrar.getClientRects().length) { e.preventDefault(); cerrar.click(); }
+    });
     document.addEventListener('pointerup', (e) => { if (e.target.closest && e.target.closest('.ppp-lienzo .nodo')) { const P = document.querySelector('.ppp'); if (P) P.removeAttribute('data-sin-panel'); } }, true);
   }
   W.__vpPredio = predio; W.__vpPon = pon;
   W.__vpMenu = (t) => {
     const col = colv(t), mo = modelo(), tn = (t.getAttribute('data-t') || '').trim(), tb = (($('b', t) || {}).textContent || '').trim();
     let ns = mo ? mo.l.filter((n) => (n.tarjetas || []).some((x) => x === tn || (x && tb.indexOf(x) === 0))) : [];
-    if (!ns.length) ns = nodos().filter((n) => colv(n) === col);
-    const m = el('div', 'vp-menu'), r = t.getBoundingClientRect();
-    m.style.left = Math.min(r.left, innerWidth - 330) + 'px'; m.style.top = (r.bottom + 2) + 'px'; m.style.width = Math.max(300, r.width) + 'px'; m.style.setProperty('--c', 'var(' + col + ')');
-    m.append(el('h3', '', (t.getAttribute('data-t') || '') + ' · ' + ns.length + ' datos'));
+    if (t.classList.contains('conf') && mo) ns = api().estado().res.por_confirmar.ids.map(id => mo.by[id]).filter(Boolean);
+    else if (!ns.length) ns = nodos().filter((n) => colv(n) === col);
+    const m = el('dialog', 'vp-menu');
+    const titulo = el('h3', '', (tn || 'Por confirmar') + ' · ' + ns.length + ' datos');
+    titulo.id = 'vp-menu-titulo';
+    m.setAttribute('aria-labelledby', titulo.id);
+    const cabecera = el('div', 'vp-cabecera'), cerrar = el('button', '', 'Cerrar');
+    cerrar.type = 'button'; cerrar.autofocus = true; cerrar.onclick = () => m.close();
+    cabecera.append(titulo, cerrar); m.append(cabecera);
+    if (tn === 'Riesgo y estado') {
+      const pruebas = el('button', '', 'Ver pruebas de riesgo'); pruebas.type = 'button';
+      pruebas.onclick = () => { m.close(); api().abrePruebas(); }; m.append(pruebas);
+    }
+    const ubica = () => {
+      if (movil()) { m.style.left = m.style.top = ''; return; }
+      const r = t.getBoundingClientRect(), caja = m.getBoundingClientRect();
+      m.style.left = Math.max(8, Math.min(r.left, innerWidth - caja.width - 8)) + 'px';
+      m.style.top = Math.max(8, Math.min(r.bottom + 3, innerHeight - caja.height - 8)) + 'px';
+    };
+    const limpiaMenu = () => {
+      t.removeAttribute('data-abierta'); t.setAttribute('aria-expanded', 'false');
+      W.removeEventListener('resize', ubica); m.remove();
+    };
+    m.addEventListener('close', limpiaMenu, {once:true});
+    m.addEventListener('click', (event) => {
+      if (event.target !== m) return;
+      const r = m.getBoundingClientRect();
+      if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) m.close();
+    });
     ns.forEach((n) => { const b = el('button'); b.type = 'button'; b.setAttribute('data-ir', nid(n)); b.append(el('span', '', nombre(n))); if (esDom(n) ? /por confirmar/i.test(partes(n)[2] || '') : /confirmar|estimad|referencia/i.test(n.estado || '')) b.append(el('i', '', 'por confirmar')); b.append(el('b', '', valor(n))); m.append(b); });
     if (!ns.length) m.append(el('p', '', 'Esta tarjeta es un resumen: no tiene datos propios en el árbol.'));
-    t.setAttribute('data-abierta', ''); document.body.append(m);
+    t.setAttribute('data-abierta', ''); t.setAttribute('aria-expanded', 'true');
+    document.body.append(m); m.showModal(); ubica(); W.addEventListener('resize', ubica);
   };
 
   /* ───── ciclo ───── */
   function tick() {
     const P = $('.ppp'), L = $('.ppp-lienzo'), p = $('.ppp-panel');
     if (!P || !L) { bar.style.display = x.style.display = abrir.style.display = 'none'; return; }
-    P.style.setProperty('--ltop', (L.getBoundingClientRect().top - P.getBoundingClientRect().top + 12) + 'px');
+    const encabezado = $('.ppp-top', P), estado = $('.ppp-barra', P);
+    if (estado && estado.parentNode !== encabezado) encabezado.append(estado);
     avisos();
-    const oculto = P.hasAttribute('data-sin-panel');
-    if (!p || oculto) { bar.style.display = x.style.display = 'none'; abrir.style.display = p && oculto ? 'block' : 'none'; return; }
+    if (!p || P.dataset.vista === 'cmp' || P.hasAttribute('data-sin-panel')) {
+      bar.style.display = x.style.display = 'none';
+      abrir.style.display = p && P.dataset.vista !== 'cmp' ? 'block' : 'none';
+      return;
+    }
+    const r = p.getBoundingClientRect();
+    abrir.style.display = 'none'; x.style.display = 'block';
+    x.style.left = (r.right - 52) + 'px'; x.style.top = (r.top + 8) + 'px';
+    if (p.dataset.vistaPanel !== 'nodo') { bar.style.display = 'none'; p.style.removeProperty('--fix'); return; }
     ficha(p); unidad(p);
     [...p.children].forEach((e) => { const g = grupo(e); if (g) e.setAttribute('data-g', g); else e.removeAttribute('data-g'); if (e.tagName === 'DETAILS' && !e.open) e.open = true; });
     const hay = { cambiar: !!$(':scope>[data-g=cambiar]', p), conex: !!$(':scope>[data-g=conex], :scope>.prev-ficha section', p), fuente: !!$(':scope>.prev-ficha .prev-docs', p), comparar: !!$(':scope>[data-g=comparar]', p) };
     let act = est.tab; if (!hay[act]) act = TABS.map((t) => t[0]).find((k) => hay[k]) || 'conex';
     p.setAttribute('data-tab', act); p.style.setProperty('--tc', TABS.find((t) => t[0] === act)[2]);
     const h2 = $(':scope>h2', p); if (h2) p.style.setProperty('--h2h', h2.offsetHeight + 'px');
-    const r = p.getBoundingClientRect();
-    abrir.style.display = 'none'; x.style.display = 'block'; x.style.left = (r.right - 52) + 'px'; x.style.top = (r.top + 8) + 'px';
     bar.style.display = 'flex'; bar.style.left = r.left + 'px'; bar.style.width = r.width + 'px'; bar.style.top = (r.bottom - 1) + 'px';
     $$('button', bar).forEach((b) => { const k = b.getAttribute('data-tab'); b.hidden = !hay[k]; b.setAttribute('aria-selected', String(k === act)); });
   }
@@ -402,22 +455,31 @@ function __mejorasArbol() {
 .ppp-panel>h2{order:-3 !important;top:calc(0px - var(--fix,0px)) !important}
 .ppp-panel>.vp-val,.ppp-panel>.grande{order:-2 !important;top:calc(var(--h2h,44px) - var(--fix,0px)) !important}
 .ppp-panel>[data-efecto]{order:-1 !important}
-@media (min-width:761px){
-.ppp>.ppp-lienzo{grid-row:1/-1!important;grid-column:1/-1!important;z-index:0!important;margin:-10px -16px 0!important;height:auto!important;min-height:0!important;align-self:stretch!important}
-.ppp>.ppp-top,.ppp>.ppp-cards,.ppp>.ppp-barra,.ppp>.ppp-herr,.ppp>.ppp-franja{position:absolute!important;z-index:3!important;background:transparent!important;pointer-events:none!important;border:0!important;box-shadow:none!important;margin:0!important;transform:none!important;width:auto!important}
-.ppp>.ppp-top *,.ppp>.ppp-cards .tarj,.ppp>.ppp-barra *,.ppp>.ppp-herr *,.ppp>.ppp-franja *{pointer-events:auto}
-.ppp>.ppp-top{top:6px!important;left:14px!important;right:14px!important;display:flex!important;justify-content:space-between!important;align-items:center!important;min-height:0!important;height:30px!important}
-.ppp>.ppp-top h1{font-size:17px!important;line-height:1!important;margin:0!important}
-.ppp>.ppp-top p,.ppp>.ppp-top small{display:none!important}
-.ppp>.ppp-top button{height:26px!important;min-height:0!important;padding:0 9px!important;font-size:12px!important;background-color:rgba(255,255,255,.55)!important}
-.ppp>.ppp-cards{top:8px!important;left:112px!important;right:200px!important;display:flex!important;flex-wrap:nowrap!important;gap:4px!important;height:26px!important;min-height:0!important;justify-content:flex-start!important}
-.ppp>.ppp-herr{top:40px!important;left:14px!important;display:flex!important;gap:5px!important}
-.ppp>.ppp-herr button{height:28px!important;min-height:0!important;padding:0 9px!important;font-size:12px!important}
-.ppp>.ppp-franja{top:40px!important;left:360px!important;max-width:calc(100% - 640px)!important;padding:0!important;min-height:0!important}
-.ppp>.ppp-barra{top:38px!important;right:14px!important}
-.ppp>.ppp-panel{top:78px!important;max-height:min(calc(100% - 150px),540px)!important}
-.ppp .ppp-ctrl{top:auto!important;bottom:12px!important}
-}
+/* Cada fila reserva su alto dentro del ancho real que deja el marco de YOD OS. */
+.ppp[data-ppp]{display:grid!important;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto auto auto auto auto auto auto minmax(0,1fr);grid-template-areas:"titulo titulo" "tarjetas desplazar" "acciones acciones" "avisos avisos" "modo modo" "comparacion comparacion" "leyenda leyenda" "horizonte horizonte" "grafo grafo";gap:0!important;min-height:0!important;padding:6px 10px!important;overflow:auto}
+.ppp>.ppp-top{grid-area:titulo;position:static!important;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:3px 10px;padding:0;margin:0 0 3px}
+.ppp>.ppp-top h1{font-size:1.1rem;line-height:1.1;margin:0;overflow-wrap:anywhere}
+.ppp .ppp-acc{flex-wrap:wrap}
+.ppp .ppp-top button,.ppp>.ppp-herr button{min-height:32px!important;font-size:.76rem;padding:2px 9px}
+.ppp>.ppp-cards,.ppp>.ppp-herr{display:flex!important;align-items:center;flex-wrap:nowrap!important;gap:5px;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding:2px 1px 3px}
+.ppp>.ppp-cards{grid-area:tarjetas}
+.vp-desplazar{grid-area:desplazar;display:flex;align-items:center;gap:2px;padding-left:3px}
+.vp-desplazar button{min-width:30px;min-height:32px;padding:0 6px;font-size:18px}
+.ppp>.ppp-herr{grid-area:acciones}
+.ppp>.ppp-herr button{flex:0 0 auto!important;white-space:nowrap}
+.ppp>.ppp-franja{grid-area:avisos;display:flex!important;flex-wrap:wrap;gap:4px 8px;max-height:16dvh;overflow:auto;margin:1px 0;padding:3px 6px!important}
+.ppp .fr-chips{min-width:0;max-width:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
+.ppp .fr-chips>*{flex-shrink:0}
+.ppp>.ppp-barra{grid-area:auto;display:flex;flex-flow:row wrap;gap:3px 7px!important;align-items:center!important;font-size:.72rem}
+.ppp-top>.ppp-barra{display:flex;flex-wrap:wrap;margin:0;min-width:0}
+.ppp>.ppp-modo{grid-area:modo}.ppp>.ppp-cmpbar{grid-area:comparacion}
+.ppp>.ppp-ley{grid-area:leyenda}.ppp>.ppp-horizonte{grid-area:horizonte}
+.ppp>.ppp-lienzo,.ppp>.ppp-cmpv{grid-area:grafo;min-height:0!important;min-width:0;margin:0}
+.ppp>.ppp-panel{grid-area:grafo;position:absolute!important;inset:8px 8px auto auto;min-height:0!important;max-height:min(540px,calc(100% - 60px))!important;max-width:calc(100% - 16px);box-sizing:border-box}
+.ppp>[hidden],.ppp>.ppp-franja[data-vacia],.vp-desplazar[hidden]{display:none!important}
+.ppp[data-vista=cmp]>.ppp-cards,.ppp[data-vista=cmp]>.ppp-herr,.ppp[data-vista=cmp]>.ppp-franja,.ppp[data-vista=cmp] .ppp-barra,.ppp[data-vista=cmp]>.vp-desplazar,.ppp[data-vista=cmp]>.ppp-panel,.ppp[data-vista=cmp]>.ppp-lienzo{display:none!important}
+.ppp .ppp-ctrl{top:auto!important;bottom:8px!important}
+.ppp .tarj:focus-visible,.vp-menu button:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
 .ppp>.ppp-cards .tarj{display:flex!important;flex:0 0 auto!important;align-items:baseline!important;gap:6px!important;height:26px!important;min-height:0!important;padding:3px 8px!important;border-radius:13px!important;border:1px solid color-mix(in srgb,var(--c) 55%,transparent)!important;border-left:4px solid var(--c)!important;background:rgba(255,255,255,.5)!important;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);box-shadow:none!important;white-space:nowrap!important;overflow:hidden!important}
 .ppp>.ppp-cards .tarj b{font-size:10px!important;letter-spacing:.02em!important;opacity:.75;font-weight:600!important;margin:0!important}
 .ppp>.ppp-cards .tarj strong{font-size:12.5px!important;line-height:1!important;margin:0!important}
@@ -426,33 +488,20 @@ function __mejorasArbol() {
 .ppp>.ppp-herr button,.ppp>.ppp-barra>*{background-color:rgba(255,255,255,.55)!important;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
 .ppp>.ppp-franja>*{background-color:rgba(253,240,238,.6)}
 @media (max-width:760px){
-html,body{overflow:hidden!important;height:100%!important}
-.ppp{display:block!important}
-.ppp>.ppp-lienzo{position:fixed!important;inset:var(--mtop,0px) 0 0 0!important;height:auto!important;width:auto!important;max-height:none!important;margin:0!important;border:0!important;border-radius:0!important;z-index:0!important}
-.ppp>.ppp-lienzo svg{width:100%!important;height:100%!important}
-.ppp>.ppp-top,.ppp>.ppp-cards,.ppp>.ppp-barra,.ppp>.ppp-herr,.ppp>.ppp-franja{position:fixed!important;z-index:3!important;background:transparent!important;border:0!important;box-shadow:none!important;margin:0!important;padding:0!important;pointer-events:none!important;width:auto!important}
-.ppp>.ppp-top *,.ppp>.ppp-cards .tarj,.ppp>.ppp-herr *,.ppp>.ppp-franja *{pointer-events:auto}
-.ppp>.ppp-top{top:calc(var(--mtop,0px) + 4px)!important;left:10px!important;right:10px!important;display:flex!important;justify-content:space-between!important;align-items:center!important;height:30px!important}
-.ppp>.ppp-top h1{font-size:18px!important;margin:0!important;line-height:1!important}
-.ppp>.ppp-top p,.ppp>.ppp-top small{display:none!important}
-.ppp>.ppp-top button{height:30px!important;min-height:0!important;padding:0 10px!important;font-size:12px!important;background-color:rgba(255,255,255,.6)!important}
-.ppp>.ppp-cards{top:calc(var(--mtop,0px) + 38px)!important;left:0!important;right:0!important;display:flex!important;flex-wrap:nowrap!important;gap:5px!important;overflow-x:auto!important;padding:0 10px!important;height:32px!important;pointer-events:auto!important;scrollbar-width:none}
-.ppp>.ppp-cards .tarj{height:30px!important;padding:5px 10px!important;border-radius:15px!important}
-.ppp>.ppp-cards .tarj b{font-size:10.5px!important}.ppp>.ppp-cards .tarj strong{font-size:13px!important}
-.ppp>.ppp-herr{top:calc(var(--mtop,0px) + 74px)!important;left:0!important;right:0!important;display:flex!important;flex-wrap:nowrap!important;gap:5px!important;overflow-x:auto!important;padding:0 10px!important;pointer-events:auto!important;scrollbar-width:none}
-.ppp>.ppp-herr button{flex:0 0 auto!important;height:30px!important;min-height:0!important;padding:0 10px!important;font-size:12px!important}
-.ppp>.ppp-franja{top:calc(var(--mtop,0px) + 108px)!important;left:10px!important;right:10px!important;display:flex!important;align-items:center!important;gap:6px!important;font-size:12px!important;overflow-x:auto!important}
-.ppp>.ppp-franja .fr-chips button{min-height:28px!important;font-size:12px!important}
-.ppp>.ppp-barra{display:none!important}
-.ppp .ppp-ctrl{position:absolute!important;top:auto!important;left:auto!important;right:10px!important;bottom:calc(var(--sheet,0px) + 60px)!important;display:flex!important;flex-direction:row!important;gap:6px!important}
-.ppp .ppp-ctrl button{width:40px!important;height:40px!important}
-.ppp>.ppp-panel{position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;width:auto!important;max-width:none!important;max-height:44%!important;overflow-y:auto!important;margin:0!important;border-radius:0!important;border-bottom:0!important;border-top:4px solid var(--tc,#2f5d8a)!important;z-index:5!important;box-shadow:0 -6px 24px rgba(0,0,0,.18)!important}
+ .ppp[data-ppp]{padding:4px 6px!important}
+.ppp>.ppp-top h1{font-size:1rem}
+.ppp-top .ppp-barra{font-size:.7rem}
+.ppp-top .ppp-avance{display:none}
+.ppp .ppp-ctrl{left:6px!important;right:auto!important;bottom:auto!important;top:6px!important;flex-flow:row wrap}
+.ppp .ppp-ctrl button{width:36px!important;height:36px!important}
+.ppp>.ppp-panel{inset:auto 0 0!important;width:100%!important;max-width:100%;max-height:min(44dvh,calc(100% - 46px))!important;border-radius:8px 8px 0 0!important;border-top:3px solid var(--tc);border-bottom:0!important}
 .vp-tabs{align-items:flex-end!important;padding-left:6px!important;gap:3px!important}
 .vp-tabs button{border-radius:12px 12px 0 0!important;transform:translateY(4px)!important;height:38px!important;padding:0 11px!important;font-size:12.5px!important;box-shadow:none!important}
 .vp-tabs button[aria-selected=true]{height:44px!important;transform:none!important}
 .vp-abrir{right:12px!important;bottom:14px!important}
 .ppp-panel .op i{font-size:.85rem !important}.ppp-panel .op{column-gap:8px !important}
-.vp-menu{left:8px!important;right:8px!important;min-width:0!important;max-height:56vh!important}
+dialog.vp-menu[open]{inset:auto 0 0;width:100%;max-width:100%;max-height:65dvh;border-radius:14px 14px 0 0;padding-bottom:max(8px,env(safe-area-inset-bottom))}
+body:has(.vp-menu[open]) :is(.ppp-panel,.vp-tabs,.vp-x,.vp-abrir){visibility:hidden}
 }
 `;
   document.head.append(st2);
@@ -494,6 +543,24 @@ html,body{overflow:hidden!important;height:100%!important}
         const b = el('button', 'ppp-btn chico vp-b3', d[1]); b.type = 'button'; b.title = d[2]; b.setAttribute('data-b3', d[0]); b.onclick = (ev) => { ev.stopPropagation(); d[3](); }; h.append(b);
       });
     }
+    const tarjetas = $('.ppp-cards'), raiz = tarjetas.parentNode;
+    let nav = $('.vp-desplazar', raiz);
+    if (!nav) {
+      nav = el('div', 'vp-desplazar'); nav.hidden = true;
+      for (const [dir, etiqueta] of [[-1,'Tarjetas anteriores'],[1,'Tarjetas siguientes']]) {
+        const btn = el('button', 'ppp-btn', dir < 0 ? '‹' : '›');
+        btn.type = 'button'; btn.setAttribute('aria-label', etiqueta); btn.title = etiqueta;
+        btn.onclick = () => tarjetas.scrollBy({left: dir * tarjetas.clientWidth * 0.8, behavior:'instant'});
+        nav.append(btn);
+      }
+      tarjetas.after(nav);
+    }
+    const ancho = tarjetas.clientWidth + (nav.hidden ? 0 : nav.offsetWidth);
+    if (ancho) nav.hidden = tarjetas.scrollWidth <= ancho + 1;
+    if (!nav.hidden) {
+      nav.firstElementChild.disabled = tarjetas.scrollLeft < 1;
+      nav.lastElementChild.disabled = tarjetas.scrollLeft + tarjetas.clientWidth >= tarjetas.scrollWidth - 1;
+    }
     const m = $('[data-b3="max"]', h), on = maxOn(), txt = on ? 'Salir de pantalla completa' : 'Pantalla completa';
     if (m && m.textContent !== txt) { m.textContent = txt; m.setAttribute('aria-pressed', String(on)); }
   }
@@ -502,11 +569,9 @@ html,body{overflow:hidden!important;height:100%!important}
     const raiz = $('.ppp'); if (!raiz) return;
     const m = movil();
     if (m !== eraMovil) { eraMovil = m; fix = 0; W.dispatchEvent(new Event('resize')); }
-    if (m) raiz.style.setProperty('--mtop', Math.round(raiz.getBoundingClientRect().top + W.scrollY) + 'px'); else raiz.style.removeProperty('--mtop');
     const p = $('.ppp-panel');
     const visible = p && !raiz.hasAttribute('data-sin-panel') && p.getClientRects().length > 0;
-    raiz.style.setProperty('--sheet', m && visible ? p.getBoundingClientRect().height + 'px' : '0px');
-    if (!p || !visible) return;
+    if (!p || !visible || p.dataset.vistaPanel !== 'nodo') return;
     if (m) { const r = p.getBoundingClientRect(), bar = $('.vp-tabs'); if (bar) { bar.style.top = (r.top - 44) + 'px'; bar.style.height = '44px'; } }
     else { const bar = $('.vp-tabs'); if (bar) bar.style.height = ''; }
     /* sencillo: el control principal a la vista; áreas, catálogos y demás ajustes quedan en «Más ajustes» */

@@ -49,6 +49,60 @@ async function abre(p, col) {
   await estado(p, 'columna ' + col);
 }
 
+async function pruebaInterfaz(p) {
+  // El portal reserva espacio para su menú lateral en escritorio.
+  const marco = await p.addStyleTag({content: '@media(min-width:901px){body{margin-left:clamp(240px,23.4vw,268px)}}'});
+  const tarjetas = p.locator('[data-cards] button');
+  const lista = boton(p, 'Ver en lista');
+  for (const [width,height] of [[321,701],[430,933],[768,1024],[901,821],[1145,844],[1440,901]]) {
+    await p.setViewportSize({width,height});
+    await p.locator('[data-b3="abre"]').waitFor();
+    assert.equal(await tarjetas.count(), 8);
+    for (const item of [...await tarjetas.all(), ...await p.locator('[data-herr] button,.ppp-acc button').all()]) {
+      await item.scrollIntoViewIfNeeded();
+      const recibe = await item.evaluate(b => [0.12,0.5,0.88].every(f => {
+        const r=b.getBoundingClientRect();
+        return b.contains(document.elementFromPoint(r.left+r.width*f,r.top+r.height/2));
+      }));
+      assert.ok(recibe, width + ' px, control tapado: ' + await item.innerText());
+    }
+    assert.equal(await p.locator('[data-rotulo]').isVisible(), true);
+    const terreno = tarjetas.first();
+    await terreno.focus(); await terreno.press('Enter');
+    const menu = p.getByRole('dialog');
+    await menu.waitFor();
+    assert.ok(await menu.evaluate(d => d.contains(document.activeElement)));
+    if (width <= 760) assert.equal(await p.locator('[data-panel]').isVisible(), false);
+    await p.keyboard.press('Escape');
+    await menu.waitFor({state:'detached'});
+    assert.ok(await terreno.evaluate(b => b === document.activeElement));
+  }
+  await p.locator('[data-b3="max"]').click();
+  await p.locator('html[data-vp-max]').waitFor();
+  for (const id of ['abre','cierra']) await p.locator('[data-b3="'+id+'"]').click({trial:true});
+  await p.locator('[data-b3="max"]').click();
+  await tarjetas.first().click();
+  await p.getByRole('dialog').locator('[data-ir]').first().click();
+  for (const tab of ['Cambiar','Conexiones','Fuente']) {
+    await p.getByRole('tab',{name:tab,exact:true}).click();
+    await lista.click();
+    const panel = p.locator('[data-panel]');
+    await panel.locator('.lista button').first().waitFor();
+    const total = Number((await panel.locator('h2').textContent()).match(/(\d+) datos/i)[1]);
+    assert.ok(total > 0);
+    assert.equal(await panel.locator('.lista button:visible').count(), total);
+    await p.getByRole('tablist').waitFor({state:'hidden'});
+    await panel.locator('.lista button').first().click();
+  }
+  await p.locator('[data-cards] button.conf').click();
+  const pendientes = p.getByRole('dialog');
+  assert.equal(await pendientes.locator('[data-ir]').count(), Number(await p.locator('.tarj.conf strong').innerText()));
+  await pendientes.getByRole('button',{name:'Cerrar',exact:true}).click();
+  await p.keyboard.press('Escape');
+  await p.locator('[data-panel]').waitFor({state:'hidden'});
+  await marco.evaluate(s => s.remove());
+}
+
 async function prueba() {
   const browser = await chromium.launch(process.env.BROWSER_EXECUTABLE ? { executablePath: process.env.BROWSER_EXECUTABLE } : {});
   try {
@@ -66,6 +120,7 @@ async function prueba() {
     if (await fila(p, BASES[0]).count()) await fila(p, BASES[0]).click();
     await estado(p, 'columna L');
     assert.equal(BASES[0], 'L');
+    await pruebaInterfaz(p);
     const claves = Servidor.CLAVES;
     const tamLocal = () => p.evaluate((k) => JSON.parse(localStorage.getItem(k)).plan.valores['T-01'].valor, claves.plan);
     assert.equal(await tamLocal(), 1500);
