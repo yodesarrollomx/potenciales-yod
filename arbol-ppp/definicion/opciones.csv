@@ -9,7 +9,7 @@ E-16,en_sotano,En sótano,Todo excavado; cuesta casi como la torre,19750,E-10=E-
 P1-05,estudio,Estudio o 1 recámara,Para una persona o pareja,48,,,1,,,,
 P1-05,dos_rec,2 recámaras,Familia chica; tamaño de referencia inicial,74,,,2,,,,
 P1-05,tres_rec,3 recámaras,Familia; unidad amplia,98,,,3,,,,
-P1-05,consultorio,Consultorios y oficinas,Consultorios u oficinas chicas para vender o rentar; tamaño promedio de referencia,30,,,4,,Referencia inicial de mercado: consultorios y oficinas chicas de 17 a 50 m² (nov 2026),2026-11-25,
+P1-05,consultorio,Consultorios y oficinas,Consultorios u oficinas chicas para vender o rentar; tamaño promedio de referencia,30,,,4,,Referencia inicial de mercado: consultorios y oficinas chicas de 17 a 50 m² (nov 2026),,
 P1-08,calibrado,Calibrado con 3 planes de referencia,4% de las unidades por mes (se ajusta a 0.3 y 30 al mes si el tamaño lo saca de ahí),PT-01 * 0.04,,,1,,Calibrado con 3 planes de referencia: 4% de las unidades por mes,,si
 P1-08,prototipo,Valor fijo de referencia inicial,"Un solo valor fijo: 1.2 unidades al mes, sea cual sea el tamaño del edificio",1.2,,,2,,prototipo-arbol.html (nodo `ritmo`: 1.2 al mes),,no
 C-01,prototipo,Referencia inicial,"Costo de obra de referencia inicial: $19,500 por m²",19500,,,1,,"prototipo-arbol.html (nodo `obra`: 19,500)",,si
