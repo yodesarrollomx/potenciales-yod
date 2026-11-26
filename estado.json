@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-26T07:15:45.777Z",
+ "generado": "2026-11-26T07:27:15.025Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -30,6 +30,16 @@
    "desde": "2026-11-13T02:18:50Z",
    "url": "https://github.com/yodesarrollomx/yodesarrollo-board/commit/edf8ce16309401e77f83083e0e753059c6a2c7ee",
    "msg": "yodesarrollo-board cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
+  },
+  {
+   "clave": "cambio:yodesarrollomx/board-flujo-yod",
+   "tipo": "cambio",
+   "nodos": [
+    "repo:yodesarrollomx/board-flujo-yod"
+   ],
+   "desde": "2026-11-14T00:43:09Z",
+   "url": "https://github.com/yodesarrollomx/board-flujo-yod/commit/1cef2f06d619d43afbc59957eb469520920a8740",
+   "msg": "board-flujo-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-revision.yml",
@@ -156,19 +166,6 @@
    "desde": "2026-10-07T22:10:23Z",
    "url": "https://github.com/yodesarrollo/amalaya-board/issues/78",
    "msg": "Chinche #78 en amalaya-board: 📌 amalaya · board · ese edificio rojo ese edificio azul que están por ahí como que no está"
-  },
-  {
-   "clave": "cambio:yodesarrollomx/board-flujo-yod",
-   "tipo": "cambio",
-   "nodos": [
-    "repo:yodesarrollomx/board-flujo-yod"
-   ],
-   "desde": "2026-11-14T00:43:09Z",
-   "url": "https://github.com/yodesarrollomx/board-flujo-yod/commit/1cef2f06d619d43afbc59957eb469520920a8740",
-   "msg": "board-flujo-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   }
- ],
- "sin_dato": [
-  "cambio:yodesarrollomx/board-flujo-yod"
  ]
 }
