@@ -113,3 +113,17 @@ test('el prefijo decide la hoja: un caso arbol- en PPP_VISOR no se sirve y una f
   const r = pide(e2);
   assert.equal(r.ok, true, JSON.stringify(r).slice(0, 200)); assert.equal('cascada' in r, false);
 });
+
+test('«Agregar versión» deja la versión nueva en el visor desde el principio, con las cifras de la columna copiada', async () => {
+  const e = con(), a = e.cliente(EDITOR), def = (await a.N.definicion()).definicion, plan = C.planMuestra(def);
+  const g1 = await a.N.guarda(def, plan, { nombre: NOMBRE, version: 'V1' }); assert.equal(g1.visor, 'guardado');
+  assert.equal((await a.N.abre(def, g1.columna)).ok, true);
+  const d = await a.N.guarda(def, null, { version: 'V2 · copia', derivada: true });
+  assert.equal(d.ok, true, JSON.stringify(d)); assert.notEqual(d.columna, g1.columna);
+  assert.equal(d.visor, 'guardado', 'la copia trae su paquete del visor: ' + JSON.stringify(d.visor));
+  assert.equal(renglones(e), 2, 'dos columnas, dos versiones en el visor');
+  const esc = 'c' + d.columna, r = pide(e, { plan: 'ppp:' + CASO + ':' + esc });
+  assert.equal(r.ok, true, JSON.stringify(r).slice(0, 300));
+  assert.equal(r.v.nombre, 'V2 · copia');
+  casi(r.v.ventas, Motor.paqueteVisor(def, plan).v.ventas, 'la copia enseña las mismas ventas que su base');
+});

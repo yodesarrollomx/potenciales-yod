@@ -50,3 +50,18 @@ test('el visor sólo abre sin liga un proyecto del árbol, y sólo con la sesió
   assert.match(visorJs, /if \(deSesion && sesion\(\)\)/, 'sin sesión no entra por #p=');
   assert.match(visorJs, /estado\.porSesion \? '' : '&liga='/, 'por sesión no se manda liga');
 });
+
+test('un proyecto sin ninguna versión en el visor no ofrece «Ver visor»; uno con versiones fija su buena', async () => {
+  const respuestas = {
+    'ppp:arbol-sin-visor': { ok: false, error: 'plan' },
+    'ppp:arbol-con-visor': { ok: true, elige: { versiones: [{ v: 'cP', buena: false }, { v: 'cQ', buena: true }] } }
+  };
+  const hecho = new Function('respuestas', 'var estado = { planId: "x" }, leer = function (r, q) { return Promise.resolve(respuestas[q.plan]); }, pintarVivero = function () {};' + trozo +
+    '; return { cargarBuenas: cargarBuenas, estado: estado };')(respuestas);
+  hecho.cargarBuenas([{ nombre: 'Sin visor', versiones: [col('P', 'Sin visor', 'V1')] }, { nombre: 'Con visor', versiones: [col('P', 'Con visor', 'V1'), col('Q', 'Con visor', 'V2')] }]);
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(hecho.estado.arbolSinVisor['arbol-sin-visor'], true);
+  assert.equal((hecho.estado.arbolSinVisor || {})['arbol-con-visor'], undefined);
+  assert.equal(hecho.estado.arbolBuena['arbol-con-visor'], 'Q');
+  assert.match(src, /caso && !\(estado\.arbolSinVisor \|\| \{\}\)\[caso\] \? '<a class="p2-btn suave" data-abre-visor/, 'la tarjeta esconde el botón');
+});

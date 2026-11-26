@@ -102,7 +102,7 @@
         cuerpo.base_columna = o.columna; cuerpo.base_rev = o.rev;
         cuerpo.version = String(datos.version || '').trim().slice(0, 40);
         if (!cuerpo.version) return Promise.resolve({ ok: false, error: 'version_vacia' });
-        return escribir(cuerpo);
+        return escribir(cuerpo).then(function (r) { return r && r.ok && r.columna ? visorDeDerivada(def, r) : r; });
       }
       try { cuerpo.columna = columnaDe(def, plan); } catch (e) { return Promise.resolve({ ok: false, error: 'definicion' }); }
       /* El paquete del visor de esta versión (el mismo de la vista previa): el servidor lo guarda junto a la columna para que la liga del
@@ -132,6 +132,23 @@
         if (!cuerpo.columna.length && cuerpo.nombre === o.nombre && cuerpo.version === o.version) return { ok: false, error: 'sin_cambios' };
         return guardaCuerpo();
       });
+    }
+    /* «Agregar versión» copia la columna en el servidor sin paquete del visor. Aquí se lee la copia, el motor saca su paquete (el mismo que
+       daría abrirla y guardarla) y se guarda sobre esa columna sin tocar ningún valor: la versión nueva aparece en el visor desde el
+       principio. Si algo falla, la versión ya quedó creada y se devuelve tal cual, con el motivo en `visor`. */
+    function visorDeDerivada(def, r) {
+      return leer('arbol-columna', { columna: r.columna }).then(function (c) {
+        if (!c || !c.ok) return Object.assign({}, r, { visor: { ok: false, error: (c && c.error) || 'red' } });
+        var v = null, pv = '';
+        try { v = planDeColumna(def, c); if (v) pv = JSON.stringify(motor.paqueteVisor(def, v.plan)); } catch (e) { v = null; }
+        if (!v || !pv || pv.length > 50000) return Object.assign({}, r, { visor: { ok: false, error: !v ? 'definicion' : 'grande' } });
+        var cuerpo2 = { tipo: 'arbol-guarda', nombre: String(v.mapa['I-01'] || r.nombre || '').slice(0, 120), version: String(r.version || v.mapa['I-02'] || '').slice(0, 40),
+          escenario: String(v.mapa['I-03'] || 'ARBOL'), columna: [], columna_existente: r.columna, rev: c.rev, visor: pv };
+        return escribir(cuerpo2).then(function (r2) {
+          if (!r2 || !r2.ok) return Object.assign({}, r, { visor: { ok: false, error: (r2 && r2.error) || 'red' } });
+          return Object.assign({}, r, { rev: r2.rev || r.rev, visor: r2.visor || { ok: true } });
+        }, function () { return Object.assign({}, r, { visor: { ok: false, error: 'red' } }); });
+      }, function () { return Object.assign({}, r, { visor: { ok: false, error: 'red' } }); });
     }
     function lista() { return leer('arbol-columnas'); }
     function versiones(o, columnas) {
