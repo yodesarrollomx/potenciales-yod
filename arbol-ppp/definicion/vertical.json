@@ -1267,7 +1267,7 @@
     "etiqueta": "texto"
    },
    "que_es": "Cómo se llama la tipología en el visor del plan; sale de la opción de producto elegida.",
-   "formula": "si(DS-01 = 'Lotes', L-08, si(DS-01 = 'Casas', L-09, si(PG-01 > 0, PG-03, si(P1-05.opcion = 'consultorio', 'Consultorios y oficinas', si(P1-05.opcion = 'estudio', 'Estudio o 1 recámara', si(P1-05.opcion = 'dos_rec', '2 recámaras', '3 recámaras'))))))",
+   "formula": "si(PG-01 > 0, PG-03, si(DS-01 = 'Lotes', L-08, si(DS-01 = 'Casas', L-09, si(P1-05.opcion = 'consultorio', 'Consultorios y oficinas', si(P1-05.opcion = 'estudio', 'Estudio o 1 recámara', si(P1-05.opcion = 'dos_rec', '2 recámaras', '3 recámaras'))))))",
    "orden": 250,
    "version": 1
   },
@@ -1556,7 +1556,7 @@
    "orden": 370,
    "sentido": "dato",
    "version": 1,
-   "aparece": "si(PG-01 > 0, si(PG-01 >= 1, P1-04 > 0 y P1-05 > 0 y P1-06 > 0 y P1-03 = 'Venta', 1 = 1) y si(PG-01 >= 2, P2-04 > 0 y P2-05 > 0 y P2-06 > 0 y P2-03 = 'Venta', 1 = 1) y si(PG-01 >= 3, P3-04 > 0 y P3-05 > 0 y P3-06 > 0 y P3-03 = 'Venta', 1 = 1) y si(PG-01 >= 4, P4-04 > 0 y P4-05 > 0 y P4-06 > 0 y P4-03 = 'Venta', 1 = 1), 1 = 1)"
+   "aparece": "si(PG-01 > 0, si(PG-01 >= 1, P1-04 > 0 y P1-09 > 0 y P1-06 > 0 y P1-03 = 'Venta', 1 = 1) y si(PG-01 >= 2, P2-04 > 0 y P2-05 > 0 y P2-06 > 0 y P2-03 = 'Venta', 1 = 1) y si(PG-01 >= 3, P3-04 > 0 y P3-05 > 0 y P3-06 > 0 y P3-03 = 'Venta', 1 = 1) y si(PG-01 >= 4, P4-04 > 0 y P4-05 > 0 y P4-06 > 0 y P4-03 = 'Venta', 1 = 1), 1 = 1)"
   },
   {
    "id": "P1-08",

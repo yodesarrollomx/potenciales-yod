@@ -37,7 +37,8 @@
     "node --test tests/arbol-ppp-visor.test.cjs (7, nueva: Agregar versión deja la versión en el visor), tests/arbol-ppp-servidor.test.cjs (9) y tests/ppp2-portada-arbol.test.cjs (7, nueva: tarjeta sin visor).",
     "motor-real 553 de 553 (cuentas a 177 nodos y 191 factores; O01 retoma huellas de tarjetas y paquete: sólo rótulos y conteos), conexión 57 de 57, servidor y visor del Árbol en verde, navegador de versiones y pie del reparto en verde.",
     "Ramas del árbol (DS-01 Edificio/Lotes/Casas): 75 planes reales del Maestro dan el mismo paquete del visor que el motor anterior; motor-real 553 de 553 (187 nodos, grafo 202, extensión 207; O01: tarjetas idénticas, paquete +1 por confirmar), conexión 57 de 57 (199 factores), servidor/visor/portada 37 de 37, navegador de versiones, visor-explica y pie del reparto en verde; vista del visor a 390 px con lotes y casas.",
-    "Tamaño de lote libre (L-07 admite otro valor de 60 a 20,000 m²; nombres por tamaño): motor-real 553 de 553 (muestra regenerada, sólo huella de la definición), conexión 57 de 57, servidor/visor/portada 23 de 23."
+    "Tamaño de lote libre (L-07 admite otro valor de 60 a 20,000 m²; nombres por tamaño): motor-real 553 de 553 (muestra regenerada, sólo huella de la definición), conexión 57 de 57, servidor/visor/portada 23 de 23.",
+    "Programa por tipología en lotes y casas: PT-07 pide unidades del producto 1 (P1-09) en vez del tamaño por unidad del edificio y P1-01 usa el nombre del programa antes que el de la rama. 75 planes del libro iguales a main; motor-real 553 de 553 (muestra regenerada, sólo huella), conexión 57 de 57, servidor/visor/portada 23 de 23."
   ],
   "rollback": "Quitar la línea de mejoras.js en arbol-ppp/arbol.html (o revertir el commit): la pantalla vuelve a verse como antes. No hay datos ni servidor que restaurar."
 }
