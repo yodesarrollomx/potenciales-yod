@@ -116,13 +116,8 @@ async function prueba() {
     await opciones(p, columnas);
     await abre(p, BASES[1]);
     assert.equal(await p.locator('[data-panel]').isVisible(), false);
-    const detalle = p.locator('.as-detalle');
-    assert.equal(await detalle.locator('a').isVisible(), false);
-    await detalle.locator('summary').click();
-    assert.equal(await detalle.getByRole('link').getAttribute('href'), FICHA);
-    await detalle.locator('summary').click();
     const acciones = await p.locator('.as-fila .as-btn').evaluateAll((bs) => bs.map(b => b.offsetTop));
-    assert.equal(new Set(acciones).size, 1, 'Las cuatro acciones caben en una fila');
+    assert.equal(new Set(acciones).size, 1, 'Las acciones del proyecto caben en una fila');
     await boton(p, 'Ver en lista').click();
     assert.equal(await p.locator('[data-panel]').isVisible(), true);
     await boton(p, 'Cerrar el panel').click();
@@ -131,9 +126,12 @@ async function prueba() {
     await abre(p, nueva);
     await boton(p, 'Versiones del proyecto').click();
     await opciones(p, columnas);
-    const ficha = fila(p, nueva).locator('..').getByRole('link');
+    const detalle = fila(p, nueva).locator('..').locator('.as-detalle');
+    assert.equal(await detalle.locator('a').isVisible(), false);
+    await detalle.locator('summary').click();
+    const ficha = detalle.getByRole('link');
     assert.equal(await ficha.getAttribute('href'), FICHA);
-    await p.waitForFunction(() => [...document.querySelectorAll('.as-panel [data-as=abre], .as-panel .as-procedencia a')].every((e) => {
+    await p.waitForFunction(() => [...document.querySelectorAll('.as-panel [data-as=abre], .as-panel .as-procedencia a')].filter((e) => e.getClientRects().length).every((e) => {
       const r = e.getBoundingClientRect();
       return [0.1, 0.5, 0.9].every((x) => e.contains(document.elementFromPoint(r.x + r.width * x, r.y + r.height / 2)));
     }));
