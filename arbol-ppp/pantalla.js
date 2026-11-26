@@ -89,6 +89,12 @@
   /* texto de una tarjeta con cifras (todas menos «Riesgo y estado»): fuera de montar para poder probarlo sin pantalla */
   function textoCifras(nombre, T) {
     const cs = T.cifras.filter((c) => c.valor != null);
+    if (nombre === 'Terreno') {
+      const indicePredio = cs.findIndex((c) => c.id === 'T-01');
+      if (indicePredio < 0) return { h: '?', s: ['Superficie del predio pendiente'], est: false };
+      const [predio] = cs.splice(indicePredio, 1);
+      cs.unshift(predio);
+    }
     if (!cs.length) return { h: '?', s: ['cerrada'], est: false };
     const s2 = cs[1] ? [etiquetaCifra(cs[0]), etiquetaCifra(cs[1]) + ' ' + fmtCifra(cs[1])] : [etiquetaCifra(cs[0])];
     if (nombre === 'Reparto') s2.push(TXT_REPARTO);      // el reparto es el del libro: después de pagar banco y capital
@@ -858,6 +864,7 @@
     }
 
     function panel(enfoca) {
+      if (enfoca) ppp.removeAttribute('data-sin-panel');
       const foco = document.activeElement, kFoco = foco && panelEl.contains(foco) ? foco.getAttribute('data-k') : null, enCampo = foco && foco.tagName === 'INPUT' && foco.type === 'text';
       const aparte = vista === 'pruebas' || vista === 'reglas' || vista === 'lista';
       const n = aparte ? null : (porId(sel) || res.nodos[0]);
@@ -881,6 +888,7 @@
     function anuncia(t) { voz.textContent = ''; temporizadores.push(setTimeout(() => { voz.textContent = t; }, 30)); }
     function seleccionar(id, enfoca) {
       if (!porId(id)) return;
+      ppp.removeAttribute('data-sin-panel');
       vista = 'nodo'; if (sel !== id) { compSel = null; efecto = null; }
       sel = id;
       if (ruta && !ruta.nodos.has(id)) { ruta = null; pintaFranja(); }   // al ir a algo fuera de la ruta, deja de atenuarse todo
@@ -962,6 +970,7 @@
       forzarArriba = true; panel();
     }
     function abreAlerta(alertaId) {
+      ppp.removeAttribute('data-sin-panel');
       const a = (res.alertas || []).find((x) => x.id === alertaId); if (!a) return;
       const mismos = res.alertas.filter((x) => x.nodo === a.nodo && x.nivel !== 'info').map((x) => x.id);
       vista = 'nodo'; compSel = null; efecto = null;
