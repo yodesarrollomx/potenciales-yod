@@ -115,6 +115,18 @@ async function prueba() {
     await boton(p, 'Versiones del proyecto').click();
     await opciones(p, columnas);
     await abre(p, BASES[1]);
+    assert.equal(await p.locator('[data-panel]').isVisible(), false);
+    const detalle = p.locator('.as-detalle');
+    assert.equal(await detalle.locator('a').isVisible(), false);
+    await detalle.locator('summary').click();
+    assert.equal(await detalle.getByRole('link').getAttribute('href'), FICHA);
+    await detalle.locator('summary').click();
+    const acciones = await p.locator('.as-fila .as-btn').evaluateAll((bs) => bs.map(b => b.offsetTop));
+    assert.equal(new Set(acciones).size, 1, 'Las cuatro acciones caben en una fila');
+    await boton(p, 'Ver en lista').click();
+    assert.equal(await p.locator('[data-panel]').isVisible(), true);
+    await boton(p, 'Cerrar el panel').click();
+    assert.equal(await p.locator('[data-panel]').isVisible(), false);
     await boton(p, 'Versiones del proyecto').click();
     await abre(p, nueva);
     await boton(p, 'Versiones del proyecto').click();
