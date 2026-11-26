@@ -189,11 +189,15 @@
     var est = { modo: 'local', aviso: '', puede: false, versiones: false, def: null, tablas: null, panel: '', lista: null, msg: '', ocupado: false, confirma: '', nombreVersion: '' }, api = null;
     function monta() {
       api = root.ArbolPantalla.montar(host, { motor: motor, tablas: est.tablas || undefined, alReiniciar: function () { N.fijaOrigen(null); est.panel = ''; est.confirma = ''; est.msg = ''; pinta(); } });
+      var arbol = host.querySelector('.ppp');
+      if (arbol && root.matchMedia && root.matchMedia('(max-width:760px)').matches) {
+        arbol.setAttribute('data-sin-panel', '');
+      }
       mide();
     }
     function mide() { try { doc.documentElement.style.setProperty('--as-alto', barra.offsetHeight + 'px'); } catch (e) { } }
-    function botonPanel(panel, nombre) {
-      return '<button type="button" class="as-btn" data-as="' + panel + '" aria-expanded="' + (est.panel === panel) + '"' + (est.ocupado ? ' disabled' : '') + '>' + nombre + '</button>';
+    function botonPanel(panel, nombre, corto) {
+      return '<button type="button" class="as-btn" aria-label="' + nombre + '" data-as="' + panel + '" aria-expanded="' + (est.panel === panel) + '"' + (est.ocupado ? ' disabled' : '') + '>' + '<span class="as-largo">' + nombre + '</span><span class="as-corto" aria-hidden="true">' + corto + '</span></button>';
     }
     function pinta() {
       var o = N.origen(), h = '<div class="as-fila"><span class="as-estado ' + (est.modo === 'libro' ? 'libro' : 'local') + '">' + (est.modo === 'libro' ? 'Conectado al libro' : 'Sin conexión al libro') + '</span>';
@@ -201,15 +205,17 @@
       if (titulo && est.modo === 'libro') titulo.textContent = o && o.nombre ? o.nombre : 'Predio de muestra';
       if (est.modo === 'libro') {
         h += '<span class="as-origen">' + (o ? '«' + esc(o.nombre || 'sin nombre') + '» · ' + esc(o.version || 'versión sin etiqueta') + ' · columna ' + esc(o.columna) : 'Plan sin guardar') + '</span><span class="as-botones">' +
-          (o && o.nombre ? botonPanel('versiones', 'Versiones del proyecto') : '') +
-          (est.puede && est.versiones && o && o.nombre ? botonPanel('agregar', 'Agregar versión') : '') +
-          (est.puede ? botonPanel('guardar', 'Guardar en el libro') : '') +
-          botonPanel('abrir', 'Abrir un plan') + '</span>';
+          (o && o.nombre ? botonPanel('versiones', 'Versiones del proyecto', 'Versiones') : '') +
+          (est.puede && est.versiones && o && o.nombre ? botonPanel('agregar', 'Agregar versión', 'Agregar') : '') +
+          (est.puede ? botonPanel('guardar', 'Guardar en el libro', 'Guardar') : '') +
+          botonPanel('abrir', 'Abrir un plan', 'Abrir') + '</span>';
       }
       h += '</div>';
       if (est.modo !== 'libro' && est.aviso) h += '<p class="as-nota">' + esc(est.aviso) + '</p>';
       if (est.modo === 'libro' && !est.puede) h += '<p class="as-nota">' + esc(texto('permiso')) + '</p>';
-      if (est.modo === 'libro' && o && o.cambio && est.panel !== 'versiones') h += '<p class="as-nota as-procedencia">' + procedencia(o.cambio) + '</p>';
+      if (est.modo === 'libro' && o && o.cambio && !est.panel) {
+        h += '<details class="as-detalle"><summary>Qué cambia en esta versión</summary><p class="as-nota as-procedencia">' + procedencia(o.cambio) + '</p></details>';
+      }
       if (est.msg) h += '<p class="as-msg" role="status">' + esc(est.msg) + '</p>';
       if (est.panel === 'agregar' && o) {
         h += '<form class="as-panel" data-as-form="agregar"><p class="as-nota">Crea un borrador a partir de la versión guardada «' + esc(o.version || 'versión sin etiqueta') + '».</p>' +
