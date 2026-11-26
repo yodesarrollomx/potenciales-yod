@@ -204,12 +204,11 @@
           (o && o.nombre ? botonPanel('versiones', 'Versiones del proyecto') : '') +
           (est.puede && est.versiones && o && o.nombre ? botonPanel('agregar', 'Agregar versión') : '') +
           (est.puede ? botonPanel('guardar', 'Guardar en el libro') : '') +
-          botonPanel('abrir', 'Abrir un plan') + '</span>';
+          (o && o.nombre ? '' : botonPanel('abrir', 'Abrir un plan')) + '</span>';   // con un proyecto abierto sólo se escogen SUS versiones; otro proyecto se abre desde la portada
       }
       h += '</div>';
       if (est.modo !== 'libro' && est.aviso) h += '<p class="as-nota">' + esc(est.aviso) + '</p>';
       if (est.modo === 'libro' && !est.puede) h += '<p class="as-nota">' + esc(texto('permiso')) + '</p>';
-      if (est.modo === 'libro' && o && o.cambio && est.panel !== 'versiones') h += '<p class="as-nota as-procedencia">' + procedencia(o.cambio) + '</p>';
       if (est.msg) h += '<p class="as-msg" role="status">' + esc(est.msg) + '</p>';
       if (est.panel === 'agregar' && o) {
         h += '<form class="as-panel" data-as-form="agregar"><p class="as-nota">Crea un borrador a partir de la versión guardada «' + esc(o.version || 'versión sin etiqueta') + '».</p>' +
@@ -226,7 +225,8 @@
       }
       if (est.panel === 'abrir' || est.panel === 'versiones') {
         var delProyecto = est.panel === 'versiones', lista = est.lista && delProyecto ? N.versiones(o || {}, est.lista) : est.lista;
-        h += '<div class="as-panel"><p class="as-nota">' + (delProyecto ? 'Versiones guardadas de «' + esc(o && o.nombre) + '».' : 'Abrir un plan reemplaza lo que tienes en pantalla.') + '</p>';
+        if (lista && est.solo) lista = lista.filter(function (c) { return c.columna === est.solo; });
+        h += '<div class="as-panel">' + (delProyecto || est.solo ? '' : '<p class="as-nota">Abrir un plan reemplaza lo que tienes en pantalla.</p>');
         if (!lista) h += '<p class="as-nota" role="status">Buscando en el libro…</p>';
         else if (!lista.length) h += '<p class="as-nota">' + (delProyecto ? 'No encontré versiones guardadas para este proyecto.' : 'El árbol todavía no ha guardado planes en el libro.') + '</p>';
         else h += '<ul class="as-lista">' + lista.map(function (c) {
@@ -235,7 +235,7 @@
           if (c.escenario && c.escenario !== 'ARBOL') nombre += ' · ' + esc(c.escenario);
           var actual = o && o.columna === c.columna;
           return '<li><button type="button" class="as-btn' + (conf ? ' alerta' : '') + '" data-as="abre" data-col="' + esc(c.columna) + '"' + (actual ? ' aria-current="true"' : '') + '>' +
-            (conf ? 'Toca otra vez para abrir ' + nombre : nombre + ' · ' + esc(c.estado || '') + ' · columna ' + esc(c.columna) + (actual ? ' · en pantalla' : '')) + '</button>' +
+            (conf ? 'Toca otra vez para abrir ' + nombre : nombre + (delProyecto ? '' : ' · columna ' + esc(c.columna)) + (actual ? ' · en pantalla' : '')) + '</button>' +
             (delProyecto && c.cambio ? '<p class="as-nota as-procedencia">' + procedencia(c.cambio) + '</p>' : '') + '</li>';
         }).join('') + '</ul>';
         h += '<div class="as-botones"><button type="button" class="as-btn" data-as="cerrar">Cerrar</button></div></div>';
@@ -284,7 +284,7 @@
     barra.addEventListener('click', function (e) {
       var b = e.target.closest ? e.target.closest('[data-as]') : null; if (!b || est.ocupado) return;
       var a = b.getAttribute('data-as');
-      if (a === 'cerrar') { est.panel = ''; est.confirma = ''; pinta(); }
+      if (a === 'cerrar') { est.panel = ''; est.confirma = ''; est.solo = ''; pinta(); }
       else if (a === 'sobre') {
         if (!N.origen()) { est.confirma = ''; pinta(); return; }
         if (est.confirma !== 'sobre') { var fo = barra.querySelector('form[data-as-form="guardar"]'), nom = fo ? fo.nombre.value : '', ver = fo ? fo.version.value : ''; est.confirma = 'sobre'; pinta(); fo = barra.querySelector('form[data-as-form="guardar"]'); if (fo) { fo.nombre.value = nom; fo.version.value = ver; } return; }
@@ -298,7 +298,7 @@
         if (api && api.reglas && api.reglas().cambios.length) { est.panel = ''; est.msg = texto('reglas'); } else est.panel = est.panel === 'guardar' ? '' : 'guardar';
         pinta();
       } else if (a === 'abrir' || a === 'versiones') {
-        est.msg = ''; est.confirma = ''; est.panel = est.panel === a ? '' : a;
+        est.msg = ''; est.confirma = ''; est.solo = ''; est.panel = est.panel === a ? '' : a;
         if (est.panel) cargaLista(); else pinta();
       } else if (a === 'abre') {
         var col = b.getAttribute('data-col');
@@ -307,7 +307,7 @@
         est.ocupado = true; est.msg = 'Abriendo el plan…'; pinta();
         N.abre(est.def, col, function () { return JSON.stringify(api.estado().plan || {}) === foto; }).then(function (r) {
           if (!r.ok) { fin(texto(r.error)); return; }
-          est.panel = ''; est.confirma = ''; monta();
+          est.panel = ''; est.confirma = ''; est.solo = ''; monta();
           fin('Abrí «' + (r.nombre || 'sin nombre') + '» de la columna ' + r.columna + '.' + (r.avisos ? ' ' + r.avisos + (r.avisos === 1 ? ' dato no se pudo leer y quedó' : ' datos no se pudieron leer y quedaron') + ' en referencia.' : ''));
         }).catch(falla);
       }
@@ -324,8 +324,8 @@
       var col = m[1], o = N.origen(), plan = api.estado().plan || {};
       var tieneDatos = Object.keys(plan.valores || {}).length > 0;
       function pideConfirmacion() {
-        est.ocupado = false; est.panel = 'abrir'; est.confirma = col;
-        est.msg = 'Hay datos en pantalla: toca el plan resaltado para reemplazarlos por los del libro.'; cargaLista();
+        est.ocupado = false; est.panel = 'abrir'; est.confirma = col; est.solo = col;
+        est.msg = 'Hay datos en pantalla: toca el plan para reemplazarlos por los del libro.'; cargaLista();
       }
       if (tieneDatos && (!o || o.columna !== col)) { pideConfirmacion(); return; }
       var foto = JSON.stringify(plan);
