@@ -95,6 +95,7 @@ jobs:
           node arbol-ppp/conexion/pruebas-gs.cjs
           node --test tests/arbol-ppp-servidor.test.cjs
           node --test tests/arbol-ppp-visor.test.cjs
+          node --test tests/ppp2-portada-arbol.test.cjs
           git diff --check
       - name: MCP · protocolo y operaciones sobre el servidor PPP aislado
         run: |

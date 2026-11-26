@@ -72,6 +72,10 @@ La creación de versiones requiere la capacidad `puede.versiones` del servidor. 
 
 Instalación, interruptor y prueba en una copia privada: `server/ppp2/INSTALAR.md`, «El Árbol PPP».
 
+## En la portada, un proyecto es una tarjeta
+
+La portada del PPP (`ppp2.js`, `agrupaArbol`) junta las columnas del Maestro que llevan el mismo nombre de proyecto, sin distinguir mayúsculas, acentos ni espacios, y enseña una sola tarjeta por proyecto con cuántas versiones tiene. La tarjeta abre la versión guardada más a la derecha; las demás se escogen adentro, en «Versiones del proyecto». Un plan con libro cuyo proyecto ya vive en el árbol deja de repetirse arriba: no se borra, sigue en su libro y se alcanza desde «Consultar expedientes anteriores». Sólo agrupa lo que el servidor ya manda: no calcula ni escribe. Pruebas: `node --test tests/ppp2-portada-arbol.test.cjs`.
+
 ## El visor enseña las versiones del Árbol
 
 Al tocar «Guardar en el libro», el Árbol manda también el paquete del visor de esa versión (el mismo de la vista previa, `Motor.paqueteVisor`). El servidor lo deja en la pestaña `ARBOL_VISOR` del Maestro, un renglón por columna del Árbol, y el visor lo sirve por la ruta de las fotos (`server/ppp2/Visor.gs`).
