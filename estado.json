@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-26T01:45:10.525Z",
+ "generado": "2026-11-26T01:48:00.321Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -10,6 +10,18 @@
    "desde": "2026-11-13T02:09:31Z",
    "url": "https://github.com/yodesarrollomx/yod-portal/commit/e189a5b6a58b17652c37079d5e79351a1662c777",
    "msg": "yod-portal cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
+  },
+  {
+   "clave": "flujo:yodesarrollomx/potenciales-yod:.github/workflows/verificar-ppp.yml",
+   "tipo": "flujo",
+   "nodos": [
+    "potenciales-yod::github_workflows_verificar_ppp",
+    "repo:yodesarrollomx/potenciales-yod",
+    "SYS-POTENCIALES"
+   ],
+   "desde": "2026-11-26T01:34:54Z",
+   "url": "https://github.com/yodesarrollomx/potenciales-yod/actions/runs/45736715930",
+   "msg": "Falló el flujo «Verificar interfaz PPP» de potenciales-yod, trabajo «PPP · interfaz y contratos», paso 12 «Recorridos reales del DOM con transporte sintético»"
   },
   {
    "clave": "cambio:yodesarrollomx/potenciales-yod",
