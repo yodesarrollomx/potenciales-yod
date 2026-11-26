@@ -195,6 +195,13 @@
     function botonPanel(panel, nombre) {
       return '<button type="button" class="as-btn" data-as="' + panel + '" aria-expanded="' + (est.panel === panel) + '"' + (est.ocupado ? ' disabled' : '') + '>' + nombre + '</button>';
     }
+    /* el caso del visor de este proyecto: la misma clave que arma el servidor (arbol_caso_) */
+    function casoVisor(n) {
+      var x = String(n == null ? '' : n).toLowerCase();
+      try { x = x.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) { }
+      x = x.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56).replace(/-+$/, '');
+      return x ? 'arbol-' + x : '';
+    }
     function pinta() {
       var o = N.origen(), h = '<div class="as-fila"><span class="as-estado ' + (est.modo === 'libro' ? 'libro' : 'local') + '">' + (est.modo === 'libro' ? 'Conectado al libro' : 'Sin conexión al libro') + '</span>';
       var titulo = host.querySelector('.ppp-proy');
@@ -202,6 +209,7 @@
       if (est.modo === 'libro') {
         h += '<span class="as-origen">' + (o ? '«' + esc(o.nombre || 'sin nombre') + '» · ' + esc(o.version || 'versión sin etiqueta') + ' · columna ' + esc(o.columna) : 'Plan sin guardar') + '</span><span class="as-botones">' +
           (o && o.nombre ? botonPanel('versiones', 'Versiones del proyecto') : '') +
+          (o && o.nombre && casoVisor(o.nombre) ? '<a class="as-btn" data-as-visor href="../visor.html#p=ppp:' + casoVisor(o.nombre) + '">Ver visor</a>' : '') +
           (est.puede && est.versiones && o && o.nombre ? botonPanel('agregar', 'Agregar versión') : '') +
           (est.puede ? botonPanel('guardar', 'Guardar en el libro') : '') +
           (o && o.nombre ? '' : botonPanel('abrir', 'Abrir un plan')) + '</span>';   // con un proyecto abierto sólo se escogen SUS versiones; otro proyecto se abre desde la portada

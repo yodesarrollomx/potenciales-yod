@@ -1607,6 +1607,12 @@
     var m = /[#&?]l=([A-Za-z0-9_-]{24,80})(?:&|$)/.exec(root.location.hash || '') || /[?&]l=([A-Za-z0-9_-]{24,80})(?:&|$)/.exec(root.location.search || '');
     return m ? m[1] : '';
   }
+  /* Un proyecto del árbol, abierto desde su PPP por alguien del equipo: `#p=ppp:arbol-<proyecto>`. No lleva liga: la llave es la
+     sesión del Portero de este navegador (sólo se lee) y el servidor decide si alcanza. Sin sesión no se pinta nada. */
+  function planDeLaDireccion() {
+    var m = /[#&?]p=(ppp:arbol-[a-z0-9]+(?:-[a-z0-9]+)*)(?:&|$)/.exec(root.location.hash || '');
+    return m && m[1].length <= 68 ? m[1] : '';
+  }
   function equipo() {
     var u = root.navigator.userAgent || '';
     return /iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : 'otro';
@@ -1616,7 +1622,7 @@
   function sesion() { try { var k = root.localStorage.getItem('pyod_clave_v1'); return k && /^[A-Za-z0-9_-]{8,200}$/.test(k) ? k : ''; } catch (e) { return ''; } }
   function pide(extra) {
     var k = sesion();
-    var q = '?recurso=ppp2-visor&liga=' + encodeURIComponent(estado.liga) + (k ? '&k=' + encodeURIComponent(k) : '') + (estado.plan ? '&plan=' + encodeURIComponent(estado.plan) : '') + (estado.v ? '&v=' + estado.v : '') + (extra || '');
+    var q = '?recurso=ppp2-visor' + (estado.porSesion ? '' : '&liga=' + encodeURIComponent(estado.liga)) + (k ? '&k=' + encodeURIComponent(k) : '') + (estado.plan ? '&plan=' + encodeURIComponent(estado.plan) : '') + (estado.v ? '&v=' + estado.v : '') + (extra || '');
     var ctl = root.AbortController ? new root.AbortController() : null, t = setTimeout(function () { if (ctl) ctl.abort(); }, 45000);
     return root.fetch(ENDPOINT + q, { credentials: 'omit', redirect: 'follow', referrerPolicy: 'no-referrer', signal: ctl ? ctl.signal : undefined })
       .then(function (r) { return r.json(); }).then(function (j) { clearTimeout(t); return j; }, function (e) { clearTimeout(t); throw e; });
@@ -1744,7 +1750,8 @@
   };
   function arranca() {
     estado.liga = ligaDeLaDireccion();
-    if (estado.liga && root.VisorPestanas && typeof root.VisorPestanas.monta === 'function') { try { P = root.VisorPestanas.monta(pagina); } catch (e) { P = null; } }
+    if (!estado.liga) { var deSesion = planDeLaDireccion(); if (deSesion && sesion()) { estado.porSesion = true; estado.liga = 'sesion'; estado.plan = deSesion; } }
+    if (estado.liga && !estado.porSesion && root.VisorPestanas && typeof root.VisorPestanas.monta === 'function') { try { P = root.VisorPestanas.monta(pagina); } catch (e) { P = null; } }
     lienzo = monta($('vz'), { alElegir: elige, alEscoger: escoge, sinElige: !!P });
     if (!estado.liga) { lienzo.mensaje('Falta la liga', 'Abre el visor desde la liga completa que te compartieron.', 'llave'); return; }
     if (!$('vzEsq')) lienzo.mensaje('Abriendo el plan…', 'Leyendo el libro.');   // el esqueleto de visor.html ya dice «abriendo»

@@ -334,6 +334,27 @@
     try { x = x.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) { }
     return x.replace(/[^a-z0-9]+/g, ' ').replace(/^ +| +$/g, '');
   }
+  /* El caso del visor de un proyecto del árbol: la misma clave que arma el servidor (`arbol_caso_`, ArbolPPP.gs). */
+  function casoArbol(n) {
+    var x = claveProyecto(n).replace(/ /g, '-').slice(0, 56).replace(/-+$/, '');
+    return x ? 'arbol-' + x : '';
+  }
+  /* La versión que Dirección fijó en el visor de cada proyecto («la buena»): la tarjeta abre ésa y no la última guardada.
+     Una consulta por proyecto, sólo lectura; si no contesta, la tarjeta sigue abriendo la última. */
+  function cargarBuenas(proyectos) {
+    estado.arbolBuena = estado.arbolBuena || {};
+    proyectos.forEach(function (g) {
+      var caso = casoArbol(g.nombre); if (!caso || estado.arbolBuena[caso] !== undefined) return;
+      estado.arbolBuena[caso] = '';
+      leer('ppp2-visor', { plan: 'ppp:' + caso }).then(function (r) {
+        var b = r && r.ok && r.elige && Array.isArray(r.elige.versiones) ? r.elige.versiones.filter(function (v) { return v && v.buena; })[0] : null;
+        var col = b && /^c[A-Z]{1,3}$/.test(String(b.v || '')) ? String(b.v).slice(1) : '';
+        if (!col || !g.versiones.some(function (c) { return c.columna === col; })) return;
+        estado.arbolBuena[caso] = col;
+        if (!estado.planId && (location.hash || '#/').replace(/^#\/?/, '') === '') pintarVivero();
+      }, function () { });
+    });
+  }
   function agrupaArbol(columnas) {
     var orden = [], por = {};
     var pos = function (l) { var n = 0; String(l || '').split('').forEach(function (c) { n = n * 26 + (c.charCodeAt(0) - 64); }); return n; };
@@ -354,6 +375,7 @@
     var anteriores = location.hash === '#/anteriores';
     var proyectos = !anteriores && v.arbol === true ? agrupaArbol(estado.arbolPlanes) : [];
     var enArbol = {}; proyectos.forEach(function (g) { enArbol[g.clave] = true; });
+    if (proyectos.length) cargarBuenas(proyectos);
     /* un plan con libro cuyo proyecto ya vive en el árbol no se repite arriba: sigue en su libro y en «expedientes anteriores» */
     var repetido = function (p) { return !!enArbol[claveProyecto(p.nombre)]; };
     var todosArbol = {}; (v.arbol === true ? agrupaArbol(estado.arbolPlanes) : []).forEach(function (g) { todosArbol[g.clave] = true; });
@@ -383,11 +405,14 @@
       (!anteriores && puede.editar && !estado.viveroCopia ? '<button class="p2-btn oro" data-accion="sembrar"><i class="ti ti-seedling"></i> Crear plan en blanco</button>' : '') + '</div></div>' +
       (tarjetas ? '<div class="p2-rejilla">' + tarjetas + '</div>' : (proyectos.length ? '' : '<div class="p2-vacio">' + (anteriores ? 'No hay expedientes anteriores en este registro.' : 'Todavía no hay planes en el nuevo sistema.') + '</div>')) +
       (proyectos.length ? '<h2 class="p2-sobre" style="margin-top:22px">Planes del árbol</h2><div class="p2-rejilla">' + proyectos.map(function (g) {
-        var c = g.abre, n = g.versiones.length;
-        return '<a class="p2-tarjeta" data-proyecto-arbol href="arbol-ppp/arbol.html#abrir=' + encodeURIComponent(c.columna) + '"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center">' +
-          chip('Árbol', 'gris') + chip(n === 1 ? '1 versión' : n + ' versiones', 'gris') + '</div><h2>' + esc(g.nombre) + '</h2>' +
-          '<div class="p2-tenue p2-chico">' + g.versiones.map(function (x) { return esc(x.version || 'V1'); }).join(' · ') + '</div>' +
-          '<div class="p2-chico"><b>Abrir en el árbol ›</b> <span class="p2-tenue">' + esc(c.version || 'V1') + ' · las demás se escogen adentro</span></div></a>';
+        var caso = casoArbol(g.nombre), fija = (estado.arbolBuena || {})[caso], n = g.versiones.length;
+        var c = (fija && g.versiones.filter(function (x) { return x.columna === fija; })[0]) || g.abre;
+        var arbol = 'arbol-ppp/arbol.html#abrir=' + encodeURIComponent(c.columna);
+        return '<div class="p2-tarjeta" data-proyecto-arbol><div style="display:flex;justify-content:space-between;gap:10px;align-items:center">' +
+          chip('Árbol', 'gris') + chip(n === 1 ? '1 versión' : n + ' versiones', 'gris') + '</div><h2><a href="' + arbol + '" style="color:inherit;text-decoration:none">' + esc(g.nombre) + '</a></h2>' +
+          '<div class="p2-tenue p2-chico">' + esc(c.version || 'V1') + (fija ? ' · la buena' : '') + '</div>' +
+          '<div class="p2-acciones" style="margin-top:10px"><a class="p2-btn suave" data-abre-arbol href="' + arbol + '">Abrir en el árbol</a>' +
+          (caso ? '<a class="p2-btn suave" data-abre-visor href="visor.html#p=' + encodeURIComponent('ppp:' + caso).replace(/%3A/g, ':') + '">Ver visor</a>' : '') + '</div></div>';
       }).join('') + '</div>' : '') +
       ((v.planes || []).some(function (p) { return !!p.error; }) ? '<p role="status">Hay libros que no se pudieron leer. <button class="p2-btn suave" data-accion="refrescar">Volver a consultar</button></p>' : '') +
       '<nav class="p2-acciones"><a class="p2-btn suave" href="' + (anteriores ? '#/' : '#/anteriores') + '">' + (anteriores ? 'Volver a planes de potencial' : 'Consultar expedientes anteriores') + '</a>' +
@@ -1682,6 +1707,6 @@
     if (document.visibilityState === 'visible' && estado.planId && estado.plan && estado.plan.resumen.esquema === 'ppp-libro-v3' && !estado.ocupado && !document.getElementById('p2Dialogo')) cargarPlan(true);
   });
   window.addEventListener('hashchange', ruta);
-  window.PPP2 = { estado: estado, recargar: function () { estado.vivero = null; estado.plan = null; ruta(); }, agrupaArbol: agrupaArbol, claveProyecto: claveProyecto };
+  window.PPP2 = { estado: estado, recargar: function () { estado.vivero = null; estado.plan = null; ruta(); }, agrupaArbol: agrupaArbol, claveProyecto: claveProyecto, casoArbol: casoArbol };
   ruta();
 })();
