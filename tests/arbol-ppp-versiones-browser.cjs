@@ -131,10 +131,15 @@ async function prueba() {
     await detalle.locator('summary').click();
     const ficha = detalle.getByRole('link');
     assert.equal(await ficha.getAttribute('href'), FICHA);
-    await p.waitForFunction(() => [...document.querySelectorAll('.as-panel [data-as=abre], .as-panel .as-procedencia a')].filter((e) => e.getClientRects().length).every((e) => {
-      const r = e.getBoundingClientRect();
-      return [0.1, 0.5, 0.9].every((x) => e.contains(document.elementFromPoint(r.x + r.width * x, r.y + r.height / 2)));
-    }));
+    // Comprueba los controles que se pueden tocar después de desplazarse por la lista.
+    for (const control of [...await p.locator('.as-panel [data-as="abre"]').all(), ficha]) {
+      await control.scrollIntoViewIfNeeded();
+      const caja = await control.boundingBox();
+      assert.ok(caja && caja.width && caja.height, 'El control ocupa espacio visible');
+      for (const fraccion of [0.1, 0.5, 0.9]) {
+        await control.click({ trial: true, position: { x: caja.width * fraccion, y: caja.height / 2 } });
+      }
+    }
     assert.deepEqual(errores, []);
     console.log('Árbol PPP: cuatro versiones, edición aislada, reapertura y fuente accesible a 390 px.');
   } finally { await browser.close(); }
