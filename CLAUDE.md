@@ -268,3 +268,7 @@ Al guardar una versión, el Árbol deja su paquete del visor en la pestaña `ARB
 ## 25-nov-2026 · Consultorios y oficinas con su equivalente en renta
 
 El Árbol suma la opción de producto «Consultorios y oficinas» y, sólo con ella, los nodos RN-01 a RN-05 (renta por m², tasa de capitalización, renta anual, valor en renta y lo que rinde sobre el costo). El visor los pinta en «Costo y ganancia» sólo si llegan (`v.renta_*`); no calcula nada. Las filas nuevas del Maestro se pasan en el orden NODOS/OPCIONES → MAESTRO → FACTORES. Detalle en docs/arbol-ppp.md.
+
+## 25-nov-2026 · Un solo árbol con ramas: edificio, lotes o casas
+
+La pregunta raíz «Qué se desarrolla» (DS-01, de entrada Edificio) abre la rama. Con Edificio las cifras no cambian (75 planes del Maestro iguales al motor anterior). Lotes y Casas usan L-01 a L-09 y ocultan los nodos del edificio; E-17, C-04/C-05/C-07/C-08/C-09, P1-09, P1-01 y PT-01 cuelgan de padres que existen en las tres ramas (un nodo sólo se ve si su padre se ve). El destino P1-03 admite «Venta y renta» y «Renta» para cualquier producto. El paquete del visor lleva `plan.tipo` lotes/casas y el cuadro Terreno los dibuja. Detalle y orden para el Maestro en docs/arbol-ppp.md.

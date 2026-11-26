@@ -10,6 +10,10 @@ P1-05,estudio,Estudio o 1 recámara,Para una persona o pareja,48,,,1,,,,
 P1-05,dos_rec,2 recámaras,Familia chica; tamaño de referencia inicial,74,,,2,,,,
 P1-05,tres_rec,3 recámaras,Familia; unidad amplia,98,,,3,,,,
 P1-05,consultorio,Consultorios y oficinas,Consultorios u oficinas chicas para vender o rentar; tamaño promedio de referencia,30,,,4,,Referencia inicial de mercado: consultorios y oficinas chicas de 17 a 50 m² (nov 2026),,
+L-07,lote_120,Lote de 120 m²,"Lote chico, de interés social o económico",120,,,1,,Referencia inicial,,
+L-07,lote_160,Lote de 160 m²,Lote de vivienda típico,160,,,2,,Motor de macrolotes del PPP de siempre (lote de vivienda: 160 m²),,
+L-07,lote_200,Lote de 200 m²,Lote medio residencial,200,,,3,,Motor de lotes residenciales del PPP de siempre (lote tipo: 206 m²),,
+L-07,lote_300,Lote de 300 m²,Lote residencial amplio,300,,,4,,Referencia inicial,,
 P1-08,calibrado,Calibrado con 3 planes de referencia,4% de las unidades por mes (se ajusta a 0.3 y 30 al mes si el tamaño lo saca de ahí),PT-01 * 0.04,,,1,,Calibrado con 3 planes de referencia: 4% de las unidades por mes,,si
 P1-08,prototipo,Valor fijo de referencia inicial,"Un solo valor fijo: 1.2 unidades al mes, sea cual sea el tamaño del edificio",1.2,,,2,,prototipo-arbol.html (nodo `ritmo`: 1.2 al mes),,no
 C-01,prototipo,Referencia inicial,"Costo de obra de referencia inicial: $19,500 por m²",19500,,,1,,"prototipo-arbol.html (nodo `obra`: 19,500)",,si

@@ -222,7 +222,10 @@
       o.push('<line x1="101" y1="13" x2="46" y2="13" stroke="' + MUTED + '" stroke-width="0.9"></line><circle cx="45.5" cy="13" r="1.4" fill="' + MUTED + '"></circle><line x1="101" y1="53.5" x2="85.5" y2="53.5" stroke="' + ORO + '" stroke-width="1.1"></line><circle cx="85" cy="53.5" r="1.4" fill="' + ORO + '"></circle>');
     }
     var parte = constr && vend ? ' · ' + pct(vend / constr, 1) : '';
-    o.push('<g' + T('Construcción total', [['Construcción', constr ? ent(constr) + ' m²' : 'sin capturar'], ['Estado del dato', (d.datos && d.datos['lamina.m2_construidos'] || {}).estado || '—']], L('Datos', 'lamina.m2_construidos'), 'datos.lamina.m2_construidos') + '>' +
+    var nUni = Math.round(suma(P.map(function (p) { return p.unidades || 0; })));
+    if (clase !== 'vertical' && !constr && nUni) o.push('<g' + T(clase === 'lotes' ? 'Lotes' : 'Casas', [['Unidades', ent(nUni)]], L('Productos', 'unidades')) + '>' +
+      '<text x="102" y="16" font-size="8" fill="' + MUTED + '">' + (clase === 'lotes' ? 'Lotes' : 'Casas') + '</text><text x="102" y="28" font-size="11" font-weight="700" fill="' + INK + '">' + ent(nUni) + '</text></g>');
+    else o.push('<g' + T('Construcción total', [['Construcción', constr ? ent(constr) + ' m²' : 'sin capturar'], ['Estado del dato', (d.datos && d.datos['lamina.m2_construidos'] || {}).estado || '—']], L('Datos', 'lamina.m2_construidos'), 'datos.lamina.m2_construidos') + '>' +
       '<text x="102" y="16" font-size="8" fill="' + MUTED + '">Construcción total</text><text x="102" y="28" font-size="11" font-weight="700" fill="' + (constr ? INK : MUTED) + '">' + (constr ? ent(constr) + ' m²' : SD(9)) + '</text></g>');
     o.push('<g' + T('Área vendible', [['Vendible', ent(vend) + ' m²']].concat(constr && vend ? [['Vendible ÷ construcción', pct(vend / constr, 1)]] : []), L('Productos', 'suma de m² vendibles'), 'datos.lamina.m2_vendibles') + '>' +
       '<text x="102" y="56" font-size="8" fill="' + ORO + '">Vendible' + parte + '</text><text x="102" y="68" font-size="11" font-weight="700" fill="' + (vend ? INK : MUTED) + '">' + (vend ? ent(vend) + ' m²' : SD(9)) + '</text></g>');

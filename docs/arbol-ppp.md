@@ -117,6 +117,18 @@ Con esa opción, y sólo con ella, aparecen cinco nodos del módulo `vertical/pr
 - **El visor no calcula:** la tarjeta «Costo y ganancia» agrega el renglón «Renta $X/año · vale $Y · rinde Z%» y su detalle «Si se renta en vez de vender», con lo que manda el Árbol.
 - **El Maestro:** las filas nuevas van a `ARBOL_NODOS` (5), `ARBOL_OPCIONES` (1) y `ARBOL_FACTORES` (5), y la fórmula de P1-01 cambia. Orden seguro: primero NODOS y OPCIONES, luego los renglones RN-01 a RN-05 de la pestaña `MAESTRO` y al final `ARBOL_FACTORES` (el guardado rechaza un factor que no esté en `MAESTRO`). La copia de pruebas `arbol-ppp/conexion/datos/arbol-desde-maestro.json` ya trae las filas.
 
+## Un solo árbol, tres ramas: edificio, lotes o casas (25-nov-2026)
+
+La primera pregunta después del terreno es **«Qué se desarrolla»** (DS-01, regla de oficio, de entrada *Edificio*). La respuesta abre la rama; todo lo demás (costos, dinero, reparto, pruebas, visor) es el mismo árbol.
+
+- **Edificio** (lo de siempre): con DS-01 en Edificio las cifras no cambian. Se comprobó con los 75 planes reales del Maestro contra el motor anterior: 0 diferencias en el paquete del visor (fuera de la huella de la definición). En los planes «por confirmar» sube 1 (la pregunta nueva).
+- **Lotes:** cesiones (L-01, 39 %: vialidades 22, verdes 10, equipamiento 7), eficiencia de la lotificación (L-02, 95 %), tamaño del lote (L-07: 120, 160, 200 o 300 m²) y urbanización por m² vendible (L-03, $1,800). Vendible = terreno × (1 − cesiones) × eficiencia; obra = vendible bruto × urbanización + obras exteriores, con el ajuste de obra. Precio de entrada $4,700 por m² de lote y ritmo 16 meses de venta. Referencias del motor de lotes residenciales del PPP 1.
+- **Casas:** lo de lotes más m² construidos por casa (L-05, 120) y costo de la casa (L-06, $14,950 por m²); precio de entrada $25,164 por m² construido (motor de casa unifamiliar).
+- **Lo que se oculta fuera del edificio:** E-01 a E-03, E-05, E-07 a E-09, E-12, E-13, E-15, E-16, el tamaño por unidad P1-05 y el costo de obra por m² C-01. Para que el resto se vea en cualquier rama, E-17, C-04, C-05, C-07, C-08, C-09, P1-09, P1-01 y PT-01 cuelgan ahora de nodos que existen en las tres (el motor sólo enseña un nodo si su padre se ve).
+- **Renta para cualquier producto:** el destino (P1-03) admite «Venta», «Venta y renta», «Renta» y «Reserva». RN-01 a RN-05 aparecen con «Venta y renta» o «Renta» (y, como antes, con Consultorios y oficinas). Con «Renta» el árbol no cuenta ventas y avisa (AL-P103-1).
+- **El visor:** el paquete lleva `plan.tipo` = `lotes` o `casas` según la rama, y el cuadro Terreno dibuja la lotificación o las casas, con el número de lotes o casas en vez de «Construcción total».
+- **El Maestro:** filas nuevas en `ARBOL_NODOS` (10), `ARBOL_OPCIONES` (4 de L-07), `MAESTRO` (8 factores) y `ARBOL_FACTORES` (8), más los cambios de `de`, `aparece`, fórmulas y referencias de los nodos de arriba, la lista de P1-03 y dos reglas (AL-P106-1 sólo para edificio; AL-P103-1 nueva redacción). Orden seguro: NODOS y OPCIONES, luego los renglones de `MAESTRO`, al final `ARBOL_FACTORES`.
+
 ## El programa por tipología, también en el repo (25-nov-2026)
 
 El Maestro ya traía el programa por tipología (PG-01 a PG-05, los tipos 2 a 4 con nombre, uso, destino, superficie, precio, ritmo, unidades y ventas, PT-04 y PT-05, y N-07 y N-08 para cajones de comercio y oficina), escrito directo en sus pestañas. Ahora `definicion/*.csv`, `vertical.json` y la copia de pruebas lo traen igual que el libro: 177 nodos y 191 factores, en el orden del libro. Con PG-01 = 0 el cálculo es el de antes, por edificio. Cambian sólo rótulos y conteos: la tarjeta Producto enseña «Unidades totales» (PT-01), «por confirmar» sube 1 (PG-01) y las explicaciones nombran los nodos nuevos.
@@ -128,14 +140,13 @@ El Maestro ya traía el programa por tipología (PG-01 a PG-05, los tipos 2 a 4 
 
 ## Lo que falta
 
-Nada de lo siguiente está hecho; una prueba en Node o con dobles no demuestra funcionamiento en producción.
+Al 25-nov-2026 el servidor (v18) y el Árbol están publicados y encendidos sobre el libro Maestro. Queda:
 
-1. **Publicar el servidor.** `ArbolPPP.gs` y el `PPP2.gs` de esta rama no están publicados. Va como versión nueva de la misma implementación, con el árbol apagado.
-2. **Probar contra Google Sheets** en una copia privada del libro Maestro antes de encenderlo.
-3. **Concordancia permanente** entre la vista previa y el libro, con más de un caso.
-4. **Prueba en celulares reales**, con lector de pantalla y en otros navegadores.
-5. **El visor** todavía no muestra el aviso de plan fuera del horizonte de 60 meses ni usa los umbrales propios en sus indicadores.
-6. **Publicar cambios a las reglas** desde la pantalla no existe: «Exportar» arma el texto y una persona lo pega en el libro.
+1. **Prueba en celulares reales** (iPhone), con lector de pantalla y en otros navegadores.
+2. **El visor** todavía no muestra el aviso de plan fuera del horizonte de 60 meses ni usa los umbrales propios en sus indicadores.
+3. **Publicar cambios a las reglas** desde la pantalla no existe: «Exportar» arma el texto y una persona lo pega en el libro.
+4. **El reparto en cascada** sigue en su copia de prueba (`reparto-prueba.html`).
+5. **Programa por tipología con destino «Venta y renta»:** las ventas de un programa (PG-01 > 0) sólo se cuentan con destino «Venta»; la fórmula de PT-07 no cabe en 500 caracteres con la opción nueva.
 
 ## Reversión
 
