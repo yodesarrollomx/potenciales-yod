@@ -116,7 +116,11 @@
     let ids = M.factores.map((f) => f.id);
     if (Array.isArray(opciones.orden)) { const pos = {}; opciones.orden.forEach((id, i) => { pos[id] = i; }); ids = ids.filter((id) => pos[id] !== undefined).sort((a, b) => pos[a] - pos[b]).concat(ids.filter((id) => pos[id] === undefined)); }
     const fac = {}; M.factores.forEach((f) => { fac[f.id] = f; });
-    return ids.map((id) => {
+    /* rama Lotes o Casas: el tamaño por unidad del edificio (P1-05) no existe, pero las fórmulas del libro lo usan
+       para contar unidades y m²; se escribe con el tamaño de la rama (lote L-07 o casa L-05) */
+    const rama = nodoR['DS-01'] ? nodoR['DS-01'].valor : null;
+    const tamRama = rama === 'Lotes' ? nodoR['L-07'] : rama === 'Casas' ? nodoR['L-05'] : null;
+    const cuentas = ids.map((id) => {
       const f = fac[id], nodo = M.por[id] || null, nr = nodoR[id], vv = vals[id] || null, cp = componenteDe(f), reg = pv[id] || null;
       let valor = null, estado = null, opcion = null, fuente = '', unidad = null, extra = null, fuentePlan = null;
       if (cp) {
@@ -160,6 +164,11 @@
       if (opcion) o.opcion = opcion; if (unidad) o.unidad = unidad; if (reg && reg.marca) o.marca = reg.marca; if (extra) Object.assign(o, extra);
       return o;
     });
+    if (tamRama && typeof tamRama.valor === 'number' && tamRama.valor > 0) {
+      const c = cuentas.find((q) => q.id === 'P1-05');
+      if (c && c.valor === null) { c.valor = tamRama.valor; c.estado = 'calculado'; c.fuente = 'Tamaño por unidad de la rama ' + rama + ' (' + (rama === 'Lotes' ? 'L-07, lote' : 'L-05, casa') + '), para las fórmulas del libro'; }
+    }
+    return cuentas;
   }
 
   /* ───────────── b) columnaAPlan ───────────── */
