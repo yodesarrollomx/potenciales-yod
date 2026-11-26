@@ -128,6 +128,7 @@ async function prueba() {
     if (await fila(p, BASES[0]).count()) await fila(p, BASES[0]).click();
     await estado(p, 'columna L');
     assert.equal(BASES[0], 'L');
+    assert.equal(await p.locator('[data-guardado]').innerText(), 'Guardado');
     await pruebaInterfaz(p);
     const claves = Servidor.CLAVES;
     const tamLocal = () => p.evaluate((k) => JSON.parse(localStorage.getItem(k)).plan.valores['T-01'].valor, claves.plan);
@@ -141,6 +142,7 @@ async function prueba() {
     await p.close();
     p = await nuevaPagina('#abrir=L');
     await fila(p, 'L').or(p.locator('.as-msg').filter({ hasText: 'Abrí «' })).first().waitFor();
+    assert.equal(await p.locator('[data-guardado]').innerText(), 'Cambios locales');
     assert.equal(await tamLocal(), 7350, 'La liga debe conservar la edición local hasta confirmar');
     assert.match(await fila(p, 'L').innerText(), /Toca otra vez para abrir/);
     await fila(p, 'L').click();
@@ -166,10 +168,22 @@ async function prueba() {
     const campo = p.locator('[data-edit="C-01"] input[data-k="campo"]');
     await campo.fill('11100');
     await campo.press('Enter');
+    assert.equal(await p.locator('[data-guardado]').innerText(), 'Cambios locales');
     await boton(p, 'Guardar en el libro').click();
     await p.locator('[data-as="sobre"]').click();
+    let responde, recibido;
+    const llegada = new Promise(resolve => { recibido = resolve; });
+    const permiso = new Promise(resolve => { responde = resolve; });
+    await p.route(Servidor.ENDPOINT, async route => {
+      if (route.request().method() === 'POST') { recibido(); await permiso; }
+      await route.fallback();
+    });
     await p.locator('[data-as="sobre"]').click();
+    await llegada;
+    assert.equal(await p.locator('[data-guardado]').innerText(), 'Guardando…');
+    responde();
     await estado(p, 'Guardado como Borrador');
+    assert.equal(await p.locator('[data-guardado]').innerText(), 'Guardado');
     assert.equal(costo(trae(nueva)), 11100);
     assert.deepEqual(BASES.map(trae), ANTES);
     await p.close();

@@ -42,3 +42,5 @@
   .as-corto{display:inline}
   body:has(.ppp[data-sin-panel]) .vp-abrir{left:8px!important;right:auto!important}
 }
+
+.as-btn [data-guardado]{display:block;font-size:.7rem;line-height:1.2;font-weight:500;color:var(--mute)}

@@ -147,7 +147,10 @@
     let tarjAntes = {}, temporizadores = [], reinicioPend = 0;
     let cmp = null, ultimoToque = null, forzarArriba = false, cierre = null, avisoCache = { clave: '', v: null };          // comparación A/B en curso; último toque del panel (contra el doble toque)
 
-    const guarda = () => { ls.set(CL.plan, JSON.stringify({ plan })); guardaCmp(); };
+    const guarda = () => {
+      ls.set(CL.plan, JSON.stringify({ plan })); guardaCmp();
+      if (opts.alCambiarPlan) opts.alCambiarPlan(plan, cambiosRegla.length > 0);
+    };
     const porId = (id) => res.nodos.find((n) => n.id === id);
     const colorDe = (n) => 'var(--' + (SLUG[(n.tarjetas || [])[0]] || 'confirmar') + ')';
     const alertasRotas = () => (res.alertas || []).filter((a) => a.nivel !== 'info');
