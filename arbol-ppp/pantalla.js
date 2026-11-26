@@ -89,6 +89,12 @@
   /* texto de una tarjeta con cifras (todas menos «Riesgo y estado»): fuera de montar para poder probarlo sin pantalla */
   function textoCifras(nombre, T) {
     const cs = T.cifras.filter((c) => c.valor != null);
+    if (nombre === 'Terreno') {
+      const indicePredio = cs.findIndex((c) => c.id === 'T-01');
+      if (indicePredio < 0) return { h: '?', s: ['Superficie del predio pendiente'], est: false };
+      const [predio] = cs.splice(indicePredio, 1);
+      cs.unshift(predio);
+    }
     if (!cs.length) return { h: '?', s: ['cerrada'], est: false };
     const s2 = cs[1] ? [etiquetaCifra(cs[0]), etiquetaCifra(cs[1]) + ' ' + fmtCifra(cs[1])] : [etiquetaCifra(cs[0])];
     if (nombre === 'Reparto') s2.push(TXT_REPARTO);      // el reparto es el del libro: después de pagar banco y capital
