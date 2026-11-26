@@ -80,6 +80,12 @@ La portada del PPP (`ppp2.js`, `agrupaArbol`) junta las columnas del Maestro que
 
 Con un proyecto abierto, la barra sólo ofrece «Versiones del proyecto», «Agregar versión» y «Guardar en el libro»: las versiones que se escogen son las de ese proyecto y otro proyecto se abre desde la portada. «Abrir un plan» queda sólo cuando no hay proyecto abierto. La nota de procedencia de la versión ya no ocupa la barra: se lee dentro de «Versiones del proyecto», junto a cada versión. Al llegar de la portada con datos en pantalla, la barra enseña sólo el plan que se pidió, no la lista de todos.
 
+## Entrar al visor desde cada proyecto
+
+La tarjeta del proyecto en la portada y la barra del árbol traen «Ver visor». Abre `visor.html#p=ppp:arbol-<proyecto>`: el visor de ese proyecto **sin liga**, con la sesión del Portero de ese navegador (sólo la lee) por la ruta con sesión de `ppp2-visor`. Sin sesión no pinta nada, y sólo acepta casos `arbol-…`. Ahí Dirección escoge «la buena» y la pantalla se pone al día sola, como con liga; las pestañas (Historial, Archivos, Opciones) son de las ligas y aquí no salen. Para compartir con alguien de fuera sigue haciendo falta una liga en la hoja `Ligas`.
+
+La tarjeta de la portada abre en el árbol la versión que Dirección fijó en el visor; si no ha fijado ninguna, la última guardada. La clave del caso la arman igual la portada (`casoArbol`), el árbol (`casoVisor`) y el servidor (`arbol_caso_`): una prueba las compara.
+
 ## El visor enseña las versiones del Árbol
 
 Al tocar «Guardar en el libro», el Árbol manda también el paquete del visor de esa versión (el mismo de la vista previa, `Motor.paqueteVisor`). El servidor lo deja en la pestaña `ARBOL_VISOR` del Maestro, un renglón por columna del Árbol, y el visor lo sirve por la ruta de las fotos (`server/ppp2/Visor.gs`).
