@@ -979,6 +979,15 @@
      "implica": "Familia; unidad amplia",
      "valor": 98,
      "orden": 3
+    },
+    {
+     "clave": "consultorio",
+     "nombre": "Consultorios y oficinas",
+     "implica": "Consultorios u oficinas chicas para vender o rentar; tamaño promedio de referencia",
+     "valor": 30,
+     "orden": 4,
+     "fuente": "Referencia inicial de mercado: consultorios y oficinas chicas de 17 a 50 m² (nov 2026)",
+     "fecha_fuente": "2026-11-25"
     }
    ],
    "etiqueta_resultado": "por unidad",
@@ -1014,7 +1023,7 @@
     "etiqueta": "texto"
    },
    "que_es": "Cómo se llama la tipología en el visor del plan; sale de la opción de producto elegida.",
-   "formula": "si(P1-05.opcion = 'estudio', 'Estudio o 1 recámara', si(P1-05.opcion = 'dos_rec', '2 recámaras', '3 recámaras'))",
+   "formula": "si(P1-05.opcion = 'consultorio', 'Consultorios y oficinas', si(P1-05.opcion = 'estudio', 'Estudio o 1 recámara', si(P1-05.opcion = 'dos_rec', '2 recámaras', '3 recámaras')))",
    "orden": 250,
    "version": 1
   },
@@ -1109,6 +1118,62 @@
    },
    "orden": 280,
    "oculto": true,
+   "version": 1
+  },
+  {
+   "id": "RN-01",
+   "modulo": "vertical/producto",
+   "tipo": "se_busca",
+   "titulo": "Renta mensual por m²",
+   "tarjetas": [
+    "Producto"
+   ],
+   "de": "P1-06",
+   "unidad": {
+    "clase": "mxn_m2",
+    "etiqueta": "$ por m² al mes"
+   },
+   "que_es": "Renta mensual por m² vendible si en vez de vender se renta. Solo aparece con el producto Consultorios y oficinas.",
+   "referencia": {
+    "valor": 625,
+    "origen": "Consultorios y oficinas en renta: de $360 a $1,000 por m² al mes en comparables de la zona; se toma la mediana, $625 (nov 2026). Ajústala con tu mercado."
+   },
+   "rango": {
+    "min": 50,
+    "max": 3000,
+    "paso": 5
+   },
+   "confirma_en": "Consultorios y oficinas en renta cerca del predio.",
+   "orden": 285,
+   "mercado_dato": "ninguno",
+   "aparece": "P1-05.opcion = 'consultorio'",
+   "version": 1
+  },
+  {
+   "id": "RN-02",
+   "modulo": "vertical/producto",
+   "tipo": "regla_oficio",
+   "titulo": "Tasa de capitalización",
+   "tarjetas": [
+    "Producto"
+   ],
+   "de": "RN-01",
+   "unidad": {
+    "clase": "pct",
+    "etiqueta": "% al año"
+   },
+   "que_es": "Lo que un comprador de inmuebles en renta espera ganar al año sobre lo que paga; con ella la renta se convierte en valor.",
+   "referencia": {
+    "valor": 0.09,
+    "origen": "Oficinas en México: de 7 % a 9 % al año; se toma 9 % para una plaza secundaria (nov 2026)."
+   },
+   "rango": {
+    "min": 0.05,
+    "max": 0.15,
+    "paso": 0.005
+   },
+   "orden": 286,
+   "aparece": "P1-05.opcion = 'consultorio'",
    "version": 1
   },
   {
@@ -3381,6 +3446,68 @@
    "orden": 1050,
    "sentido": "mas_es_mejor",
    "umbral": 0.05,
+   "version": 1
+  },
+  {
+   "id": "RN-03",
+   "modulo": "vertical/producto",
+   "tipo": "calculado",
+   "titulo": "Renta anual",
+   "tarjetas": [
+    "Costo y ganancia"
+   ],
+   "de": "RN-01",
+   "unidad": {
+    "clase": "mxn",
+    "etiqueta": "millones al año",
+    "escala": 1000000
+   },
+   "que_es": "Todo lo vendible rentado los 12 meses a la renta por m² que escribiste.",
+   "formula": "(PT-03 + E-18) * RN-01 * 12",
+   "orden": 1060,
+   "sentido": "mas_es_mejor",
+   "aparece": "P1-05.opcion = 'consultorio'",
+   "version": 1
+  },
+  {
+   "id": "RN-04",
+   "modulo": "vertical/producto",
+   "tipo": "calculado",
+   "titulo": "Valor en renta",
+   "tarjetas": [
+    "Costo y ganancia"
+   ],
+   "de": "RN-03",
+   "unidad": {
+    "clase": "mxn",
+    "etiqueta": "millones",
+    "escala": 1000000
+   },
+   "que_es": "Lo que valdría el edificio rentado: la renta anual entre la tasa de capitalización. Se compara con las ventas.",
+   "formula": "si(RN-02 > 0, RN-03 / RN-02, 0)",
+   "orden": 1061,
+   "sentido": "mas_es_mejor",
+   "aparece": "P1-05.opcion = 'consultorio'",
+   "version": 1
+  },
+  {
+   "id": "RN-05",
+   "modulo": "vertical/producto",
+   "tipo": "calculado",
+   "titulo": "Rinde la renta sobre el costo",
+   "tarjetas": [
+    "Costo y ganancia"
+   ],
+   "de": "RN-03",
+   "unidad": {
+    "clase": "pct",
+    "etiqueta": "% del costo al año"
+   },
+   "que_es": "La renta anual entre el costo total: cuánto rinde al año lo invertido si se queda en renta.",
+   "formula": "si(C-17 > 0, RN-03 / C-17, 0)",
+   "orden": 1062,
+   "sentido": "mas_es_mejor",
+   "aparece": "P1-05.opcion = 'consultorio'",
    "version": 1
   },
   {
@@ -6203,6 +6330,91 @@
    "nota": "",
    "etiqueta_corta": "Margen",
    "orden_tarjeta": "2",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "RN-01",
+   "nombre": "Renta mensual por m²",
+   "unidad_maestro": "MXN/m²",
+   "origen_maestro": "captura",
+   "tarjeta": "Producto",
+   "campo_visor": "v.renta_m2",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "",
+   "etiqueta_corta": "Renta por m²",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "RN-02",
+   "nombre": "Tasa de capitalización",
+   "unidad_maestro": "%",
+   "origen_maestro": "captura",
+   "tarjeta": "Producto",
+   "campo_visor": "v.renta_tasa",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "",
+   "etiqueta_corta": "Tasa",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "RN-03",
+   "nombre": "Renta anual",
+   "unidad_maestro": "MXN",
+   "origen_maestro": "formula",
+   "tarjeta": "Costo y ganancia",
+   "campo_visor": "v.renta_anual",
+   "conversion_visor": "/1000000",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "",
+   "etiqueta_corta": "Renta al año",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "RN-04",
+   "nombre": "Valor en renta",
+   "unidad_maestro": "MXN",
+   "origen_maestro": "formula",
+   "tarjeta": "Costo y ganancia",
+   "campo_visor": "v.renta_valor",
+   "conversion_visor": "/1000000",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "",
+   "etiqueta_corta": "Vale rentado",
+   "orden_tarjeta": "",
+   "minimo_tarjeta": ""
+  },
+  {
+   "id": "RN-05",
+   "nombre": "Rinde la renta sobre el costo",
+   "unidad_maestro": "%",
+   "origen_maestro": "formula",
+   "tarjeta": "Costo y ganancia",
+   "campo_visor": "v.renta_rinde",
+   "conversion_visor": "",
+   "hoja_libro": "",
+   "clave_libro": "",
+   "clave_prototipo": "",
+   "correspondencia": "sin_equivalente",
+   "nota": "",
+   "etiqueta_corta": "Rinde",
+   "orden_tarjeta": "",
    "minimo_tarjeta": ""
   },
   {
