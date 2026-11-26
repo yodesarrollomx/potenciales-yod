@@ -49,6 +49,68 @@ async function abre(p, col) {
   await estado(p, 'columna ' + col);
 }
 
+async function pruebaInterfaz(p) {
+  // El portal reserva espacio para su menú lateral en escritorio.
+  const marco = await p.addStyleTag({content: '@media(min-width:901px){body{margin-left:clamp(240px,23.4vw,268px)}}'});
+  const tarjetas = p.locator('[data-cards] button');
+  const lista = boton(p, 'Ver en lista');
+  for (const [width,height] of [[321,701],[430,933],[768,1024],[901,821],[1145,844],[1440,901]]) {
+    await p.setViewportSize({width,height});
+    await p.locator('[data-b3="abre"]').waitFor();
+    assert.equal(await tarjetas.count(), 8);
+    for (const item of [...await tarjetas.all(), ...await p.locator('[data-herr] button,.ppp-acc button').all()]) {
+      await item.scrollIntoViewIfNeeded();
+      const recibe = await item.evaluate(b => [0.12,0.5,0.88].every(f => {
+        const r=b.getBoundingClientRect();
+        return b.contains(document.elementFromPoint(r.left+r.width*f,r.top+r.height/2));
+      }));
+      assert.ok(recibe, width + ' px, control tapado: ' + await item.innerText());
+    }
+    assert.ok(await tarjetas.evaluateAll(items => items.every(item => {
+      const card = item.getBoundingClientRect();
+      return ['b','strong'].every(selector => {
+        const rango = document.createRange(); rango.selectNodeContents(item.querySelector(selector));
+        const texto = rango.getBoundingClientRect();
+        return texto.top >= card.top && texto.bottom <= card.bottom && texto.left >= card.left && texto.right <= card.right;
+      });
+    })), width + ' px, nombre o cifra recortados');
+    assert.equal(await p.locator('[data-rotulo]').isVisible(), true);
+    const terreno = tarjetas.first();
+    await terreno.focus(); await terreno.press('Enter');
+    const menu = p.getByRole('dialog');
+    await menu.waitFor();
+    assert.ok(await menu.evaluate(d => d.contains(document.activeElement)));
+    if (width <= 760) assert.equal(await p.locator('[data-panel]').isVisible(), false);
+    await p.keyboard.press('Escape');
+    await menu.waitFor({state:'detached'});
+    assert.ok(await terreno.evaluate(b => b === document.activeElement));
+  }
+  await p.locator('[data-b3="max"]').click();
+  await p.locator('html[data-vp-max]').waitFor();
+  for (const id of ['abre','cierra']) await p.locator('[data-b3="'+id+'"]').click({trial:true});
+  await p.locator('[data-b3="max"]').click();
+  await tarjetas.first().click();
+  await p.getByRole('dialog').locator('[data-ir]').first().click();
+  for (const tab of ['Cambiar','Conexiones','Fuente']) {
+    await p.getByRole('tab',{name:tab,exact:true}).click();
+    await lista.click();
+    const panel = p.locator('[data-panel]');
+    await panel.locator('.lista button').first().waitFor();
+    const total = Number((await panel.locator('h2').textContent()).match(/(\d+) datos/i)[1]);
+    assert.ok(total > 0);
+    assert.equal(await panel.locator('.lista button:visible').count(), total);
+    await p.getByRole('tablist').waitFor({state:'hidden'});
+    await panel.locator('.lista button').first().click();
+  }
+  await p.locator('[data-cards] button.conf').click();
+  const pendientes = p.getByRole('dialog');
+  assert.equal(await pendientes.locator('[data-ir]').count(), Number(await p.locator('.tarj.conf strong').innerText()));
+  await pendientes.getByRole('button',{name:'Cerrar',exact:true}).click();
+  await p.keyboard.press('Escape');
+  await p.locator('[data-panel]').waitFor({state:'hidden'});
+  await marco.evaluate(s => s.remove());
+}
+
 async function prueba() {
   const browser = await chromium.launch(process.env.BROWSER_EXECUTABLE ? { executablePath: process.env.BROWSER_EXECUTABLE } : {});
   try {
@@ -66,6 +128,8 @@ async function prueba() {
     if (await fila(p, BASES[0]).count()) await fila(p, BASES[0]).click();
     await estado(p, 'columna L');
     assert.equal(BASES[0], 'L');
+    assert.equal(await p.locator('[data-guardado]').innerText(), 'Guardado');
+    await pruebaInterfaz(p);
     const claves = Servidor.CLAVES;
     const tamLocal = () => p.evaluate((k) => JSON.parse(localStorage.getItem(k)).plan.valores['T-01'].valor, claves.plan);
     assert.equal(await tamLocal(), 1500);
@@ -78,6 +142,7 @@ async function prueba() {
     await p.close();
     p = await nuevaPagina('#abrir=L');
     await fila(p, 'L').or(p.locator('.as-msg').filter({ hasText: 'Abrí «' })).first().waitFor();
+    assert.equal(await p.locator('[data-guardado]').innerText(), 'Cambios locales');
     assert.equal(await tamLocal(), 7350, 'La liga debe conservar la edición local hasta confirmar');
     assert.match(await fila(p, 'L').innerText(), /Toca otra vez para abrir/);
     await fila(p, 'L').click();
@@ -103,10 +168,22 @@ async function prueba() {
     const campo = p.locator('[data-edit="C-01"] input[data-k="campo"]');
     await campo.fill('11100');
     await campo.press('Enter');
+    assert.equal(await p.locator('[data-guardado]').innerText(), 'Cambios locales');
     await boton(p, 'Guardar en el libro').click();
     await p.locator('[data-as="sobre"]').click();
+    let responde, recibido;
+    const llegada = new Promise(resolve => { recibido = resolve; });
+    const permiso = new Promise(resolve => { responde = resolve; });
+    await p.route(Servidor.ENDPOINT, async route => {
+      if (route.request().method() === 'POST') { recibido(); await permiso; }
+      await route.fallback();
+    });
     await p.locator('[data-as="sobre"]').click();
+    await llegada;
+    assert.equal(await p.locator('[data-guardado]').innerText(), 'Guardando…');
+    responde();
     await estado(p, 'Guardado como Borrador');
+    assert.equal(await p.locator('[data-guardado]').innerText(), 'Guardado');
     assert.equal(costo(trae(nueva)), 11100);
     assert.deepEqual(BASES.map(trae), ANTES);
     await p.close();

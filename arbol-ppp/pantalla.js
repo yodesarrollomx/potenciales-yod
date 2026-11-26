@@ -147,7 +147,10 @@
     let tarjAntes = {}, temporizadores = [], reinicioPend = 0;
     let cmp = null, ultimoToque = null, forzarArriba = false, cierre = null, avisoCache = { clave: '', v: null };          // comparación A/B en curso; último toque del panel (contra el doble toque)
 
-    const guarda = () => { ls.set(CL.plan, JSON.stringify({ plan })); guardaCmp(); };
+    const guarda = () => {
+      ls.set(CL.plan, JSON.stringify({ plan })); guardaCmp();
+      if (opts.alCambiarPlan) opts.alCambiarPlan(plan, cambiosRegla.length > 0);
+    };
     const porId = (id) => res.nodos.find((n) => n.id === id);
     const colorDe = (n) => 'var(--' + (SLUG[(n.tarjetas || [])[0]] || 'confirmar') + ')';
     const alertasRotas = () => (res.alertas || []).filter((a) => a.nivel !== 'info');
@@ -171,7 +174,7 @@
     host.innerHTML =
       '<div class="ppp" data-ppp>' +
       '<header class="ppp-top"><h1>Árbol PPP <span class="ppp-proy">' + esc(proyecto) + '</span></h1><div class="ppp-acc"><button class="ppp-btn" type="button" data-act="deshacer" disabled>Deshacer</button><button class="ppp-btn" type="button" data-act="reiniciar">Empezar de nuevo</button></div></header>' +
-      '<section class="ppp-cards" aria-label="Visor del plan: siete tarjetas" data-cards></section>' +
+      '<section class="ppp-cards" aria-label="Tarjetas del plan" data-cards></section>' +
       '<div class="ppp-barra" data-barra><span class="ppp-rotulo" role="status" data-rotulo>Estimado · no sincronizado</span><span class="ppp-avance" data-avance></span></div>' +
       '<div class="ppp-herr" data-herr role="group" aria-label="Herramientas"><button class="ppp-btn chico" type="button" data-act="comparar" aria-pressed="false">Comparar</button><button class="ppp-btn chico" type="button" data-act="editar" aria-pressed="false">Editar reglas</button><button class="ppp-btn chico" type="button" data-act="lista" aria-pressed="false">Ver en lista</button><button class="ppp-btn chico" type="button" data-act="ley" aria-expanded="false" aria-controls="ppp-ley">Leyenda</button></div>' +
       '<div class="ppp-modo" data-modo hidden role="status"></div>' +
@@ -225,6 +228,9 @@
       return textoCifras(nombre, T);
     }
     function pintaTarjetas() {
+      const menus = host.hasAttribute('data-menus-tarjetas');
+      const tag = menus ? 'button' : 'div';
+      const atributos = menus ? 'type="button" aria-haspopup="dialog" aria-expanded="false" ' : 'role="group" ';
       let html = '';
       const flash = [], rojas = ((res.rojos && res.rojos.tarjetas) || []).concat(avisoArbol() ? TARJ_DINERO : []);
       ORDEN_TARJETAS.forEach((nombre) => {
@@ -236,11 +242,11 @@
         tarjAntes[nombre] = clave;
         if (cambio) flash.push(nombre);
         const roja = abierta && rojas.indexOf(nombre) >= 0, esRiesgo = nombre === 'Riesgo y estado';
-        html += '<div class="tarj ' + (abierta ? '' : 'cerrada') + (roja ? ' roja' : '') + (esRiesgo ? ' toca' : '') + '" data-t="' + esc(nombre) + '" style="--c:var(--' + SLUG[nombre] + ')" ' + (esRiesgo ? 'role="button" tabindex="0" data-abre="pruebas" ' : 'role="group" ') + 'aria-label="' + esc(nombre) + ': ' + esc(abierta ? t.h + ', ' + t.s.join(' ') + (t.est ? ', estimado' : '') + (roja ? (avisoArbol() && TARJ_DINERO.indexOf(nombre) >= 0 ? ', cifra no confiable: el plan se sale del horizonte' : ', con pruebas en rojo') : '') : 'cerrada, sin cifra todavía') + '">' +
-          '<b>' + esc(nombre) + (roja ? '<i class="rj" title="Hay algo en rojo" aria-hidden="true">!</i>' : t.est ? '<i title="Estimado" aria-hidden="true">≈</i>' : '') + '</b><strong data-c="' + esc(t.hc || t.h) + '" data-cc="' + esc(t.hcc || t.hc || t.h) + '">' + esc(t.h) + '</strong><span>' + t.s.map((x, ix) => '<em' + (t.marca && ix === t.s.length - 1 ? ' class="up"' : '') + '>' + esc(x) + '</em>').join('') + '</span></div>';
+        html += '<' + tag + ' class="tarj ' + (abierta ? '' : 'cerrada') + (roja ? ' roja' : '') + (esRiesgo ? ' toca' : '') + '" data-t="' + esc(nombre) + '" style="--c:var(--' + SLUG[nombre] + ')" ' + (esRiesgo && !menus ? 'role="button" tabindex="0" data-abre="pruebas" ' : atributos) + 'aria-label="' + esc(nombre) + ': ' + esc(abierta ? t.h + ', ' + t.s.join(' ') + (t.est ? ', estimado' : '') + (roja ? (avisoArbol() && TARJ_DINERO.indexOf(nombre) >= 0 ? ', cifra no confiable: el plan se sale del horizonte' : ', con pruebas en rojo') : '') : 'cerrada, sin cifra todavía') + '">' +
+          '<b>' + esc(nombre) + (roja ? '<i class="rj" title="Hay algo en rojo" aria-hidden="true">!</i>' : t.est ? '<i title="Estimado" aria-hidden="true">≈</i>' : '') + '</b><strong data-c="' + esc(t.hc || t.h) + '" data-cc="' + esc(t.hcc || t.hc || t.h) + '">' + esc(t.h) + '</strong><span>' + t.s.map((x, ix) => '<em' + (t.marca && ix === t.s.length - 1 ? ' class="up"' : '') + '>' + esc(x) + '</em>').join('') + '</span></' + tag + '>';
       });
       const pc = res.por_confirmar.n;
-      html += '<div class="tarj conf" role="group" aria-label="Por confirmar: ' + pc + '. Es la distancia entre el estimado y el plan completo."><b>Por confirmar</b><strong>' + pc + '</strong><span>' + (pc ? 'para el plan completo' : 'plan completo') + '</span></div>';
+      html += '<' + tag + ' class="tarj conf" ' + atributos + 'aria-label="Por confirmar: ' + pc + '. Es la distancia entre el estimado y el plan completo."><b>Por confirmar</b><strong>' + pc + '</strong><span>' + (pc ? 'para el plan completo' : 'plan completo') + '</span></' + tag + '>';
       $('[data-cards]').innerHTML = html;
       ajustaCifras();
       flash.forEach((n) => { const e = host.querySelector('.tarj[data-t="' + n + '"]'); if (e) { e.classList.add('cambio'); temporizadores.push(setTimeout(() => e.classList.remove('cambio'), 1000)); } });
@@ -870,6 +876,7 @@
       const n = aparte ? null : (porId(sel) || res.nodos[0]);
       const clave = (aparte ? vista : n && n.id), st = panelEl.scrollTop, mismo = clave === panelClave;
       panelClave = clave;
+      panelEl.dataset.vistaPanel = aparte ? vista : 'nodo';
       if (vista === 'pruebas') { panelEl.style.setProperty('--c', 'var(--riesgo)'); panelEl.innerHTML = panelPruebas() + (toastTxt ? '' : ''); }
       else if (vista === 'reglas') { panelEl.style.setProperty('--c', 'var(--alerta)'); panelEl.innerHTML = panelReglas(); }
       else if (vista === 'lista') { panelEl.style.setProperty('--c', 'var(--confirmar)'); panelEl.innerHTML = panelLista(); }
@@ -1861,7 +1868,7 @@
 
     const api = {
       destruir() { escucha.forEach(([t, ev, fn, o]) => t.removeEventListener(ev, fn, o)); if (ro) ro.disconnect(); cancelAnimationFrame(raf); temporizadores.forEach(clearTimeout); delete host.__ppp; host.innerHTML = ''; },
-      reiniciar, seleccionar, alterna, verTodo, centrar, decide, deshacer, abreAlerta, verPrueba, avisoArbol,
+      reiniciar, seleccionar, alterna, verTodo, centrar, decide, deshacer, abreAlerta, abrePruebas, verPrueba, avisoArbol,
       comparacion: () => cmp ? { activo: cmp.activo, ver: cmp.ver, rotA: cmp.rotA, rotB: cmp.rotB, planA: cmp.A.plan, planB: cmp.B.plan, cambios: cmp.datos && cmp.datos.cambios, omitidas: cmp.datos && cmp.datos.omitidas, igual: cmp.datos && cmp.datos.igual, veredicto: cmp.datos && cmp.datos.c && cmp.datos.c.veredicto, aportes: cmp.datos && cmp.datos.c && cmp.datos.c.aportes, medidas: cmp.datos && cmp.datos.c && cmp.datos.c.medidas } : null,
       reglas: () => ({ editar, cambios: JSON.parse(JSON.stringify(cambiosRegla)), huella: DEF.huella, huella0: DEF0.huella, filas: JSON.parse(JSON.stringify(filasRegla)) }),
       estado: () => ({ sel, vista, plan, res, plegados: [...plegados], camara: Object.assign({}, cam), tam: { vw, vh }, caja: bbox, animando: !!(anim.cam || anim.lay), ruta: ruta ? { alertas: ruta.alertas.slice(), nodos: [...ruta.nodos], aristas: [...ruta.aristas], ok: ruta.ok } : null, historia: historia.length, resumen: modoResumen, visibles: visibles.map((n) => n.id) }),

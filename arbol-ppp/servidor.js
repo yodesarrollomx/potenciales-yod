@@ -187,8 +187,29 @@
     op = op || {};
     var doc = root.document, motor = op.motor || root.ArbolMotor, N = nucleo({ endpoint: op.endpoint, fetch: op.fetch, almacen: op.almacen || root.localStorage, motor: motor, conexion: op.conexion || root.ArbolConexion });
     var est = { modo: 'local', aviso: '', puede: false, versiones: false, def: null, tablas: null, panel: '', lista: null, msg: '', ocupado: false, confirma: '', nombreVersion: '' }, api = null;
-    function monta() {
-      api = root.ArbolPantalla.montar(host, { motor: motor, tablas: est.tablas || undefined, alReiniciar: function () { N.fijaOrigen(null); est.panel = ''; est.confirma = ''; est.msg = ''; pinta(); } });
+    var almacen = op.almacen || root.localStorage, claveRecibo = 'ppp-arbol-ultimo-guardado-1';
+    var recibo = null, escribiendo = false, edicionLocal = false;
+    try { recibo = JSON.parse(almacen.getItem(claveRecibo)); } catch (e) { /* El estado sigue disponible en esta pestaña. */ }
+    function registraGuardado(foto) {
+      var o = N.origen(); if (!o) return;
+      edicionLocal = false;
+      recibo = { columna: o.columna, rev: o.rev, foto: foto };
+      try { almacen.setItem(claveRecibo, JSON.stringify(recibo)); } catch (e) { /* La confirmación de esta sesión sigue siendo válida. */ }
+    }
+    function actualizaGuardado(plan, reglas) {
+      var campo = barra.querySelector('[data-guardado]'); if (!campo) return;
+      var o = N.origen(), estado = 'Copia local';
+      if (escribiendo) estado = 'Guardando…';
+      else if (reglas) estado = 'Reglas locales';
+      else if (o && recibo && recibo.columna === o.columna && recibo.rev === o.rev) {
+        estado = recibo.foto === JSON.stringify(plan) ? 'Guardado' : 'Cambios locales';
+      } else if (edicionLocal) estado = 'Cambios locales';
+      else if (o) estado = 'Sin verificar';
+      if (campo.textContent !== estado) campo.textContent = estado;
+    }
+    function monta(desdeLibro) {
+      api = root.ArbolPantalla.montar(host, { motor: motor, tablas: est.tablas || undefined, alCambiarPlan: function (plan, reglas) { edicionLocal = true; actualizaGuardado(plan, reglas); }, alReiniciar: function () { N.fijaOrigen(null); est.panel = ''; est.confirma = ''; est.msg = ''; pinta(); } });
+      if (desdeLibro) registraGuardado(JSON.stringify(api.estado().plan));
       var arbol = host.querySelector('.ppp');
       if (arbol && root.matchMedia && root.matchMedia('(max-width:760px)').matches) {
         arbol.setAttribute('data-sin-panel', '');
@@ -252,9 +273,18 @@
         }).join('') + '</ul>';
         h += '<div class="as-botones"><button type="button" class="as-btn" data-as="cerrar">Cerrar</button></div></div>';
       }
-      barra.innerHTML = h; mide();
+      barra.innerHTML = h;
+      if (api && est.modo === 'libro') {
+        var rotulo = host.querySelector('[data-rotulo]'); if (rotulo) rotulo.textContent = 'Estimado';
+        var guardar = barra.querySelector('[data-as="guardar"]');
+        if (guardar) {
+          var estado = doc.createElement('small'); estado.setAttribute('data-guardado', ''); estado.setAttribute('role','status');
+          guardar.appendChild(estado); actualizaGuardado(api.estado().plan, api.reglas().cambios.length > 0);
+        }
+      }
+      mide();
     }
-    function fin(msg) { est.ocupado = false; est.msg = msg; pinta(); }
+    function fin(msg) { escribiendo = false; est.ocupado = false; est.msg = msg; pinta(); }
     function falla() { fin(texto('red')); }
     var consulta = 0;
     function cargaLista() {
@@ -270,9 +300,11 @@
       var f = barra.querySelector('form[data-as-form="guardar"]'); if (!f || est.ocupado || !api) return;
       if (api.reglas && api.reglas().cambios.length) { est.panel = ''; fin(texto('reglas')); return; }
       var datos = { nombre: f.elements.nombre.value, version: f.elements.version.value, sobre: !!sobre };
-      est.ocupado = true; est.confirma = ''; est.msg = 'Guardando en el libro…'; pinta();
-      N.guarda(est.def, api.estado().plan, datos).then(function (r) {
+      var plan = api.estado().plan, foto = JSON.stringify(plan);
+      escribiendo = true; est.ocupado = true; est.confirma = ''; est.msg = 'Guardando en el libro…'; pinta();
+      N.guarda(est.def, plan, datos).then(function (r) {
         if (!r.ok) { fin(texto(r.error) + (r.columna ? ' Columna ' + r.columna + '.' : '')); return; }
+        registraGuardado(foto);
         est.panel = ''; est.nombreVersion = ''; fin('Guardado como Borrador en la columna ' + r.columna + ' del libro (' + r.escritos + ' valores).');
       }).catch(falla);
     }
@@ -287,7 +319,7 @@
         est.panel = 'versiones'; est.confirma = ''; est.nombreVersion = '';
         var mensaje = 'Creé «' + r.version + '» como Borrador · columna ' + r.columna + '.';
         return N.abre(est.def, r.columna, function () { return JSON.stringify(api.estado().plan || {}) === foto; }).then(function (abierta) {
-          if (abierta.ok) monta();
+          if (abierta.ok) monta(true);
           fin(mensaje + (abierta.ok ? '' : ' ' + texto(abierta.error)));
           cargaLista();
         });
@@ -319,7 +351,7 @@
         est.ocupado = true; est.msg = 'Abriendo el plan…'; pinta();
         N.abre(est.def, col, function () { return JSON.stringify(api.estado().plan || {}) === foto; }).then(function (r) {
           if (!r.ok) { fin(texto(r.error)); return; }
-          est.panel = ''; est.confirma = ''; est.solo = ''; monta();
+          est.panel = ''; est.confirma = ''; est.solo = ''; monta(true);
           fin('Abrí «' + (r.nombre || 'sin nombre') + '» de la columna ' + r.columna + '.' + (r.avisos ? ' ' + r.avisos + (r.avisos === 1 ? ' dato no se pudo leer y quedó' : ' datos no se pudieron leer y quedaron') + ' en referencia.' : ''));
         }).catch(falla);
       }
@@ -347,7 +379,7 @@
       }).then(function (r) {
         if (r.error === 'cambio_local') { pideConfirmacion(); return; }
         if (!r.ok) { fin(texto(r.error)); return; }
-        monta(); fin('Abrí «' + (r.nombre || 'sin nombre') + '» de la columna ' + r.columna + '.');
+        monta(true); fin('Abrí «' + (r.nombre || 'sin nombre') + '» de la columna ' + r.columna + '.');
       }).catch(falla);
     }
     monta(); pinta();                                   // primero lo de la página; si el libro contesta, se cambia a su definición
