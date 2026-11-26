@@ -117,6 +117,12 @@ Con esa opción, y sólo con ella, aparecen cinco nodos del módulo `vertical/pr
 - **El visor no calcula:** la tarjeta «Costo y ganancia» agrega el renglón «Renta $X/año · vale $Y · rinde Z%» y su detalle «Si se renta en vez de vender», con lo que manda el Árbol.
 - **El Maestro:** las filas nuevas van a `ARBOL_NODOS` (5), `ARBOL_OPCIONES` (1) y `ARBOL_FACTORES` (5), y la fórmula de P1-01 cambia. Orden seguro: primero NODOS y OPCIONES, luego los renglones RN-01 a RN-05 de la pestaña `MAESTRO` y al final `ARBOL_FACTORES` (el guardado rechaza un factor que no esté en `MAESTRO`). La copia de pruebas `arbol-ppp/conexion/datos/arbol-desde-maestro.json` ya trae las filas.
 
+## Cada versión, en el visor desde que nace (25-nov-2026)
+
+- **«Agregar versión» ya trae su visor.** El servidor copia la columna base; enseguida el Árbol lee la copia, el motor saca su paquete (el mismo que daría abrirla y guardarla) y lo guarda sobre esa misma columna **sin cambiar ningún valor** (`visorDeDerivada` en `arbol-ppp/servidor.js`). En `CAMBIOS` quedan dos renglones: la derivación y el guardado del visor. Si este segundo paso falla, la versión queda creada igual y la respuesta dice por qué en `visor`.
+- **La portada no ofrece «Ver visor» a un proyecto sin versiones en el visor.** Si el servidor contesta `plan` (no hay ninguna versión guardada en `ARBOL_VISOR`), la tarjeta deja sólo «Abrir en el árbol» (`estado.arbolSinVisor` en `ppp2.js`).
+- **«Falta calcular».** Una versión no tiene flujo mientras le falten decisiones que el flujo necesita (tipo de edificio, estacionamiento, arranque de obra, trato con el dueño o crédito del banco). Se resuelve contestándolas en el Árbol y guardando.
+
 ## Lo que falta
 
 Nada de lo siguiente está hecho; una prueba en Node o con dobles no demuestra funcionamiento en producción.

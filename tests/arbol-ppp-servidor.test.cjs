@@ -138,10 +138,14 @@ test('versiones de un proyecto: lista completa, derivación aislada, origen y re
   assert.equal(g.nueva, true);
   assert.equal(g.nombre, nombre);
   assert.match(g.cambio, new RegExp('V3 · columna ' + base.columna + ' · revisión ' + base.rev));
-  const fila = e.m.hojas.CAMBIOS.getRange(e.m.hojas.CAMBIOS.getLastRow(), 1, 1, 6).getValues()[0];
+  /* la derivación deja su renglón en CAMBIOS; enseguida el árbol guarda el paquete del visor sobre esa misma columna (otro renglón) */
+  const ultimas = e.m.hojas.CAMBIOS.getRange(e.m.hojas.CAMBIOS.getLastRow() - 1, 1, 2, 6).getValues();
+  const fila = ultimas.find((r) => String(r[2]).includes(g.cambio));
+  assert.ok(fila, 'el renglón de la derivación está en CAMBIOS');
   assert.equal(fila[1], 'Editora Prueba');
   assert.equal(fila[3], g.columna);
-  assert.ok(fila[2].includes(g.cambio));
+  assert.equal(ultimas[1][3], g.columna, 'el guardado del visor es sobre la columna nueva');
+  assert.ok(g.visor, 'la derivación trae el resultado del paquete del visor');
   const datos = (col) => Object.fromEntries(lee(col).valores.map((v) => [v.id, v.valor]));
   const clonada = datos(g.columna);
   assert.equal(clonada['C-01'], datos(base.columna)['C-01']);
