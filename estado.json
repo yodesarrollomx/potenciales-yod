@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-26T02:04:42.859Z",
+ "generado": "2026-11-26T02:16:30.000Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -10,18 +10,6 @@
    "desde": "2026-11-13T02:09:31Z",
    "url": "https://github.com/yodesarrollomx/yod-portal/commit/e189a5b6a58b17652c37079d5e79351a1662c777",
    "msg": "yod-portal cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
-  },
-  {
-   "clave": "flujo:yodesarrollomx/potenciales-yod:.github/workflows/verificar-ppp.yml",
-   "tipo": "flujo",
-   "nodos": [
-    "potenciales-yod::github_workflows_verificar_ppp",
-    "repo:yodesarrollomx/potenciales-yod",
-    "SYS-POTENCIALES"
-   ],
-   "desde": "2026-11-26T01:34:54Z",
-   "url": "https://github.com/yodesarrollomx/potenciales-yod/actions/runs/45737301164",
-   "msg": "Falló el flujo «Verificar interfaz PPP» de potenciales-yod, trabajo «PPP · interfaz y contratos», paso 12 «Recorridos reales del DOM con transporte sintético»"
   },
   {
    "clave": "cambio:yodesarrollomx/potenciales-yod",
@@ -54,18 +42,6 @@
    "msg": "board-flujo-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
-   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/publicar.yml",
-   "tipo": "flujo",
-   "nodos": [
-    "sala-edicion::github_workflows_publicar",
-    "repo:yodesarrollomx/sala-edicion",
-    "SYS-SALA"
-   ],
-   "desde": "2026-11-25T18:34:41Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45729359043",
-   "msg": "Falló el flujo «Sala · publicacion=datos-45728262964-1-arranque · sha=19992e0de78c954874bbb12b8a6ea4c4a891ed02» de sala-edicion, trabajo «publicar», paso 12 «Run actions/deploy-pages@v4»"
-  },
-  {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-cada-hora.yml",
    "tipo": "flujo",
    "nodos": [
@@ -76,18 +52,6 @@
    "desde": "2026-11-26T00:22:25Z",
    "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45728262964",
    "msg": "Falló el flujo «Sala · Cada hora» de sala-edicion, trabajo «arranque / arranque», paso 11 «Publicar datos y esperar su recibo exacto»"
-  },
-  {
-   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-diario.yml",
-   "tipo": "flujo",
-   "nodos": [
-    "sala-edicion::github_workflows_sala_diario",
-    "repo:yodesarrollomx/sala-edicion",
-    "SYS-SALA"
-   ],
-   "desde": "2026-11-26T00:03:11Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/45725903922",
-   "msg": "Falló el flujo «Sala · Diario» de sala-edicion, trabajo «relevo / relevo», paso 8 «Publicar datos y esperar su recibo exacto»"
   },
   {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-revision.yml",
