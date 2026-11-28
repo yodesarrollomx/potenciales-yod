@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-28T07:59:22.000Z",
+ "generado": "2026-11-28T14:33:19.704Z",
  "errores": [
   {
    "clave": "cambio:yodesarrollomx/yod-portal",
@@ -42,6 +42,18 @@
    "msg": "board-flujo-yod cambió después de armar el grafo (2026-11-12); se refleja al rehacerlo"
   },
   {
+   "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-cada-hora.yml",
+   "tipo": "flujo",
+   "nodos": [
+    "sala-edicion::github_workflows_sala_cada_hora",
+    "repo:yodesarrollomx/sala-edicion",
+    "SYS-SALA"
+   ],
+   "desde": "2026-11-28T14:27:08Z",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/46154722684",
+   "msg": "Falló el flujo «Sala · Cada hora» de sala-edicion, trabajo «mesa / mesa», paso 14 «Avisar si algo falló»"
+  },
+  {
    "clave": "flujo:yodesarrollomx/sala-edicion:.github/workflows/sala-mesa.yml",
    "tipo": "flujo",
    "nodos": [
@@ -50,7 +62,7 @@
     "SYS-SALA"
    ],
    "desde": "2026-11-26T13:55:09Z",
-   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/46015588239",
+   "url": "https://github.com/yodesarrollomx/sala-edicion/actions/runs/46152253638",
    "msg": "Falló el flujo «Montador de la mesa» de sala-edicion, trabajo «mesa», paso 14 «Avisar si algo falló»"
   },
   {
